@@ -6,8 +6,8 @@ services:
     expose:
       - "8000"
     volumes:
-      - ./backend:/app
       - ./:/project
+    working_dir: /project
     environment:
       - PYTHONPATH=/project
       - PYTHONDONTWRITEBYTECODE=1
