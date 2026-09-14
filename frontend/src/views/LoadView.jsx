@@ -40,8 +40,8 @@ export function LoadView() {
   } = useBatchLoad();
 
   const isValid =
-    input.dois.trim() !== '' &amp;&amp;
-    config.destination.trim() !== '' &amp;&amp;
+    input.dois.trim() !== '' &&
+    config.destination.trim() !== '' &&
     config.email.trim() !== '';
 
   return (
