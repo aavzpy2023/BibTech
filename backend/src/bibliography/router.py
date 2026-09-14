@@ -1,8 +1,10 @@
 import os
 from typing import List
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from .schemas import ParsedReference
+from fastapi.responses import StreamingResponse
+from .schemas import ParsedReference, BatchDownloadRequest
 from .parser_service import parse_bibliography_content
+from .download_service import execute_batch_download
 
 router = APIRouter()
 
@@ -40,3 +42,20 @@ if HAS_MULTIPART:
 else:
     async def upload_bibliography(file: UploadFile):
         return await _process_upload(file)
+
+
+@router.post("/batch-download")
+async def batch_download(request: BatchDownloadRequest):
+    async def sse_generator():
+        async for event in execute_batch_download(
+            request.dois,
+            request.destination,
+            request.email,
+            request.delay,
+        ):
+            yield f"data: {event}\n\n"
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream"
+    )

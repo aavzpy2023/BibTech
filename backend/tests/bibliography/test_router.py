@@ -22,7 +22,11 @@ except (RuntimeError, ImportError):
     client = None
     HAS_TESTCLIENT = False
 
-from backend.src.bibliography.router import upload_bibliography
+from backend.src.bibliography.router import (
+    upload_bibliography,
+    batch_download,
+)
+from backend.src.bibliography.schemas import BatchDownloadRequest
 
 def test_upload_bibliography_direct_success():
     mock_ref = ParsedReference(
@@ -93,3 +97,47 @@ def test_upload_bibliography_invalid_extension():
     # Assert
     assert response.status_code == 400
     assert "Unsupported file extension" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_batch_download_endpoint_direct():
+    async def mock_generator(*args, **kwargs):
+        yield '{"log": "test"}'
+
+    req = BatchDownloadRequest(
+        dois=["10.1000/182"],
+        delay=0,
+        destination="/tmp/downloads",
+        email="test@example.com",
+    )
+    with patch(
+        "backend.src.bibliography.router.execute_batch_download",
+        side_effect=mock_generator,
+    ):
+        response = await batch_download(req)
+        assert response.media_type == "text/event-stream"
+        chunks = [chunk async for chunk in response.body_iterator]
+        assert chunks == ['data: {"log": "test"}\n\n']
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+def test_batch_download_endpoint_client():
+    async def mock_generator(*args, **kwargs):
+        yield '{"log": "test"}'
+
+    payload = {
+        "dois": ["10.1000/182"],
+        "delay": 0,
+        "destination": "/tmp/downloads",
+        "email": "test@example.com",
+    }
+    with patch(
+        "backend.src.bibliography.router.execute_batch_download",
+        side_effect=mock_generator,
+    ):
+        response = client.post(
+            "/api/bibliography/batch-download", json=payload
+        )
+        assert response.status_code == 200
+        assert "text/event-stream" in response.headers["content-type"]
+        assert 'data: {"log": "test"}\n\n' in response.text

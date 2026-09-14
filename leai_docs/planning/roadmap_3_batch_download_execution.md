@@ -45,7 +45,8 @@ complexity_aggregate: "HARD"
   - [ID-3.3.3] [CORE/LOGIC]: [1. Create backend/src/bibliography/download_service.py. 2. Implement async generator execute_batch_download(dois: list[str], dest: str, email: str, delay: int). 3. Loop over DOIs. Yield JSON parsing state. Await resolve_pdf_url. 4. If URL exists, fetch raw bytes via HTTPX, await save_pdf_bytes. 5. Yield success JSON string. 6. Await asyncio.sleep(delay). 7. Yield final completion event]. Type: Task.
   - [ID-3.3.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_3_batch_download_execution.md and check - [x] for Story 3.3. 2. Append &gt; Files touched: file_storage_service.py, download_service.py, test_download.py. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-010]]. Type: Task.
 
-- [ ] Story 3.4: Boundary Marshal API Endpoint (SSE) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 3.4: Boundary Marshal API Endpoint (SSE) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+  &gt; Files touched: schemas.py, router.py, test_router.py
   Business Requirement: Define strict DTOs and expose the generator stream safely to the frontend. (&lt;-- REQ-010)
   Story Context Radius: {"backend/src/bibliography/schemas.py": [""], "backend/src/bibliography/router.py": [""], "backend/src/bibliography/download_service.py": ["def execute_batch_download"], "backend/tests/bibliography/test_router.py": [""], "leai_docs/planning/roadmap_3_batch_download_execution.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown:
@@ -54,7 +55,8 @@ complexity_aggregate: "HARD"
   - [ID-3.4.3] [EXTERNAL/IO]: [1. Open backend/src/bibliography/router.py. 2. Add POST /batch-download accepting BatchDownloadRequest. 3. Return StreamingResponse(sse_generator(), media_type="text/event-stream"). 4. The internal sse_generator must consume execute_batch_download and format every string as yield f"data: {event_string}\n\n"]. Type: Task.
   - [ID-3.4.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_3_batch_download_execution.md and check - [x] for Story 3.4. 2. Append &gt; Files touched: schemas.py, router.py, test_router.py. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-010]]. Type: Task.
 
-- [ ] Story 3.5: Frontend SSE Hook State Integration | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 3.5: Frontend SSE Hook State Integration | [MoSCoW: MUST] | [Complexity: MEDIUM]
+  &gt; Files touched: useBatchLoad.js, useBatchLoad.test.js
   Business Requirement: Read the text/event-stream in React, dynamically mutating the monitor state without blocking the UI thread. (&lt;-- REQ-011)
   Story Context Radius: {"frontend/src/hooks/useBatchLoad.js": [""], "frontend/src/hooks/useBatchLoad.test.js": [""], "leai_docs/planning/roadmap_3_batch_download_execution.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown:

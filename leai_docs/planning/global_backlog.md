@@ -19,7 +19,7 @@
 - [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
 - [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
 - [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
-- [ ] [REQ-011] Frontend SSE Hook State Integration
+- [x] [REQ-011] Frontend SSE Hook State Integration
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
