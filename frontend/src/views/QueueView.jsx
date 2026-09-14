@@ -171,8 +171,13 @@ export function QueueView() {
     }
   };
 
+  const selectableDois = (dois || []).filter(
+    (doi) => statuses[doi] !== 'not_found' && statuses[doi] !== 'failed'
+  );
+
   const allSelected =
-    dois.length > 0 && selectedDois.length === dois.length;
+    selectableDois.length > 0 &&
+    selectableDois.every((doi) => selectedDois.includes(doi));
 
   return (
     <div style={styles.container} data-testid="queue-view">
@@ -204,7 +209,8 @@ export function QueueView() {
                 type="checkbox"
                 aria-label="Select all"
                 checked={allSelected}
-                onChange={() => toggleAll(dois)}
+                disabled={selectableDois.length === 0}
+                onChange={() => toggleAll(selectableDois)}
               />
             </th>
             <th style={styles.th}>DOI</th>
@@ -220,7 +226,9 @@ export function QueueView() {
             </tr>
           ) : (
             dois.map((doi) => {
-              const isSelected = selectedDois.includes(doi);
+              const isUnavailable =
+                statuses[doi] === 'not_found' || statuses[doi] === 'failed';
+              const isSelected = !isUnavailable && selectedDois.includes(doi);
               return (
                 <tr key={doi} style={styles.row}>
                   <td style={{ ...styles.td, textAlign: 'center' }}>
@@ -228,7 +236,15 @@ export function QueueView() {
                       type="checkbox"
                       aria-label={`Select ${doi}`}
                       checked={isSelected}
-                      onChange={() => toggleSelection(doi)}
+                      disabled={isUnavailable}
+                      style={{
+                        cursor: isUnavailable ? 'not-allowed' : 'pointer'
+                      }}
+                      onChange={() => {
+                        if (!isUnavailable) {
+                          toggleSelection(doi);
+                        }
+                      }}
                     />
                   </td>
                   <td style={styles.td}>{doi}</td>

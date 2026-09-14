@@ -94,4 +94,26 @@ describe('QueueView component', () => {
     const badges = screen.getAllByText('⊘ PDF Not Available');
     expect(badges.length).toBe(2);
   });
+
+  it('disables the checkbox if a PDF could not be downloaded', () => {
+    vi.spyOn(batchHook, 'useBatchLoad').mockReturnValue({
+      input: { dois: '10.1\n10.2', files: [] },
+      config: { destination: 'b', delay: 5, email: 't@e.com' },
+      monitor: { progress: 2, total: 2, logs: [] },
+      statuses: { '10.1000/182': 'downloaded', '10.1000/183': 'failed' },
+      updateInput: vi.fn(),
+      updateConfig: vi.fn(),
+      updateMonitor: vi.fn(),
+      startBatch: vi.fn()
+    });
+
+    render(<QueueView />);
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    expect(checkboxes[1]).not.toBeDisabled();
+    expect(checkboxes[2]).toBeDisabled();
+
+    fireEvent.click(checkboxes[2]);
+    expect(mockToggleSelection).not.toHaveBeenCalledWith('10.1000/183');
+  });
 });
