@@ -72,8 +72,30 @@ export function useQueueState() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Failed to download ZIP archive', err);
-    }
-  }, [config.destination, selectedDois]);
+    },
+    [config.destination, selectedDois]
+  );
+
+  const downloadMissingDois = useCallback(
+    (missingList, batchNameOverride) => {
+      if (!missingList || missingList.length === 0) return;
+
+      const batchName =
+        batchNameOverride || config.destination || 'batch';
+      const blob = new Blob([missingList.join('\n')], {
+        type: 'text/plain;charset=utf-8'
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${batchName}_missing_dois.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    },
+    [config.destination]
+  );
 
   return {
     dois,
@@ -81,7 +103,8 @@ export function useQueueState() {
     selectedDois,
     toggleSelection,
     toggleAll,
-    downloadZip
+    downloadZip,
+    downloadMissingDois
   };
 }
 

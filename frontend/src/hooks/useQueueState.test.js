@@ -167,4 +167,24 @@ describe('useQueueState hook', () => {
 
     global.fetch = originalFetch;
   });
+
+  it('triggers downloadMissingDois creating a txt file blob', () => {
+    const mockCreateObjectURL = vi.fn().mockReturnValue('blob:txt-url');
+    const mockRevokeObjectURL = vi.fn();
+    window.URL.createObjectURL = mockCreateObjectURL;
+    window.URL.revokeObjectURL = mockRevokeObjectURL;
+
+    vi.mocked(router.useLocation).mockReturnValue({
+      state: { config: { destination: 'mine' } }
+    });
+
+    const { result } = renderHook(() => useQueueState());
+
+    act(() => {
+      result.current.downloadMissingDois(['10.1029/2024GH001325'], 'mine');
+    });
+
+    expect(mockCreateObjectURL).toHaveBeenCalled();
+    expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:txt-url');
+  });
 });

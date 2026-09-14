@@ -28,6 +28,16 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer'
   },
+  secondaryButton: {
+    backgroundColor: '#fff',
+    color: '#24292e',
+    border: '1px solid #d1d5da',
+    borderRadius: '6px',
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer'
+  },
   disabledButton: {
     backgroundColor: '#94d3a2',
     cursor: 'not-allowed',
@@ -105,7 +115,8 @@ export function QueueView() {
     selectedDois,
     toggleSelection,
     toggleAll,
-    downloadZip
+    downloadZip,
+    downloadMissingDois
   } = useQueueState();
   const { monitor, statuses = {}, startBatch } = useBatchLoad();
 
@@ -130,10 +141,19 @@ export function QueueView() {
     }
   }, [statuses, dois, selectedDois, toggleSelection]);
 
+  const missingDois = (dois || []).filter(
+    (doi) => statuses[doi] === 'not_found' || statuses[doi] === 'failed'
+  );
+  const hasMissing = missingDois.length > 0;
+
   const handleDownload = () => {
     const target =
       selectedDois.length > 0 ? selectedDois : downloadedDois;
     downloadZip(target);
+  };
+
+  const handleDownloadMissing = () => {
+    downloadMissingDois(missingDois, config.destination);
   };
 
   const renderStatus = (statusKey) => {
@@ -188,10 +208,22 @@ export function QueueView() {
           Batch: {config.destination || 'Default'} | Progress: {monitor?.progress ?? 0}/{monitor?.total || dois.length}
         </p>
       </div>
-        <button
-          type="button"
-          disabled={!canDownload}
-          style={{
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            type="button"
+            disabled={!hasMissing}
+            style={{
+              ...styles.secondaryButton,
+              ...(!hasMissing ? styles.disabledButton : {})
+            }}
+            onClick={handleDownloadMissing}
+          >
+            Export Missing DOIs (.txt)
+          </button>
+          <button
+            type="button"
+            disabled={!canDownload}
+            style={{
             ...styles.downloadButton,
             ...(!canDownload ? styles.disabledButton : {})
           }}
@@ -199,6 +231,7 @@ export function QueueView() {
         >
           Download PDFs
         </button>
+        </div>
       </div>
 
       <table style={styles.table}>

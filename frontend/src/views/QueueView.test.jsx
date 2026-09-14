@@ -116,4 +116,38 @@ describe('QueueView component', () => {
     fireEvent.click(checkboxes[2]);
     expect(mockToggleSelection).not.toHaveBeenCalledWith('10.1000/183');
   });
+
+  it('renders Export Missing DOIs button and enables it when missing DOIs exist', () => {
+    const mockDownloadMissing = vi.fn();
+    vi.spyOn(queueHook, 'useQueueState').mockReturnValue({
+      dois: ['10.1', '10.2'],
+      config: { destination: 'mine' },
+      selectedDois: [],
+      toggleSelection: vi.fn(),
+      toggleAll: vi.fn(),
+      downloadZip: vi.fn(),
+      downloadMissingDois: mockDownloadMissing
+    });
+
+    vi.spyOn(batchHook, 'useBatchLoad').mockReturnValue({
+      input: { dois: '10.1\n10.2', files: [] },
+      config: { destination: 'mine' },
+      monitor: { progress: 2, total: 2, logs: [] },
+      statuses: { '10.1': 'not_found', '10.2': 'downloaded' },
+      updateInput: vi.fn(),
+      updateConfig: vi.fn(),
+      updateMonitor: vi.fn(),
+      startBatch: vi.fn()
+    });
+
+    render(<QueueView />);
+
+    const missingBtn = screen.getByRole('button', {
+      name: /Export Missing DOIs/i
+    });
+    expect(missingBtn).not.toBeDisabled();
+
+    fireEvent.click(missingBtn);
+    expect(mockDownloadMissing).toHaveBeenCalledWith(['10.1'], 'mine');
+  });
 });
