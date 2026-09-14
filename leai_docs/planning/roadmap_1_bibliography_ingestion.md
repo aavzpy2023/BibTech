@@ -107,8 +107,9 @@ complexity_aggregate: "MEDIUM"
     leai_docs/planning/global_backlog.md and check - [x] for REQ-002].
     Type: Task.
 
-- [ ] Story 2.3: Frontend State Management (Hooks) | [MoSCoW: MUST] |
+- [x] Story 2.3: Frontend State Management (Hooks) | [MoSCoW: MUST] |
   [Complexity: MEDIUM]
+  > Files touched: frontend/src/hooks/useBibliography.js, frontend/src/hooks/useBibliography.test.js
   Business Requirement: Isolate React state and API calling logic from the
   UI components. (&lt;-- REQ-001, REQ-003)
   Story Context Radius:
