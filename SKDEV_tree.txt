@@ -16,6 +16,7 @@
 │   │   ├── package.json
 │   │   ├── src/
 │   │   │   ├── App.jsx
+│   │   │   ├── App.test.jsx
 │   │   │   ├── main.jsx
 │   │   │   ├── views/
 │   │   │   │   ├── AnalysisView.jsx
@@ -23,6 +24,7 @@
 │   │   │   │   ├── QueueView.jsx
 │   │   │   │   ├── QueueView.test.jsx
 │   │   │   │   ├── ReferencesView.jsx
+│   │   │   │   ├── ReferencesView.test.jsx
 │   │   │   ├── hooks/
 │   │   │   │   ├── useBatchLoad.js
 │   │   │   │   ├── useBatchLoad.test.js
@@ -124,6 +126,7 @@
 │   │   │   ├── roadmap_4_download_queue_and_zip.md
 │   │   │   ├── roadmap_5_database_schema.md
 │   │   │   ├── roadmap_6_references_ingestion.md
+│   │   │   ├── roadmap_7_ui_standardization_and_multi_upload.md
 │   ├── nginx/
 │   │   ├── Dockerfile
 │   │   ├── nginx.conf

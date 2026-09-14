@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 
 export function extractDoisFromText(text, filename = '') {
@@ -63,7 +63,7 @@ const styles = {
   },
   textarea: {
     width: '100%',
-    minHeight: '120px',
+    minHeight: '300px',
     padding: '12px',
     borderRadius: '6px',
     border: '1px solid #d1d5da',
@@ -82,6 +82,23 @@ const styles = {
     marginTop: '8px',
     fontSize: '13px',
     color: '#586069'
+  },
+  uploadBtn: {
+    backgroundColor: '#0366d6', color: '#ffffff', border: 'none', borderRadius: '6px',
+    padding: '8px 16px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+  },
+  modalOverlay: {
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+  },
+  modalContent: {
+    backgroundColor: '#fff', padding: '24px', borderRadius: '8px', width: '450px', maxWidth: '90%'
+  },
+  badge: {
+    backgroundColor: '#e1e4e8', color: '#24292e', padding: '4px 8px', borderRadius: '12px', fontSize: '12px', marginLeft: '8px'
+  },
+  headerRow: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'
   }
 };
 
@@ -91,6 +108,7 @@ export function BatchInput({
   input,
   onInputUpdate
 }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const currentFiles = input?.files ?? files;
   const currentDois = input?.dois ?? dois;
 
@@ -127,6 +145,7 @@ export function BatchInput({
       const merged = Array.from(new Set([...existing, ...allExtractedDois]));
       onInputUpdate('dois', merged.join('\n'));
     }
+    setIsModalOpen(false);
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -138,10 +157,35 @@ export function BatchInput({
     }
   });
 
+  const doiList = currentDois ? currentDois.split('\n').map(d => d.trim()).filter(Boolean) : [];
+  const uniqueDois = Array.from(new Set(doiList));
+  const doiCount = uniqueDois.length;
+
+  const handleBlur = () => {
+    if (currentDois && onInputUpdate) {
+      onInputUpdate('dois', uniqueDois.join('\n'));
+    }
+  };
+
   return (
     <div style={styles.container}>
-      <div>
-        <span style={styles.label}>Input Files (.bib, .ris)</span>
+      <div style={styles.headerRow}>
+        <label htmlFor="batch-dois-textarea" style={{ ...styles.label, marginBottom: 0 }}>
+          List of DOIs (one per line)
+          <span style={styles.badge}>{doiCount} PDFs to download</span>
+        </label>
+        <button type="button" style={styles.uploadBtn} onClick={() => setIsModalOpen(true)}>
+          + Upload files
+        </button>
+      </div>
+      {isModalOpen && (
+        <div style={styles.modalOverlay} onClick={() => setIsModalOpen(false)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.headerRow}>
+              <h3 style={{ margin: 0, fontSize: '18px' }}>Extract DOIs</h3>
+              <button type="button" onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            <p style={{ fontSize: '14px', color: '#586069', marginBottom: '16px' }}>Select .bib or .ris files to automatically extract DOIs.</p>
         <div
           {...getRootProps()}
           style={{
@@ -159,13 +203,13 @@ export function BatchInput({
             </div>
           )}
         </div>
-      </div>
+          </div>
+        </div>
+      )}
 
-      <div>
-        <label htmlFor="batch-dois-textarea" style={styles.label}>
-          List of DOIs (one per line)
-        </label>
+      <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
         <textarea
+          onBlur={handleBlur}
           id="batch-dois-textarea"
           style={styles.textarea}
           placeholder="10.1000/182&#10;10.1000/183"
