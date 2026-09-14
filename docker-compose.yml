@@ -1,0 +1,48 @@
+services:
+
+  backend:
+    container_name: bibtech-backend
+    build: ./backend
+    expose:
+      - "8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://user:password@db:5432/dbname
+    depends_on:
+      - db
+
+  frontend:
+    container_name: bibtech-frontend
+    build: ./frontend
+    expose:
+      - "5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  nginx:
+    container_name: bibtech-nginx
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+
+  db:
+    container_name: bibtech-postgres
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=dbname
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
