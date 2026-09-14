@@ -72,8 +72,9 @@ export function useQueueState() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Failed to download ZIP archive', err);
-    },
-    [config.destination, selectedDois]
+    }
+  },
+  [config.destination, selectedDois]
   );
 
   const downloadMissingDois = useCallback(
