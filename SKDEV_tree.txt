@@ -36,7 +36,6 @@
 │   │   ├── Dockerfile
 │   │   ├── __init__.py
 │   │   ├── main.py
-│   │   ├── pyproject.toml
 │   │   ├── bibtech_backend.egg-info/
 │   │   │   ├── SOURCES.txt
 │   │   │   ├── dependency_links.txt
@@ -49,6 +48,11 @@
 │   │   │   │   ├── parser_service.py
 │   │   │   │   ├── router.py
 │   │   │   │   ├── schemas.py
+│   │   │   ├── bibtech_backend.egg-info/
+│   │   │   │   ├── SOURCES.txt
+│   │   │   │   ├── dependency_links.txt
+│   │   │   │   ├── requires.txt
+│   │   │   │   ├── top_level.txt
 │   │   ├── tests/
 │   │   │   ├── __init__.py
 │   │   │   ├── bibliography/

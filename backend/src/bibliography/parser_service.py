@@ -1,8 +1,51 @@
 import datetime
-from typing import List
+from typing import List, Optional
 import rispy
 import bibtexparser
 from .schemas import ParsedReference
+
+
+def _extract_bib_field(entry, key: str) -> Optional[str]:
+    if isinstance(entry, dict):
+        val = entry.get(key)
+    elif hasattr(entry, "fields_dict") and key in entry.fields_dict:
+        field = entry.fields_dict[key]
+        val = getattr(field, "value", str(field))
+    elif hasattr(entry, "fields"):
+        val = None
+        for field in entry.fields:
+            if getattr(field, "key", None) == key:
+                val = getattr(field, "value", str(field))
+                break
+    elif hasattr(entry, key):
+        val = getattr(entry, key)
+    elif hasattr(entry, "get"):
+        try:
+            val = entry.get(key)
+        except Exception:
+            val = None
+    else:
+        val = None
+
+    if val is not None:
+        if hasattr(val, "value"):
+            val = val.value
+        return str(val)
+    return None
+
+
+def _parse_bibtex_entries(content: str) -> list:
+    if hasattr(bibtexparser, "parse_string"):
+        result = bibtexparser.parse_string(content)
+        return list(getattr(result, "entries", getattr(result, "blocks", [])))
+    if hasattr(bibtexparser, "loads"):
+        result = bibtexparser.loads(content)
+        return list(getattr(result, "entries", []))
+    if hasattr(bibtexparser, "bparser"):
+        parser = bibtexparser.bparser.BibTexParser()
+        result = parser.parse(content)
+        return list(getattr(result, "entries", []))
+    return []
 
 def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
     parsed_refs: List[ParsedReference] = []
@@ -26,15 +69,14 @@ def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
             )
             
     elif ext.lower() == ".bib":
-        # bibtexparser carga el string y expone la lista de diccionarios en .entries
-        bib_database = bibtexparser.loads(content)
-        for entry in bib_database.entries:
+        entries = _parse_bibtex_entries(content)
+        for entry in entries:
             parsed_refs.append(
                 ParsedReference(
-                    author=entry.get("author", None),
-                    year=entry.get("year", None),
-                    title=entry.get("title", None),
-                    journal=entry.get("journal", None),
+                    author=_extract_bib_field(entry, "author"),
+                    year=_extract_bib_field(entry, "year"),
+                    title=_extract_bib_field(entry, "title"),
+                    journal=_extract_bib_field(entry, "journal"),
                     upload_datetime=now
                 )
             )
