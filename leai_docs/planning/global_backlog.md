@@ -6,7 +6,7 @@
 
 ## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
 - [ ] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
-- [ ] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
+- [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
 - [ ] [REQ-003] Bibliography Data Display &amp; Table View
 
 ## EPIC 3: BATCH LOAD INTERFACE

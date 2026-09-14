@@ -1,19 +1,216 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 15:13:38
+Date: 2026-09-14 15:23:53
 AST Mode: True
 Line Numbers: False
-Modules: execution_output.txt
-Processed Files: 1
+Modules: main.py, global_backlog.md, roadmap_1_bibliography_ingestion.md
+Processed Files: 3
 ===========================
 
 
 
-// --- execution_output.txt ---
+// --- backend/main.py ---
 
-=== PATCH OPERATIONS APPLIED ===
-- [Successful] CREATE -> leai_docs/planning/roadmap_2_batch_load.md
-- [Successful] EDIT -> leai_docs/planning/global_backlog.md
+from fastapi import FastAPI
+import sys
 
-=== VALIDATION COMMAND OUTPUT (PART 7) ===
-Pruebas omitidas o sin comandos bash ejecutados (# N/A).
+app = FastAPI()
+
+@app.get("/api/requirements")
+def get_requirements():
+    return {
+        "python_version": sys.version.split()[0],
+        "framework": "FastAPI 0.110.0",
+        "database": "POSTGRES (Versión: 16)",
+        "proxy": "Nginx (Puerto 80)" if True else "Directo (Puerto 5173/8000)",
+        "status": "¡Entorno moderno con pyproject.toml listo! 🚀"
+    }
+
+
+
+// --- leai_docs/planning/global_backlog.md ---
+
+# Global Backlog
+
+## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
+- [x] Story 1.0: Roadmap &amp; Planning Initialization
+- [x] Story 1.1: Project Dependencies &amp; Context Genesis
+
+## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
+- [ ] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
+- [ ] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
+- [ ] [REQ-003] Bibliography Data Display &amp; Table View
+
+## EPIC 3: BATCH LOAD INTERFACE
+- [x] [REQ-004] Frontend Routing &amp; Main Layout
+- [x] [REQ-005] Load View - State Fractality (Custom Hook)
+- [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
+- [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
+
+## Active Roadmaps
+- [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
+- [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
+
+
+// --- leai_docs/planning/roadmap_1_bibliography_ingestion.md ---
+
+---
+type: "roadmap"
+epic_name: "Bibliography Ingestion &amp; Display"
+domain: "Bibliography"
+complexity_aggregate: "MEDIUM"
+---
+
+# EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION | [ISOLATED VERTICAL]
+
+- [x] Story 1.0: Roadmap &amp; Planning Initialization | [MoSCoW: MUST] |
+  [Complexity: TRIVIAL]
+  Business Requirement: Initialize sequential agentic memory state trackers
+  ensuring DAG dependencies.
+  Story Context Radius:
+  {"leai_docs/planning/global_backlog.md": ["*"]}
+  Layered Technical Breakdown:
+  - [ID-1.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if
+    missing. 2. Create leai_docs/planning/global_backlog.md and append EPIC 1
+    and EPIC 2 with REQ-001, REQ-002, REQ-003, and the Roadmap link. 3. Write
+    THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block
+    above) into leai_docs/planning/roadmap_1_bibliography_ingestion.md].
+    Type: Task.
+  > Files touched: leai_docs/planning/global_backlog.md,
+  leai_docs/planning/roadmap_1_bibliography_ingestion.md
+
+- [x] Story 1.1: Project Dependencies &amp; Context Genesis | [MoSCoW: MUST] |
+  [Complexity: EASY]
+  &gt; Files touched: backend/pyproject.toml, frontend/package.json, context.md
+  Business Requirement: Install required libraries for parsing and UI, and
+  initialize the root context.
+  Story Context Radius:
+  {"backend/pyproject.toml": [""], "frontend/package.json": [""],
+  "context.md": [""],
+  "leai_docs/planning/roadmap_1_bibliography_ingestion.md": [""],
+  "leai_docs/planning/global_backlog.md": ["*"]}
+  Layered Technical Breakdown:
+  - [ID-1.1.1] [CORE/LOGIC]: [1. Add rispy and bibtexparser to
+    backend/pyproject.toml dependencies. 2. Add react-dropzone and date-fns
+    (for safe datetime formatting) to frontend/package.json dependencies. 3.
+    Create context.md at the root of the project defining the architecture
+    (FastAPI + React) and the Bibliography domain]. Type: Task.
+  - [ID-1.1.2] [PLANNING/SYNC]: [1. Open
+    leai_docs/planning/roadmap_1_bibliography_ingestion.md and check - [x]
+    for Story 1.1. 2. Append &gt; Files touched: backend/pyproject.toml,
+    frontend/package.json, context.md under the story]. Type: Task.
+
+# EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY | [ISOLATED VERTICAL]
+
+- [x] Story 2.1: Backend Parser Service (Core Logic &amp; TDE) | [MoSCoW: MUST] |
+  [Complexity: MEDIUM]
+  > Files touched: backend/src/bibliography/schemas.py, backend/src/bibliography/parser_service.py, backend/tests/bibliography/test_parser.py
+  Business Requirement: Implement pure Python logic to parse .ris and .bib
+  strings into a normalized schema. (&lt;-- REQ-002)
+  Story Context Radius:
+  {"backend/src/bibliography/parser_service.py": [""],
+  "backend/src/bibliography/schemas.py": [""],
+  "backend/tests/bibliography/test_parser.py": [""],
+  "leai_docs/planning/roadmap_1_bibliography_ingestion.md": [""],
+  "leai_docs/planning/global_backlog.md": ["*"]}
+  Layered Technical Breakdown:
+  - [ID-2.1.1] [TESTING/TDE]: [1. Arrange: Define a raw .ris string and a
+    raw .bib string in memory. 2. Act: Call parse_bibliography_content with
+    both strings. 3. Assert: Verify the returned list contains
+    ParsedReference objects with correctly mapped author, year, title,
+    journal, and a valid datetime]. Type: Task.
+  - [ID-2.1.2] [CORE/LOGIC]: [1. Create backend/src/bibliography/schemas.py
+    defining ParsedReference Pydantic model (author, year, title, journal,
+    upload_datetime). 2. Create backend/src/bibliography/parser_service.py.
+    3. Implement parse_bibliography_content(content: str, ext: str) -&gt;
+    List[ParsedReference] using rispy for .ris and bibtexparser for .bib,
+    injecting the current UTC datetime for upload_datetime]. Type: Task.
+  - [ID-2.1.3] [PLANNING/SYNC]: [1. Open
+    leai_docs/planning/roadmap_1_bibliography_ingestion.md and check - [x]
+    for Story 2.1. 2. Append &gt; Files touched:
+    backend/src/bibliography/schemas.py,
+    backend/src/bibliography/parser_service.py,
+    backend/tests/bibliography/test_parser.py under the story]. Type: Task.
+
+- [ ] Story 2.2: Backend Upload Endpoint (I/O &amp; Wiring) | [MoSCoW: MUST] |
+  [Complexity: EASY]
+  Business Requirement: Expose a FastAPI endpoint to receive files and
+  return parsed data. (&lt;-- REQ-002)
+  Story Context Radius:
+  {"backend/src/bibliography/router.py": [""], "backend/main.py": [""],
+  "backend/tests/bibliography/test_router.py": [""],
+  "leai_docs/planning/roadmap_1_bibliography_ingestion.md": [""],
+  "leai_docs/planning/global_backlog.md": ["*"]}
+  Layered Technical Breakdown:
+  - [ID-2.2.1] [TESTING/TDE]: [1. Arrange: Mock parse_bibliography_content
+    to return a dummy ParsedReference. Create a dummy UploadFile payload. 2.
+    Act: Send POST request to /api/bibliography/upload using TestClient. 3.
+    Assert: Verify status code is 200 and response JSON matches the mocked
+    ParsedReference]. Type: Task.
+  - [ID-2.2.2] [EXTERNAL/IO]: [1. Create backend/src/bibliography/router.py
+    with an APIRouter. 2. Implement POST /upload accepting UploadFile. 3.
+    Read file content, extract extension, call parse_bibliography_content,
+    and return the list]. Type: Task.
+  - [ID-2.2.3] [CORE/WIRING]: [1. Open backend/main.py. 2. Import the
+    bibliography router. 3. Include the router in the FastAPI app under the
+    prefix /api/bibliography]. Type: Task.
+  - [ID-2.2.4] [PLANNING/SYNC]: [1. Open
+    leai_docs/planning/roadmap_1_bibliography_ingestion.md and check - [x]
+    for Story 2.2. 2. Append &gt; Files touched:
+    backend/src/bibliography/router.py, backend/main.py,
+    backend/tests/bibliography/test_router.py under the story. 3. Open
+    leai_docs/planning/global_backlog.md and check - [x] for REQ-002].
+    Type: Task.
+
+- [ ] Story 2.3: Frontend State Management (Hooks) | [MoSCoW: MUST] |
+  [Complexity: MEDIUM]
+  Business Requirement: Isolate React state and API calling logic from the
+  UI components. (&lt;-- REQ-001, REQ-003)
+  Story Context Radius:
+  {"frontend/src/hooks/useBibliography.js": [""],
+  "leai_docs/planning/roadmap_1_bibliography_ingestion.md": [""],
+  "leai_docs/planning/global_backlog.md": ["*"]}
+  Layered Technical Breakdown:
+  - [ID-2.3.1] [UI/STATE]: [1. Create frontend/src/hooks/useBibliography.js.
+    2. Implement state variables: references (array), isLoading (boolean),
+    error (string). 3. Implement uploadFile(file) function that creates a
+    FormData, sends a POST to /api/bibliography/upload, and updates the
+    states accordingly. 4. Export the hook]. Type: Task.
+  - [ID-2.3.2] [PLANNING/SYNC]: [1. Open
+    leai_docs/planning/roadmap_1_bibliography_ingestion.md and check - [x]
+    for Story 2.3. 2. Append &gt; Files touched:
+    frontend/src/hooks/useBibliography.js under the story]. Type: Task.
+
+- [ ] Story 2.4: Frontend Dumb Views (UI &amp; Wiring) | [MoSCoW: MUST] |
+  [Complexity: EASY]
+  Business Requirement: Implement pure, dumb UI components for Drag &amp; Drop
+  and Table display, wired to the custom hook. (&lt;-- REQ-001, REQ-003)
+  Story Context Radius:
+  {"frontend/src/App.jsx": [""],
+  "frontend/src/components/BibliographyUploader.jsx": [""],
+  "frontend/src/components/ReferenceTable.jsx": [""],
+  "frontend/src/hooks/useBibliography.js": [""],
+  "leai_docs/planning/roadmap_1_bibliography_ingestion.md": [""],
+  "leai_docs/planning/global_backlog.md": [""]}
+  Layered Technical Breakdown:
+  - [ID-2.4.1] [UI/VIEW]: [1. Create
+    frontend/src/components/BibliographyUploader.jsx. 2. Implement a dumb
+    component using react-dropzone that accepts an onUpload prop. 3.
+    Trigger onUpload(file) when a valid .ris or .bib file is dropped].
+    Type: Task.
+  - [ID-2.4.2] [UI/VIEW]: [1. Create
+    frontend/src/components/ReferenceTable.jsx. 2. Implement a dumb
+    component that accepts a references prop. 3. Render a native HTML
+    &lt;table&gt; with columns: Author, Year, Title, Journal, Upload Datetime
+    (formatted via date-fns)]. Type: Task.
+  - [ID-2.4.3] [UI/WIRING]: [1. Modify frontend/src/App.jsx. 2. Import and
+    initialize useBibliography(). 3. Render BibliographyUploader passing
+    uploadFile to onUpload. 4. Render ReferenceTable passing the references
+    state. 5. Display loading/error states if applicable]. Type: Task.
+  - [ID-2.4.4] [PLANNING/SYNC]: [1. Open
+    leai_docs/planning/roadmap_1_bibliography_ingestion.md and check - [x]
+    for Story 2.4. 2. Append &gt; Files touched: frontend/src/App.jsx,
+    frontend/src/components/BibliographyUploader.jsx,
+    frontend/src/components/ReferenceTable.jsx under the story. 3. Open
+    leai_docs/planning/global_backlog.md and check - [x] for REQ-001 and
+    REQ-003]. Type: Task.

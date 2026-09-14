@@ -46,8 +46,9 @@ complexity_aggregate: "MEDIUM"
 
 # EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY | [ISOLATED VERTICAL]
 
-- [ ] Story 2.1: Backend Parser Service (Core Logic &amp; TDE) | [MoSCoW: MUST] |
+- [x] Story 2.1: Backend Parser Service (Core Logic &amp; TDE) | [MoSCoW: MUST] |
   [Complexity: MEDIUM]
+  > Files touched: backend/src/bibliography/schemas.py, backend/src/bibliography/parser_service.py, backend/tests/bibliography/test_parser.py
   Business Requirement: Implement pure Python logic to parse .ris and .bib
   strings into a normalized schema. (&lt;-- REQ-002)
   Story Context Radius:
@@ -75,8 +76,9 @@ complexity_aggregate: "MEDIUM"
     backend/src/bibliography/parser_service.py,
     backend/tests/bibliography/test_parser.py under the story]. Type: Task.
 
-- [ ] Story 2.2: Backend Upload Endpoint (I/O &amp; Wiring) | [MoSCoW: MUST] |
+- [x] Story 2.2: Backend Upload Endpoint (I/O &amp; Wiring) | [MoSCoW: MUST] |
   [Complexity: EASY]
+  > Files touched: backend/src/bibliography/router.py, backend/main.py, backend/tests/bibliography/test_router.py
   Business Requirement: Expose a FastAPI endpoint to receive files and
   return parsed data. (&lt;-- REQ-002)
   Story Context Radius:

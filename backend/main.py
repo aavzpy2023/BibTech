@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 import sys
+from backend.src.bibliography.router import router as bibliography_router
 
 app = FastAPI()
+
+app.include_router(bibliography_router, prefix="/api/bibliography", tags=["bibliography"])
 
 @app.get("/api/requirements")
 def get_requirements():

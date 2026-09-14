@@ -1,0 +1,44 @@
+import datetime
+from typing import List
+import rispy
+import bibtexparser
+from .schemas import ParsedReference
+
+def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
+    parsed_refs: List[ParsedReference] = []
+    now = datetime.datetime.now(datetime.timezone.utc)
+    
+    if ext.lower() == ".ris":
+        # rispy.loads maneja el string crudo y extrae diccionarios
+        entries = rispy.loads(content)
+        for entry in entries:
+            authors = entry.get("authors", [])
+            author_str = " and ".join(authors) if isinstance(authors, list) else authors
+            
+            parsed_refs.append(
+                ParsedReference(
+                    author=author_str or None,
+                    year=entry.get("year", None),
+                    title=entry.get("title", None),
+                    journal=entry.get("journal_name", None),
+                    upload_datetime=now
+                )
+            )
+            
+    elif ext.lower() == ".bib":
+        # bibtexparser carga el string y expone la lista de diccionarios en .entries
+        bib_database = bibtexparser.loads(content)
+        for entry in bib_database.entries:
+            parsed_refs.append(
+                ParsedReference(
+                    author=entry.get("author", None),
+                    year=entry.get("year", None),
+                    title=entry.get("title", None),
+                    journal=entry.get("journal", None),
+                    upload_datetime=now
+                )
+            )
+    else:
+        raise ValueError(f"Unsupported extension: {ext}")
+        
+    return parsed_refs
