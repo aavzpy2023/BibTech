@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { BatchProvider } from '../hooks/useBatchLoad';
 
 const navItems = [
   { name: 'Dashboard', path: '/' },
@@ -59,7 +60,9 @@ function Layout() {
         </nav>
       </header>
       <main style={styles.main}>
-        <Outlet />
+        <BatchProvider>
+          <Outlet />
+        </BatchProvider>
       </main>
     </div>
   );

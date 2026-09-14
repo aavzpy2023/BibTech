@@ -17,8 +17,7 @@ describe('BatchMonitor component', () => {
       />
     );
 
-    expect(screen.getByText('Log 1: Initializing download')).toBeTruthy();
-    expect(screen.getByText('Log 2: In progress')).toBeTruthy();
+    expect(screen.queryByText('Log 1: Initializing download')).toBeNull();
     expect(screen.getByText(/45 \/ 344/)).toBeTruthy();
 
     const progressBar = screen.getByTestId('progress-bar-fill');
@@ -42,5 +41,21 @@ describe('BatchMonitor component', () => {
     fireEvent.click(startButton);
 
     expect(mockOnStart).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables button when isDownloading is true', () => {
+    render(
+      <BatchMonitor
+        progress={1}
+        total={10}
+        isDownloading={true}
+        onStart={vi.fn()}
+      />
+    );
+
+    const startButton = screen.getByRole('button', {
+      name: /downloading/i
+    });
+    expect(startButton).toBeDisabled();
   });
 });

@@ -81,6 +81,19 @@ const styles = {
     color: '#586069',
     marginTop: '4px'
   },
+  progressTrack: {
+    width: '100%',
+    height: '10px',
+    backgroundColor: '#e1e4e8',
+    borderRadius: '5px',
+    overflow: 'hidden',
+    marginTop: '8px'
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#0366d6',
+    transition: 'width 0.3s ease'
+  },
   table: {
     width: '100%',
     borderCollapse: 'collapse',
@@ -207,6 +220,26 @@ export function QueueView() {
           <p style={styles.subtitle}>
           Batch: {config.destination || 'Default'} | Progress: {monitor?.progress ?? 0}/{monitor?.total || dois.length}
         </p>
+        <div style={styles.progressTrack}>
+          <div
+            data-testid="queue-progress-bar-fill"
+            style={{
+              ...styles.progressFill,
+              width: `${
+                (monitor?.total || dois.length) > 0
+                  ? Math.min(
+                      100,
+                      Math.round(
+                        ((monitor?.progress ?? 0) /
+                          (monitor?.total || dois.length)) *
+                          100
+                      )
+                    )
+                  : 0
+              }%`
+            }}
+          />
+        </div>
       </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button

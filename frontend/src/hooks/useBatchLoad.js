@@ -1,4 +1,9 @@
-import { useState, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback
+} from 'react';
 
 const initialInputState = {
   files: [],
@@ -17,11 +22,12 @@ const initialMonitorState = {
   logs: []
 };
 
-export function useBatchLoad() {
+function useBatchLoadInternal() {
   const [input, setInput] = useState(initialInputState);
   const [config, setConfig] = useState(initialConfigState);
   const [monitor, setMonitor] = useState(initialMonitorState);
   const [statuses, setStatuses] = useState({});
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const updateInput = useCallback((fieldOrUpdates, maybeValue) => {
     setInput((prev) => {
@@ -55,6 +61,7 @@ export function useBatchLoad() {
     setConfig(initialConfigState);
     setMonitor(initialMonitorState);
     setStatuses({});
+    setIsDownloading(false);
   }, []);
 
   const startBatch = useCallback(
@@ -69,6 +76,7 @@ export function useBatchLoad() {
 
       const activeConfig = overrideConfig ?? config;
 
+      setIsDownloading(true);
       const initialStatuses = {};
       dois.forEach((d) => {
         initialStatuses[d] = 'queued';
@@ -139,6 +147,8 @@ export function useBatchLoad() {
         ...prev,
         logs: [...prev.logs, `Error: ${err.message}`]
       }));
+    } finally {
+      setIsDownloading(false);
     }
   }, [input.dois, config.delay, config.destination, config.email]);
 
@@ -149,6 +159,7 @@ export function useBatchLoad() {
     config,
     monitor,
     statuses,
+    isDownloading,
     isValidEmail,
     resetBatch,
     updateInput,
@@ -156,6 +167,22 @@ export function useBatchLoad() {
     updateMonitor,
     startBatch
   };
+}
+
+const BatchContext = createContext(null);
+
+export function BatchProvider({ children }) {
+  const batchState = useBatchLoadInternal();
+  return (
+    <BatchContext.Provider value={batchState}>
+      {children}
+    </BatchContext.Provider>
+  );
+}
+
+export function useBatchLoad() {
+  const context = useContext(BatchContext);
+  return context || useBatchLoadInternal();
 }
 
 export default useBatchLoad;

@@ -158,4 +158,36 @@ describe('useBatchLoad hook', () => {
     expect(result.current.config.destination).toBe('');
     expect(result.current.config.email).toBe('');
   });
+
+  it('sets isDownloading to true during batch download and false when done', async () => {
+    const payload = 'data: {"progress": 1, "total": 1}\n\n';
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(payload));
+        controller.close();
+      }
+    });
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      body: stream
+    });
+
+    const { result } = renderHook(() => useBatchLoad());
+
+    expect(result.current.isDownloading).toBe(false);
+
+    let startPromise;
+    act(() => {
+      startPromise = result.current.startBatch(['10.1/test']);
+    });
+
+    expect(result.current.isDownloading).toBe(true);
+
+    await act(async () => {
+      await startPromise;
+    });
+
+    expect(result.current.isDownloading).toBe(false);
+  });
 });

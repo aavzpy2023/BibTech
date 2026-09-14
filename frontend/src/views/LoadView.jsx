@@ -54,6 +54,7 @@ export function LoadView() {
     updateInput,
     updateConfig,
     isValidEmail,
+    isDownloading,
     resetBatch,
     startBatch
   } = useBatchLoad();
@@ -61,6 +62,8 @@ export function LoadView() {
   const isValid =
     input.dois.trim() !== '' &&
     config.destination.trim() !== '' &&
+    isValidEmail &&
+    !isDownloading;
     config.email.trim() !== '';
 
   return (
@@ -101,9 +104,11 @@ export function LoadView() {
         total={monitor.total}
         logs={monitor.logs}
         disabled={!isValid}
-        onStart={() =>
-          navigate('/queue', { state: { dois: input.dois, config } })
-        }
+        isDownloading={isDownloading}
+        onStart={() => {
+          startBatch();
+          navigate('/queue', { state: { dois: input.dois, config } });
+        }}
       />
     </div>
   );

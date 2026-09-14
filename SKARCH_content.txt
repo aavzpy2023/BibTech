@@ -1,124 +1,280 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 17:49:31
+Date: 2026-09-14 17:54:22
 AST Mode: True
 Line Numbers: False
-Modules: useQueueState.js
-Processed Files: 1
+Modules: Layout.jsx, BatchMonitor.jsx, BatchMonitor.test.jsx
+Processed Files: 3
 ===========================
 
 
 
-// --- frontend/src/hooks/useQueueState.js ---
+// --- frontend/src/components/Layout.jsx ---
 
-import { useState, useMemo, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import React from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
 
-export function useQueueState() {
-  const location = useLocation();
-  const rawDois = location.state?.dois ?? '';
-  const config = location.state?.config ?? {};
+const navItems = [
+  { name: 'Dashboard', path: '/' },
+  { name: 'Search', path: '/search' },
+  { name: 'Load', path: '/load' },
+  { name: 'Download queue', path: '/queue' },
+  { name: 'References', path: '/references' }
+];
 
-  const dois = useMemo(() => {
-    if (Array.isArray(rawDois)) {
-      return rawDois;
-    }
-    if (typeof rawDois === 'string') {
-      return rawDois
-        .split('\n')
-        .map((d) => d.trim())
-        .filter((d) => d.length > 0);
-    }
-    return [];
-  }, [rawDois]);
+const styles = {
+  header: {
+    borderBottom: '1px solid #e1e4e8',
+    padding: '0 20px',
+    backgroundColor: '#ffffff'
+  },
+  nav: {
+    display: 'flex',
+    gap: '24px',
+    alignItems: 'center'
+  },
+  link: {
+    padding: '16px 4px',
+    textDecoration: 'none',
+    color: '#586069',
+    fontWeight: 500,
+    fontSize: '14px',
+    borderBottom: '2px solid transparent'
+  },
+  activeLink: {
+    color: '#0366d6',
+    borderBottom: '2px solid #0366d6'
+  },
+  main: {
+    padding: '24px',
+    maxWidth: '1200px',
+    margin: '0 auto'
+  }
+};
 
-  const [selectedDois, setSelectedDois] = useState([]);
-
-  const toggleSelection = useCallback((doi) => {
-    setSelectedDois((prev) =>
-      prev.includes(doi) ? prev.filter((d) => d !== doi) : [...prev, doi]
-    );
-  }, []);
-
-  const toggleAll = useCallback(
-    (allDois) => {
-      const targetList = allDois ?? dois;
-      setSelectedDois((prev) =>
-        prev.length === targetList.length ? [] : [...targetList]
-      );
-    },
-    [dois]
+function Layout() {
+  return (
+    <div>
+      <header style={styles.header}>
+        <nav style={styles.nav}>
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              style={({ isActive }) => ({
+                ...styles.link,
+                ...(isActive ? styles.activeLink : {})
+              })}
+            >
+              {item.name}
+            </NavLink>
+          ))}
+        </nav>
+      </header>
+      <main style={styles.main}>
+        <Outlet />
+      </main>
+    </div>
   );
-
-  const downloadZip = useCallback(
-    async (overrideDois) => {
-      const targetDois =
-        overrideDois && overrideDois.length > 0
-          ? overrideDois
-          : selectedDois;
-
-      if (targetDois.length === 0) return;
-
-      const batchName = config.destination || 'download_batch';
-    try {
-      const response = await fetch('/api/bibliography/download-zip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          batch_name: batchName,
-          dois: targetDois
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Download failed with status ${response.status}`);
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${batchName}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Failed to download ZIP archive', err);
-    },
-    [config.destination, selectedDois]
-  );
-
-  const downloadMissingDois = useCallback(
-    (missingList, batchNameOverride) => {
-      if (!missingList || missingList.length === 0) return;
-
-      const batchName =
-        batchNameOverride || config.destination || 'batch';
-      const blob = new Blob([missingList.join('\n')], {
-        type: 'text/plain;charset=utf-8'
-      });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${batchName}_missing_dois.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    },
-    [config.destination]
-  );
-
-  return {
-    dois,
-    config,
-    selectedDois,
-    toggleSelection,
-    toggleAll,
-    downloadZip,
-    downloadMissingDois
-  };
 }
 
-export default useQueueState;
+export default Layout;
+
+
+// --- frontend/src/components/load/BatchMonitor.jsx ---
+
+import React from 'react';
+
+const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    padding: '20px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #e1e4e8',
+    borderRadius: '8px'
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  button: {
+    padding: '10px 24px',
+    backgroundColor: '#2ea44f',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    fontWeight: 'bold',
+    fontSize: '14px',
+    cursor: 'pointer'
+  },
+  progressContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px'
+  },
+  progressText: {
+    fontSize: '13px',
+    color: '#586069',
+    display: 'flex',
+    justifyContent: 'space-between'
+  },
+  track: {
+    width: '100%',
+    height: '16px',
+    backgroundColor: '#e1e4e8',
+    borderRadius: '8px',
+    overflow: 'hidden'
+  },
+  fill: {
+    height: '100%',
+    backgroundColor: '#0366d6',
+    transition: 'width 0.3s ease'
+  },
+  logsContainer: {
+    backgroundColor: '#0d1117',
+    color: '#c9d1d9',
+    fontFamily: 'monospace',
+    fontSize: '12px',
+    padding: '12px',
+    borderRadius: '6px',
+    maxHeight: '180px',
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px'
+  }
+};
+
+export function BatchMonitor({
+  progress = 0,
+  total = 0,
+  logs = [],
+  disabled = false,
+  monitor,
+  onStart
+}) {
+  const currentProgress = monitor?.progress ?? progress;
+  const currentTotal = monitor?.total ?? total;
+  const currentLogs = monitor?.logs ?? logs;
+
+  const percentage =
+    currentTotal > 0
+      ? Math.min(100, Math.round((currentProgress / currentTotal) * 100))
+      : 0;
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h3 style={{ margin: 0, fontSize: '16px', color: '#24292e' }}>
+          Load and Download Monitor
+        </h3>
+        <button
+          type="button"
+          disabled={disabled}
+          style={{
+            ...styles.button,
+            backgroundColor: disabled ? '#94d3a2' : '#2ea44f',
+            cursor: disabled ? 'not-allowed' : 'pointer'
+          }}
+          onClick={disabled ? undefined : onStart}
+        >
+          Start Download
+        </button>
+      </div>
+
+      <div style={styles.progressContainer}>
+        <div style={styles.progressText}>
+          <span>Retrieval progress</span>
+          <span>
+            {currentProgress} / {currentTotal} ({percentage}%)
+          </span>
+        </div>
+        <div style={styles.track}>
+          <div
+            data-testid="progress-bar-fill"
+            style={{
+              ...styles.fill,
+              width: `${percentage}%`
+            }}
+          />
+        </div>
+      </div>
+
+      <div>
+        <div
+          style={{
+            fontSize: '13px',
+            fontWeight: 'bold',
+            marginBottom: '6px'
+          }}
+        >
+          Event logs
+        </div>
+        <div style={styles.logsContainer}>
+          {currentLogs.length === 0 ? (
+            <span style={{ color: '#8b949e' }}>No recent activity.</span>
+          ) : (
+            currentLogs.map((log, index) => (
+              <div key={`${index}-${log.slice(0, 10)}`}>{log}</div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default BatchMonitor;
+
+
+// --- frontend/src/components/load/BatchMonitor.test.jsx ---
+
+import React from 'react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import BatchMonitor from './BatchMonitor';
+
+describe('BatchMonitor component', () => {
+  it('renders progress bar width and log text correctly', () => {
+    const mockOnStart = vi.fn();
+    const logs = ['Log 1: Initializing download', 'Log 2: In progress'];
+
+    render(
+      <BatchMonitor
+        progress={45}
+        total={344}
+        logs={logs}
+        onStart={mockOnStart}
+      />
+    );
+
+    expect(screen.getByText('Log 1: Initializing download')).toBeTruthy();
+    expect(screen.getByText('Log 2: In progress')).toBeTruthy();
+    expect(screen.getByText(/45 \/ 344/)).toBeTruthy();
+
+    const progressBar = screen.getByTestId('progress-bar-fill');
+    expect(progressBar.style.width).toContain('%');
+  });
+
+  it('triggers onStart when Start Download button is clicked', () => {
+    const mockOnStart = vi.fn();
+    render(
+      <BatchMonitor
+        progress={0}
+        total={10}
+        logs={[]}
+        onStart={mockOnStart}
+      />
+    );
+
+    const startButton = screen.getByRole('button', {
+      name: /iniciar descarga/i
+    });
+    fireEvent.click(startButton);
+
+    expect(mockOnStart).toHaveBeenCalledTimes(1);
+  });
+});

@@ -68,6 +68,7 @@ export function BatchMonitor({
   total = 0,
   logs = [],
   disabled = false,
+  isDownloading = false,
   monitor,
   onStart
 }) {
@@ -88,15 +89,15 @@ export function BatchMonitor({
         </h3>
         <button
           type="button"
-          disabled={disabled}
+          disabled={disabled || isDownloading}
           style={{
             ...styles.button,
             backgroundColor: disabled ? '#94d3a2' : '#2ea44f',
             cursor: disabled ? 'not-allowed' : 'pointer'
           }}
-          onClick={disabled ? undefined : onStart}
+          onClick={disabled || isDownloading ? undefined : onStart}
         >
-          Start Download
+          {isDownloading ? 'Downloading...' : 'Start Download'}
         </button>
       </div>
 
@@ -118,7 +119,7 @@ export function BatchMonitor({
         </div>
       </div>
 
-      <div>
+      {false && <div>
         <div
           style={{
             fontSize: '13px',
@@ -137,7 +138,7 @@ export function BatchMonitor({
             ))
           )}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
