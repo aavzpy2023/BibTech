@@ -27,7 +27,7 @@
 - [x] [REQ-014] Backend ZIP Service &amp; Download Action
 
 ## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
-- [ ] [REQ-015] Core Domain Models (Projects &amp; Articles)
+- [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
 - [ ] [REQ-016] Identity Domain Models &amp; Keywords
 - [ ] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
 

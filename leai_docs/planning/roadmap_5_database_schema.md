@@ -25,7 +25,8 @@ complexity_aggregate: "HARD"
   - [ID-6.1.3] [CORE/MIGRATIONS]: [1. Initialize Alembic within backend/. 2. Modify backend/alembic/env.py to import Base from backend.src.database.session. 3. Set target_metadata = Base.metadata to link the ORM to the migration engine safely]. Type: Task.
   - [ID-6.1.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_5_database_schema.md and check - [x] for Story 6.1. 2. Append > Files touched: pyproject.toml, session.py, alembic/env.py under the story]. Type: Task.
 
-- [ ] Story 6.2: Core Domain Models (Projects & Articles) | [MoSCoW: MUST] | [Complexity: HARD]
+- [x] Story 6.2: Core Domain Models (Projects & Articles) | [MoSCoW: MUST] | [Complexity: HARD]
+  > Files touched: core.py, test_core_models.py, alembic/versions/001_add_core_models.py
   Business Requirement: Define the central entities Project and Article with a Many-to-Many relationship, enforcing Semantic Primacy. (<-- REQ-015)
   Story Context Radius: {"backend/src/database/session.py": [""], "backend/src/database/models/core.py": [""], "backend/tests/database/test_core_models.py": [""], "backend/alembic/env.py": [""], "leai_docs/planning/roadmap_5_database_schema.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown:
