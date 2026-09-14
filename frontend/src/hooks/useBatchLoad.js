@@ -50,6 +50,13 @@ export function useBatchLoad() {
     });
   }, []);
 
+  const resetBatch = useCallback(() => {
+    setInput(initialInputState);
+    setConfig(initialConfigState);
+    setMonitor(initialMonitorState);
+    setStatuses({});
+  }, []);
+
   const startBatch = useCallback(
     async (overrideDois, overrideConfig) => {
       const rawDois = overrideDois ?? input.dois;
@@ -143,6 +150,7 @@ export function useBatchLoad() {
     monitor,
     statuses,
     isValidEmail,
+    resetBatch,
     updateInput,
     updateConfig,
     updateMonitor,

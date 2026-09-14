@@ -1,322 +1,220 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 17:23:13
+Date: 2026-09-14 17:42:14
 AST Mode: True
 Line Numbers: False
-Modules: download_service.py, useBatchLoad.js, useBatchLoad.test.js
-Processed Files: 3
+Modules: BatchComponents.test.jsx, BatchInput.jsx
+Processed Files: 2
 ===========================
 
 
 
-// --- backend/src/bibliography/download_service.py ---
+// --- frontend/src/components/load/BatchComponents.test.jsx ---
 
-import asyncio
-import json
-from typing import AsyncGenerator, List
-import httpx
-from .resolver_service import resolve_pdf_url
-from .file_storage_service import save_pdf_bytes
+import React from 'react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import BatchInput from './BatchInput';
+import BatchConfig from './BatchConfig';
 
+describe('BatchLoad Dumb Components', () => {
+  describe('BatchInput', () => {
+    it('renders dropzone area and textarea', () => {
+      const mockOnInputUpdate = vi.fn();
+      render(
+        <BatchInput
+          dois=""
+          files={[]}
+          onInputUpdate={mockOnInputUpdate}
+        />
+      );
 
-async def _download_and_save(dest: str, doi: str, url: str) -> str:
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        res = await client.get(url)
-        res.raise_for_status()
-        return await save_pdf_bytes(dest, doi, res.content)
-
-
-async def execute_batch_download(
-    dois: List[str], dest: str, email: str, delay: int
-) -> AsyncGenerator[str, None]:
-    total, completed = len(dois), 0
-    for doi in dois:
-        yield json.dumps({
-            "progress": completed,
-            "total": total,
-            "log": f"Resolving: {doi}"
-        })
-        try:
-            url = await resolve_pdf_url(doi, email)
-            if url:
-                path = await _download_and_save(dest, doi, url)
-                log = f'Downloaded {doi} to {path}'
-                status = 'downloaded'
-            else:
-                log = f'No open access URL found for {doi}'
-                status = 'not_found'
-        except Exception as err:
-            log = f'Failed {doi}: {err}'
-            status = 'failed'
-        completed += 1
-        yield json.dumps({
-            'progress': completed,
-            'total': total,
-            'log': log,
-            'doi': doi,
-            'status': status,
-        })
-            "log": log
-        })
-        if delay > 0 and completed < total:
-            await asyncio.sleep(delay)
-    yield json.dumps({
-        "progress": total,
-        "total": total,
-        "log": "Batch processing finished"
-    })
-
-
-// --- frontend/src/hooks/useBatchLoad.js ---
-
-import { useState, useCallback } from 'react';
-
-const initialInputState = {
-  files: [],
-  dois: ''
-};
-
-const initialConfigState = {
-  delay: 5,
-  destination: '',
-  email: ''
-};
-
-const initialMonitorState = {
-  progress: 0,
-  total: 0,
-  logs: []
-};
-
-export function useBatchLoad() {
-  const [input, setInput] = useState(initialInputState);
-  const [config, setConfig] = useState(initialConfigState);
-  const [monitor, setMonitor] = useState(initialMonitorState);
-  const [statuses, setStatuses] = useState({});
-
-  const updateInput = useCallback((fieldOrUpdates, maybeValue) => {
-    setInput((prev) => {
-      if (typeof fieldOrUpdates === 'string') {
-        return { ...prev, [fieldOrUpdates]: maybeValue };
-      }
-      return { ...prev, ...fieldOrUpdates };
-    });
-  }, []);
-
-  const updateConfig = useCallback((fieldOrUpdates, maybeValue) => {
-    setConfig((prev) => {
-      if (typeof fieldOrUpdates === 'string') {
-        return { ...prev, [fieldOrUpdates]: maybeValue };
-      }
-      return { ...prev, ...fieldOrUpdates };
-    });
-  }, []);
-
-  const updateMonitor = useCallback((fieldOrUpdates, maybeValue) => {
-    setMonitor((prev) => {
-      if (typeof fieldOrUpdates === 'string') {
-        return { ...prev, [fieldOrUpdates]: maybeValue };
-      }
-      return { ...prev, ...fieldOrUpdates };
-    });
-  }, []);
-
-  const startBatch = useCallback(
-    async (overrideDois, overrideConfig) => {
-      const rawDois = overrideDois ?? input.dois;
-      const dois = Array.isArray(rawDois)
-        ? rawDois
-        : rawDois
-            .split('\n')
-            .map((d) => d.trim())
-            .filter((d) => d.length > 0);
-
-      const activeConfig = overrideConfig ?? config;
-
-      const initialStatuses = {};
-      dois.forEach((d) => {
-        initialStatuses[d] = 'queued';
-      });
-      setStatuses(initialStatuses);
-
-    setMonitor({
-      progress: 0,
-      total: dois.length,
-      logs: ['Starting batch download...']
+      expect(screen.getByPlaceholderText(/10\./i)).toBeTruthy();
+      expect(screen.getByText(/arrastra o selecciona archivos/i)).toBeTruthy();
     });
 
-    try {
-      const response = await fetch('/api/bibliography/batch-download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dois,
-          delay: Number(activeConfig.delay ?? 5),
-          destination: activeConfig.destination ?? '',
-          email: activeConfig.email ?? ''
-        })
-      });
+    it('triggers onInputUpdate when textarea content changes', () => {
+      const mockOnInputUpdate = vi.fn();
+      render(
+        <BatchInput
+          dois=""
+          files={[]}
+          onInputUpdate={mockOnInputUpdate}
+        />
+      );
 
-      if (!response.ok || !response.body) {
-        throw new Error(`HTTP error ${response.status}`);
-      }
+      const textarea = screen.getByPlaceholderText(/10\./i);
+      fireEvent.change(textarea, { target: { value: '10.1000/182' } });
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8');
-      let buffer = '';
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n\n');
-        buffer = lines.pop() || '';
-
-        for (const block of lines) {
-          const trimmed = block.trim();
-          if (trimmed.startsWith('data:')) {
-            const jsonStr = trimmed.slice(5).trim();
-            try {
-              const eventData = JSON.parse(jsonStr);
-              if (eventData.doi && eventData.status) {
-                setStatuses((prev) => ({
-                  ...prev,
-                  [eventData.doi]: eventData.status
-                }));
-              }
-              setMonitor((prev) => ({
-                progress: eventData.progress ?? prev.progress,
-                total: eventData.total ?? prev.total,
-                logs: eventData.log
-                  ? [...prev.logs, eventData.log]
-                  : prev.logs
-              }));
-            } catch {
-              // Ignore non-JSON or partial chunk
-            }
-          }
-        }
-      }
-    } catch (err) {
-      setMonitor((prev) => ({
-        ...prev,
-        logs: [...prev.logs, `Error: ${err.message}`]
-      }));
-    }
-  }, [input.dois, config.delay, config.destination, config.email]);
-
-  return {
-    input,
-    config,
-    monitor,
-    updateInput,
-    updateConfig,
-    updateMonitor,
-    startBatch
-  };
-}
-
-export default useBatchLoad;
-
-
-// --- frontend/src/hooks/useBatchLoad.test.js ---
-
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useBatchLoad } from './useBatchLoad';
-
-describe('useBatchLoad hook', () => {
-  const originalFetch = global.fetch;
-
-  beforeEach(() => {
-    vi.restoreAllMocks();
+      expect(mockOnInputUpdate).toHaveBeenCalledWith('dois', '10.1000/182');
+    });
   });
 
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
+  describe('BatchConfig', () => {
+    it('renders slider, 5 checkboxes and 2 text inputs correctly', () => {
+      const mockOnConfigUpdate = vi.fn();
+      const initialConfig = {
+        delay: 15,
+        sources: ['Unpaywall'],
+        destination: '/downloads',
+        email: 'test@example.com'
+      };
 
-  it('initializes with default states', () => {
-    const { result } = renderHook(() => useBatchLoad());
-    expect(result.current.input.dois).toBe('');
-    expect(result.current.config.delay).toBe(5);
-    expect(result.current.monitor.progress).toBe(0);
-    expect(result.current.monitor.logs).toEqual([]);
-  });
+      render(
+        <BatchConfig
+          config={initialConfig}
+          onConfigUpdate={mockOnConfigUpdate}
+        />
+      );
 
-  it('updates input and config correctly', () => {
-    const { result } = renderHook(() => useBatchLoad());
-
-    act(() => {
-      result.current.updateInput('dois', '10.1000/182\n10.1000/183');
-      result.current.updateConfig('destination', '/downloads');
-      result.current.updateConfig('email', 'author@uni.edu');
+      expect(screen.getByRole('slider')).toBeTruthy();
+      const checkboxes = screen.getAllByRole('checkbox');
+      expect(checkboxes.length).toBe(5);
+      expect(screen.getByPlaceholderText(/carpeta o ruta/i)).toBeTruthy();
+      expect(screen.getByPlaceholderText(/correo/i)).toBeTruthy();
     });
 
-    expect(result.current.input.dois).toBe('10.1000/182\n10.1000/183');
-    expect(result.current.config.destination).toBe('/downloads');
-    expect(result.current.config.email).toBe('author@uni.edu');
-  });
+    it('triggers onConfigUpdate when delay slider changes', () => {
+      const mockOnConfigUpdate = vi.fn();
+      render(
+        <BatchConfig
+          delay={5}
+          onConfigUpdate={mockOnConfigUpdate}
+        />
+      );
 
-  it('streams batch download updates via startBatch', async () => {
-    const eventPayload =
-      'data: {"progress": 1, "total": 1, "log": "test"}\n\n';
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(new TextEncoder().encode(eventPayload));
-        controller.close();
-      }
+      const slider = screen.getByRole('slider');
+      fireEvent.change(slider, { target: { value: '30' } });
+
+      expect(mockOnConfigUpdate).toHaveBeenCalledWith('delay', 30);
     });
 
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      body: stream
+    it('triggers onConfigUpdate when checkbox is toggled', () => {
+      const mockOnConfigUpdate = vi.fn();
+      render(
+        <BatchConfig
+          config={{ delay: 5, sources: [], destination: '', email: '' }}
+          onConfigUpdate={mockOnConfigUpdate}
+        />
+      );
+
+      const unpaywallCheckbox = screen.getByLabelText(/unpaywall/i);
+      fireEvent.click(unpaywallCheckbox);
+
+      expect(mockOnConfigUpdate).toHaveBeenCalled();
     });
-
-    const { result } = renderHook(() => useBatchLoad());
-
-    act(() => {
-      result.current.updateInput('dois', '10.1000/182');
-      result.current.updateConfig('destination', '/downloads');
-      result.current.updateConfig('email', 'author@uni.edu');
-    });
-
-    await act(async () => {
-      await result.current.startBatch();
-    });
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      '/api/bibliography/batch-download',
-      expect.objectContaining({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dois: ['10.1000/182'],
-          delay: 5,
-          destination: '/downloads',
-          email: 'author@uni.edu'
-        })
-      })
-    );
-
-    expect(result.current.monitor.progress).toBe(1);
-    expect(result.current.monitor.logs).toContain('test');
-  });
-
-  it('handles fetch failure gracefully in startBatch', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
-
-    const { result } = renderHook(() => useBatchLoad());
-
-    act(() => {
-      result.current.updateInput('dois', '10.1000/182');
-    });
-
-    await act(async () => {
-      await result.current.startBatch();
-    });
-
-    expect(result.current.monitor.logs).toContain('Error: Network error');
   });
 });
+
+
+// --- frontend/src/components/load/BatchInput.jsx ---
+
+import React from 'react';
+import { useDropzone } from 'react-dropzone';
+
+const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    marginBottom: '24px'
+  },
+  dropzone: {
+    border: '2px dashed #0366d6',
+    borderRadius: '8px',
+    padding: '24px',
+    textAlign: 'center',
+    cursor: 'pointer',
+    backgroundColor: '#f6f8fa'
+  },
+  dropzoneActive: {
+    backgroundColor: '#e1f5fe',
+    borderColor: '#0288d1'
+  },
+  textarea: {
+    width: '100%',
+    minHeight: '120px',
+    padding: '12px',
+    borderRadius: '6px',
+    border: '1px solid #d1d5da',
+    fontFamily: 'monospace',
+    fontSize: '13px',
+    boxSizing: 'border-box'
+  },
+  label: {
+    fontWeight: 'bold',
+    fontSize: '14px',
+    color: '#24292e',
+    marginBottom: '6px',
+    display: 'block'
+  },
+  fileList: {
+    marginTop: '8px',
+    fontSize: '13px',
+    color: '#586069'
+  }
+};
+
+export function BatchInput({
+  files = [],
+  dois = '',
+  input,
+  onInputUpdate
+}) {
+  const currentFiles = input?.files ?? files;
+  const currentDois = input?.dois ?? dois;
+
+  const onDrop = (acceptedFiles) => {
+    if (onInputUpdate) {
+      onInputUpdate('files', acceptedFiles);
+    }
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop
+  });
+
+  return (
+    <div style={styles.container}>
+      <div>
+        <span style={styles.label}>Input Files (BibTeX, RIS, PDF)</span>
+        <div
+          {...getRootProps()}
+          style={{
+            ...styles.dropzone,
+            ...(isDragActive ? styles.dropzoneActive : {})
+          }}
+        >
+          <input {...getInputProps()} />
+          <p style={{ margin: 0, color: '#444' }}>
+            Drag or select files here (.bib, .ris, .txt)
+          </p>
+          {currentFiles && currentFiles.length > 0 && (
+            <div style={styles.fileList}>
+              {currentFiles.length} file(s) selected
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="batch-dois-textarea" style={styles.label}>
+          List of DOIs (one per line)
+        </label>
+        <textarea
+          id="batch-dois-textarea"
+          style={styles.textarea}
+          placeholder="10.1000/182&#10;10.1000/183"
+          value={currentDois}
+          onChange={(e) => {
+            if (onInputUpdate) {
+              onInputUpdate('dois', e.target.value);
+            }
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default BatchInput;

@@ -138,4 +138,24 @@ describe('useBatchLoad hook', () => {
 
     expect(result.current.statuses['10.1/test']).toBe('downloaded');
   });
+
+  it('resets all fields back to initial state via resetBatch', () => {
+    const { result } = renderHook(() => useBatchLoad());
+
+    act(() => {
+      result.current.updateInput('dois', '10.1/test');
+      result.current.updateConfig('destination', '/custom');
+      result.current.updateConfig('email', 'author@test.com');
+    });
+
+    expect(result.current.input.dois).toBe('10.1/test');
+
+    act(() => {
+      result.current.resetBatch();
+    });
+
+    expect(result.current.input.dois).toBe('');
+    expect(result.current.config.destination).toBe('');
+    expect(result.current.config.email).toBe('');
+  });
 });

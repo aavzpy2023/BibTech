@@ -17,6 +17,21 @@ const styles = {
     borderBottom: '1px solid #e1e4e8',
     paddingBottom: '16px'
   },
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  newBatchBtn: {
+    backgroundColor: '#fff',
+    border: '1px solid #d1d5da',
+    borderRadius: '6px',
+    padding: '6px 14px',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#24292e',
+    cursor: 'pointer'
+  },
   title: {
     fontSize: '24px',
     fontWeight: 'bold',
@@ -38,6 +53,8 @@ export function LoadView() {
     monitor,
     updateInput,
     updateConfig,
+    isValidEmail,
+    resetBatch,
     startBatch
   } = useBatchLoad();
 
@@ -49,10 +66,21 @@ export function LoadView() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h2 style={styles.title}>Batch Bibliography Load</h2>
-        <p style={styles.subtitle}>
+        <div style={styles.headerRow}>
+          <div>
+            <h2 style={styles.title}>Batch Bibliography Load</h2>
+            <p style={styles.subtitle}>
           Enter bibliographic files or DOI identifiers for automatic download.
-        </p>
+            </p>
+          </div>
+          <button
+            type="button"
+            style={styles.newBatchBtn}
+            onClick={resetBatch}
+          >
+            New batch
+          </button>
+        </div>
       </div>
 
       <BatchInput

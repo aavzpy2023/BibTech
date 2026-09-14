@@ -1,6 +1,47 @@
 import React from 'react';
 import { useDropzone } from 'react-dropzone';
 
+export function extractDoisFromText(text, filename = '') {
+  const isRis = filename.toLowerCase().endsWith('.ris');
+  const isBib = filename.toLowerCase().endsWith('.bib');
+  const foundDois = [];
+
+  if (isRis || (!isBib && text.includes('DO  -'))) {
+    const risRegex = /^[ \t]*DO\s+-\s+(.+)$/gim;
+    let match;
+    while ((match = risRegex.exec(text)) !== null) {
+      const doi = match[1].trim();
+      if (doi && !foundDois.includes(doi)) {
+        foundDois.push(doi);
+      }
+    }
+  }
+
+  if (isBib || (!isRis && (text.includes('DOI =') || text.includes('doi =')))) {
+    const bibRegex = /\bdoi\s*=\s*(?:\{([^}]+)\}|"([^"]+)")/gi;
+    let match;
+    while ((match = bibRegex.exec(text)) !== null) {
+      const doi = (match[1] || match[2] || '').trim();
+      if (doi && !foundDois.includes(doi)) {
+        foundDois.push(doi);
+      }
+    }
+  }
+
+  if (foundDois.length === 0) {
+    const genericRegex = /\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+\b/gi;
+    let match;
+    while ((match = genericRegex.exec(text)) !== null) {
+      const doi = match[0].trim();
+      if (doi && !foundDois.includes(doi)) {
+        foundDois.push(doi);
+      }
+    }
+  }
+
+  return foundDois;
+}
+
 const styles = {
   container: {
     display: 'flex',
@@ -53,20 +94,54 @@ export function BatchInput({
   const currentFiles = input?.files ?? files;
   const currentDois = input?.dois ?? dois;
 
-  const onDrop = (acceptedFiles) => {
+  const onDrop = async (acceptedFiles) => {
+    const validFiles = (acceptedFiles || []).filter((file) => {
+      const ext = file.name.toLowerCase().split('.').pop();
+      return ext === 'bib' || ext === 'ris';
+    });
+
+    if (validFiles.length === 0) return;
+
     if (onInputUpdate) {
-      onInputUpdate('files', acceptedFiles);
+      onInputUpdate('files', validFiles);
+    }
+
+    const allExtractedDois = [];
+    for (const file of validFiles) {
+      try {
+        const text = await file.text();
+        const extracted = extractDoisFromText(text, file.name);
+        allExtractedDois.push(...extracted);
+      } catch (err) {
+        console.error('Failed to read file for DOI extraction', err);
+      }
+    }
+
+    if (allExtractedDois.length > 0 && onInputUpdate) {
+      const existing = currentDois
+        ? currentDois
+            .split('\n')
+            .map((d) => d.trim())
+            .filter(Boolean)
+        : [];
+      const merged = Array.from(new Set([...existing, ...allExtractedDois]));
+      onInputUpdate('dois', merged.join('\n'));
     }
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop
+    onDrop,
+    accept: {
+      'text/plain': ['.bib', '.ris'],
+      'application/x-bibtex': ['.bib'],
+      'application/x-research-info-systems': ['.ris']
+    }
   });
 
   return (
     <div style={styles.container}>
       <div>
-        <span style={styles.label}>Input Files (BibTeX, RIS, PDF)</span>
+        <span style={styles.label}>Input Files (.bib, .ris)</span>
         <div
           {...getRootProps()}
           style={{
@@ -76,7 +151,7 @@ export function BatchInput({
         >
           <input {...getInputProps()} />
           <p style={{ margin: 0, color: '#444' }}>
-            Drag or select files here (.bib, .ris, .txt)
+            Drag or select files here / Arrastra o selecciona archivos (.bib, .ris)
           </p>
           {currentFiles && currentFiles.length > 0 && (
             <div style={styles.fileList}>

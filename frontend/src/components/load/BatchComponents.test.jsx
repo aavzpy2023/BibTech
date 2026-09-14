@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import BatchInput from './BatchInput';
+import BatchInput, { extractDoisFromText } from './BatchInput';
 import BatchConfig from './BatchConfig';
 
 describe('BatchLoad Dumb Components', () => {
@@ -34,6 +34,26 @@ describe('BatchLoad Dumb Components', () => {
       fireEvent.change(textarea, { target: { value: '10.1000/182' } });
 
       expect(mockOnInputUpdate).toHaveBeenCalledWith('dois', '10.1000/182');
+    });
+
+    it('extracts DOIs from .bib format for WoS and Scopus', () => {
+      const bibText =
+        'DOI = {10.1098/rsif.2016.0410},\ndoi = {10.1038/srep33707}';
+      const extracted = extractDoisFromText(bibText, 'test.bib');
+      expect(extracted).toEqual([
+        '10.1098/rsif.2016.0410',
+        '10.1038/srep33707'
+      ]);
+    });
+
+    it('extracts DOIs from .ris format for WoS and Scopus', () => {
+      const risText =
+        'DO  - 10.1098/rsif.2016.0410\nDO  - 10.1038/srep33707';
+      const extracted = extractDoisFromText(risText, 'test.ris');
+      expect(extracted).toEqual([
+        '10.1098/rsif.2016.0410',
+        '10.1038/srep33707'
+      ]);
     });
   });
 
