@@ -1,12 +1,7 @@
 import React from 'react';
 
-const AVAILABLE_SOURCES = [
-  'Unpaywall',
-  'CrossRef',
-  'Semantic Scholar',
-  'OpenAlex',
-  'PubMed'
-];
+
+
 
 const styles = {
   container: {
@@ -65,25 +60,17 @@ const styles = {
 
 export function BatchConfig({
   delay = 5,
-  sources = [],
   destination = '',
   email = '',
   config,
   onConfigUpdate
 }) {
   const currentDelay = config?.delay ?? delay;
-  const currentSources = config?.sources ?? sources;
   const currentDestination = config?.destination ?? destination;
   const currentEmail = config?.email ?? email;
 
-  const handleSourceToggle = (sourceName) => {
-    if (!onConfigUpdate) return;
-    const exists = currentSources.includes(sourceName);
-    const updated = exists
-      ? currentSources.filter((s) => s !== sourceName)
-      : [...currentSources, sourceName];
-    onConfigUpdate('sources', updated);
-  };
+
+
 
   return (
     <div style={styles.container}>
@@ -113,19 +100,9 @@ export function BatchConfig({
         </div>
       </div>
 
-      <div style={styles.section}>
-        <span style={styles.label}>Retrieval Sources (5 Sources)</span>
-        <div style={styles.checkboxGrid}>
-          {AVAILABLE_SOURCES.map((source) => (
-            <label key={source} style={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={currentSources.includes(source)}
-                onChange={() => handleSourceToggle(source)}
-              />
-              {source}
-            </label>
-          ))}
+
+
+
         </div>
       </div>
 

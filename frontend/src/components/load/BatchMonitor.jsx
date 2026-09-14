@@ -67,6 +67,7 @@ export function BatchMonitor({
   progress = 0,
   total = 0,
   logs = [],
+  disabled = false,
   monitor,
   onStart
 }) {
@@ -87,8 +88,13 @@ export function BatchMonitor({
         </h3>
         <button
           type="button"
-          style={styles.button}
-          onClick={onStart}
+          disabled={disabled}
+          style={{
+            ...styles.button,
+            backgroundColor: disabled ? '#94d3a2' : '#2ea44f',
+            cursor: disabled ? 'not-allowed' : 'pointer'
+          }}
+          onClick={disabled ? undefined : onStart}
         >
           Start Download
         </button>

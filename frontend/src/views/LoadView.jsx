@@ -39,6 +39,11 @@ export function LoadView() {
     startBatch
   } = useBatchLoad();
 
+  const isValid =
+    input.dois.trim() !== '' &amp;&amp;
+    config.destination.trim() !== '' &amp;&amp;
+    config.email.trim() !== '';
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -56,7 +61,6 @@ export function LoadView() {
 
       <BatchConfig
         delay={config.delay}
-        sources={config.sources}
         destination={config.destination}
         email={config.email}
         onConfigUpdate={updateConfig}
@@ -66,6 +70,7 @@ export function LoadView() {
         progress={monitor.progress}
         total={monitor.total}
         logs={monitor.logs}
+        disabled={!isValid}
         onStart={startBatch}
       />
     </div>
