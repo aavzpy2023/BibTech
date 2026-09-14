@@ -22,8 +22,8 @@
 - [x] [REQ-011] Frontend SSE Hook State Integration
 
 ## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
-- [ ] [REQ-012] Load View Validation &amp; Label Updates
-- [ ] [REQ-013] Queue View State &amp; UI Assembly
+- [x] [REQ-012] Load View Validation &amp; Label Updates
+- [x] [REQ-013] Queue View State &amp; UI Assembly
 - [ ] [REQ-014] Backend ZIP Service &amp; Download Action
 
 ## Active Roadmaps

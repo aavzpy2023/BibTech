@@ -35,8 +35,9 @@ complexity_aggregate: "HARD"
   - [ ] [ID-4.2.4] [UI/WIRING]: [1. Open frontend/src/App.jsx. 2. Add <Route path="queue" element={<QueueView />} /> (create a temporary dummy QueueView.jsx returning a div if it doesn't exist yet)]. Type: Task.
   - [ ] [ID-4.2.5] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_4_download_queue_and_zip.md and check - [x] for Story 4.2. 2. Append > Files touched: frontend/src/hooks/useQueueState.js, frontend/src/views/LoadView.jsx, frontend/src/App.jsx under the story]. Type: Task.
 
-- [ ] Story 4.3: Queue View UI & Assembly (Dumb View) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 4.3: Queue View UI & Assembly (Dumb View) | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Implement a pure dumb component for the Queue table, wired to useQueueState. (<-- REQ-013)
+  > Files touched: frontend/src/views/QueueView.jsx
   Story Context Radius: {"frontend/src/views/QueueView.jsx": [""], "frontend/src/hooks/useQueueState.js": [""], "frontend/src/hooks/useBatchLoad.js": [""], "leai_docs/planning/roadmap_4_download_queue_and_zip.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown:
   - [ ] [ID-4.3.1] [TESTING/TDE]: [1. Arrange: Mock useQueueState to return dummy DOIs and useBatchLoad to return dummy monitor logs. 2. Act: Render QueueView. 3. Assert: Verify table rows render correctly with checkboxes]. Type: Task.
