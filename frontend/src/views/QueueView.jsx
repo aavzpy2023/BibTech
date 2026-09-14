@@ -273,7 +273,15 @@ export function QueueView() {
           />
         </div>
       </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <label style={styles.filterLabel}>
+            <input
+              type="checkbox"
+              checked={showOnlyDownloaded}
+              onChange={(e) => setShowOnlyDownloaded(e.target.checked)}
+            />
+            <span>Only PDFs</span>
+          </label>
           <button
             type="button"
             disabled={!hasMissing}
@@ -299,16 +307,8 @@ export function QueueView() {
         </div>
       </div>
 
-      <div style={styles.filterBar}>
-        <label style={styles.filterLabel}>
-          <input
-            type="checkbox"
-            checked={showOnlyDownloaded}
-            onChange={(e) => setShowOnlyDownloaded(e.target.checked)}
-          />
-          Show only downloaded PDFs
-        </label>
-      </div>
+
+
 
       <table style={styles.table}>
         <thead>

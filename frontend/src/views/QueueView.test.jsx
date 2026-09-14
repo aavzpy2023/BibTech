@@ -179,7 +179,7 @@ describe('QueueView component', () => {
     expect(screen.getByText('10.1000/183')).toBeInTheDocument();
 
     const filterCheckbox = screen.getByLabelText(
-      /show only downloaded pdfs/i
+      /only pdfs/i
     );
     fireEvent.click(filterCheckbox);
 
