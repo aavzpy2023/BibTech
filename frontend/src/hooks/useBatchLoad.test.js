@@ -95,4 +95,47 @@ describe('useBatchLoad hook', () => {
 
     expect(result.current.monitor.logs).toContain('Error: Network error');
   });
+
+  it('validates email format correctly via isValidEmail', () => {
+    const { result } = renderHook(() => useBatchLoad());
+
+    expect(result.current.isValidEmail).toBe(false);
+
+    act(() => {
+      result.current.updateConfig('email', 'invalid-email');
+    });
+    expect(result.current.isValidEmail).toBe(false);
+
+    act(() => {
+      result.current.updateConfig('email', 'author@domain.com');
+    });
+    expect(result.current.isValidEmail).toBe(true);
+  });
+
+  it('updates per-DOI statuses during startBatch with overrides', async () => {
+    const payload =
+      'data: {"progress": 1, "total": 1, "doi": "10.1/test", "status": "downloaded"}\n\n';
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(payload));
+        controller.close();
+      }
+    });
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      body: stream
+    });
+
+    const { result } = renderHook(() => useBatchLoad());
+
+    await act(async () => {
+      await result.current.startBatch(['10.1/test'], {
+        destination: '/custom',
+        email: 'a@b.com'
+      });
+    });
+
+    expect(result.current.statuses['10.1/test']).toBe('downloaded');
+  });
 });

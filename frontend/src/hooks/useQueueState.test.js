@@ -129,4 +129,42 @@ describe('useQueueState hook', () => {
 
     global.fetch = originalFetch;
   });
+
+  it('allows downloadZip with override DOIs even when selectedDois is empty', async () => {
+    const originalFetch = global.fetch;
+    const mockBlob = new Blob(['zip data'], { type: 'application/zip' });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      blob: vi.fn().mockResolvedValue(mockBlob)
+    });
+
+    window.URL.createObjectURL = vi.fn().mockReturnValue('blob:url');
+    window.URL.revokeObjectURL = vi.fn();
+
+    vi.mocked(router.useLocation).mockReturnValue({
+      state: {
+        dois: '10.1\n10.2',
+        config: { destination: 'batch-test' }
+      }
+    });
+
+    const { result } = renderHook(() => useQueueState());
+
+    await act(async () => {
+      await result.current.downloadZip(['10.1']);
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/bibliography/download-zip',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          batch_name: 'batch-test',
+          dois: ['10.1']
+        })
+      })
+    );
+
+    global.fetch = originalFetch;
+  });
 });

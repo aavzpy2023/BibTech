@@ -19,11 +19,15 @@
 │   │   │   ├── main.jsx
 │   │   │   ├── views/
 │   │   │   │   ├── LoadView.jsx
+│   │   │   │   ├── QueueView.jsx
+│   │   │   │   ├── QueueView.test.jsx
 │   │   │   ├── hooks/
 │   │   │   │   ├── useBatchLoad.js
 │   │   │   │   ├── useBatchLoad.test.js
 │   │   │   │   ├── useBibliography.js
 │   │   │   │   ├── useBibliography.test.js
+│   │   │   │   ├── useQueueState.js
+│   │   │   │   ├── useQueueState.test.js
 │   │   │   ├── components/
 │   │   │   │   ├── BibliographyUploader.jsx
 │   │   │   │   ├── Layout.jsx
@@ -53,6 +57,7 @@
 │   │   │   │   ├── resolver_service.py
 │   │   │   │   ├── router.py
 │   │   │   │   ├── schemas.py
+│   │   │   │   ├── zip_service.py
 │   │   │   ├── bibtech_backend.egg-info/
 │   │   │   │   ├── SOURCES.txt
 │   │   │   │   ├── dependency_links.txt
@@ -66,6 +71,7 @@
 │   │   │   │   ├── test_parser.py
 │   │   │   │   ├── test_resolver.py
 │   │   │   │   ├── test_router.py
+│   │   │   │   ├── test_zip_service.py
 │   ├── _scripts/
 │   │   ├── dev/
 │   │   │   ├── auto_sync_accounts.py
@@ -84,6 +90,7 @@
 │   │   │   ├── roadmap_1_bibliography_ingestion.md
 │   │   │   ├── roadmap_2_batch_load.md
 │   │   │   ├── roadmap_3_batch_download_execution.md
+│   │   │   ├── roadmap_4_download_queue_and_zip.md
 │   ├── nginx/
 │   │   ├── Dockerfile
 │   │   ├── nginx.conf

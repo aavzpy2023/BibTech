@@ -37,17 +37,23 @@ export function useQueueState() {
     [dois]
   );
 
-  const downloadZip = useCallback(async () => {
-    if (selectedDois.length === 0) return;
+  const downloadZip = useCallback(
+    async (overrideDois) => {
+      const targetDois =
+        overrideDois && overrideDois.length > 0
+          ? overrideDois
+          : selectedDois;
 
-    const batchName = config.destination || 'download_batch';
+      if (targetDois.length === 0) return;
+
+      const batchName = config.destination || 'download_batch';
     try {
       const response = await fetch('/api/bibliography/download-zip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           batch_name: batchName,
-          dois: selectedDois
+          dois: targetDois
         })
       });
 

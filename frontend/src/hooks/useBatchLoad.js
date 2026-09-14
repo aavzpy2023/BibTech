@@ -21,6 +21,7 @@ export function useBatchLoad() {
   const [input, setInput] = useState(initialInputState);
   const [config, setConfig] = useState(initialConfigState);
   const [monitor, setMonitor] = useState(initialMonitorState);
+  const [statuses, setStatuses] = useState({});
 
   const updateInput = useCallback((fieldOrUpdates, maybeValue) => {
     setInput((prev) => {
@@ -49,11 +50,23 @@ export function useBatchLoad() {
     });
   }, []);
 
-  const startBatch = useCallback(async () => {
-    const dois = input.dois
-      .split('\n')
-      .map((d) => d.trim())
-      .filter((d) => d.length > 0);
+  const startBatch = useCallback(
+    async (overrideDois, overrideConfig) => {
+      const rawDois = overrideDois ?? input.dois;
+      const dois = Array.isArray(rawDois)
+        ? rawDois
+        : rawDois
+            .split('\n')
+            .map((d) => d.trim())
+            .filter((d) => d.length > 0);
+
+      const activeConfig = overrideConfig ?? config;
+
+      const initialStatuses = {};
+      dois.forEach((d) => {
+        initialStatuses[d] = 'queued';
+      });
+      setStatuses(initialStatuses);
 
     setMonitor({
       progress: 0,
@@ -67,9 +80,9 @@ export function useBatchLoad() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           dois,
-          delay: Number(config.delay),
-          destination: config.destination,
-          email: config.email
+          delay: Number(activeConfig.delay ?? 5),
+          destination: activeConfig.destination ?? '',
+          email: activeConfig.email ?? ''
         })
       });
 
@@ -95,6 +108,12 @@ export function useBatchLoad() {
             const jsonStr = trimmed.slice(5).trim();
             try {
               const eventData = JSON.parse(jsonStr);
+              if (eventData.doi && eventData.status) {
+                setStatuses((prev) => ({
+                  ...prev,
+                  [eventData.doi]: eventData.status
+                }));
+              }
               setMonitor((prev) => ({
                 progress: eventData.progress ?? prev.progress,
                 total: eventData.total ?? prev.total,
@@ -116,10 +135,14 @@ export function useBatchLoad() {
     }
   }, [input.dois, config.delay, config.destination, config.email]);
 
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.email);
+
   return {
     input,
     config,
     monitor,
+    statuses,
+    isValidEmail,
     updateInput,
     updateConfig,
     updateMonitor,

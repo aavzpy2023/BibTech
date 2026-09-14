@@ -21,21 +21,29 @@ async def execute_batch_download(
         yield json.dumps({
             "progress": completed,
             "total": total,
-            "log": f"Resolving: {doi}"
+            "log": f"Resolving: {doi}",
+            "doi": doi,
+            "status": "resolving",
         })
         try:
             url = await resolve_pdf_url(doi, email)
             if url:
                 path = await _download_and_save(dest, doi, url)
-                log = f"Downloaded {doi} to {path}"
+                log = f'Downloaded {doi} to {path}'
+                status = 'downloaded'
             else:
-                log = f"No open access URL found for {doi}"
+                log = f'No open access URL found for {doi}'
+                status = 'not_found'
         except Exception as err:
-            log = f"Failed {doi}: {err}"
+            log = f'Failed {doi}: {err}'
+            status = 'failed'
         completed += 1
         yield json.dumps({
-            "progress": completed,
-            "total": total,
+            'progress': completed,
+            'total': total,
+            'log': log,
+            'doi': doi,
+            'status': status,
             "log": log
         })
         if delay > 0 and completed < total:

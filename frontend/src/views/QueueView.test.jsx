@@ -28,6 +28,7 @@ describe('QueueView component', () => {
       input: { dois: '10.1000/182\n10.1000/183', files: [] },
       config: { destination: 'my-batch', delay: 5, email: 'test@example.com' },
       monitor: { progress: 1, total: 2, logs: ['Downloaded 10.1000/182'] },
+      statuses: { '10.1000/182': 'downloaded', '10.1000/183': 'resolving' },
       updateInput: vi.fn(),
       updateConfig: vi.fn(),
       updateMonitor: vi.fn(),
@@ -41,6 +42,11 @@ describe('QueueView component', () => {
     expect(screen.getByText('Download Queue')).toBeInTheDocument();
     expect(screen.getByText('10.1000/182')).toBeInTheDocument();
     expect(screen.getByText('10.1000/183')).toBeInTheDocument();
+    expect(screen.getByText('✓ Downloaded')).toBeInTheDocument();
+    expect(screen.getByText('⏳ Resolving...')).toBeInTheDocument();
+
+    const downloadBtn = screen.getByRole('button', { name: /Download PDFs/i });
+    expect(downloadBtn).not.toBeDisabled();
 
     const checkboxes = screen.getAllByRole('checkbox');
     expect(checkboxes.length).toBe(3);
@@ -69,5 +75,23 @@ describe('QueueView component', () => {
   it('triggers startBatch on mount', () => {
     render(<QueueView />);
     expect(mockStartBatch).toHaveBeenCalled();
+  });
+
+  it('renders "PDF no disponible" when status is failed or not_found', () => {
+    vi.spyOn(batchHook, 'useBatchLoad').mockReturnValue({
+      input: { dois: '10.1\n10.2', files: [] },
+      config: { destination: 'b', delay: 5, email: 't@e.com' },
+      monitor: { progress: 2, total: 2, logs: [] },
+      statuses: { '10.1000/182': 'failed', '10.1000/183': 'not_found' },
+      updateInput: vi.fn(),
+      updateConfig: vi.fn(),
+      updateMonitor: vi.fn(),
+      startBatch: vi.fn()
+    });
+
+    render(<QueueView />);
+
+    const badges = screen.getAllByText('⊘ PDF no disponible');
+    expect(badges.length).toBe(2);
   });
 });

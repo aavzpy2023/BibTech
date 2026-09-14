@@ -33,6 +33,33 @@ const styles = {
     cursor: 'not-allowed',
     opacity: 0.6
   },
+  statusBadge: {
+    padding: '4px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '600',
+    display: 'inline-block'
+  },
+  statusQueued: {
+    backgroundColor: '#f1f8ff',
+    color: '#0366d6'
+  },
+  statusResolving: {
+    backgroundColor: '#fffbdd',
+    color: '#735c0f'
+  },
+  statusDownloaded: {
+    backgroundColor: '#dcffe4',
+    color: '#1a7f37'
+  },
+  statusNotFound: {
+    backgroundColor: '#f6f8fa',
+    color: '#57606a'
+  },
+  statusFailed: {
+    backgroundColor: '#ffebe9',
+    color: '#cf222e'
+  },
   title: {
     fontSize: '24px',
     fontWeight: 'bold',
@@ -80,11 +107,69 @@ export function QueueView() {
     toggleAll,
     downloadZip
   } = useQueueState();
-  const { startBatch } = useBatchLoad();
+  const { monitor, statuses = {}, startBatch } = useBatchLoad();
 
   useEffect(() => {
-    startBatch(dois, config);
-  }, []);
+    if (dois && dois.length > 0) {
+      startBatch(dois, config);
+    }
+  }, [dois, config, startBatch]);
+
+  const downloadedDois = (dois || []).filter(
+    (doi) => statuses[doi] === 'downloaded'
+  );
+  const canDownload = selectedDois.length > 0 || downloadedDois.length > 0;
+
+  useEffect(() => {
+    if (downloadedDois.length > 0) {
+      downloadedDois.forEach((doi) => {
+        if (!selectedDois.includes(doi)) {
+          toggleSelection(doi);
+        }
+      });
+    }
+  }, [statuses, dois, selectedDois, toggleSelection]);
+
+  const handleDownload = () => {
+    const target =
+      selectedDois.length > 0 ? selectedDois : downloadedDois;
+    downloadZip(target);
+  };
+
+  const renderStatus = (statusKey) => {
+    switch (statusKey) {
+      case 'downloaded':
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusDownloaded }}>
+            ✓ Downloaded
+          </span>
+        );
+      case 'resolving':
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusResolving }}>
+            ⏳ Resolving...
+          </span>
+        );
+      case 'not_found':
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusNotFound }}>
+            ⊘ PDF no disponible
+          </span>
+        );
+      case 'failed':
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusNotFound }}>
+            ⊘ PDF no disponible
+          </span>
+        );
+      default:
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusQueued }}>
+            Queued
+          </span>
+        );
+    }
+  };
 
   const allSelected =
     dois.length > 0 && selectedDois.length === dois.length;
@@ -95,17 +180,17 @@ export function QueueView() {
         <div>
           <h2 style={styles.title}>Download Queue</h2>
           <p style={styles.subtitle}>
-            Batch: {config.destination || 'Default'} | Total DOIs: {dois.length}
-          </p>
-        </div>
+          Batch: {config.destination || 'Default'} | Progress: {monitor?.progress ?? 0}/{monitor?.total || dois.length}
+        </p>
+      </div>
         <button
           type="button"
-          disabled={selectedDois.length === 0}
+          disabled={!canDownload}
           style={{
             ...styles.downloadButton,
-            ...(selectedDois.length === 0 ? styles.disabledButton : {})
+            ...(!canDownload ? styles.disabledButton : {})
           }}
-          onClick={downloadZip}
+          onClick={handleDownload}
         >
           Download PDFs
         </button>
@@ -147,7 +232,9 @@ export function QueueView() {
                     />
                   </td>
                   <td style={styles.td}>{doi}</td>
-                  <td style={styles.td}>Queued</td>
+                  <td style={styles.td}>
+                    {renderStatus(statuses[doi] || 'queued')}
+                  </td>
                 </tr>
               );
             })
