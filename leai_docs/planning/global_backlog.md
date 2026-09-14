@@ -37,6 +37,11 @@
 - [x] [REQ-020] Frontend Injection State Hook
 - [x] [REQ-021] References View Routing &amp; Assembly
 
+## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
+- [ ] [REQ-022] Multiple File Upload Logic (FIFO Queue)
+- [ ] [REQ-023] References Tab Translation to English
+- [ ] [REQ-024] UI Standardization (Width & Headers)
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
@@ -44,3 +49,4 @@
 - [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
 - [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
 - [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
+- [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)

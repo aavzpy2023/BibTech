@@ -1,0 +1,44 @@
+---
+type: "roadmap"
+epic_name: "UI Standardization & Multi-File Upload"
+domain: "Frontend UI"
+complexity_aggregate: "MEDIUM"
+---
+
+# EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD | [ISOLATED VERTICAL]
+
+- [x] Story 7.0: Roadmap & Planning Initialization | [MoSCoW: MUST] | [Complexity: TRIVIAL]
+  Business Requirement: Initialize sequential agentic memory state trackers ensuring DAG dependencies.
+  Story Context Radius: {"leai_docs/planning/global_backlog.md": ["*"]}
+  Layered Technical Breakdown:
+  [ID-7.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Append EPIC 8, its [REQ-022] to [REQ-024] list, and the Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md]. Type: Task.
+
+- [ ] Story 7.1: UI Standardization (Width & Headers) | [MoSCoW: MUST] | [Complexity: EASY]
+  Business Requirement: Standardize layout width (matching Analysis tab) and header typography/positioning (matching Load tab) across all views. (&lt;-- REQ-024)
+  Story Context Radius: {"frontend/src/App.jsx": ["DashboardView"], "frontend/src/views/LoadView.jsx": ["styles"], "frontend/src/views/QueueView.jsx": ["styles"], "frontend/src/views/ReferencesView.jsx": ["styles"], "leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md": [""], "leai_docs/planning/global_backlog.md": [""]}
+  Layered Technical Breakdown:
+  [ID-7.1.1] [TESTING/TDE]: [1. Arrange: Mount DashboardView in a test environment. 2. Act: Query the main container and header elements. 3. Assert: Verify the computed styles or inline styles match the standardized padding (24px) and typography (24px, bold, #24292e)]. Type: Task.
+  [ID-7.1.2] [UI/VIEW]: [1. Open frontend/src/App.jsx. 2. In DashboardView styles, remove maxWidth: '600px' and margin: '0 auto'. Apply padding: '24px', backgroundColor: '#ffffff', border: '1px solid #e1e4e8', borderRadius: '8px'. 3. Update the &lt;h1&gt; style to: fontSize: '24px', fontWeight: 'bold', color: '#24292e', margin: '0 0 8px 0']. Type: Task.
+  [ID-7.1.3] [UI/VIEW]: [1. Open frontend/src/views/LoadView.jsx and frontend/src/views/QueueView.jsx. 2. In their styles.container, remove maxWidth: '900px' and margin: '0 auto'. Add padding: '24px', backgroundColor: '#ffffff', border: '1px solid #e1e4e8', borderRadius: '8px'. 3. Ensure styles.title exactly matches fontSize: '24px', fontWeight: 'bold', color: '#24292e', margin: '0 0 8px 0']. Type: Task.
+  [ID-7.1.4] [UI/VIEW]: [1. Open frontend/src/views/ReferencesView.jsx. 2. In styles.container, remove maxWidth: '1000px' and margin: '0 auto'. Add backgroundColor: '#ffffff', border: '1px solid #e1e4e8', borderRadius: '8px'. 3. Update styles.title to exactly match fontSize: '24px', fontWeight: 'bold', color: '#24292e', margin: '0 0 8px 0']. Type: Task.
+  [ID-7.1.5] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md and check - [x] for Story 7.1. 2. Append &gt; Files touched: frontend/src/App.jsx, frontend/src/views/LoadView.jsx, frontend/src/views/QueueView.jsx, frontend/src/views/ReferencesView.jsx under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-024]]. Type: Task.
+
+- [ ] Story 7.2: References Tab Translation to English | [MoSCoW: MUST] | [Complexity: TRIVIAL]
+  Business Requirement: Translate all Spanish text in the References tab (Views, Modals, and Data Tables) strictly to English. (&lt;-- REQ-023)
+  Story Context Radius: {"frontend/src/views/ReferencesView.jsx": [""], "frontend/src/components/references/UploadReferencesModal.jsx": [""], "frontend/src/components/references/ReferencesDataTable.jsx": [""], "leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
+  Layered Technical Breakdown:
+  [ID-7.2.1] [TESTING/TDE]: [1. Arrange: Mount ReferencesView and UploadReferencesModal. 2. Act: Trigger render. 3. Assert: Verify the presence of English strings (e.g., "Bibliographic References", "New References Ingestion") and absence of Spanish strings]. Type: Task.
+  [ID-7.2.2] [UI/VIEW]: [1. Open frontend/src/views/ReferencesView.jsx. 2. Translate texts: "Referencias Bibliográficas" -&gt; "Bibliographic References", "Visualice y administre..." -&gt; "View and manage persisted publications.", "Proyecto activo:" -&gt; "Active project:", "+ Cargar Referencias" -&gt; "+ Upload References", "Archivo:" -&gt; "File:"]. Type: Task.
+  [ID-7.2.3] [UI/VIEW]: [1. Open frontend/src/components/references/UploadReferencesModal.jsx. 2. Translate texts: "Nueva Ingesta de Referencias" -&gt; "New References Ingestion", "Ingrese el código..." -&gt; "Enter the project code and select .ris or .bib files to persist in the database.", "Código o Nombre del Proyecto *" -&gt; "Project Code or Name *", "Ej: PROJ-AI-2026" -&gt; "Ex: PROJ-AI-2026", "Indique un nombre..." -&gt; "Provide a project name to enable the uploader.", "Inyectando referencias..." -&gt; "Injecting references into database...", "¡Ingesta completada!" -&gt; "Ingestion completed!", "Se insertaron" -&gt; "Inserted", "artículos en el proyecto" -&gt; "articles into project", "Cerrar" -&gt; "Close", "Cancelar" -&gt; "Cancel"]. Type: Task.
+  [ID-7.2.4] [UI/VIEW]: [1. Open frontend/src/components/references/ReferencesDataTable.jsx. 2. Translate empty state text: "No hay referencias disponibles para mostrar." -&gt; "No references available to display."]. Type: Task.
+  [ID-7.2.5] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md and check - [x] for Story 7.2. 2. Append &gt; Files touched: frontend/src/views/ReferencesView.jsx, frontend/src/components/references/UploadReferencesModal.jsx, frontend/src/components/references/ReferencesDataTable.jsx under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-023]]. Type: Task.
+
+- [ ] Story 7.3: Multiple File Upload Logic (FIFO Queue) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+  Business Requirement: Support multiple file uploads in References using a FIFO queue and unique React keys to prevent collisions. (&lt;-- REQ-022)
+  Story Context Radius: {"frontend/src/hooks/useReferencesUpload.js": [""], "frontend/src/hooks/useReferencesUpload.test.js": [""], "frontend/src/components/BibliographyUploader.jsx": [""], "frontend/src/views/ReferencesView.jsx": [""], "leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md": [""], "leai_docs/planning/global_backlog.md": [""]}
+  Layered Technical Breakdown:
+  [ID-7.3.1] [TESTING/TDE]: [1. Arrange: In frontend/src/hooks/useReferencesUpload.test.js, mock global.fetch to return { message: "Success", inserted: 2 } for each call. Create an array of two mock files. 2. Act: Call uploadAndInject(mockFilesArray). 3. Assert: Verify global.fetch was called 4 times (2 for inject, 2 for upload) sequentially, and insertedCount equals 4]. Type: Task.
+  [ID-7.3.2] [UI/STATE]: [1. Open frontend/src/hooks/useReferencesUpload.js. 2. Modify uploadAndInject to accept files (array or single file). If it's a single file, wrap it in an array [files]. 3. Initialize let totalInserted = 0 and const allParsed = []. 4. Loop through the files array sequentially (FIFO) using a for...of loop. For each file, execute the inject fetch, accumulate data.inserted into totalInserted, then execute the upload fetch and push the parsed results into allParsed. 5. After the loop, setInsertedCount(totalInserted) and return allParsed]. Type: Task.
+  [ID-7.3.3] [UI/VIEW]: [1. Open frontend/src/components/BibliographyUploader.jsx. 2. Change multiple: false to multiple: true in the useDropzone configuration. 3. In onDrop, change onUpload(acceptedFiles[0]) to onUpload(acceptedFiles) to pass the full array of valid files to the parent]. Type: Task.
+  [ID-7.3.4] [UI/WIRING]: [1. Open frontend/src/views/ReferencesView.jsx. 2. In handleUploadSuccess, update the fallback ID generation to use id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}` to guarantee unique React keys even if multiple files are processed instantly. 3. Ensure handleUploadSuccess handles the accumulated array of parsed references correctly (spreading them into setTableData)]. Type: Task.
+  [ID-7.3.5] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md and check - [x] for Story 7.3. 2. Append &gt; Files touched: frontend/src/hooks/useReferencesUpload.js, frontend/src/hooks/useReferencesUpload.test.js, frontend/src/components/BibliographyUploader.jsx, frontend/src/views/ReferencesView.jsx under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-022]]. Type: Task.
