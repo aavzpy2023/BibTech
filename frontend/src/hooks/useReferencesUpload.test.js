@@ -14,10 +14,11 @@ describe('useReferencesUpload', () => {
     expect(result.current.projectCode).toBe('DEFAULT-PROJ');
   });
 
-  it('should upload and inject references successfully', async () => {
+  it('should upload and inject multiple files sequentially (FIFO)', async () => {
     const mockFile = new File(['fake ris content'], 'test.ris', {
       type: 'text/plain',
     });
+    const mockFile2 = new File(['fake bib'], 'test2.bib', { type: 'text/plain' });
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -31,10 +32,10 @@ describe('useReferencesUpload', () => {
     });
 
     await act(async () => {
-      await result.current.uploadAndInject(mockFile);
+      await result.current.uploadAndInject([mockFile, mockFile2]);
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledTimes(4); // 2 files * 2 requests
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).toBe('/api/bibliography/inject');
     expect(options.method).toBe('POST');
@@ -44,7 +45,7 @@ describe('useReferencesUpload', () => {
     expect(result.current.isSuccess).toBe(true);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
-    expect(result.current.insertedCount).toBe(5);
+    expect(result.current.insertedCount).toBe(10); // 2 files * 5
     expect(localStorage.getItem('last_project_code')).toBe('TEST');
   });
 

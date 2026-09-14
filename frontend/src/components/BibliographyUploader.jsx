@@ -32,7 +32,7 @@ const styles = {
 export function BibliographyUploader({ onUpload }) {
   const onDrop = (acceptedFiles) => {
     if (acceptedFiles.length > 0 && onUpload) {
-      onUpload(acceptedFiles[0]);
+      onUpload(acceptedFiles);
     }
   };
 
@@ -41,7 +41,7 @@ export function BibliographyUploader({ onUpload }) {
     accept: {
       'text/plain': ['.ris', '.bib']
     },
-    multiple: false
+    multiple: true
   });
 
   return (

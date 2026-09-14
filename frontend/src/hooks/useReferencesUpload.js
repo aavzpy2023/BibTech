@@ -14,29 +14,35 @@ export function useReferencesUpload() {
   const [insertedCount, setInsertedCount] = useState(null);
 
   const uploadAndInject = useCallback(
-    async (file) => {
+    async (filesInput) => {
       if (!projectCode || !projectCode.trim()) {
         setError('El código de proyecto es requerido');
         setIsSuccess(false);
         return;
       }
 
-      if (!file) {
+      if (!filesInput || (Array.isArray(filesInput) && filesInput.length === 0)) {
         setError('Debe seleccionar un archivo bibliográfico válido');
         setIsSuccess(false);
         return;
       }
+      
+      const files = Array.isArray(filesInput) ? filesInput : [filesInput];
 
       setIsLoading(true);
       setError(null);
       setIsSuccess(false);
 
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('project_code', projectCode.trim());
+        let totalInserted = 0;
+        const allParsed = [];
 
-        const response = await fetch('/api/bibliography/inject', {
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('project_code', projectCode.trim());
+
+          const response = await fetch('/api/bibliography/inject', {
           method: 'POST',
           body: formData,
         });
@@ -49,11 +55,7 @@ export function useReferencesUpload() {
         }
 
         const data = await response.json();
-        try {
-          localStorage.setItem('last_project_code', projectCode.trim());
-        } catch {}
-        setIsSuccess(true);
-        setInsertedCount(data.inserted ?? 0);
+        totalInserted += (data.inserted ?? 0);
 
         try {
           const uploadForm = new FormData();
@@ -63,10 +65,18 @@ export function useReferencesUpload() {
             body: uploadForm,
           });
           if (parseRes.ok) {
-            return await parseRes.json();
+            const parsed = await parseRes.json();
+            if (Array.isArray(parsed)) allParsed.push(...parsed);
           }
         } catch {}
-        return [];
+        }
+
+        try {
+          localStorage.setItem('last_project_code', projectCode.trim());
+        } catch {}
+        setIsSuccess(true);
+        setInsertedCount(totalInserted);
+        return allParsed;
       } catch (err) {
         setError(err.message || 'Error inesperado durante la carga');
         setIsSuccess(false);

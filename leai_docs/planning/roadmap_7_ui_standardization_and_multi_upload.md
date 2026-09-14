@@ -35,8 +35,9 @@ complexity_aggregate: "MEDIUM"
   [ID-7.2.4] [UI/VIEW]: [1. Open frontend/src/components/references/ReferencesDataTable.jsx. 2. Translate empty state text: "No hay referencias disponibles para mostrar." -&gt; "No references available to display."]. Type: Task.
   [ID-7.2.5] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md and check - [x] for Story 7.2. 2. Append &gt; Files touched: frontend/src/views/ReferencesView.jsx, frontend/src/components/references/UploadReferencesModal.jsx, frontend/src/components/references/ReferencesDataTable.jsx under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-023]]. Type: Task.
 
-- [ ] Story 7.3: Multiple File Upload Logic (FIFO Queue) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 7.3: Multiple File Upload Logic (FIFO Queue) | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Support multiple file uploads in References using a FIFO queue and unique React keys to prevent collisions. (&lt;-- REQ-022)
+  > Files touched: frontend/src/hooks/useReferencesUpload.js, frontend/src/hooks/useReferencesUpload.test.js, frontend/src/components/BibliographyUploader.jsx, frontend/src/views/ReferencesView.jsx
   Story Context Radius: {"frontend/src/hooks/useReferencesUpload.js": [""], "frontend/src/hooks/useReferencesUpload.test.js": [""], "frontend/src/components/BibliographyUploader.jsx": [""], "frontend/src/views/ReferencesView.jsx": [""], "leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown:
   [ID-7.3.1] [TESTING/TDE]: [1. Arrange: In frontend/src/hooks/useReferencesUpload.test.js, mock global.fetch to return { message: "Success", inserted: 2 } for each call. Create an array of two mock files. 2. Act: Call uploadAndInject(mockFilesArray). 3. Assert: Verify global.fetch was called 4 times (2 for inject, 2 for upload) sequentially, and insertedCount equals 4]. Type: Task.

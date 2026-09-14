@@ -38,7 +38,7 @@
 - [x] [REQ-021] References View Routing &amp; Assembly
 
 ## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
-- [ ] [REQ-022] Multiple File Upload Logic (FIFO Queue)
+- [x] [REQ-022] Multiple File Upload Logic (FIFO Queue)
 - [x] [REQ-023] References Tab Translation to English
 - [x] [REQ-024] UI Standardization (Width & Headers)
 

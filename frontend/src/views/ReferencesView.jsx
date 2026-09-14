@@ -142,19 +142,20 @@ export function ReferencesView() {
     resetStatus,
   } = useReferencesUpload();
 
-  const handleUploadSuccess = (file, parsedRefs) => {
+  const handleUploadSuccess = (files, parsedRefs) => {
     if (Array.isArray(parsedRefs) && parsedRefs.length > 0) {
-      setTableData(parsedRefs);
+      setTableData((prev) => [...parsedRefs, ...prev]);
       return;
     }
-    const newEntry = {
-      id: Date.now(),
-    title: file.name.replace(/\.[^/.]+$/, ''),
-    author: 'File: ' + file.name,
-    year: new Date().getFullYear(),
-    journal: projectCode || 'Project',
-    };
-    setTableData((prev) => [newEntry, ...prev]);
+    const fileArray = Array.isArray(files) ? files : [files];
+    const newEntries = fileArray.map((f) => ({
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title: f.name.replace(/\.[^/.]+$/, ''),
+      author: 'File: ' + f.name,
+      year: new Date().getFullYear(),
+      journal: projectCode || 'Project',
+    }));
+    setTableData((prev) => [...newEntries, ...prev]);
   };
 
   return (
@@ -191,9 +192,9 @@ export function ReferencesView() {
         onClose={() => setIsModalOpen(false)}
         projectCode={projectCode}
         setProjectCode={setProjectCode}
-        uploadAndInject={async (file) => {
-          const parsed = await uploadAndInject(file);
-          handleUploadSuccess(file, parsed);
+        uploadAndInject={async (files) => {
+          const parsed = await uploadAndInject(files);
+          handleUploadSuccess(files, parsed);
         }}
         isLoading={isLoading}
         isSuccess={isSuccess}
