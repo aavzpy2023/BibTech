@@ -153,13 +153,13 @@ export function QueueView() {
       case 'not_found':
         return (
           <span style={{ ...styles.statusBadge, ...styles.statusNotFound }}>
-            ⊘ PDF no disponible
+            ⊘ PDF Not Available
           </span>
         );
       case 'failed':
         return (
           <span style={{ ...styles.statusBadge, ...styles.statusNotFound }}>
-            ⊘ PDF no disponible
+            ⊘ PDF Not Available
           </span>
         );
       default:

@@ -91,7 +91,7 @@ describe('QueueView component', () => {
 
     render(<QueueView />);
 
-    const badges = screen.getAllByText('⊘ PDF no disponible');
+    const badges = screen.getAllByText('⊘ PDF Not Available');
     expect(badges.length).toBe(2);
   });
 });
