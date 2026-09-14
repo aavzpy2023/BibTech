@@ -150,3 +150,87 @@ class AuthorArticle(Base):
 
     author = relationship("Author", back_populates="author_articles")
     article = relationship("Article", back_populates="author_articles")
+
+
+class Keyword(Base):
+    """Represents a descriptive keyword, MeSH term, or topical tag."""
+
+    __tablename__ = "keywords"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key identifier for keyword",
+    )
+    name = Column(
+        String(255),
+        nullable=False,
+        index=True,
+        comment="Normalized keyword or term string",
+    )
+    type = Column(
+        String(50),
+        default="author",
+        nullable=False,
+        comment="Classification type of keyword (e.g. author, mesh, index)",
+    )
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when keyword was registered",
+    )
+
+    keyword_articles = relationship(
+        "KeywordArticle",
+        back_populates="keyword",
+        cascade="all, delete-orphan",
+    )
+    articles = relationship(
+        "Article",
+        secondary="keyword_articles",
+        back_populates="keywords",
+        viewonly=True,
+    )
+
+
+class KeywordArticle(Base):
+    """Junction model connecting keywords to articles."""
+
+    __tablename__ = "keyword_articles"
+    __table_args__ = (
+        UniqueConstraint(
+            "keyword_id",
+            "article_id",
+            name="uq_keyword_article",
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key junction identifier",
+    )
+    keyword_id = Column(
+        Integer,
+        ForeignKey("keywords.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Foreign key linking to keywords.id",
+    )
+    article_id = Column(
+        Integer,
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Foreign key linking to articles.id",
+    )
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when keyword was linked to article",
+    )
+
+    keyword = relationship("Keyword", back_populates="keyword_articles")
+    article = relationship("Article", back_populates="keyword_articles")

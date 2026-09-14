@@ -5,7 +5,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.database.models.core import Article
-from src.database.models.identity import Affiliation, Author, AuthorArticle
+from src.database.models.identity import (
+    Affiliation,
+    Author,
+    AuthorArticle,
+    Keyword,
+    KeywordArticle,
+)
 from src.database.session import Base
 
 
@@ -77,9 +83,49 @@ class TestIdentityModels(unittest.TestCase):
         self.assertEqual(len(author.articles), 1)
         self.assertEqual(author.articles[0].title, "Foundations of AI")
 
+    def test_keyword_article_m2m(self) -> None:
+        """Verify Keyword creation and linkage to Article."""
+        article = Article(
+            doi="10.1000/keyword-test",
+            title="Transformer Architectures",
+            journal="arXiv",
+        )
+        keyword = Keyword(
+            name="deep learning",
+            type="author",
+        )
+        self.session.add_all([article, keyword])
+        self.session.commit()
+
+        link = KeywordArticle(
+            keyword_id=keyword.id,
+            article_id=article.id,
+        )
+        self.session.add(link)
+        self.session.commit()
+
+        queried = (
+            self.session.query(Article)
+            .filter_by(doi="10.1000/keyword-test")
+            .one()
+        )
+        self.assertGreater(len(queried.keywords), 0)
+        self.assertEqual(queried.keywords[0].name, "deep learning")
+        self.assertEqual(queried.keywords[0].type, "author")
+        self.assertEqual(len(keyword.articles), 1)
+        self.assertEqual(
+            keyword.articles[0].title, "Transformer Architectures"
+        )
+
     def test_semantic_comments_present_on_all_identity_columns(self) -> None:
         """Enforce Semantic Primacy: every column must contain a comment."""
-        models = [Affiliation, Author, AuthorArticle]
+        models = [
+            Affiliation,
+            Author,
+            AuthorArticle,
+            Keyword,
+            KeywordArticle,
+        ]
         for model in models:
             for col in model.__table__.columns:
                 self.assertIsNotNone(

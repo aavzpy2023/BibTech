@@ -45,7 +45,8 @@ complexity_aggregate: "HARD"
   - [ID-6.3.3] [CORE/MIGRATIONS]: [1. Import identity.py into alembic/env.py. 2. Run alembic revision --autogenerate -m "Add identity models". 3. Validate safety of the generated script]. Type: Task.
   - [ID-6.3.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_5_database_schema.md and check - [x] for Story 6.3. 2. Append > Files touched: identity.py, test_identity_models.py under the story]. Type: Task.
 
-- [ ] Story 6.4: Auxiliary Keyword Models | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 6.4: Auxiliary Keyword Models | [MoSCoW: MUST] | [Complexity: EASY]
+  > Files touched: identity.py, test_identity_models.py, alembic/versions/003_add_keywords.py
   Business Requirement: Define Keywords and link them to Articles cleanly to maintain atomic micro-surgery limits. (<-- REQ-016)
   Story Context Radius: {"backend/src/database/models/core.py": ["class Article"], "backend/src/database/models/identity.py": [""], "backend/tests/database/test_identity_models.py": [""], "leai_docs/planning/roadmap_5_database_schema.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown:

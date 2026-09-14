@@ -162,6 +162,17 @@ class Article(Base):
         back_populates="articles",
         viewonly=True,
     )
+    keyword_articles = relationship(
+        "KeywordArticle",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+    keywords = relationship(
+        "Keyword",
+        secondary="keyword_articles",
+        back_populates="articles",
+        viewonly=True,
+    )
 
 
 class ProjectArticle(Base):
