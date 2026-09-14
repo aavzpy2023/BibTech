@@ -3,9 +3,17 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 try:
-    from src.bibliography.schemas import ParsedReference
-    from src.database.models.core import Article, Project, ProjectArticle
-except ImportError:
+    from .schemas import ParsedReference
+    from ..database.models.core import Article, Project, ProjectArticle
+except (ImportError, ValueError):
+    try:
+        from src.bibliography.schemas import ParsedReference
+        from src.database.models.core import (
+            Article,
+            Project,
+            ProjectArticle,
+        )
+    except ImportError:
     from backend.src.bibliography.schemas import ParsedReference
     from backend.src.database.models.core import (
         Article,

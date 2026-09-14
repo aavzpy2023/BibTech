@@ -12,7 +12,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from src.database.session import Base
+from ..session import Base
 
 
 class Affiliation(Base):

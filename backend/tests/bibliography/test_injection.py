@@ -171,3 +171,11 @@ def test_inject_references_empty_list(in_memory_db):
         .first()
     )
     assert proj is not None
+
+
+def test_models_and_router_imports_resolve_without_src_package():
+    import importlib
+    models_pkg = importlib.import_module("backend.src.database.models")
+    assert hasattr(models_pkg, "Article")
+    assert hasattr(models_pkg, "Project")
+    assert hasattr(models_pkg, "ProjectArticle")

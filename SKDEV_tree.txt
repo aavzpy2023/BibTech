@@ -22,6 +22,7 @@
 │   │   │   │   ├── LoadView.jsx
 │   │   │   │   ├── QueueView.jsx
 │   │   │   │   ├── QueueView.test.jsx
+│   │   │   │   ├── ReferencesView.jsx
 │   │   │   ├── hooks/
 │   │   │   │   ├── useBatchLoad.js
 │   │   │   │   ├── useBatchLoad.test.js
@@ -29,6 +30,8 @@
 │   │   │   │   ├── useBibliography.test.js
 │   │   │   │   ├── useQueueState.js
 │   │   │   │   ├── useQueueState.test.js
+│   │   │   │   ├── useReferencesUpload.js
+│   │   │   │   ├── useReferencesUpload.test.js
 │   │   │   ├── components/
 │   │   │   │   ├── BibliographyUploader.jsx
 │   │   │   │   ├── Layout.jsx
@@ -39,6 +42,8 @@
 │   │   │   │   │   ├── BatchInput.jsx
 │   │   │   │   │   ├── BatchMonitor.jsx
 │   │   │   │   │   ├── BatchMonitor.test.jsx
+│   │   │   │   ├── references/
+│   │   │   │   │   ├── ReferencesDataTable.jsx
 │   ├── backend/
 │   │   ├── Dockerfile
 │   │   ├── __init__.py
@@ -62,6 +67,7 @@
 │   │   │   │   ├── __init__.py
 │   │   │   │   ├── download_service.py
 │   │   │   │   ├── file_storage_service.py
+│   │   │   │   ├── injection_service.py
 │   │   │   │   ├── parser_service.py
 │   │   │   │   ├── resolver_service.py
 │   │   │   │   ├── router.py
@@ -85,6 +91,7 @@
 │   │   │   ├── bibliography/
 │   │   │   │   ├── __init__.py
 │   │   │   │   ├── test_download.py
+│   │   │   │   ├── test_injection.py
 │   │   │   │   ├── test_parser.py
 │   │   │   │   ├── test_resolver.py
 │   │   │   │   ├── test_router.py
@@ -115,6 +122,7 @@
 │   │   │   ├── roadmap_3_batch_download_execution.md
 │   │   │   ├── roadmap_4_download_queue_and_zip.md
 │   │   │   ├── roadmap_5_database_schema.md
+│   │   │   ├── roadmap_6_references_ingestion.md
 │   ├── nginx/
 │   │   ├── Dockerfile
 │   │   ├── nginx.conf

@@ -1,61 +1,172 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-14 16:42:47
+Date: 2026-09-14 19:35:32
 AST Mode: False
 Line Numbers: True
-Modules: docker-compose.yml
+Modules: tracking.py
 Processed Files: 1
 ===========================
 
 
 
-// --- docker-compose.yml ---
+// --- backend/src/database/models/tracking.py ---
 
-[L001, S0] services:
-[L002, S0] 
-[L003, S2]   backend:
-[L004, S4]     container_name: bibtech-backend
-[L005, S4]     build: ./backend
-[L006, S4]     expose:
-[L007, S6]       - "8000"
-[L008, S4]     volumes:
-[L009, S6]       - ./backend:/app
-[L010, S4]     environment:
-[L011, S6]       - PYTHONDONTWRITEBYTECODE=1
-[L012, S6]       - PYTHONUNBUFFERED=1
-[L013, S6]       - DATABASE_URL=postgresql://user:password@db:5432/dbname
-[L014, S4]     depends_on:
-[L015, S6]       - db
+[L001, S0] """Extended tracking models for citations, funding, and paper downloads."""
+[L002, S0] from datetime import datetime, timezone
+[L003, S0] 
+[L004, S0] from sqlalchemy import (
+[L005, S4]     Column,
+[L006, S4]     DateTime,
+[L007, S4]     ForeignKey,
+[L008, S4]     Integer,
+[L009, S4]     String,
+[L010, S4]     Text,
+[L011, S0] )
+[L012, S0] from sqlalchemy.orm import relationship
+[L013, S0] 
+[L014, S0] from src.database.session import Base
+[L015, S0] 
 [L016, S0] 
-[L017, S2]   frontend:
-[L018, S4]     container_name: bibtech-frontend
-[L019, S4]     build: ./frontend
-[L020, S4]     expose:
-[L021, S6]       - "5173"
-[L022, S4]     volumes:
-[L023, S6]       - ./frontend:/app
-[L024, S6]       - /app/node_modules
-[L025, S0] 
-[L026, S2]   nginx:
-[L027, S4]     container_name: bibtech-nginx
-[L028, S4]     build: ./nginx
-[L029, S4]     ports:
-[L030, S6]       - "88:80"
-[L031, S4]     depends_on:
-[L032, S6]       - frontend
-[L033, S6]       - backend
-[L034, S0] 
-[L035, S2]   db:
-[L036, S4]     container_name: bibtech-postgres
-[L037, S4]     image: postgres:16-alpine
-[L038, S4]     ports:
-[L039, S6]       - "5432:5432"
-[L040, S4]     environment:
-[L041, S6]       - POSTGRES_USER=user
-[L042, S6]       - POSTGRES_PASSWORD=password
-[L043, S6]       - POSTGRES_DB=dbname
-[L044, S4]     volumes:
-[L045, S6]       - postgres_data:/var/lib/postgresql/data
-[L046, S0] 
-[L047, S0] volumes:
-[L048, S2]   postgres_data:
+[L017, S0] class Reference(Base):
+[L018, S4]     """Represents a citation or reference cited by an article."""
+[L019, S0] 
+[L020, S4]     __tablename__ = "references"
+[L021, S0] 
+[L022, S4]     id = Column(
+[L023, S8]         Integer,
+[L024, S8]         primary_key=True,
+[L025, S8]         autoincrement=True,
+[L026, S8]         comment="Primary key identifier for reference",
+[L027, S4]     )
+[L028, S4]     article_id = Column(
+[L029, S8]         Integer,
+[L030, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L031, S8]         nullable=False,
+[L032, S8]         comment="Foreign key linking to the referencing article",
+[L033, S4]     )
+[L034, S4]     raw_citation = Column(
+[L035, S8]         Text,
+[L036, S8]         nullable=False,
+[L037, S8]         comment="Full text or formatted citation string of the reference",
+[L038, S4]     )
+[L039, S4]     doi = Column(
+[L040, S8]         String(255),
+[L041, S8]         nullable=True,
+[L042, S8]         index=True,
+[L043, S8]         comment="Extracted or resolved DOI for cited reference",
+[L044, S4]     )
+[L045, S4]     title = Column(
+[L046, S8]         Text,
+[L047, S8]         nullable=True,
+[L048, S8]         comment="Title of the cited reference",
+[L049, S4]     )
+[L050, S4]     year = Column(
+[L051, S8]         Integer,
+[L052, S8]         nullable=True,
+[L053, S8]         comment="Publication year of the cited reference",
+[L054, S4]     )
+[L055, S4]     created_at = Column(
+[L056, S8]         DateTime,
+[L057, S8]         default=lambda: datetime.now(timezone.utc),
+[L058, S8]         nullable=False,
+[L059, S8]         comment="UTC timestamp when reference was extracted",
+[L060, S4]     )
+[L061, S0] 
+[L062, S4]     article = relationship("Article", back_populates="references")
+[L063, S0] 
+[L064, S0] 
+[L065, S0] class Funding(Base):
+[L066, S4]     """Represents financial support or grants supporting an article."""
+[L067, S0] 
+[L068, S4]     __tablename__ = "funding"
+[L069, S0] 
+[L070, S4]     id = Column(
+[L071, S8]         Integer,
+[L072, S8]         primary_key=True,
+[L073, S8]         autoincrement=True,
+[L074, S8]         comment="Primary key identifier for funding record",
+[L075, S4]     )
+[L076, S4]     article_id = Column(
+[L077, S8]         Integer,
+[L078, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L079, S8]         nullable=False,
+[L080, S8]         comment="Foreign key linking to funded article",
+[L081, S4]     )
+[L082, S4]     agency = Column(
+[L083, S8]         String(255),
+[L084, S8]         nullable=False,
+[L085, S8]         comment="Name of funding agency or institution",
+[L086, S4]     )
+[L087, S4]     grant_number = Column(
+[L088, S8]         String(100),
+[L089, S8]         nullable=True,
+[L090, S8]         comment="Specific grant or award identification number",
+[L091, S4]     )
+[L092, S4]     country = Column(
+[L093, S8]         String(100),
+[L094, S8]         nullable=True,
+[L095, S8]         comment="Country of funding organization",
+[L096, S4]     )
+[L097, S4]     created_at = Column(
+[L098, S8]         DateTime,
+[L099, S8]         default=lambda: datetime.now(timezone.utc),
+[L100, S8]         nullable=False,
+[L101, S8]         comment="UTC timestamp when funding record was created",
+[L102, S4]     )
+[L103, S0] 
+[L104, S4]     article = relationship("Article", back_populates="funding")
+[L105, S0] 
+[L106, S0] 
+[L107, S0] class Download(Base):
+[L108, S4]     """Represents a document acquisition event for an article in a project."""
+[L109, S0] 
+[L110, S4]     __tablename__ = "downloads"
+[L111, S0] 
+[L112, S4]     id = Column(
+[L113, S8]         Integer,
+[L114, S8]         primary_key=True,
+[L115, S8]         autoincrement=True,
+[L116, S8]         comment="Primary key identifier for download record",
+[L117, S4]     )
+[L118, S4]     article_id = Column(
+[L119, S8]         Integer,
+[L120, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L121, S8]         nullable=False,
+[L122, S8]         comment="Foreign key linking to downloaded article",
+[L123, S4]     )
+[L124, S4]     project_id = Column(
+[L125, S8]         Integer,
+[L126, S8]         ForeignKey("projects.id", ondelete="CASCADE"),
+[L127, S8]         nullable=False,
+[L128, S8]         comment="Foreign key linking to parent project",
+[L129, S4]     )
+[L130, S4]     source = Column(
+[L131, S8]         String(100),
+[L132, S8]         nullable=False,
+[L133, S8]         comment="Download source or resolver (e.g. unpaywall, openalex)",
+[L134, S4]     )
+[L135, S4]     file_path = Column(
+[L136, S8]         String(500),
+[L137, S8]         nullable=True,
+[L138, S8]         comment="Local or cloud storage path of downloaded PDF",
+[L139, S4]     )
+[L140, S4]     file_size_bytes = Column(
+[L141, S8]         Integer,
+[L142, S8]         nullable=True,
+[L143, S8]         comment="Size of downloaded file in bytes",
+[L144, S4]     )
+[L145, S4]     status = Column(
+[L146, S8]         String(50),
+[L147, S8]         default="completed",
+[L148, S8]         nullable=False,
+[L149, S8]         comment="Download status (e.g. completed, failed, in_progress)",
+[L150, S4]     )
+[L151, S4]     downloaded_at = Column(
+[L152, S8]         DateTime,
+[L153, S8]         default=lambda: datetime.now(timezone.utc),
+[L154, S8]         nullable=False,
+[L155, S8]         comment="UTC timestamp when download occurred",
+[L156, S4]     )
+[L157, S0] 
+[L158, S4]     article = relationship("Article", back_populates="downloads")
+[L159, S4]     project = relationship("Project", back_populates="downloads")

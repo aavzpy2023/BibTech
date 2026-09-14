@@ -14,9 +14,12 @@ from .zip_service import create_zip_from_pdfs
 from .injection_service import inject_references_to_db
 
 try:
-    from src.database.session import get_db
-except ImportError:
-    from backend.src.database.session import get_db
+    from ..database.session import get_db
+except (ImportError, ValueError):
+    try:
+        from src.database.session import get_db
+    except ImportError:
+        from backend.src.database.session import get_db
 
 router = APIRouter()
 
