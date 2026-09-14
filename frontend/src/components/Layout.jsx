@@ -12,6 +12,11 @@ const navItems = [
 ];
 
 const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: '100vh'
+  },
   header: {
     borderBottom: '1px solid #e1e4e8',
     padding: '0 20px',
@@ -20,7 +25,8 @@ const styles = {
   nav: {
     display: 'flex',
     gap: '24px',
-    alignItems: 'center'
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   link: {
     padding: '16px 4px',
@@ -35,15 +41,27 @@ const styles = {
     borderBottom: '2px solid #0366d6'
   },
   main: {
+    flex: 1,
+    width: '100%',
     padding: '24px',
     maxWidth: '1200px',
-    margin: '0 auto'
+    margin: '0 auto',
+    boxSizing: 'border-box'
+  },
+  footer: {
+    padding: '24px',
+    textAlign: 'center',
+    borderTop: '1px solid #e1e4e8',
+    backgroundColor: '#ffffff',
+    color: '#586069',
+    fontSize: '14px'
   }
 };
 
 function Layout() {
+  const currentYear = new Date().getFullYear();
   return (
-    <div>
+    <div style={styles.container}>
       <header style={styles.header}>
         <nav style={styles.nav}>
           {navItems.map((item) => (
@@ -65,6 +83,9 @@ function Layout() {
           <Outlet />
         </BatchProvider>
       </main>
+      <footer style={styles.footer}>
+        &copy; {currentYear} Universidad Tecnológica Metropolitana, Santiago, Chile
+      </footer>
     </div>
   );
 }

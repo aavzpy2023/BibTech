@@ -1,69 +1,170 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 18:26:15
+Date: 2026-09-14 18:42:39
 AST Mode: True
 Line Numbers: False
-Modules: global_backlog.md, pyproject.toml
+Modules: App.jsx, Layout.jsx
 Processed Files: 2
 ===========================
 
 
 
-// --- leai_docs/planning/global_backlog.md ---
+// --- frontend/src/App.jsx ---
 
-# Global Backlog
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import LoadView from './views/LoadView';
+import QueueView from './views/QueueView';
+import AnalysisView from './views/AnalysisView';
+import BibliographyUploader from './components/BibliographyUploader';
+import ReferenceTable from './components/ReferenceTable';
+import { useBibliography } from './hooks/useBibliography';
 
-## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
-- [x] Story 1.0: Roadmap &amp; Planning Initialization
-- [x] Story 1.1: Project Dependencies &amp; Context Genesis
+function DashboardView() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const { references, isLoading, error: uploadError, uploadFile } = useBibliography();
 
-## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
-- [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
-- [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
-- [x] [REQ-003] Bibliography Data Display &amp; Table View
+  useEffect(() => {
+    fetch('/api/requirements')
+      .then(res => {
+        if (!res.ok) throw new Error('Error al conectar con el servidor');
+        return res.json();
+      })
+      .then(data => setData(data))
+      .catch(err => setError(err.message));
+  }, []);
 
-## EPIC 3: BATCH LOAD INTERFACE
-- [x] [REQ-004] Frontend Routing &amp; Main Layout
-- [x] [REQ-005] Load View - State Fractality (Custom Hook)
-- [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
-- [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
+  const styles = {
+    container: { fontFamily: 'system-ui, sans-serif', padding: '40px', maxWidth: '600px', margin: '0 auto', textAlign: 'center', color: '#333' },
+    card: { border: '1px solid #e1e4e8', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', backgroundColor: '#fff', textAlign: 'left' },
+    badge: { backgroundColor: '#e2f5ea', color: '#137333', padding: '6px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: 'bold', display: 'inline-block', marginBottom: '15px' }
+  };
 
-## EPIC 4: BATCH DOWNLOAD EXECUTION
-- [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
-- [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
-- [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
-- [x] [REQ-011] Frontend SSE Hook State Integration
+  return (
+    <div style={styles.container}>
+      <h1>¡Proyecto bibtech Inicializado! 🎉</h1>
+      <div style={styles.card}>
+        <h3>Ingesta de Bibliografía</h3>
+        {uploadError && <p style={{color: 'red', fontWeight: 'bold'}}>❌ {uploadError}</p>}
+        {isLoading && <p style={{color: '#0366d6'}}>Procesando archivo...</p>}
+        
+        <BibliographyUploader onUpload={uploadFile} />
+        <ReferenceTable references={references} />
+        
+        <hr style={{margin: '32px 0', border: 'none', borderTop: '1px solid #e1e4e8'}} />
+        
+        <h3>Parámetros Modernos Detectados:</h3>
+        {error && <p style={{color: 'red'}}>❌ {error}</p>}
+        {!data && !error && <p>Cargando requerimientos...</p>}
+        {data && (
+          <div>
+            <span style={styles.badge}>{data.status}</span>
+            <ul>
+              <li><strong>Estructura:</strong> bibtech</li>
+              <li><strong>Configuración Backend:</strong> pyproject.toml (PEP 621)</li>
+              <li><strong>Base de Datos:</strong> {data.database}</li>
+              <li><strong>Ruteo/Proxy:</strong> {data.proxy}</li>
+              <li><strong>Backend Framework:</strong> Python + {data.framework}</li>
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
-## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
-- [x] [REQ-012] Load View Validation &amp; Label Updates
-- [x] [REQ-013] Queue View State &amp; UI Assembly
-- [x] [REQ-014] Backend ZIP Service &amp; Download Action
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<DashboardView />} />
+          <Route path="load" element={<LoadView />} />
+          <Route path="queue" element={<QueueView />} />
+          <Route path="analysis" element={<AnalysisView />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
 
-## Active Roadmaps
-- [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
-- [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
-- [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
-- [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
+export default App;
 
 
-// --- backend/pyproject.toml ---
 
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+// --- frontend/src/components/Layout.jsx ---
 
-[project]
-name = "bibtech-backend"
-version = "0.1.0"
-description = "Backend de Python configurado dinámicamente"
-requires-python = ">=3.11"
-dependencies = [
-    "fastapi>=0.110.0",
-    "uvicorn[standard]>=0.28.0",
-    "psycopg2-binary>=2.9.9",
-    "rispy>=0.9.0",
-    "bibtexparser>=1.4.3",
-    "python-multipart>=0.0.9",
-    "httpx>=0.27.0",
-]
+import React from 'react';
+import { NavLink, Outlet } from 'react-router-dom';
+import { BatchProvider } from '../hooks/useBatchLoad';
 
+const navItems = [
+  { name: 'Dashboard', path: '/' },
+  { name: 'Search', path: '/search' },
+  { name: 'Load', path: '/load' },
+  { name: 'Download queue', path: '/queue' },
+  { name: 'Analysis', path: '/analysis' },
+  { name: 'References', path: '/references' }
+];
+
+const styles = {
+  header: {
+    borderBottom: '1px solid #e1e4e8',
+    padding: '0 20px',
+    backgroundColor: '#ffffff'
+  },
+  nav: {
+    display: 'flex',
+    gap: '24px',
+    alignItems: 'center'
+  },
+  link: {
+    padding: '16px 4px',
+    textDecoration: 'none',
+    color: '#586069',
+    fontWeight: 500,
+    fontSize: '14px',
+    borderBottom: '2px solid transparent'
+  },
+  activeLink: {
+    color: '#0366d6',
+    borderBottom: '2px solid #0366d6'
+  },
+  main: {
+    padding: '24px',
+    maxWidth: '1200px',
+    margin: '0 auto'
+  }
+};
+
+function Layout() {
+  return (
+    <div>
+      <header style={styles.header}>
+        <nav style={styles.nav}>
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              style={({ isActive }) => ({
+                ...styles.link,
+                ...(isActive ? styles.activeLink : {})
+              })}
+            >
+              {item.name}
+            </NavLink>
+          ))}
+        </nav>
+      </header>
+      <main style={styles.main}>
+        <BatchProvider>
+          <Outlet />
+        </BatchProvider>
+      </main>
+    </div>
+  );
+}
+
+export default Layout;
