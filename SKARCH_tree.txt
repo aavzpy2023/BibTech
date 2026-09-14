@@ -3,6 +3,7 @@
 --- Raíz de escaneo: . ---
 │   ├── Makefile
 │   ├── README.md
+│   ├── conftest.py
 │   ├── context.md
 │   ├── create_project.py
 │   ├── docker-compose.yml
@@ -33,19 +34,25 @@
 │   │   │   │   │   ├── BatchMonitor.test.jsx
 │   ├── backend/
 │   │   ├── Dockerfile
+│   │   ├── __init__.py
 │   │   ├── main.py
+│   │   ├── pyproject.toml
 │   │   ├── bibtech_backend.egg-info/
 │   │   │   ├── SOURCES.txt
 │   │   │   ├── dependency_links.txt
 │   │   │   ├── requires.txt
 │   │   │   ├── top_level.txt
 │   │   ├── src/
+│   │   │   ├── __init__.py
 │   │   │   ├── bibliography/
+│   │   │   │   ├── __init__.py
 │   │   │   │   ├── parser_service.py
 │   │   │   │   ├── router.py
 │   │   │   │   ├── schemas.py
 │   │   ├── tests/
+│   │   │   ├── __init__.py
 │   │   │   ├── bibliography/
+│   │   │   │   ├── __init__.py
 │   │   │   │   ├── test_parser.py
 │   │   │   │   ├── test_router.py
 │   ├── _scripts/

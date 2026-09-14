@@ -1,522 +1,60 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 15:36:22
+Date: 2026-09-14 15:46:53
 AST Mode: True
 Line Numbers: False
-Modules: LoadView.jsx, BatchInput.jsx, BatchConfig.jsx, BatchMonitor.jsx
-Processed Files: 4
+Modules: router.py, pyproject.toml
+Processed Files: 2
 ===========================
 
 
 
-// --- frontend/src/views/LoadView.jsx ---
+// --- backend/src/bibliography/router.py ---
 
-import React from 'react';
-import useBatchLoad from '../hooks/useBatchLoad';
-import BatchInput from '../components/load/BatchInput';
-import BatchConfig from '../components/load/BatchConfig';
-import BatchMonitor from '../components/load/BatchMonitor';
+import os
+from typing import List
+from fastapi import APIRouter, UploadFile, File, HTTPException
+from .schemas import ParsedReference
+from .parser_service import parse_bibliography_content
 
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
-    maxWidth: '900px',
-    margin: '0 auto'
-  },
-  header: {
-    borderBottom: '1px solid #e1e4e8',
-    paddingBottom: '16px'
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#24292e',
-    margin: '0 0 8px 0'
-  },
-  subtitle: {
-    fontSize: '14px',
-    color: '#586069',
-    margin: 0
-  }
-};
+router = APIRouter()
 
-export function LoadView() {
-  const {
-    input,
-    config,
-    monitor,
-    updateInput,
-    updateConfig,
-    startBatch
-  } = useBatchLoad();
-
-  return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h2 style={styles.title}>Carga por Lote de Bibliografía</h2>
-        <p style={styles.subtitle}>
-          Ingresa archivos bibliográficos o identificadores DOI para descarga
-          automática.
-        </p>
-      </div>
-
-      <BatchInput
-        files={input.files}
-        dois={input.dois}
-        onInputUpdate={updateInput}
-      />
-
-      <BatchConfig
-        delay={config.delay}
-        sources={config.sources}
-        destination={config.destination}
-        email={config.email}
-        onConfigUpdate={updateConfig}
-      />
-
-      <BatchMonitor
-        progress={monitor.progress}
-        total={monitor.total}
-        logs={monitor.logs}
-        onStart={startBatch}
-      />
-    </div>
-  );
-}
-
-export default LoadView;
+@router.post("/upload", response_model=List[ParsedReference])
+async def upload_bibliography(file: UploadFile = File(...)):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
+    _, ext = os.path.splitext(file.filename)
+    if ext.lower() not in [".ris", ".bib"]:
+        raise HTTPException(status_code=400, detail="Unsupported file extension")
+    
+    try:
+        content_bytes = await file.read()
+        content_str = content_bytes.decode("utf-8")
+        refs = parse_bibliography_content(content_str, ext)
+        return refs
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error during parsing")
 
 
-// --- frontend/src/components/load/BatchInput.jsx ---
+// --- backend/pyproject.toml ---
 
-import React from 'react';
-import { useDropzone } from 'react-dropzone';
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-    marginBottom: '24px'
-  },
-  dropzone: {
-    border: '2px dashed #0366d6',
-    borderRadius: '8px',
-    padding: '24px',
-    textAlign: 'center',
-    cursor: 'pointer',
-    backgroundColor: '#f6f8fa'
-  },
-  dropzoneActive: {
-    backgroundColor: '#e1f5fe',
-    borderColor: '#0288d1'
-  },
-  textarea: {
-    width: '100%',
-    minHeight: '120px',
-    padding: '12px',
-    borderRadius: '6px',
-    border: '1px solid #d1d5da',
-    fontFamily: 'monospace',
-    fontSize: '13px',
-    boxSizing: 'border-box'
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: '14px',
-    color: '#24292e',
-    marginBottom: '6px',
-    display: 'block'
-  },
-  fileList: {
-    marginTop: '8px',
-    fontSize: '13px',
-    color: '#586069'
-  }
-};
+[project]
+name = "bibtech-backend"
+version = "0.1.0"
+description = "Backend de Python configurado dinámicamente"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "psycopg2-binary>=2.9.9",
+    "rispy>=0.9.0",
+    "bibtexparser>=1.4.3",
+]
 
-export function BatchInput({
-  files = [],
-  dois = '',
-  input,
-  onInputUpdate
-}) {
-  const currentFiles = input?.files ?? files;
-  const currentDois = input?.dois ?? dois;
-
-  const onDrop = (acceptedFiles) => {
-    if (onInputUpdate) {
-      onInputUpdate('files', acceptedFiles);
-    }
-  };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop
-  });
-
-  return (
-    <div style={styles.container}>
-      <div>
-        <span style={styles.label}>Archivos de Entrada (BibTeX, RIS, PDF)</span>
-        <div
-          {...getRootProps()}
-          style={{
-            ...styles.dropzone,
-            ...(isDragActive ? styles.dropzoneActive : {})
-          }}
-        >
-          <input {...getInputProps()} />
-          <p style={{ margin: 0, color: '#444' }}>
-            Arrastra o selecciona archivos aquí (.bib, .ris, .txt)
-          </p>
-          {currentFiles && currentFiles.length > 0 && (
-            <div style={styles.fileList}>
-              {currentFiles.length} archivo(s) seleccionado(s)
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="batch-dois-textarea" style={styles.label}>
-          Lista de DOIs (uno por línea)
-        </label>
-        <textarea
-          id="batch-dois-textarea"
-          style={styles.textarea}
-          placeholder="10.1000/182&#10;10.1000/183"
-          value={currentDois}
-          onChange={(e) => {
-            if (onInputUpdate) {
-              onInputUpdate('dois', e.target.value);
-            }
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-export default BatchInput;
-
-
-// --- frontend/src/components/load/BatchConfig.jsx ---
-
-import React from 'react';
-
-const AVAILABLE_SOURCES = [
-  'Unpaywall',
-  'CrossRef',
-  'Semantic Scholar',
-  'OpenAlex',
-  'PubMed'
-];
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
-    marginBottom: '24px',
-    padding: '20px',
-    backgroundColor: '#fafbfc',
-    border: '1px solid #e1e4e8',
-    borderRadius: '8px'
-  },
-  section: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px'
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: '14px',
-    color: '#24292e'
-  },
-  sliderContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px'
-  },
-  slider: {
-    flex: 1,
-    cursor: 'pointer'
-  },
-  checkboxGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-    gap: '10px'
-  },
-  checkboxLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontSize: '13px',
-    cursor: 'pointer'
-  },
-  inputsGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '16px'
-  },
-  input: {
-    padding: '8px 12px',
-    borderRadius: '6px',
-    border: '1px solid #d1d5da',
-    fontSize: '14px'
-  }
-};
-
-export function BatchConfig({
-  delay = 5,
-  sources = [],
-  destination = '',
-  email = '',
-  config,
-  onConfigUpdate
-}) {
-  const currentDelay = config?.delay ?? delay;
-  const currentSources = config?.sources ?? sources;
-  const currentDestination = config?.destination ?? destination;
-  const currentEmail = config?.email ?? email;
-
-  const handleSourceToggle = (sourceName) => {
-    if (!onConfigUpdate) return;
-    const exists = currentSources.includes(sourceName);
-    const updated = exists
-      ? currentSources.filter((s) => s !== sourceName)
-      : [...currentSources, sourceName];
-    onConfigUpdate('sources', updated);
-  };
-
-  return (
-    <div style={styles.container}>
-      <div style={styles.section}>
-        <label htmlFor="delay-slider" style={styles.label}>
-          Retardo entre descargas: {currentDelay}s
-        </label>
-        <div style={styles.sliderContainer}>
-          <input
-            id="delay-slider"
-            role="slider"
-            type="range"
-            min="5"
-            max="60"
-            step="5"
-            value={currentDelay}
-            style={styles.slider}
-            onChange={(e) => {
-              if (onConfigUpdate) {
-                onConfigUpdate('delay', Number(e.target.value));
-              }
-            }}
-          />
-          <span style={{ fontSize: '12px', color: '#586069' }}>
-            [5s, 15s, 30s, 60s]
-          </span>
-        </div>
-      </div>
-
-      <div style={styles.section}>
-        <span style={styles.label}>Fuentes de Recuperación (5 Fuentes)</span>
-        <div style={styles.checkboxGrid}>
-          {AVAILABLE_SOURCES.map((source) => (
-            <label key={source} style={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={currentSources.includes(source)}
-                onChange={() => handleSourceToggle(source)}
-              />
-              {source}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div style={styles.inputsGrid}>
-        <div style={styles.section}>
-          <label htmlFor="destination-input" style={styles.label}>
-            Carpeta de Destino
-          </label>
-          <input
-            id="destination-input"
-            type="text"
-            style={styles.input}
-            placeholder="Carpeta o ruta de descarga"
-            value={currentDestination}
-            onChange={(e) => {
-              if (onConfigUpdate) {
-                onConfigUpdate('destination', e.target.value);
-              }
-            }}
-          />
-        </div>
-
-        <div style={styles.section}>
-          <label htmlFor="email-input" style={styles.label}>
-            Correo Electrónico (Polite Pool)
-          </label>
-          <input
-            id="email-input"
-            type="email"
-            style={styles.input}
-            placeholder="Correo para APIs académicas"
-            value={currentEmail}
-            onChange={(e) => {
-              if (onConfigUpdate) {
-                onConfigUpdate('email', e.target.value);
-              }
-            }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default BatchConfig;
-
-
-// --- frontend/src/components/load/BatchMonitor.jsx ---
-
-import React from 'react';
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-    padding: '20px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e1e4e8',
-    borderRadius: '8px'
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  button: {
-    padding: '10px 24px',
-    backgroundColor: '#2ea44f',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '6px',
-    fontWeight: 'bold',
-    fontSize: '14px',
-    cursor: 'pointer'
-  },
-  progressContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px'
-  },
-  progressText: {
-    fontSize: '13px',
-    color: '#586069',
-    display: 'flex',
-    justifyContent: 'space-between'
-  },
-  track: {
-    width: '100%',
-    height: '16px',
-    backgroundColor: '#e1e4e8',
-    borderRadius: '8px',
-    overflow: 'hidden'
-  },
-  fill: {
-    height: '100%',
-    backgroundColor: '#0366d6',
-    transition: 'width 0.3s ease'
-  },
-  logsContainer: {
-    backgroundColor: '#0d1117',
-    color: '#c9d1d9',
-    fontFamily: 'monospace',
-    fontSize: '12px',
-    padding: '12px',
-    borderRadius: '6px',
-    maxHeight: '180px',
-    overflowY: 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px'
-  }
-};
-
-export function BatchMonitor({
-  progress = 0,
-  total = 0,
-  logs = [],
-  monitor,
-  onStart
-}) {
-  const currentProgress = monitor?.progress ?? progress;
-  const currentTotal = monitor?.total ?? total;
-  const currentLogs = monitor?.logs ?? logs;
-
-  const percentage =
-    currentTotal > 0
-      ? Math.min(100, Math.round((currentProgress / currentTotal) * 100))
-      : 0;
-
-  return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h3 style={{ margin: 0, fontSize: '16px', color: '#24292e' }}>
-          Monitor de Carga y Descarga
-        </h3>
-        <button
-          type="button"
-          style={styles.button}
-          onClick={onStart}
-        >
-          Iniciar Descarga
-        </button>
-      </div>
-
-      <div style={styles.progressContainer}>
-        <div style={styles.progressText}>
-          <span>Progreso de recuperación</span>
-          <span>
-            {currentProgress} / {currentTotal} ({percentage}%)
-          </span>
-        </div>
-        <div style={styles.track}>
-          <div
-            data-testid="progress-bar-fill"
-            style={{
-              ...styles.fill,
-              width: `${percentage}%`
-            }}
-          />
-        </div>
-      </div>
-
-      <div>
-        <div
-          style={{
-            fontSize: '13px',
-            fontWeight: 'bold',
-            marginBottom: '6px'
-          }}
-        >
-          Registros de eventos
-        </div>
-        <div style={styles.logsContainer}>
-          {currentLogs.length === 0 ? (
-            <span style={{ color: '#8b949e' }}>Sin actividad reciente.</span>
-          ) : (
-            currentLogs.map((log, index) => (
-              <div key={`${index}-${log.slice(0, 10)}`}>{log}</div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default BatchMonitor;
