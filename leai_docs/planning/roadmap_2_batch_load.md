@@ -102,7 +102,8 @@ complexity_aggregate: "MEDIUM"
   leai_docs/planning/global_backlog.md and check - [x] for REQ-005 and REQ-006].
   Type: Task.
 
-- [ ] Story 2.4: Load View - Dumb Component (Monitor) & Assembly | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 2.4: Load View - Dumb Component (Monitor) & Assembly | [MoSCoW: MUST] | [Complexity: MEDIUM]
+  > Files touched: frontend/src/components/load/BatchMonitor.jsx, frontend/src/views/LoadView.jsx, frontend/src/App.jsx
   Business Requirement: Implement the Monitor UI and assemble the final Load View
   by wiring the hook to the dumb components. (<-- REQ-007)
   Story Context Radius: {"frontend/src/components/load/BatchMonitor.jsx": [""],

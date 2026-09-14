@@ -13,7 +13,7 @@
 - [x] [REQ-004] Frontend Routing &amp; Main Layout
 - [x] [REQ-005] Load View - State Fractality (Custom Hook)
 - [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
-- [ ] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
+- [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)

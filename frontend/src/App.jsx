@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import LoadView from './views/LoadView';
 
 function DashboardView() {
   const [data, setData] = useState(null);
@@ -52,7 +53,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<DashboardView />} />
-          <Route path="load" element={<div>Load View</div>} />
+          <Route path="load" element={<LoadView />} />
         </Route>
       </Routes>
     </BrowserRouter>
