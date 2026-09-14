@@ -98,7 +98,6 @@ export function ReferencesDataTable({ data = [] }) {
             <tr
               key={row.id || index}
               style={styles.tr}
-              title={JSON.stringify(row, null, 2)}
               onMouseMove={(e) => handleMouseMove(e, row)}
               onMouseLeave={handleMouseLeave}
             >
