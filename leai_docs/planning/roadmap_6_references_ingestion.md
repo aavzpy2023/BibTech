@@ -82,7 +82,7 @@ complexity_aggregate: "MEDIUM"
     [REQ-018]]. Type: Task.
   > Files touched: router.py, test_router.py
 
-- [ ] Story 6.3: Frontend Injection State Hook (State Fractality) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 6.3: Frontend Injection State Hook (State Fractality) | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Isolate the multi-part upload and state tracking logic
   entirely outside the React UI component. (<-- REQ-020)
   Story Context Radius: {"frontend/src/hooks/useReferencesUpload.js": [""],
@@ -105,9 +105,9 @@ complexity_aggregate: "MEDIUM"
   - [ID-6.3.3] [PLANNING/SYNC]: [1. Open
     leai_docs/planning/roadmap_6_references_ingestion.md and check - [x] for
     Story 6.3. 2. Append > Files touched: useReferencesUpload.js,
-    useReferencesUpload.test.js under the story. 3. Open
-    leai_docs/planning/global_backlog.md and check - [x] for [REQ-020]]. Type:
-    Task.
+    story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for
+    [REQ-020]]. Type: Task.
+  > Files touched: useReferencesUpload.js, useReferencesUpload.test.js
 
 - [ ] Story 6.4: Frontend Dumb Views & Routing Assembly | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Implement strict Dumb Components for the table and
