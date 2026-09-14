@@ -20,6 +20,7 @@
 │   │   │   │   ├── LoadView.jsx
 │   │   │   ├── hooks/
 │   │   │   │   ├── useBatchLoad.js
+│   │   │   │   ├── useBatchLoad.test.js
 │   │   │   │   ├── useBibliography.js
 │   │   │   │   ├── useBibliography.test.js
 │   │   │   ├── components/
@@ -45,7 +46,10 @@
 │   │   │   ├── __init__.py
 │   │   │   ├── bibliography/
 │   │   │   │   ├── __init__.py
+│   │   │   │   ├── download_service.py
+│   │   │   │   ├── file_storage_service.py
 │   │   │   │   ├── parser_service.py
+│   │   │   │   ├── resolver_service.py
 │   │   │   │   ├── router.py
 │   │   │   │   ├── schemas.py
 │   │   │   ├── bibtech_backend.egg-info/
@@ -57,7 +61,9 @@
 │   │   │   ├── __init__.py
 │   │   │   ├── bibliography/
 │   │   │   │   ├── __init__.py
+│   │   │   │   ├── test_download.py
 │   │   │   │   ├── test_parser.py
+│   │   │   │   ├── test_resolver.py
 │   │   │   │   ├── test_router.py
 │   ├── _scripts/
 │   │   ├── dev/
@@ -76,6 +82,7 @@
 │   │   │   ├── global_backlog.md
 │   │   │   ├── roadmap_1_bibliography_ingestion.md
 │   │   │   ├── roadmap_2_batch_load.md
+│   │   │   ├── roadmap_3_batch_download_execution.md
 │   ├── nginx/
 │   │   ├── Dockerfile
 │   │   ├── nginx.conf

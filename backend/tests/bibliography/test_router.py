@@ -99,8 +99,7 @@ def test_upload_bibliography_invalid_extension():
     assert "Unsupported file extension" in response.json()["detail"]
 
 
-@pytest.mark.asyncio
-async def test_batch_download_endpoint_direct():
+async def _run_batch_download_direct():
     async def mock_generator(*args, **kwargs):
         yield '{"log": "test"}'
 
@@ -118,6 +117,10 @@ async def test_batch_download_endpoint_direct():
         assert response.media_type == "text/event-stream"
         chunks = [chunk async for chunk in response.body_iterator]
         assert chunks == ['data: {"log": "test"}\n\n']
+
+
+def test_batch_download_endpoint_direct():
+    asyncio.run(_run_batch_download_direct())
 
 
 @pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")

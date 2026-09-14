@@ -1,639 +1,140 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 16:07:55
+Date: 2026-09-14 16:24:29
 AST Mode: True
 Line Numbers: False
-Modules: global_backlog.md, BatchConfig.jsx, BatchMonitor.jsx, LoadView.jsx, BatchComponents.test.jsx, BatchMonitor.test.jsx, schemas.py, router.py, test_router.py, useBatchLoad.js
-Processed Files: 10
+Modules: test_download.py, test_router.py
+Processed Files: 2
 ===========================
 
 
 
-// --- leai_docs/planning/global_backlog.md ---
-
-# Global Backlog
-
-## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
-- [x] Story 1.0: Roadmap &amp; Planning Initialization
-- [x] Story 1.1: Project Dependencies &amp; Context Genesis
-
-## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
-- [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
-- [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
-- [x] [REQ-003] Bibliography Data Display &amp; Table View
-
-## EPIC 3: BATCH LOAD INTERFACE
-- [x] [REQ-004] Frontend Routing &amp; Main Layout
-- [x] [REQ-005] Load View - State Fractality (Custom Hook)
-- [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
-- [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
-
-## Active Roadmaps
-- [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
-- [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
-
-
-// --- frontend/src/components/load/BatchConfig.jsx ---
-
-import React from 'react';
-
-const AVAILABLE_SOURCES = [
-  'Unpaywall',
-  'CrossRef',
-  'Semantic Scholar',
-  'OpenAlex',
-  'PubMed'
-];
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
-    marginBottom: '24px',
-    padding: '20px',
-    backgroundColor: '#fafbfc',
-    border: '1px solid #e1e4e8',
-    borderRadius: '8px'
-  },
-  section: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px'
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: '14px',
-    color: '#24292e'
-  },
-  sliderContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px'
-  },
-  slider: {
-    flex: 1,
-    cursor: 'pointer'
-  },
-  checkboxGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-    gap: '10px'
-  },
-  checkboxLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontSize: '13px',
-    cursor: 'pointer'
-  },
-  inputsGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '16px'
-  },
-  input: {
-    padding: '8px 12px',
-    borderRadius: '6px',
-    border: '1px solid #d1d5da',
-    fontSize: '14px'
-  }
-};
-
-export function BatchConfig({
-  delay = 5,
-  sources = [],
-  destination = '',
-  email = '',
-  config,
-  onConfigUpdate
-}) {
-  const currentDelay = config?.delay ?? delay;
-  const currentSources = config?.sources ?? sources;
-  const currentDestination = config?.destination ?? destination;
-  const currentEmail = config?.email ?? email;
-
-  const handleSourceToggle = (sourceName) => {
-    if (!onConfigUpdate) return;
-    const exists = currentSources.includes(sourceName);
-    const updated = exists
-      ? currentSources.filter((s) => s !== sourceName)
-      : [...currentSources, sourceName];
-    onConfigUpdate('sources', updated);
-  };
-
-  return (
-    <div style={styles.container}>
-      <div style={styles.section}>
-        <label htmlFor="delay-slider" style={styles.label}>
-          Delay between downloads: {currentDelay}s
-        </label>
-        <div style={styles.sliderContainer}>
-          <input
-            id="delay-slider"
-            role="slider"
-            type="range"
-            min="5"
-            max="60"
-            step="5"
-            value={currentDelay}
-            style={styles.slider}
-            onChange={(e) => {
-              if (onConfigUpdate) {
-                onConfigUpdate('delay', Number(e.target.value));
-              }
-            }}
-          />
-          <span style={{ fontSize: '12px', color: '#586069' }}>
-            [5s, 15s, 30s, 60s]
-          </span>
-        </div>
-      </div>
-
-      <div style={styles.section}>
-        <span style={styles.label}>Retrieval Sources (5 Sources)</span>
-        <div style={styles.checkboxGrid}>
-          {AVAILABLE_SOURCES.map((source) => (
-            <label key={source} style={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={currentSources.includes(source)}
-                onChange={() => handleSourceToggle(source)}
-              />
-              {source}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div style={styles.inputsGrid}>
-        <div style={styles.section}>
-          <label htmlFor="destination-input" style={styles.label}>
-            Destination Folder
-          </label>
-          <input
-            id="destination-input"
-            type="text"
-            style={styles.input}
-            placeholder="Download folder or path"
-            value={currentDestination}
-            onChange={(e) => {
-              if (onConfigUpdate) {
-                onConfigUpdate('destination', e.target.value);
-              }
-            }}
-          />
-        </div>
-
-        <div style={styles.section}>
-          <label htmlFor="email-input" style={styles.label}>
-            Email Address (Polite Pool)
-          </label>
-          <input
-            id="email-input"
-            type="email"
-            style={styles.input}
-            placeholder="Email for academic APIs"
-            value={currentEmail}
-            onChange={(e) => {
-              if (onConfigUpdate) {
-                onConfigUpdate('email', e.target.value);
-              }
-            }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default BatchConfig;
-
-
-// --- frontend/src/components/load/BatchMonitor.jsx ---
-
-import React from 'react';
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-    padding: '20px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e1e4e8',
-    borderRadius: '8px'
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  button: {
-    padding: '10px 24px',
-    backgroundColor: '#2ea44f',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '6px',
-    fontWeight: 'bold',
-    fontSize: '14px',
-    cursor: 'pointer'
-  },
-  progressContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px'
-  },
-  progressText: {
-    fontSize: '13px',
-    color: '#586069',
-    display: 'flex',
-    justifyContent: 'space-between'
-  },
-  track: {
-    width: '100%',
-    height: '16px',
-    backgroundColor: '#e1e4e8',
-    borderRadius: '8px',
-    overflow: 'hidden'
-  },
-  fill: {
-    height: '100%',
-    backgroundColor: '#0366d6',
-    transition: 'width 0.3s ease'
-  },
-  logsContainer: {
-    backgroundColor: '#0d1117',
-    color: '#c9d1d9',
-    fontFamily: 'monospace',
-    fontSize: '12px',
-    padding: '12px',
-    borderRadius: '6px',
-    maxHeight: '180px',
-    overflowY: 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px'
-  }
-};
-
-export function BatchMonitor({
-  progress = 0,
-  total = 0,
-  logs = [],
-  monitor,
-  onStart
-}) {
-  const currentProgress = monitor?.progress ?? progress;
-  const currentTotal = monitor?.total ?? total;
-  const currentLogs = monitor?.logs ?? logs;
-
-  const percentage =
-    currentTotal > 0
-      ? Math.min(100, Math.round((currentProgress / currentTotal) * 100))
-      : 0;
-
-  return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h3 style={{ margin: 0, fontSize: '16px', color: '#24292e' }}>
-          Load and Download Monitor
-        </h3>
-        <button
-          type="button"
-          style={styles.button}
-          onClick={onStart}
-        >
-          Start Download
-        </button>
-      </div>
-
-      <div style={styles.progressContainer}>
-        <div style={styles.progressText}>
-          <span>Retrieval progress</span>
-          <span>
-            {currentProgress} / {currentTotal} ({percentage}%)
-          </span>
-        </div>
-        <div style={styles.track}>
-          <div
-            data-testid="progress-bar-fill"
-            style={{
-              ...styles.fill,
-              width: `${percentage}%`
-            }}
-          />
-        </div>
-      </div>
-
-      <div>
-        <div
-          style={{
-            fontSize: '13px',
-            fontWeight: 'bold',
-            marginBottom: '6px'
-          }}
-        >
-          Event logs
-        </div>
-        <div style={styles.logsContainer}>
-          {currentLogs.length === 0 ? (
-            <span style={{ color: '#8b949e' }}>No recent activity.</span>
-          ) : (
-            currentLogs.map((log, index) => (
-              <div key={`${index}-${log.slice(0, 10)}`}>{log}</div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default BatchMonitor;
-
-
-// --- frontend/src/views/LoadView.jsx ---
-
-import React from 'react';
-import useBatchLoad from '../hooks/useBatchLoad';
-import BatchInput from '../components/load/BatchInput';
-import BatchConfig from '../components/load/BatchConfig';
-import BatchMonitor from '../components/load/BatchMonitor';
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
-    maxWidth: '900px',
-    margin: '0 auto'
-  },
-  header: {
-    borderBottom: '1px solid #e1e4e8',
-    paddingBottom: '16px'
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#24292e',
-    margin: '0 0 8px 0'
-  },
-  subtitle: {
-    fontSize: '14px',
-    color: '#586069',
-    margin: 0
-  }
-};
-
-export function LoadView() {
-  const {
-    input,
-    config,
-    monitor,
-    updateInput,
-    updateConfig,
-    startBatch
-  } = useBatchLoad();
-
-  return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h2 style={styles.title}>Batch Bibliography Load</h2>
-        <p style={styles.subtitle}>
-          Enter bibliographic files or DOI identifiers for automatic download.
-        </p>
-      </div>
-
-      <BatchInput
-        files={input.files}
-        dois={input.dois}
-        onInputUpdate={updateInput}
-      />
-
-      <BatchConfig
-        delay={config.delay}
-        sources={config.sources}
-        destination={config.destination}
-        email={config.email}
-        onConfigUpdate={updateConfig}
-      />
-
-      <BatchMonitor
-        progress={monitor.progress}
-        total={monitor.total}
-        logs={monitor.logs}
-        onStart={startBatch}
-      />
-    </div>
-  );
-}
-
-export default LoadView;
-
-
-// --- frontend/src/components/load/BatchComponents.test.jsx ---
-
-import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import BatchInput from './BatchInput';
-import BatchConfig from './BatchConfig';
-
-describe('BatchLoad Dumb Components', () => {
-  describe('BatchInput', () => {
-    it('renders dropzone area and textarea', () => {
-      const mockOnInputUpdate = vi.fn();
-      render(
-        <BatchInput
-          dois=""
-          files={[]}
-          onInputUpdate={mockOnInputUpdate}
-        />
-      );
-
-      expect(screen.getByPlaceholderText(/10\./i)).toBeTruthy();
-      expect(screen.getByText(/arrastra o selecciona archivos/i)).toBeTruthy();
-    });
-
-    it('triggers onInputUpdate when textarea content changes', () => {
-      const mockOnInputUpdate = vi.fn();
-      render(
-        <BatchInput
-          dois=""
-          files={[]}
-          onInputUpdate={mockOnInputUpdate}
-        />
-      );
-
-      const textarea = screen.getByPlaceholderText(/10\./i);
-      fireEvent.change(textarea, { target: { value: '10.1000/182' } });
-
-      expect(mockOnInputUpdate).toHaveBeenCalledWith('dois', '10.1000/182');
-    });
-  });
-
-  describe('BatchConfig', () => {
-    it('renders slider, 5 checkboxes and 2 text inputs correctly', () => {
-      const mockOnConfigUpdate = vi.fn();
-      const initialConfig = {
-        delay: 15,
-        sources: ['Unpaywall'],
-        destination: '/downloads',
-        email: 'test@example.com'
-      };
-
-      render(
-        <BatchConfig
-          config={initialConfig}
-          onConfigUpdate={mockOnConfigUpdate}
-        />
-      );
-
-      expect(screen.getByRole('slider')).toBeTruthy();
-      const checkboxes = screen.getAllByRole('checkbox');
-      expect(checkboxes.length).toBe(5);
-      expect(screen.getByPlaceholderText(/carpeta o ruta/i)).toBeTruthy();
-      expect(screen.getByPlaceholderText(/correo/i)).toBeTruthy();
-    });
-
-    it('triggers onConfigUpdate when delay slider changes', () => {
-      const mockOnConfigUpdate = vi.fn();
-      render(
-        <BatchConfig
-          delay={5}
-          onConfigUpdate={mockOnConfigUpdate}
-        />
-      );
-
-      const slider = screen.getByRole('slider');
-      fireEvent.change(slider, { target: { value: '30' } });
-
-      expect(mockOnConfigUpdate).toHaveBeenCalledWith('delay', 30);
-    });
-
-    it('triggers onConfigUpdate when checkbox is toggled', () => {
-      const mockOnConfigUpdate = vi.fn();
-      render(
-        <BatchConfig
-          config={{ delay: 5, sources: [], destination: '', email: '' }}
-          onConfigUpdate={mockOnConfigUpdate}
-        />
-      );
-
-      const unpaywallCheckbox = screen.getByLabelText(/unpaywall/i);
-      fireEvent.click(unpaywallCheckbox);
-
-      expect(mockOnConfigUpdate).toHaveBeenCalled();
-    });
-  });
-});
-
-
-// --- frontend/src/components/load/BatchMonitor.test.jsx ---
-
-import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import BatchMonitor from './BatchMonitor';
-
-describe('BatchMonitor component', () => {
-  it('renders progress bar width and log text correctly', () => {
-    const mockOnStart = vi.fn();
-    const logs = ['Log 1: Initializing download', 'Log 2: In progress'];
-
-    render(
-      <BatchMonitor
-        progress={45}
-        total={344}
-        logs={logs}
-        onStart={mockOnStart}
-      />
-    );
-
-    expect(screen.getByText('Log 1: Initializing download')).toBeTruthy();
-    expect(screen.getByText('Log 2: In progress')).toBeTruthy();
-    expect(screen.getByText(/45 \/ 344/)).toBeTruthy();
-
-    const progressBar = screen.getByTestId('progress-bar-fill');
-    expect(progressBar.style.width).toContain('%');
-  });
-
-  it('triggers onStart when Start Download button is clicked', () => {
-    const mockOnStart = vi.fn();
-    render(
-      <BatchMonitor
-        progress={0}
-        total={10}
-        logs={[]}
-        onStart={mockOnStart}
-      />
-    );
-
-    const startButton = screen.getByRole('button', {
-      name: /iniciar descarga/i
-    });
-    fireEvent.click(startButton);
-
-    expect(mockOnStart).toHaveBeenCalledTimes(1);
-  });
-});
-
-
-// --- backend/src/bibliography/schemas.py ---
-
-from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, ConfigDict
-
-class ParsedReference(BaseModel):
-    """..."""
-
-
-// --- backend/src/bibliography/router.py ---
-
-import os
-from typing import List
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from .schemas import ParsedReference
-from .parser_service import parse_bibliography_content
-
-router = APIRouter()
-
-try:
-    import multipart
-    HAS_MULTIPART = True
-except ImportError:
-    HAS_MULTIPART = False
-
-async def _process_upload(file: UploadFile) -> List[ParsedReference]:
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-    
-    _, ext = os.path.splitext(file.filename)
-    if ext.lower() not in [".ris", ".bib"]:
-        raise HTTPException(status_code=400, detail="Unsupported file extension")
-    
-    try:
-        content_bytes = await file.read()
-        content_str = content_bytes.decode("utf-8")
-        refs = parse_bibliography_content(content_str, ext)
-        return refs
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error during parsing"
+// --- backend/tests/bibliography/test_download.py ---
+
+import sys
+from pathlib import Path
+import json
+import asyncio
+from unittest.mock import AsyncMock, patch, MagicMock
+import httpx
+import pytest
+
+_root = Path(__file__).resolve().parents[3]
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
+
+from backend.src.bibliography.file_storage_service import save_pdf_bytes
+from backend.src.bibliography.download_service import execute_batch_download
+
+
+@pytest.mark.asyncio
+async def test_save_pdf_bytes(tmp_path: Path):
+    dest_dir = str(tmp_path / "downloads")
+    doi = "10.1000/182"
+    pdf_data = b"%PDF-1.4 test content"
+
+    saved_path = asyncio.run(save_pdf_bytes(dest_dir, doi, pdf_data))
+
+    assert Path(saved_path).exists()
+    assert Path(saved_path).read_bytes() == pdf_data
+    assert "10.1000_182.pdf" in saved_path
+
+
+async def _collect_events(dois, dest, email, delay=0):
+    return [
+        json.loads(chunk)
+        async for chunk in execute_batch_download(
+            dois, dest, email, delay=delay
+        )
+    ]
+
+
+def test_execute_batch_download_success():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b"%PDF mock content"
+    mock_resp.raise_for_status = MagicMock()
+
+    with (
+        patch(
+            "backend.src.bibliography.download_service.resolve_pdf_url",
+            new_callable=AsyncMock,
+            return_value="https://example.com/paper.pdf",
+        ),
+        patch(
+            "backend.src.bibliography.download_service.save_pdf_bytes",
+            new_callable=AsyncMock,
+            return_value="/downloads/10.x.pdf",
+        ),
+        patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get,
+    ):
+        mock_get.return_value = mock_resp
+        events = asyncio.run(
+            _collect_events(
+                ["10.1000/182"], "/dest", "test@mail.com", delay=0
+            )
         )
 
-if HAS_MULTIPART:
-    @router.post("/upload", response_model=List[ParsedReference])
-    async def upload_bibliography(file: UploadFile = File(...)):
-        return await _process_upload(file)
-else:
-    async def upload_bibliography(file: UploadFile):
-        return await _process_upload(file)
+
+        assert len(events) == 3
+        assert events[0]["progress"] == 0
+        assert events[0]["total"] == 1
+        assert "Resolving" in events[0]["log"]
+
+        assert events[1]["progress"] == 1
+        assert events[1]["total"] == 1
+        assert "Downloaded" in events[1]["log"]
+
+        assert events[2]["progress"] == 1
+        assert events[2]["total"] == 1
+        assert "finished" in events[2]["log"]
+
+
+@pytest.mark.asyncio
+async def test_execute_batch_download_no_url():
+    with patch(
+        "backend.src.bibliography.download_service.resolve_pdf_url",
+        new_callable=AsyncMock,
+        return_value=None,
+    ):
+        events = asyncio.run(
+            _collect_events(
+                ["10.1000/missing"], "/dest", "test@mail.com", delay=0
+            )
+        )
+
+
+        assert len(events) == 3
+        assert events[1]["progress"] == 1
+        assert "No open access URL found" in events[1]["log"]
+
+
+@pytest.mark.asyncio
+async def test_execute_batch_download_http_error():
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "Server Error", request=MagicMock(), response=MagicMock()
+    )
+
+    with (
+        patch(
+            "backend.src.bibliography.download_service.resolve_pdf_url",
+            new_callable=AsyncMock,
+            return_value="https://example.com/error.pdf",
+        ),
+        patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get,
+    ):
+        mock_get.return_value = mock_resp
+        events = asyncio.run(
+            _collect_events(
+                ["10.1000/fail"], "/dest", "test@mail.com", delay=0
+            )
+        )
+
+
+        assert len(events) == 3
+        assert events[1]["progress"] == 1
+        assert "Failed" in events[1]["log"]
 
 
 // --- backend/tests/bibliography/test_router.py ---
@@ -662,7 +163,11 @@ except (RuntimeError, ImportError):
     client = None
     HAS_TESTCLIENT = False
 
-from backend.src.bibliography.router import upload_bibliography
+from backend.src.bibliography.router import (
+    upload_bibliography,
+    batch_download,
+)
+from backend.src.bibliography.schemas import BatchDownloadRequest
 
 def test_upload_bibliography_direct_success():
     mock_ref = ParsedReference(
@@ -735,77 +240,50 @@ def test_upload_bibliography_invalid_extension():
     assert "Unsupported file extension" in response.json()["detail"]
 
 
-// --- frontend/src/hooks/useBatchLoad.js ---
+async def _run_batch_download_direct():
+    async def mock_generator(*args, **kwargs):
+        yield '{"log": "test"}'
 
-import { useState, useCallback } from 'react';
+    req = BatchDownloadRequest(
+        dois=["10.1000/182"],
+        delay=0,
+        destination="/tmp/downloads",
+        email="test@example.com",
+    )
+    with patch(
+        "backend.src.bibliography.router.execute_batch_download",
+        side_effect=mock_generator,
+    ):
+        response = await batch_download(req)
+        assert response.media_type == "text/event-stream"
+        chunks = [chunk async for chunk in response.body_iterator]
+        assert chunks == ['data: {"log": "test"}\n\n']
 
-const initialInputState = {
-  files: [],
-  dois: ''
-};
 
-const initialConfigState = {
-  delay: 5,
-  sources: [],
-  destination: '',
-  email: ''
-};
+def test_batch_download_endpoint_direct():
+    asyncio.run(_run_batch_download_direct())
 
-const initialMonitorState = {
-  progress: 0,
-  total: 0,
-  logs: []
-};
+    asyncio.run(_test())
 
-export function useBatchLoad() {
-  const [input, setInput] = useState(initialInputState);
-  const [config, setConfig] = useState(initialConfigState);
-  const [monitor, setMonitor] = useState(initialMonitorState);
 
-  const updateInput = useCallback((fieldOrUpdates, maybeValue) => {
-    setInput((prev) => {
-      if (typeof fieldOrUpdates === 'string') {
-        return { ...prev, [fieldOrUpdates]: maybeValue };
-      }
-      return { ...prev, ...fieldOrUpdates };
-    });
-  }, []);
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+def test_batch_download_endpoint_client():
+    async def mock_generator(*args, **kwargs):
+        yield '{"log": "test"}'
 
-  const updateConfig = useCallback((fieldOrUpdates, maybeValue) => {
-    setConfig((prev) => {
-      if (typeof fieldOrUpdates === 'string') {
-        return { ...prev, [fieldOrUpdates]: maybeValue };
-      }
-      return { ...prev, ...fieldOrUpdates };
-    });
-  }, []);
-
-  const updateMonitor = useCallback((fieldOrUpdates, maybeValue) => {
-    setMonitor((prev) => {
-      if (typeof fieldOrUpdates === 'string') {
-        return { ...prev, [fieldOrUpdates]: maybeValue };
-      }
-      return { ...prev, ...fieldOrUpdates };
-    });
-  }, []);
-
-  const startBatch = useCallback(() => {
-    setMonitor((prev) => ({
-      ...prev,
-      progress: 0,
-      logs: [...prev.logs, 'Batch processing started...']
-    }));
-  }, []);
-
-  return {
-    input,
-    config,
-    monitor,
-    updateInput,
-    updateConfig,
-    updateMonitor,
-    startBatch
-  };
-}
-
-export default useBatchLoad;
+    payload = {
+        "dois": ["10.1000/182"],
+        "delay": 0,
+        "destination": "/tmp/downloads",
+        "email": "test@example.com",
+    }
+    with patch(
+        "backend.src.bibliography.router.execute_batch_download",
+        side_effect=mock_generator,
+    ):
+        response = client.post(
+            "/api/bibliography/batch-download", json=payload
+        )
+        assert response.status_code == 200
+        assert "text/event-stream" in response.headers["content-type"]
+        assert 'data: {"log": "test"}\n\n' in response.text

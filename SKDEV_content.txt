@@ -1,0 +1,137 @@
+=== SK-CONTEXT MANIFEST ===
+Intent: SKDEV
+Date: 2026-09-14 16:33:13
+AST Mode: False
+Line Numbers: True
+Modules: test_download.py
+Processed Files: 1
+===========================
+
+
+
+// --- backend/tests/bibliography/test_download.py ---
+
+[L001, S0] import sys
+[L002, S0] from pathlib import Path
+[L003, S0] import json
+[L004, S0] import asyncio
+[L005, S0] from unittest.mock import AsyncMock, patch, MagicMock
+[L006, S0] import httpx
+[L007, S0] import pytest
+[L008, S0] 
+[L009, S0] _root = Path(__file__).resolve().parents[3]
+[L010, S0] if str(_root) not in sys.path:
+[L011, S4]     sys.path.insert(0, str(_root))
+[L012, S0] 
+[L013, S0] from backend.src.bibliography.file_storage_service import save_pdf_bytes
+[L014, S0] from backend.src.bibliography.download_service import execute_batch_download
+[L015, S0] 
+[L016, S0] 
+[L017, S0] 
+[L018, S0] async def test_save_pdf_bytes(tmp_path: Path):
+[L019, S4]     dest_dir = str(tmp_path / "downloads")
+[L020, S4]     doi = "10.1000/182"
+[L021, S4]     pdf_data = b"%PDF-1.4 test content"
+[L022, S0] 
+[L023, S4]     saved_path = asyncio.run(save_pdf_bytes(dest_dir, doi, pdf_data))
+[L024, S0] 
+[L025, S4]     assert Path(saved_path).exists()
+[L026, S4]     assert Path(saved_path).read_bytes() == pdf_data
+[L027, S4]     assert "10.1000_182.pdf" in saved_path
+[L028, S0] 
+[L029, S0] 
+[L030, S0] async def _collect_events(dois, dest, email, delay=0):
+[L031, S4]     return [
+[L032, S8]         json.loads(chunk)
+[L033, S8]         async for chunk in execute_batch_download(
+[L034, S12]             dois, dest, email, delay=delay
+[L035, S8]         )
+[L036, S4]     ]
+[L037, S0] 
+[L038, S0] 
+[L039, S0] def test_execute_batch_download_success():
+[L040, S4]     mock_resp = MagicMock()
+[L041, S4]     mock_resp.status_code = 200
+[L042, S4]     mock_resp.content = b"%PDF mock content"
+[L043, S4]     mock_resp.raise_for_status = MagicMock()
+[L044, S0] 
+[L045, S4]     with (
+[L046, S8]         patch(
+[L047, S12]             "backend.src.bibliography.download_service.resolve_pdf_url",
+[L048, S12]             new_callable=AsyncMock,
+[L049, S12]             return_value="https://example.com/paper.pdf",
+[L050, S8]         ),
+[L051, S8]         patch(
+[L052, S12]             "backend.src.bibliography.download_service.save_pdf_bytes",
+[L053, S12]             new_callable=AsyncMock,
+[L054, S12]             return_value="/downloads/10.x.pdf",
+[L055, S8]         ),
+[L056, S8]         patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get,
+[L057, S4]     ):
+[L058, S8]         mock_get.return_value = mock_resp
+[L059, S8]         events = asyncio.run(
+[L060, S12]             _collect_events(
+[L061, S16]                 ["10.1000/182"], "/dest", "test@mail.com", delay=0
+[L062, S12]             )
+[L063, S8]         )
+[L064, S0] 
+[L065, S0] 
+[L066, S8]         assert len(events) == 3
+[L067, S8]         assert events[0]["progress"] == 0
+[L068, S8]         assert events[0]["total"] == 1
+[L069, S8]         assert "Resolving" in events[0]["log"]
+[L070, S0] 
+[L071, S8]         assert events[1]["progress"] == 1
+[L072, S8]         assert events[1]["total"] == 1
+[L073, S8]         assert "Downloaded" in events[1]["log"]
+[L074, S0] 
+[L075, S8]         assert events[2]["progress"] == 1
+[L076, S8]         assert events[2]["total"] == 1
+[L077, S8]         assert "finished" in events[2]["log"]
+[L078, S0] 
+[L079, S0] 
+[L080, S0] 
+[L081, S0] async def test_execute_batch_download_no_url():
+[L082, S4]     with patch(
+[L083, S8]         "backend.src.bibliography.download_service.resolve_pdf_url",
+[L084, S8]         new_callable=AsyncMock,
+[L085, S8]         return_value=None,
+[L086, S4]     ):
+[L087, S8]         events = asyncio.run(
+[L088, S12]             _collect_events(
+[L089, S16]                 ["10.1000/missing"], "/dest", "test@mail.com", delay=0
+[L090, S12]             )
+[L091, S8]         )
+[L092, S0] 
+[L093, S0] 
+[L094, S8]         assert len(events) == 3
+[L095, S8]         assert events[1]["progress"] == 1
+[L096, S8]         assert "No open access URL found" in events[1]["log"]
+[L097, S0] 
+[L098, S0] 
+[L099, S0] 
+[L100, S0] async def test_execute_batch_download_http_error():
+[L101, S4]     mock_resp = MagicMock()
+[L102, S4]     mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+[L103, S8]         "Server Error", request=MagicMock(), response=MagicMock()
+[L104, S4]     )
+[L105, S0] 
+[L106, S4]     with (
+[L107, S8]         patch(
+[L108, S12]             "backend.src.bibliography.download_service.resolve_pdf_url",
+[L109, S12]             new_callable=AsyncMock,
+[L110, S12]             return_value="https://example.com/error.pdf",
+[L111, S8]         ),
+[L112, S8]         patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get,
+[L113, S4]     ):
+[L114, S8]         mock_get.return_value = mock_resp
+[L115, S8]         events = asyncio.run(
+[L116, S12]             _collect_events(
+[L117, S16]                 ["10.1000/fail"], "/dest", "test@mail.com", delay=0
+[L118, S12]             )
+[L119, S8]         )
+[L120, S0] 
+[L121, S0] 
+[L122, S8]         assert len(events) == 3
+[L123, S8]         assert events[1]["progress"] == 1
+[L124, S8]         assert "Failed" in events[1]["log"]
