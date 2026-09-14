@@ -29,7 +29,7 @@
 ## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
 - [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
 - [x] [REQ-016] Identity Domain Models &amp; Keywords
-- [ ] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
+- [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)

@@ -55,7 +55,8 @@ complexity_aggregate: "HARD"
   - [ID-6.4.3] [CORE/MIGRATIONS]: [1. Run alembic revision --autogenerate -m "Add keywords". 2. Validate script safety]. Type: Task.
   - [ID-6.4.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_5_database_schema.md and check - [x] for Story 6.4. 2. Append > Files touched: identity.py, test_identity_models.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-016]]. Type: Task.
 
-- [ ] Story 6.5: Extended Tracking Models (References, Funding, Downloads) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 6.5: Extended Tracking Models (References, Funding, Downloads) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+  > Files touched: tracking.py, test_tracking_models.py, alembic/versions/004_add_tracking_models.py
   Business Requirement: Define distinct tables for tracking citations, financial support, and system downloads securely. (<-- REQ-017)
   Story Context Radius: {"backend/src/database/models/core.py": ["class Article", "class Project"], "backend/src/database/models/tracking.py": [""], "backend/tests/database/test_tracking_models.py": [""], "backend/alembic/env.py": [""], "leai_docs/planning/roadmap_5_database_schema.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown:

@@ -7,6 +7,7 @@ from src.database.models.identity import (
     Keyword,
     KeywordArticle,
 )
+from src.database.models.tracking import Download, Funding, Reference
 
 __all__ = [
     "Affiliation",
@@ -17,4 +18,7 @@ __all__ = [
     "KeywordArticle",
     "Project",
     "ProjectArticle",
+    "Reference",
+    "Funding",
+    "Download",
 ]

@@ -66,6 +66,11 @@ class Project(Base):
         back_populates="projects",
         viewonly=True,
     )
+    downloads = relationship(
+        "Download",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
 
 
 class Article(Base):
@@ -172,6 +177,21 @@ class Article(Base):
         secondary="keyword_articles",
         back_populates="articles",
         viewonly=True,
+    )
+    references = relationship(
+        "Reference",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+    funding = relationship(
+        "Funding",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+    downloads = relationship(
+        "Download",
+        back_populates="article",
+        cascade="all, delete-orphan",
     )
 
 
