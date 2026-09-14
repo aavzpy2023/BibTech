@@ -1,4 +1,11 @@
+import sys
+from pathlib import Path
 import pytest
+
+_root = Path(__file__).resolve().parents[3]
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
+
 from backend.src.bibliography.parser_service import parse_bibliography_content
 
 def test_parse_ris_content():
