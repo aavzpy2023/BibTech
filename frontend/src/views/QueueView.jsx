@@ -131,13 +131,23 @@ export function QueueView() {
     downloadZip,
     downloadMissingDois
   } = useQueueState();
-  const { monitor, statuses = {}, startBatch } = useBatchLoad();
+  const {
+    monitor,
+    statuses = {},
+    startBatch,
+    isDownloading
+  } = useBatchLoad();
 
   useEffect(() => {
-    if (dois && dois.length > 0) {
+    if (
+      !isDownloading &&
+      (monitor?.progress ?? 0) === 0 &&
+      dois &&
+      dois.length > 0
+    ) {
       startBatch(dois, config);
     }
-  }, [dois, config, startBatch]);
+  }, [dois, config, startBatch, isDownloading, monitor?.progress]);
 
   const downloadedDois = (dois || []).filter(
     (doi) => statuses[doi] === 'downloaded'

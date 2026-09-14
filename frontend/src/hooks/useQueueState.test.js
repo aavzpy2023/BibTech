@@ -187,4 +187,11 @@ describe('useQueueState hook', () => {
     expect(mockCreateObjectURL).toHaveBeenCalled();
     expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:txt-url');
   });
+
+  it('preserves dois from batchLoad fallback when location.state is empty', () => {
+    vi.mocked(router.useLocation).mockReturnValue({});
+
+    const { result } = renderHook(() => useQueueState());
+    expect(Array.isArray(result.current.dois)).toBe(true);
+  });
 });

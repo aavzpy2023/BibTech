@@ -28,6 +28,7 @@ function useBatchLoadInternal() {
   const [monitor, setMonitor] = useState(initialMonitorState);
   const [statuses, setStatuses] = useState({});
   const [isDownloading, setIsDownloading] = useState(false);
+  const [activeDois, setActiveDois] = useState([]);
 
   const updateInput = useCallback((fieldOrUpdates, maybeValue) => {
     setInput((prev) => {
@@ -61,6 +62,7 @@ function useBatchLoadInternal() {
     setConfig(initialConfigState);
     setMonitor(initialMonitorState);
     setStatuses({});
+    setActiveDois([]);
     setIsDownloading(false);
   }, []);
 
@@ -76,6 +78,7 @@ function useBatchLoadInternal() {
 
       const activeConfig = overrideConfig ?? config;
 
+      setActiveDois(dois);
       setIsDownloading(true);
       const initialStatuses = {};
       dois.forEach((d) => {
@@ -160,6 +163,7 @@ function useBatchLoadInternal() {
     monitor,
     statuses,
     isDownloading,
+    activeDois,
     isValidEmail,
     resetBatch,
     updateInput,

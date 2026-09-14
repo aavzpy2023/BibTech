@@ -1,10 +1,22 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useBatchLoad } from './useBatchLoad';
 
 export function useQueueState() {
   const location = useLocation();
-  const rawDois = location.state?.dois ?? '';
-  const config = location.state?.config ?? {};
+  const { input, config: batchConfig, activeDois, statuses } =
+    useBatchLoad();
+
+  const rawDois =
+    (activeDois && activeDois.length > 0 ? activeDois : null) ||
+    location.state?.dois ||
+    input?.dois ||
+    Object.keys(statuses || {});
+
+  const config =
+    location.state?.config ||
+    batchConfig ||
+    {};
 
   const dois = useMemo(() => {
     if (Array.isArray(rawDois)) {
