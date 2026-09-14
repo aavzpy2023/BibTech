@@ -35,7 +35,8 @@ complexity_aggregate: "HARD"
   - [ID-6.2.3] [CORE/MIGRATIONS]: [1. Open backend/alembic/env.py and ensure core.py is imported so metadata is registered. 2. Execute alembic revision --autogenerate -m "Add core models". 3. Review the generated migration file to ensure it ONLY contains op.create_table commands]. Type: Task.
   - [ID-6.2.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_5_database_schema.md and check - [x] for Story 6.2. 2. Append > Files touched: core.py, test_core_models.py, alembic versions under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-015]]. Type: Task.
 
-- [ ] Story 6.3: Identity Domain Models (Authors & Affiliations) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 6.3: Identity Domain Models (Authors & Affiliations) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+  > Files touched: identity.py, test_identity_models.py, alembic/versions/002_add_identity_models.py
   Business Requirement: Define Author and Affiliation entities, linking Authors to Articles, utilizing explicit semantic payloads. (<-- REQ-016)
   Story Context Radius: {"backend/src/database/models/core.py": ["class Article"], "backend/src/database/models/identity.py": [""], "backend/tests/database/test_identity_models.py": [""], "backend/alembic/env.py": [""], "leai_docs/planning/roadmap_5_database_schema.md": [""]}
   Layered Technical Breakdown:

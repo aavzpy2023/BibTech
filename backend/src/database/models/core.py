@@ -146,8 +146,19 @@ class Article(Base):
         cascade="all, delete-orphan",
     )
     projects = relationship(
-        "Article",
+        "Project",
         secondary="project_articles",
+        back_populates="articles",
+        viewonly=True,
+    )
+    author_articles = relationship(
+        "AuthorArticle",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+    authors = relationship(
+        "Author",
+        secondary="author_articles",
         back_populates="articles",
         viewonly=True,
     )

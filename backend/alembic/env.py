@@ -12,6 +12,7 @@ if BASE_DIR not in sys.path:
 try:
     from src.database.session import Base
     import src.database.models.core  # noqa: F401
+    import src.database.models.identity  # noqa: F401
 except ImportError:
     from backend.src.database.session import Base
     import backend.src.database.models.core  # noqa: F401
