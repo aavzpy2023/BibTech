@@ -44,8 +44,9 @@ complexity_aggregate: "HARD"
   - [ ] [ID-4.3.2] [UI/VIEW]: [1. Open frontend/src/views/QueueView.jsx. 2. Import useQueueState and useBatchLoad. 3. Call startBatch in a useEffect on mount (using the config from useQueueState). 4. Render an HTML <table> mapping over the DOIs. 5. Render checkboxes wired to toggleSelection and selectedDois.includes(doi)]. Type: Task.
   - [ ] [ID-4.3.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_4_download_queue_and_zip.md and check - [x] for Story 4.3. 2. Append > Files touched: frontend/src/views/QueueView.jsx under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-013]]. Type: Task.
 
-- [ ] Story 4.4: Backend ZIP Service (Micro-Surgery) | [MoSCoW: MUST] | [Complexity: HARD]
+- [x] Story 4.4: Backend ZIP Service (Micro-Surgery) | [MoSCoW: MUST] | [Complexity: HARD]
   Business Requirement: Create a pure, atomic service to compress requested PDFs into an in-memory ZIP file. (<-- REQ-014)
+  > Files touched: backend/src/bibliography/zip_service.py, backend/tests/bibliography/test_zip_service.py
   Story Context Radius: {"backend/src/bibliography/zip_service.py": [""], "backend/tests/bibliography/test_zip_service.py": [""], "leai_docs/planning/roadmap_4_download_queue_and_zip.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown:
   - [ ] [ID-4.4.1] [TESTING/TDE]: [1. Arrange: Mock os.path.exists to return True and mock builtins.open to return dummy bytes. 2. Act: Call create_zip_from_pdfs("batch1", ["10.1/123"]). 3. Assert: Verify the returned BytesIO object is not empty and contains valid zip headers]. Type: Task.
