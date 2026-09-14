@@ -10,6 +10,7 @@
 │   ├── frontend/
 │   │   ├── Dockerfile
 │   │   ├── index.html
+│   │   ├── package-lock.json
 │   │   ├── package.json
 │   │   ├── src/
 │   │   │   ├── App.jsx
@@ -21,7 +22,9 @@
 │   │   │   │   ├── useBibliography.js
 │   │   │   │   ├── useBibliography.test.js
 │   │   │   ├── components/
+│   │   │   │   ├── BibliographyUploader.jsx
 │   │   │   │   ├── Layout.jsx
+│   │   │   │   ├── ReferenceTable.jsx
 │   │   │   │   ├── load/
 │   │   │   │   │   ├── BatchComponents.test.jsx
 │   │   │   │   │   ├── BatchConfig.jsx

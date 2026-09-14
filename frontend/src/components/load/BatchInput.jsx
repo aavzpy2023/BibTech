@@ -66,7 +66,7 @@ export function BatchInput({
   return (
     <div style={styles.container}>
       <div>
-        <span style={styles.label}>Archivos de Entrada (BibTeX, RIS, PDF)</span>
+        <span style={styles.label}>Input Files (BibTeX, RIS, PDF)</span>
         <div
           {...getRootProps()}
           style={{
@@ -76,11 +76,11 @@ export function BatchInput({
         >
           <input {...getInputProps()} />
           <p style={{ margin: 0, color: '#444' }}>
-            Arrastra o selecciona archivos aquí (.bib, .ris, .txt)
+            Drag or select files here (.bib, .ris, .txt)
           </p>
           {currentFiles && currentFiles.length > 0 && (
             <div style={styles.fileList}>
-              {currentFiles.length} archivo(s) seleccionado(s)
+              {currentFiles.length} file(s) selected
             </div>
           )}
         </div>
@@ -88,7 +88,7 @@ export function BatchInput({
 
       <div>
         <label htmlFor="batch-dois-textarea" style={styles.label}>
-          Lista de DOIs (uno por línea)
+          List of DOIs (one per line)
         </label>
         <textarea
           id="batch-dois-textarea"

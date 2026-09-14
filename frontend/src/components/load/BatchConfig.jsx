@@ -89,7 +89,7 @@ export function BatchConfig({
     <div style={styles.container}>
       <div style={styles.section}>
         <label htmlFor="delay-slider" style={styles.label}>
-          Retardo entre descargas: {currentDelay}s
+          Delay between downloads: {currentDelay}s
         </label>
         <div style={styles.sliderContainer}>
           <input
@@ -114,7 +114,7 @@ export function BatchConfig({
       </div>
 
       <div style={styles.section}>
-        <span style={styles.label}>Fuentes de Recuperación (5 Fuentes)</span>
+        <span style={styles.label}>Retrieval Sources (5 Sources)</span>
         <div style={styles.checkboxGrid}>
           {AVAILABLE_SOURCES.map((source) => (
             <label key={source} style={styles.checkboxLabel}>
@@ -132,13 +132,13 @@ export function BatchConfig({
       <div style={styles.inputsGrid}>
         <div style={styles.section}>
           <label htmlFor="destination-input" style={styles.label}>
-            Carpeta de Destino
+            Destination Folder
           </label>
           <input
             id="destination-input"
             type="text"
             style={styles.input}
-            placeholder="Carpeta o ruta de descarga"
+            placeholder="Download folder or path"
             value={currentDestination}
             onChange={(e) => {
               if (onConfigUpdate) {
@@ -150,13 +150,13 @@ export function BatchConfig({
 
         <div style={styles.section}>
           <label htmlFor="email-input" style={styles.label}>
-            Correo Electrónico (Polite Pool)
+            Email Address (Polite Pool)
           </label>
           <input
             id="email-input"
             type="email"
             style={styles.input}
-            placeholder="Correo para APIs académicas"
+            placeholder="Email for academic APIs"
             value={currentEmail}
             onChange={(e) => {
               if (onConfigUpdate) {

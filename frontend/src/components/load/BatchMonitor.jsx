@@ -83,20 +83,20 @@ export function BatchMonitor({
     <div style={styles.container}>
       <div style={styles.header}>
         <h3 style={{ margin: 0, fontSize: '16px', color: '#24292e' }}>
-          Monitor de Carga y Descarga
+          Load and Download Monitor
         </h3>
         <button
           type="button"
           style={styles.button}
           onClick={onStart}
         >
-          Iniciar Descarga
+          Start Download
         </button>
       </div>
 
       <div style={styles.progressContainer}>
         <div style={styles.progressText}>
-          <span>Progreso de recuperación</span>
+          <span>Retrieval progress</span>
           <span>
             {currentProgress} / {currentTotal} ({percentage}%)
           </span>
@@ -120,11 +120,11 @@ export function BatchMonitor({
             marginBottom: '6px'
           }}
         >
-          Registros de eventos
+          Event logs
         </div>
         <div style={styles.logsContainer}>
           {currentLogs.length === 0 ? (
-            <span style={{ color: '#8b949e' }}>Sin actividad reciente.</span>
+            <span style={{ color: '#8b949e' }}>No recent activity.</span>
           ) : (
             currentLogs.map((log, index) => (
               <div key={`${index}-${log.slice(0, 10)}`}>{log}</div>

@@ -42,10 +42,9 @@ export function LoadView() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h2 style={styles.title}>Carga por Lote de Bibliografía</h2>
+        <h2 style={styles.title}>Batch Bibliography Load</h2>
         <p style={styles.subtitle}>
-          Ingresa archivos bibliográficos o identificadores DOI para descarga
-          automática.
+          Enter bibliographic files or DOI identifiers for automatic download.
         </p>
       </div>
 
