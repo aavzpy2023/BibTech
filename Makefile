@@ -1,4 +1,4 @@
-.PHONY: up down restart build logs
+.PHONY: up down restart build logs migrate db-upgrade
 
 up:
 	docker compose up -d --build
@@ -14,3 +14,8 @@ build:
 
 logs:
 	docker compose logs -f
+
+migrate:
+	docker compose exec -T backend sh -c "cd /project/backend && alembic upgrade head"
+
+db-upgrade: migrate

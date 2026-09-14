@@ -1,62 +1,86 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 19:41:17
+Date: 2026-09-14 19:44:14
 AST Mode: True
 Line Numbers: False
-Modules: injection_service.py
-Processed Files: 1
+Modules: Makefile, docker-compose.yml
+Processed Files: 2
 ===========================
 
 
 
-// --- backend/src/bibliography/injection_service.py ---
+// --- Makefile ---
 
-"""Service for persisting bibliographic references into the database."""
-from typing import List, Optional
-from sqlalchemy.orm import Session
+.PHONY: up down restart build logs
 
-try:
-    from .schemas import ParsedReference
-    from ..database.models.core import Article, Project, ProjectArticle
-except (ImportError, ValueError):
-    try:
+up:
+	docker compose up -d --build
+
+down:
+	docker compose down
+
+restart:
+	docker compose restart
+
+build:
+	docker compose build --no-cache
+
+logs:
+	docker compose logs -f
 
 
-        from backend.src.bibliography.schemas import ParsedReference
-        from backend.src.database.models.core import (
-            Article,
-            Project,
-            ProjectArticle,
-        )
 
+// --- docker-compose.yml ---
 
-def inject_references_to_db(
-    db: Session, refs: List[ParsedReference], project_code: str
-) -> int:
-    """Persist parsed references and associate them with a project."""
-    project = db.query(Project).filter(Project.name == project_code).first()
-    if not project:
-        project = Project(name=project_code)
-        db.add(project)
-        db.flush()
+services:
 
-    for ref in refs:
-        year_val: Optional[int] = None
-        if ref.year:
-            try:
-                year_val = int(float(str(ref.year).strip()))
-            except (ValueError, TypeError):
-                year_val = None
+  backend:
+    container_name: bibtech-backend
+    build: ./backend
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+    expose:
+      - "8000"
+    volumes:
+      - ./:/project
+    working_dir: /project
+    environment:
+      - PYTHONPATH=/project
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://user:password@db:5432/dbname
+    depends_on:
+      - db
 
-        article = Article(
-            title=ref.title or "Untitled",
-            journal=ref.journal,
-            year=year_val,
-        )
-        db.add(article)
-        db.flush()
-        db.add(ProjectArticle(project_id=project.id, article_id=article.id))
+  frontend:
+    container_name: bibtech-frontend
+    build: ./frontend
+    expose:
+      - "5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
 
-    db.commit()
-    return len(refs)
+  nginx:
+    container_name: bibtech-nginx
+    build: ./nginx
+    ports:
+      - "88:80"
+    depends_on:
+      - frontend
+      - backend
+
+  db:
+    container_name: bibtech-postgres
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=dbname
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
 
