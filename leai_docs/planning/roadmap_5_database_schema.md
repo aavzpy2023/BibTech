@@ -15,7 +15,8 @@ complexity_aggregate: "HARD"
   Layered Technical Breakdown:
   - [ID-6.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Append EPIC 6, its [REQ-015] to [REQ-017] list, and the Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_5_database_schema.md]. Type: Task.
 
-- [ ] Story 6.1: DB Infrastructure & Alembic Bootstrap | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 6.1: DB Infrastructure & Alembic Bootstrap | [MoSCoW: MUST] | [Complexity: EASY]
+  > Files touched: pyproject.toml, session.py, alembic/env.py
   Business Requirement: Isolate shared core database configuration, install dependencies, and initialize the migration environment to prevent data wipeout. (<-- REQ-015)
   Story Context Radius: {"backend/pyproject.toml": [""], "backend/src/database/session.py": [""], "backend/alembic.ini": [""], "leai_docs/planning/roadmap_5_database_schema.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown:
