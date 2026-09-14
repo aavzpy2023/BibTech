@@ -82,6 +82,11 @@ def _extract_ris_journal(entry: dict) -> Optional[str]:
     return (
         entry.get("journal_name")
         or entry.get("secondary_title")
+        or entry.get("alternate_title1")
+        or entry.get("alternate_title2")
+        or entry.get("alternate_title3")
+        or entry.get("source")
+        or entry.get("SO")
         or entry.get("T2")
         or entry.get("JO")
         or entry.get("JF")
