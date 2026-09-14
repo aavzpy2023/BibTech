@@ -1,271 +1,1625 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 20:16:09
+Date: 2026-09-14 20:31:05
 AST Mode: True
 Line Numbers: False
-Modules: parser_service.py
-Processed Files: 1
+Modules: App.jsx, LoadView.jsx, QueueView.jsx, AnalysisView.jsx, ReferencesView.jsx, UploadReferencesModal.jsx, ReferencesDataTable.jsx, useReferencesUpload.js, useReferencesUpload.test.js, BibliographyUploader.jsx, global_backlog.md
+Processed Files: 11
 ===========================
 
 
 
-// --- backend/src/bibliography/parser_service.py ---
+// --- frontend/src/App.jsx ---
 
-import datetime
-from typing import List, Optional
-import re
-import rispy
-import bibtexparser
-from .schemas import ParsedReference
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import LoadView from './views/LoadView';
+import QueueView from './views/QueueView';
+import AnalysisView from './views/AnalysisView';
+import ReferencesView from './views/ReferencesView';
+import BibliographyUploader from './components/BibliographyUploader';
+import ReferenceTable from './components/ReferenceTable';
+import { useBibliography } from './hooks/useBibliography';
 
+function DashboardView() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  const { references, isLoading, error: uploadError, uploadFile } = useBibliography();
 
-def _extract_bib_field(entry, key: str) -> Optional[str]:
-    target_keys = {key.lower()}
-    if key.lower() == "journal":
-        target_keys.update(
-            {"journaltitle", "booktitle", "series", "journal-iso"}
-        )
-    elif key.lower() == "title":
-        target_keys.update({"booktitle"})
-    elif key.lower() == "year":
-        target_keys.update({"date", "py"})
+  useEffect(() => {
+    fetch('/api/requirements')
+      .then(res => {
+        if (!res.ok) throw new Error('Error al conectar con el servidor');
+        return res.json();
+      })
+      .then(data => setData(data))
+      .catch(err => setError(err.message));
+  }, []);
 
-    val = None
-    if isinstance(entry, dict):
-        for k, v in entry.items():
-            if str(k).lower() in target_keys:
-                val = v
-                break
-    elif hasattr(entry, "fields_dict"):
-        for k, v in entry.fields_dict.items():
-            if str(k).lower() in target_keys:
-                val = getattr(v, "value", str(v))
-                break
-        field = entry.fields_dict[key]
-        val = getattr(field, "value", str(field))
-    elif hasattr(entry, "fields"):
-        for field in entry.fields:
-            f_key = getattr(field, "key", None)
-            if f_key and str(f_key).lower() in target_keys:
-                val = getattr(field, "value", str(field))
-                break
-    elif hasattr(entry, key):
-        val = getattr(entry, key)
-    elif hasattr(entry, "get"):
-        for tk in target_keys:
-            try:
-                v = entry.get(tk) or entry.get(tk.capitalize())
-                if v is not None:
-                    val = v
-                    break
-            except Exception:
-                pass
-    else:
-        val = None
+  const styles = {
+    container: { fontFamily: 'system-ui, sans-serif', padding: '40px', maxWidth: '600px', margin: '0 auto', textAlign: 'center', color: '#333' },
+    card: { border: '1px solid #e1e4e8', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', backgroundColor: '#fff', textAlign: 'left' },
+    badge: { backgroundColor: '#e2f5ea', color: '#137333', padding: '6px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: 'bold', display: 'inline-block', marginBottom: '15px' }
+  };
 
-    if val is not None:
-        if hasattr(val, "value"):
-            val = val.value
-        cleaned = str(val).strip()
-        while (cleaned.startswith("{") and cleaned.endswith("}")) or (
-            cleaned.startswith('"') and cleaned.endswith('"')
-        ):
-            cleaned = cleaned[1:-1].strip()
-        cleaned = re.sub(r"\s+", " ", cleaned)
-        if key.lower() == "year":
-
-    return None
-        if cleaned.startswith("{") and cleaned.endswith("}"):
-            cleaned = cleaned[1:-1].strip()
-
-            match = re.search(r"\b(19\d\d|20\d\d)\b", cleaned)
-            return match.group(1) if match else (cleaned or None)
-        return cleaned or None
-    return None
-
-
-def _parse_bibtex_entries(content: str) -> list:
-    if hasattr(bibtexparser, "parse_string"):
-        result = bibtexparser.parse_string(content)
-        return list(getattr(result, "entries", getattr(result, "blocks", [])))
-    if hasattr(bibtexparser, "loads"):
-        result = bibtexparser.loads(content)
-        return list(getattr(result, "entries", []))
-    if hasattr(bibtexparser, "bparser"):
-        parser = bibtexparser.bparser.BibTexParser()
-        result = parser.parse(content)
-        return list(getattr(result, "entries", []))
-    return []
-
-
-def _clean_year(val: Optional[str]) -> Optional[str]:
-    if not val:
-        return None
-    match = re.search(r"\b(19\d\d|20\d\d)\b", str(val))
-    if match:
-        return match.group(1)
-    cleaned = re.sub(r"[^\d]", "", str(val))
-    return cleaned[:4] if len(cleaned) >= 4 else (cleaned or None)
-
-
-def _extract_ris_title(entry: dict) -> Optional[str]:
-    return (
-        entry.get("title")
-        or entry.get("primary_title")
-        or entry.get("TI")
-        or entry.get("T1")
-        or entry.get("CT")
-        or None
-    )
-
-
-def _extract_ris_journal(entry: dict) -> Optional[str]:
-    return (
-        entry.get("journal_name")
-        or entry.get("secondary_title")
-        or entry.get("alternate_title1")
-        or entry.get("alternate_title2")
-        or entry.get("alternate_title3")
-        or entry.get("source")
-        or entry.get("SO")
-        or entry.get("T2")
-        or entry.get("JO")
-        or entry.get("JF")
-        or entry.get("JA")
-        or entry.get("J2")
-        or None
-    )
-
-
-def _extract_ris_authors(entry: dict) -> Optional[str]:
-    authors = (
-        entry.get("authors")
-        or entry.get("primary_authors")
-        or entry.get("AU")
-        or entry.get("A1")
-        or []
-    )
-    if isinstance(authors, list):
-        clean_authors = [str(a).strip() for a in authors if str(a).strip()]
-        return " and ".join(clean_authors) if clean_authors else None
-    if isinstance(authors, str) and authors.strip():
-        return authors.strip()
-    return None
-
-
-def _extract_ris_year(entry: dict) -> Optional[str]:
-    raw_year = (
-        entry.get("year")
-        or entry.get("publication_year")
-        or entry.get("PY")
-        or entry.get("Y1")
-        or entry.get("DA")
-        or None
-    )
-    return _clean_year(raw_year)
-
-
-def _extract_ris_doi(entry: dict) -> Optional[str]:
-    doi = entry.get("doi") or entry.get("DO") or entry.get("DI") or None
-    if doi:
-        return (
-            str(doi)
-            .strip()
-            .replace("https://doi.org/", "")
-            .replace("http://doi.org/", "")
-        )
-    return None
-
-
-def _parse_ris_fallback(content: str) -> list:
-    entries = []
-    current_entry = {}
-    current_tag = None
-
-    for line in content.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        match = re.match(r"^([A-Z0-9]{2})\s*-\s*(.*)$", line)
-        if match:
-            tag, val = match.group(1), match.group(2).strip()
-            current_tag = tag
-            if tag == "TY":
-                if current_entry and (
-                    current_entry.get("TI")
-                    or current_entry.get("title")
-                    or current_entry.get("AU")
-                ):
-                    entries.append(current_entry)
-                current_entry = {"TY": val, "authors": []}
-            elif tag == "ER":
-                if current_entry:
-                    entries.append(current_entry)
-                    current_entry = {}
-            elif tag in ("AU", "A1"):
-                if "authors" not in current_entry:
-                    current_entry["authors"] = []
-                current_entry["authors"].append(val)
-            else:
-                current_entry[tag] = val
-        elif current_tag and current_entry:
-            if current_tag not in ("AU", "A1") and current_tag in current_entry:
-                current_entry[current_tag] += " " + line
-
-    if current_entry and (
-        current_entry.get("TI")
-        or current_entry.get("title")
-        or current_entry.get("AU")
-    ):
-        entries.append(current_entry)
-
-    return entries
-
-
-def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
-    parsed_refs: List[ParsedReference] = []
-    now = datetime.datetime.now(datetime.timezone.utc)
-    
-    if ext.lower() == ".ris":
-        entries = []
-        try:
-            entries = rispy.loads(content, skip_unknown_tags=True)
-        except Exception:
-            entries = []
-
-        fallback_entries = _parse_ris_fallback(content)
-        if len(fallback_entries) > len(entries):
-            entries = fallback_entries
-
-        for entry in entries:
-            authors = entry.get("authors", [])
-            author_str = " and ".join(authors) if isinstance(authors, list) else authors
-            
-            parsed_refs.append(
-                ParsedReference(
-                    author=_extract_ris_authors(entry),
-                    year=_extract_ris_year(entry),
-                    title=_extract_ris_title(entry),
-                    journal=_extract_ris_journal(entry),
-                    doi=_extract_ris_doi(entry),
-                    upload_datetime=now,
-                )
-            )
-            
-    elif ext.lower() == ".bib":
-        entries = _parse_bibtex_entries(content)
-        for entry in entries:
-            parsed_refs.append(
-                ParsedReference(
-                    author=_extract_bib_field(entry, "author"),
-                    year=_extract_bib_field(entry, "year"),
-                    title=_extract_bib_field(entry, "title"),
-                    journal=_extract_bib_field(entry, "journal"),
-                    doi=_extract_bib_field(entry, "doi"),
-                    upload_datetime=now,
-                )
-            )
-    else:
-        raise ValueError(f"Unsupported extension: {ext}")
+  return (
+    <div style={styles.container}>
+      <h1>¡Proyecto bibtech Inicializado! 🎉</h1>
+      <div style={styles.card}>
+        <h3>Ingesta de Bibliografía</h3>
+        {uploadError && <p style={{color: 'red', fontWeight: 'bold'}}>❌ {uploadError}</p>}
+        {isLoading && <p style={{color: '#0366d6'}}>Procesando archivo...</p>}
         
-    return parsed_refs
+        <BibliographyUploader onUpload={uploadFile} />
+        <ReferenceTable references={references} />
+        
+        <hr style={{margin: '32px 0', border: 'none', borderTop: '1px solid #e1e4e8'}} />
+        
+        <h3>Parámetros Modernos Detectados:</h3>
+        {error && <p style={{color: 'red'}}>❌ {error}</p>}
+        {!data && !error && <p>Cargando requerimientos...</p>}
+        {data && (
+          <div>
+            <span style={styles.badge}>{data.status}</span>
+            <ul>
+              <li><strong>Estructura:</strong> bibtech</li>
+              <li><strong>Configuración Backend:</strong> pyproject.toml (PEP 621)</li>
+              <li><strong>Base de Datos:</strong> {data.database}</li>
+              <li><strong>Ruteo/Proxy:</strong> {data.proxy}</li>
+              <li><strong>Backend Framework:</strong> Python + {data.framework}</li>
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<DashboardView />} />
+          <Route path="load" element={<LoadView />} />
+          <Route path="queue" element={<QueueView />} />
+          <Route path="analysis" element={<AnalysisView />} />
+          <Route path="references" element={<ReferencesView />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+
+// --- frontend/src/views/LoadView.jsx ---
+
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import useBatchLoad from '../hooks/useBatchLoad';
+import BatchInput from '../components/load/BatchInput';
+import BatchConfig from '../components/load/BatchConfig';
+import BatchMonitor from '../components/load/BatchMonitor';
+
+const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px',
+    maxWidth: '900px',
+    margin: '0 auto'
+  },
+  header: {
+    borderBottom: '1px solid #e1e4e8',
+    paddingBottom: '16px'
+  },
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  newBatchBtn: {
+    backgroundColor: '#fff',
+    border: '1px solid #d1d5da',
+    borderRadius: '6px',
+    padding: '6px 14px',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#24292e',
+    cursor: 'pointer'
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: 'bold',
+    color: '#24292e',
+    margin: '0 0 8px 0'
+  },
+  subtitle: {
+    fontSize: '14px',
+    color: '#586069',
+    margin: 0
+  }
+};
+
+export function LoadView() {
+  const navigate = useNavigate();
+  const {
+    input,
+    config,
+    monitor,
+    updateInput,
+    updateConfig,
+    isValidEmail,
+    isDownloading,
+    resetBatch,
+    startBatch
+  } = useBatchLoad();
+
+  const isValid =
+    input.dois.trim() !== '' &&
+    config.destination.trim() !== '' &&
+    isValidEmail &&
+    !isDownloading;
+    config.email.trim() !== '';
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={styles.headerRow}>
+          <div>
+            <h2 style={styles.title}>Batch Bibliography Load</h2>
+            <p style={styles.subtitle}>
+          Enter bibliographic files or DOI identifiers for automatic download.
+            </p>
+          </div>
+          <button
+            type="button"
+            style={styles.newBatchBtn}
+            onClick={resetBatch}
+          >
+            New batch
+          </button>
+        </div>
+      </div>
+
+      <BatchInput
+        files={input.files}
+        dois={input.dois}
+        onInputUpdate={updateInput}
+      />
+
+      <BatchConfig
+        delay={config.delay}
+        destination={config.destination}
+        email={config.email}
+        onConfigUpdate={updateConfig}
+      />
+
+      <BatchMonitor
+        progress={monitor.progress}
+        total={monitor.total}
+        logs={monitor.logs}
+        disabled={!isValid}
+        isDownloading={isDownloading}
+        onStart={() => {
+          startBatch();
+          navigate('/queue', { state: { dois: input.dois, config } });
+        }}
+      />
+    </div>
+  );
+}
+
+export default LoadView;
+
+
+// --- frontend/src/views/QueueView.jsx ---
+
+import React, { useState, useEffect } from 'react';
+import useQueueState from '../hooks/useQueueState';
+import useBatchLoad from '../hooks/useBatchLoad';
+
+const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+    maxWidth: '900px',
+    margin: '0 auto',
+    padding: '20px 0'
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid #e1e4e8',
+    paddingBottom: '16px'
+  },
+  downloadButton: {
+    backgroundColor: '#2ea44f',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer'
+  },
+  secondaryButton: {
+    backgroundColor: '#fff',
+    color: '#24292e',
+    border: '1px solid #d1d5da',
+    borderRadius: '6px',
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer'
+  },
+  disabledButton: {
+    backgroundColor: '#94d3a2',
+    cursor: 'not-allowed',
+    opacity: 0.6
+  },
+  filterBar: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: '12px',
+    marginBottom: '8px'
+  },
+  filterLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '13px',
+    fontWeight: '500',
+    color: '#24292e',
+    cursor: 'pointer'
+  },
+  statusBadge: {
+    padding: '4px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '600',
+    display: 'inline-block'
+  },
+  statusQueued: {
+    backgroundColor: '#f1f8ff',
+    color: '#0366d6'
+  },
+  statusResolving: {
+    backgroundColor: '#fffbdd',
+    color: '#735c0f'
+  },
+  statusDownloaded: {
+    backgroundColor: '#dcffe4',
+    color: '#1a7f37'
+  },
+  statusNotFound: {
+    backgroundColor: '#f6f8fa',
+    color: '#57606a'
+  },
+  statusFailed: {
+    backgroundColor: '#ffebe9',
+    color: '#cf222e'
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: 'bold',
+    color: '#24292e',
+    margin: 0
+  },
+  subtitle: {
+    fontSize: '14px',
+    color: '#586069',
+    marginTop: '4px'
+  },
+  progressTrack: {
+    width: '100%',
+    height: '10px',
+    backgroundColor: '#e1e4e8',
+    borderRadius: '5px',
+    overflow: 'hidden',
+    marginTop: '8px'
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#0366d6',
+    transition: 'width 0.3s ease'
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    marginTop: '16px',
+    border: '1px solid #e1e4e8',
+    borderRadius: '6px'
+  },
+  th: {
+    backgroundColor: '#f6f8fa',
+    padding: '12px',
+    textAlign: 'left',
+    borderBottom: '1px solid #e1e4e8',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#24292e'
+  },
+  td: {
+    padding: '12px',
+    borderBottom: '1px solid #e1e4e8',
+    fontSize: '14px',
+    color: '#24292e'
+  },
+  row: {
+    backgroundColor: '#fff'
+  }
+};
+
+export function QueueView() {
+  const {
+    dois,
+    config,
+    selectedDois,
+    toggleSelection,
+    toggleAll,
+    downloadZip,
+    downloadMissingDois,
+    isZipping
+  } = useQueueState();
+  const {
+    monitor,
+    statuses = {},
+    startBatch,
+    isDownloading
+  } = useBatchLoad();
+
+  useEffect(() => {
+    if (
+      !isDownloading &&
+      (monitor?.progress ?? 0) === 0 &&
+      dois &&
+      dois.length > 0
+    ) {
+      startBatch(dois, config);
+    }
+  }, [dois, config, startBatch, isDownloading, monitor?.progress]);
+
+  const downloadedDois = (dois || []).filter(
+    (doi) => statuses[doi] === 'downloaded'
+  );
+  const canDownload = selectedDois.length > 0 || downloadedDois.length > 0;
+
+  useEffect(() => {
+    if (downloadedDois.length > 0) {
+      downloadedDois.forEach((doi) => {
+        if (!selectedDois.includes(doi)) {
+          toggleSelection(doi);
+        }
+      });
+    }
+  }, [statuses, dois, selectedDois, toggleSelection]);
+
+  const missingDois = (dois || []).filter(
+    (doi) => statuses[doi] === 'not_found' || statuses[doi] === 'failed'
+  );
+  const hasMissing = missingDois.length > 0;
+
+  const handleDownload = () => {
+    const target =
+      selectedDois.length > 0 ? selectedDois : downloadedDois;
+    downloadZip(target);
+  };
+
+  const handleDownloadMissing = () => {
+    downloadMissingDois(missingDois, config.destination);
+  };
+
+  const renderStatus = (statusKey) => {
+    switch (statusKey) {
+      case 'downloaded':
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusDownloaded }}>
+            ✓ Downloaded
+          </span>
+        );
+      case 'resolving':
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusResolving }}>
+            ⏳ Resolving...
+          </span>
+        );
+      case 'not_found':
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusNotFound }}>
+            ⊘ PDF Not Available
+          </span>
+        );
+      case 'failed':
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusNotFound }}>
+            ⊘ PDF Not Available
+          </span>
+        );
+      default:
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusQueued }}>
+            Queued
+          </span>
+        );
+    }
+  };
+
+  const [showOnlyDownloaded, setShowOnlyDownloaded] = useState(false);
+
+  const displayedDois = showOnlyDownloaded
+    ? (dois || []).filter((doi) => statuses[doi] === 'downloaded')
+    : (dois || []);
+
+  const selectableDois = displayedDois.filter(
+    (doi) => statuses[doi] !== 'not_found' && statuses[doi] !== 'failed'
+  );
+
+  const allSelected =
+    selectableDois.length > 0 &&
+    selectableDois.every((doi) => selectedDois.includes(doi));
+
+  return (
+    <div style={styles.container} data-testid="queue-view">
+      <div style={styles.header}>
+        <div>
+          <h2 style={styles.title}>Download Queue</h2>
+          <p style={styles.subtitle}>
+          Batch: {config.destination || 'Default'} | Progress: {monitor?.progress ?? 0}/{monitor?.total || dois.length}
+        </p>
+        <div style={styles.progressTrack}>
+          <div
+            data-testid="queue-progress-bar-fill"
+            style={{
+              ...styles.progressFill,
+              width: `${
+                (monitor?.total || dois.length) > 0
+                  ? Math.min(
+                      100,
+                      Math.round(
+                        ((monitor?.progress ?? 0) /
+                          (monitor?.total || dois.length)) *
+                          100
+                      )
+                    )
+                  : 0
+              }%`
+            }}
+          />
+        </div>
+      </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <label style={styles.filterLabel}>
+            <input
+              type="checkbox"
+              checked={showOnlyDownloaded}
+              onChange={(e) => setShowOnlyDownloaded(e.target.checked)}
+            />
+            <span>Only PDFs</span>
+          </label>
+          <button
+            type="button"
+            disabled={!hasMissing}
+            style={{
+              ...styles.secondaryButton,
+              ...(!hasMissing ? styles.disabledButton : {})
+            }}
+            onClick={handleDownloadMissing}
+          >
+            Export Missing DOIs (.txt)
+          </button>
+          <button
+            type="button"
+            disabled={!canDownload || isZipping}
+            style={{
+            ...styles.downloadButton,
+            ...(!canDownload || isZipping ? styles.disabledButton : {})
+          }}
+          onClick={handleDownload}
+        >
+          {isZipping ? 'Zipping PDFs...' : 'Download PDFs'}
+        </button>
+        </div>
+      </div>
+
+
+
+
+      <table style={styles.table}>
+        <thead>
+          <tr>
+            <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+              <input
+                type="checkbox"
+                aria-label="Select all"
+                checked={allSelected}
+                disabled={selectableDois.length === 0}
+                onChange={() => toggleAll(selectableDois)}
+              />
+            </th>
+            <th style={styles.th}>DOI</th>
+            <th style={styles.th}>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {displayedDois.length === 0 ? (
+            <tr>
+              <td colSpan={3} style={{ ...styles.td, textAlign: 'center' }}>
+                {showOnlyDownloaded
+                  ? 'No downloaded PDFs found.'
+                  : 'No DOIs in queue.'}
+              </td>
+            </tr>
+          ) : (
+            displayedDois.map((doi) => {
+              const isUnavailable =
+                statuses[doi] === 'not_found' || statuses[doi] === 'failed';
+              const isSelected = !isUnavailable && selectedDois.includes(doi);
+              return (
+                <tr key={doi} style={styles.row}>
+                  <td style={{ ...styles.td, textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${doi}`}
+                      checked={isSelected}
+                      disabled={isUnavailable}
+                      style={{
+                        cursor: isUnavailable ? 'not-allowed' : 'pointer'
+                      }}
+                      onChange={() => {
+                        if (!isUnavailable) {
+                          toggleSelection(doi);
+                        }
+                      }}
+                    />
+                  </td>
+                  <td style={styles.td}>{doi}</td>
+                  <td style={styles.td}>
+                    {renderStatus(statuses[doi] || 'queued')}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default QueueView;
+
+
+// --- frontend/src/views/AnalysisView.jsx ---
+
+import React from 'react';
+
+const styles = {
+  container: {
+    padding: '24px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #e1e4e8',
+    borderRadius: '8px'
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: 'bold',
+    color: '#24292e',
+    margin: '0 0 8px 0'
+  },
+  subtitle: {
+    fontSize: '14px',
+    color: '#586069',
+    margin: 0
+  }
+};
+
+export function AnalysisView() {
+  return (
+    <div style={styles.container} data-testid="analysis-view">
+      <h2 style={styles.title}>Bibliographic Analysis</h2>
+      <p style={styles.subtitle}>
+        Analyze bibliographic metadata and downloaded publications.
+      </p>
+    </div>
+  );
+}
+
+export default AnalysisView;
+
+
+// --- frontend/src/views/ReferencesView.jsx ---
+
+import React, { useState } from 'react';
+import { useReferencesUpload } from '../hooks/useReferencesUpload';
+import ReferencesDataTable from '../components/references/ReferencesDataTable';
+import UploadReferencesModal from '../components/references/UploadReferencesModal';
+
+const styles = {
+  container: {
+    fontFamily: 'system-ui, sans-serif',
+    padding: '32px',
+    maxWidth: '1000px',
+    margin: '0 auto',
+    color: '#24292e',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+    flexWrap: 'wrap',
+    gap: '12px',
+  },
+  modalBtn: {
+    backgroundColor: '#0366d6',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '10px 18px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+  },
+  card: {
+    border: '1px solid #e1e4e8',
+    borderRadius: '10px',
+    padding: '24px',
+    backgroundColor: '#ffffff',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+    marginBottom: '24px',
+  },
+  title: {
+    marginTop: 0,
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#1b1f23',
+    marginBottom: '8px',
+  },
+  description: {
+    fontSize: '14px',
+    color: '#586069',
+    marginBottom: '20px',
+  },
+  formGroup: {
+    marginBottom: '20px',
+  },
+  label: {
+    display: 'block',
+    fontWeight: '500',
+    marginBottom: '8px',
+    fontSize: '14px',
+  },
+  input: {
+    width: '100%',
+    maxWidth: '380px',
+    padding: '10px 12px',
+    fontSize: '14px',
+    border: '1px solid #d1d5da',
+    borderRadius: '6px',
+    boxSizing: 'border-box',
+    outline: 'none',
+  },
+  hint: {
+    fontSize: '12px',
+    color: '#6a737d',
+    marginTop: '6px',
+  },
+  uploaderWrapper: {
+    transition: 'opacity 0.2s ease',
+  },
+  errorBox: {
+    backgroundColor: '#ffeef0',
+    color: '#cb2431',
+    border: '1px solid #f97583',
+    padding: '12px 16px',
+    borderRadius: '6px',
+    marginBottom: '16px',
+    fontSize: '14px',
+  },
+  successBox: {
+    backgroundColor: '#dcffe4',
+    color: '#165c26',
+    border: '1px solid #85e89d',
+    padding: '16px',
+    borderRadius: '6px',
+    marginTop: '24px',
+  },
+  successTitle: {
+    fontWeight: '600',
+    margin: '0 0 8px 0',
+    fontSize: '16px',
+  },
+  badge: {
+    display: 'inline-block',
+    backgroundColor: '#2ea44f',
+    color: '#ffffff',
+    padding: '4px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '600',
+    marginTop: '4px',
+  },
+};
+
+export function ReferencesView() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [tableData, setTableData] = useState([]);
+  const [_dummyState, _setDummy] = useState([
+    {
+      id: 1,
+      title: 'Attention Is All You Need',
+      author: 'Vaswani, A. et al.',
+      year: 2017,
+      journal: 'NeurIPS',
+    },
+    {
+      id: 2,
+      title: 'Deep Residual Learning for Image Recognition',
+      author: 'He, K. et al.',
+      year: 2016,
+      journal: 'CVPR',
+    },
+  ]);
+
+  const {
+    projectCode,
+    setProjectCode,
+    isLoading,
+    isSuccess,
+    error,
+    insertedCount,
+    uploadAndInject,
+    resetStatus,
+  } = useReferencesUpload();
+
+  const handleUploadSuccess = (file, parsedRefs) => {
+    if (Array.isArray(parsedRefs) && parsedRefs.length > 0) {
+      setTableData(parsedRefs);
+      return;
+    }
+    const newEntry = {
+      id: Date.now(),
+      title: file.name.replace(/\.[^/.]+$/, ''),
+      author: 'Archivo: ' + file.name,
+      year: new Date().getFullYear(),
+      journal: projectCode || 'Proyecto',
+    };
+    setTableData((prev) => [newEntry, ...prev]);
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div>
+          <h2 style={{ ...styles.title, margin: 0 }}>
+            Referencias Bibliográficas
+          </h2>
+          <p style={{ ...styles.description, margin: '4px 0 0 0' }}>
+            Visualice y administre las publicaciones persistidas.
+            {projectCode && (
+              <span> Proyecto activo: <strong>{projectCode}</strong></span>
+            )}
+          </p>
+        </div>
+        <button
+          style={styles.modalBtn}
+          onClick={() => {
+            if (resetStatus) resetStatus();
+            setIsModalOpen(true);
+          }}
+        >
+          + Cargar Referencias
+        </button>
+      </div>
+
+      <div style={styles.card}>
+        <ReferencesDataTable data={tableData} />
+      </div>
+
+      <UploadReferencesModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        projectCode={projectCode}
+        setProjectCode={setProjectCode}
+        uploadAndInject={async (file) => {
+          const parsed = await uploadAndInject(file);
+          handleUploadSuccess(file, parsed);
+        }}
+        isLoading={isLoading}
+        isSuccess={isSuccess}
+        error={error}
+        insertedCount={insertedCount}
+      />
+    </div>
+  );
+}
+
+function _legacyUnused() {
+  return (
+    <div>
+      <div>
+        <h2>Ingesta</h2>
+        <p style={styles.description}>
+          Asocie archivos bibliográficos (.ris o .bib) a un proyecto de
+          investigación para persistir sus artículos.
+        </p>
+
+        <div style={styles.formGroup}>
+          <label htmlFor="project-code-input" style={styles.label}>
+            Código del Proyecto *
+          </label>
+          <input
+            id="project-code-input"
+            type="text"
+            placeholder="Ej: PROJ-AI-2026"
+            value={projectCode}
+            onChange={(e) => setProjectCode(e.target.value)}
+            style={styles.input}
+          />
+          {!isProjectReady && (
+            <p style={styles.hint}>
+              Debe ingresar un código de proyecto para habilitar el cargador.
+            </p>
+          )}
+        </div>
+
+        {error && <div style={styles.errorBox}>❌ {error}</div>}
+        {isLoading && (
+          <p style={{ color: '#0366d6', fontWeight: '500' }}>
+            Inyectando referencias en base de datos...
+          </p>
+        )}
+
+        <div
+          style={{
+            ...styles.uploaderWrapper,
+            opacity: isProjectReady ? 1 : 0.45,
+            pointerEvents: isProjectReady ? 'auto' : 'none',
+          }}
+        >
+          <BibliographyUploader
+            onUpload={(file) => {
+              if (isProjectReady) {
+                uploadAndInject(file);
+              }
+            }}
+          />
+        </div>
+
+        {isSuccess && (
+          <div style={styles.successBox}>
+            <p style={styles.successTitle}>
+              ¡Ingesta completada con éxito!
+            </p>
+            <p style={{ margin: '4px 0' }}>
+              Proyecto:{' '}
+              <strong>{projectCode}</strong>
+            </p>
+            <p style={{ margin: '4px 0' }}>
+              Total de artículos registrados:{' '}
+              <strong>{insertedCount}</strong>
+            </p>
+            <span style={styles.badge}>Persistido en DB</span>
+            <ReferencesDataTable
+              data={[
+                {
+                  id: 1,
+                  title: `Artículos asociados a ${projectCode}`,
+                  author: 'Verificado',
+                  year: new Date().getFullYear(),
+                  journal: 'Repositorio Local',
+                },
+              ]}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default ReferencesView;
+
+
+
+// --- frontend/src/components/references/UploadReferencesModal.jsx ---
+
+import React from 'react';
+import BibliographyUploader from '../BibliographyUploader';
+
+const styles = {
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    backdropFilter: 'blur(2px)',
+  },
+  modal: {
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.18)',
+    width: '100%',
+    maxWidth: '560px',
+    padding: '28px',
+    boxSizing: 'border-box',
+    position: 'relative',
+    maxHeight: '90vh',
+    overflowY: 'auto',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  },
+  title: {
+    margin: 0,
+    fontSize: '20px',
+    fontWeight: '600',
+    color: '#1b1f23',
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '20px',
+    cursor: 'pointer',
+    color: '#6a737d',
+    padding: '4px 8px',
+    borderRadius: '4px',
+  },
+  description: {
+    fontSize: '14px',
+    color: '#586069',
+    marginTop: 0,
+    marginBottom: '20px',
+  },
+  formGroup: {
+    marginBottom: '20px',
+  },
+  label: {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: '500',
+    marginBottom: '8px',
+    color: '#24292e',
+  },
+  input: {
+    width: '100%',
+    padding: '10px 12px',
+    fontSize: '14px',
+    border: '1px solid #d1d5da',
+    borderRadius: '6px',
+    boxSizing: 'border-box',
+    outline: 'none',
+  },
+  hint: {
+    fontSize: '12px',
+    color: '#6a737d',
+    marginTop: '6px',
+    marginBottom: 0,
+  },
+  uploaderWrapper: {
+    transition: 'opacity 0.2s ease',
+  },
+  errorBox: {
+    backgroundColor: '#ffeef0',
+    color: '#cb2431',
+    border: '1px solid #f97583',
+    padding: '10px 14px',
+    borderRadius: '6px',
+    marginBottom: '16px',
+    fontSize: '13px',
+  },
+  successBox: {
+    backgroundColor: '#dcffe4',
+    color: '#165c26',
+    border: '1px solid #85e89d',
+    padding: '14px 16px',
+    borderRadius: '6px',
+    marginTop: '16px',
+    marginBottom: '16px',
+  },
+  successTitle: {
+    margin: '0 0 6px 0',
+    fontWeight: '600',
+    fontSize: '15px',
+  },
+  footer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '12px',
+    marginTop: '20px',
+  },
+  cancelBtn: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    color: '#24292e',
+    backgroundColor: '#f6f8fa',
+    border: '1px solid #d1d5da',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+  },
+};
+
+export function UploadReferencesModal({
+  isOpen,
+  onClose,
+  projectCode,
+  setProjectCode,
+  uploadAndInject,
+  isLoading,
+  isSuccess,
+  error,
+  insertedCount,
+}) {
+  if (!isOpen) return null;
+
+  const isProjectReady = Boolean(projectCode && projectCode.trim());
+
+  return (
+    <div style={styles.overlay} onClick={onClose}>
+      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.header}>
+          <h3 style={styles.title}>Nueva Ingesta de Referencias</h3>
+          <button style={styles.closeBtn} onClick={onClose} aria-label="Cerrar">
+            ✕
+          </button>
+        </div>
+
+        <p style={styles.description}>
+          Ingrese el código del proyecto y seleccione un archivo .ris o .bib
+          para persistir en la base de datos.
+        </p>
+
+        <div style={styles.formGroup}>
+          <label htmlFor="modal-project-code" style={styles.label}>
+            Código o Nombre del Proyecto *
+          </label>
+          <input
+            id="modal-project-code"
+            type="text"
+            placeholder="Ej: PROJ-AI-2026"
+            value={projectCode}
+            onChange={(e) => setProjectCode(e.target.value)}
+            style={styles.input}
+            autoFocus
+          />
+          {!isProjectReady && (
+            <p style={styles.hint}>
+              Indique un nombre de proyecto para habilitar el cargador.
+            </p>
+          )}
+        </div>
+
+        {error && <div style={styles.errorBox}>❌ {error}</div>}
+        {isLoading && (
+          <p style={{ color: '#0366d6', fontWeight: '500', fontSize: '14px' }}>
+            Inyectando referencias en base de datos...
+          </p>
+        )}
+
+        {isSuccess && (
+          <div style={styles.successBox}>
+            <p style={styles.successTitle}>¡Ingesta completada!</p>
+            <p style={{ margin: 0, fontSize: '13px' }}>
+              Se insertaron <strong>{insertedCount}</strong> artículos en el
+              proyecto <strong>{projectCode}</strong>.
+            </p>
+          </div>
+        )}
+
+        <div
+          style={{
+            ...styles.uploaderWrapper,
+            opacity: isProjectReady ? 1 : 0.45,
+            pointerEvents: isProjectReady ? 'auto' : 'none',
+          }}
+        >
+          <BibliographyUploader
+            onUpload={(file) => {
+              if (isProjectReady) {
+                uploadAndInject(file);
+              }
+            }}
+          />
+        </div>
+
+        <div style={styles.footer}>
+          <button style={styles.cancelBtn} onClick={onClose}>
+            {isSuccess ? 'Cerrar' : 'Cancelar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default UploadReferencesModal;
+
+
+// --- frontend/src/components/references/ReferencesDataTable.jsx ---
+
+import React, { useState } from 'react';
+
+const styles = {
+  container: {
+    width: '100%',
+    overflowX: 'auto',
+    marginTop: '20px',
+    position: 'relative',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    textAlign: 'left',
+    fontSize: '14px',
+    fontFamily: 'system-ui, sans-serif',
+  },
+  th: {
+    backgroundColor: '#f6f8fa',
+    borderBottom: '2px solid #d0d7de',
+    padding: '10px 14px',
+    fontWeight: '600',
+    color: '#24292e',
+  },
+  tr: {
+    borderBottom: '1px solid #eaecef',
+    cursor: 'pointer',
+    transition: 'background-color 0.15s ease',
+  },
+  td: {
+    padding: '10px 14px',
+    color: '#24292e',
+  },
+  empty: {
+    padding: '24px',
+    textAlign: 'center',
+    color: '#586069',
+    fontSize: '14px',
+    fontStyle: 'italic',
+  },
+  popover: {
+    position: 'fixed',
+    backgroundColor: '#1f2428',
+    color: '#f6f8fa',
+    padding: '12px 16px',
+    borderRadius: '6px',
+    fontSize: '12px',
+    maxWidth: '400px',
+    maxHeight: '260px',
+    overflow: 'auto',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+    zIndex: 1000,
+    pointerEvents: 'none',
+  },
+  pre: {
+    margin: 0,
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    fontFamily: 'monospace',
+  },
+};
+
+export function ReferencesDataTable({ data = [] }) {
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const [coords, setCoords] = useState({ x: 0, y: 0 });
+
+  if (!data || data.length === 0) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.empty}>
+          No hay referencias disponibles para mostrar.
+        </div>
+      </div>
+    );
+  }
+
+  const handleMouseMove = (e, row) => {
+    setHoveredRow(row);
+    setCoords({ x: e.clientX + 16, y: e.clientY + 16 });
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredRow(null);
+  };
+
+  return (
+    <div style={styles.container}>
+      <table style={styles.table}>
+        <thead>
+          <tr>
+            <th style={styles.th}>Title</th>
+            <th style={styles.th}>Author</th>
+            <th style={styles.th}>Year</th>
+            <th style={styles.th}>Journal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, index) => (
+            <tr
+              key={row.id || index}
+              style={styles.tr}
+              onMouseMove={(e) => handleMouseMove(e, row)}
+              onMouseLeave={handleMouseLeave}
+            >
+              <td style={styles.td}>{row.title || 'N/A'}</td>
+              <td style={styles.td}>{row.author || 'N/A'}</td>
+              <td style={styles.td}>{row.year || 'N/A'}</td>
+              <td style={styles.td}>{row.journal || 'N/A'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {hoveredRow && (
+        <div
+          style={{
+            ...styles.popover,
+            top: `${coords.y}px`,
+            left: `${coords.x}px`,
+          }}
+        >
+          <pre style={styles.pre}>
+            {JSON.stringify(hoveredRow, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ReferencesDataTable;
+
+
+// --- frontend/src/hooks/useReferencesUpload.js ---
+
+import { useState, useCallback } from 'react';
+
+export function useReferencesUpload() {
+  const [projectCode, setProjectCode] = useState(() => {
+    try {
+      return localStorage.getItem('last_project_code') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState(null);
+  const [insertedCount, setInsertedCount] = useState(null);
+
+  const uploadAndInject = useCallback(
+    async (file) => {
+      if (!projectCode || !projectCode.trim()) {
+        setError('El código de proyecto es requerido');
+        setIsSuccess(false);
+        return;
+      }
+
+      if (!file) {
+        setError('Debe seleccionar un archivo bibliográfico válido');
+        setIsSuccess(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      setIsSuccess(false);
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('project_code', projectCode.trim());
+
+        const response = await fetch('/api/bibliography/inject', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errPayload = await response.json().catch(() => ({}));
+          throw new Error(
+            errPayload.detail || 'Error al inyectar referencias'
+          );
+        }
+
+        const data = await response.json();
+        try {
+          localStorage.setItem('last_project_code', projectCode.trim());
+        } catch {}
+        setIsSuccess(true);
+        setInsertedCount(data.inserted ?? 0);
+
+        try {
+          const uploadForm = new FormData();
+          uploadForm.append('file', file);
+          const parseRes = await fetch('/api/bibliography/upload', {
+            method: 'POST',
+            body: uploadForm,
+          });
+          if (parseRes.ok) {
+            return await parseRes.json();
+          }
+        } catch {}
+        return [];
+      } catch (err) {
+        setError(err.message || 'Error inesperado durante la carga');
+        setIsSuccess(false);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [projectCode]
+  );
+
+  const resetStatus = useCallback(() => {
+    setIsSuccess(false);
+    setError(null);
+  }, []);
+
+  return {
+    projectCode,
+    setProjectCode,
+    isLoading,
+    isSuccess,
+    error,
+    insertedCount,
+    uploadAndInject,
+    resetStatus,
+  };
+}
+
+export default useReferencesUpload;
+
+
+// --- frontend/src/hooks/useReferencesUpload.test.js ---
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useReferencesUpload } from './useReferencesUpload';
+
+describe('useReferencesUpload', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it('should initialize projectCode from localStorage if present', () => {
+    localStorage.setItem('last_project_code', 'DEFAULT-PROJ');
+    const { result } = renderHook(() => useReferencesUpload());
+    expect(result.current.projectCode).toBe('DEFAULT-PROJ');
+  });
+
+  it('should upload and inject references successfully', async () => {
+    const mockFile = new File(['fake ris content'], 'test.ris', {
+      type: 'text/plain',
+    });
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: 'Success', inserted: 5 }),
+    });
+
+    const { result } = renderHook(() => useReferencesUpload());
+
+    act(() => {
+      result.current.setProjectCode('TEST');
+    });
+
+    await act(async () => {
+      await result.current.uploadAndInject(mockFile);
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toBe('/api/bibliography/inject');
+    expect(options.method).toBe('POST');
+    expect(options.body).toBeInstanceOf(FormData);
+    expect(options.body.get('file')).toBe(mockFile);
+    expect(options.body.get('project_code')).toBe('TEST');
+    expect(result.current.isSuccess).toBe(true);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBeNull();
+    expect(result.current.insertedCount).toBe(5);
+    expect(localStorage.getItem('last_project_code')).toBe('TEST');
+  });
+
+  it('should abort and set error if project code is missing', async () =>>
+    const mockFile = new File(['content'], 'test.ris', {
+      type: 'text/plain',
+    });
+    global.fetch = vi.fn();
+
+    const { result } = renderHook(() => useReferencesUpload());
+
+    await act(async () => {
+      await result.current.uploadAndInject(mockFile);
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.error).toBe(
+      'El código de proyecto es requerido'
+    );
+  });
+
+  it('should abort and set error if file is missing', async () => {
+    global.fetch = vi.fn();
+
+    const { result } = renderHook(() => useReferencesUpload());
+
+    act(() => {
+      result.current.setProjectCode('TEST');
+    });
+
+    await act(async () => {
+      await result.current.uploadAndInject(null);
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.error).toBe(
+      'Debe seleccionar un archivo bibliográfico válido'
+    );
+  });
+
+  it('should handle API error gracefully', async () => {
+    const mockFile = new File(['bad content'], 'test.txt', {
+      type: 'text/plain',
+    });
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ detail: 'Unsupported file extension' }),
+    });
+
+    const { result } = renderHook(() => useReferencesUpload());
+
+    act(() => {
+      result.current.setProjectCode('TEST');
+    });
+
+    await act(async () => {
+      await result.current.uploadAndInject(mockFile);
+    });
+
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe('Unsupported file extension');
+  });
+});
+
+
+// --- frontend/src/components/BibliographyUploader.jsx ---
+
+import React from 'react';
+import { useDropzone } from 'react-dropzone';
+
+const styles = {
+  dropzone: {
+    border: '2px dashed #0366d6',
+    borderRadius: '8px',
+    padding: '40px',
+    textAlign: 'center',
+    cursor: 'pointer',
+    backgroundColor: '#f6f8fa',
+    marginBottom: '24px',
+    transition: 'background-color 0.2s ease'
+  },
+  dropzoneActive: {
+    backgroundColor: '#e1f5fe',
+    borderColor: '#0288d1'
+  },
+  text: {
+    margin: 0,
+    color: '#24292e',
+    fontSize: '16px',
+    fontWeight: '500'
+  },
+  subtext: {
+    margin: '8px 0 0 0',
+    color: '#586069',
+    fontSize: '14px'
+  }
+};
+
+export function BibliographyUploader({ onUpload }) {
+  const onDrop = (acceptedFiles) => {
+    if (acceptedFiles.length > 0 && onUpload) {
+      onUpload(acceptedFiles[0]);
+    }
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'text/plain': ['.ris', '.bib']
+    },
+    multiple: false
+  });
+
+  return (
+    <div
+      {...getRootProps()}
+      style={{
+        ...styles.dropzone,
+        ...(isDragActive ? styles.dropzoneActive : {})
+      }}
+    >
+      <input {...getInputProps()} />
+      <p style={styles.text}>
+        Arrastra y suelta un archivo bibliográfico aquí, o haz clic para seleccionar
+      </p>
+      <p style={styles.subtext}>Formatos soportados: .ris, .bib</p>
+    </div>
+  );
+}
+
+export default BibliographyUploader;
+
+
+// --- leai_docs/planning/global_backlog.md ---
+
+# Global Backlog
+
+## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
+- [x] Story 1.0: Roadmap &amp; Planning Initialization
+- [x] Story 1.1: Project Dependencies &amp; Context Genesis
+
+## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
+- [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
+- [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
+- [x] [REQ-003] Bibliography Data Display &amp; Table View
+
+## EPIC 3: BATCH LOAD INTERFACE
+- [x] [REQ-004] Frontend Routing &amp; Main Layout
+- [x] [REQ-005] Load View - State Fractality (Custom Hook)
+- [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
+- [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
+
+## EPIC 4: BATCH DOWNLOAD EXECUTION
+- [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
+- [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
+- [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
+- [x] [REQ-011] Frontend SSE Hook State Integration
+
+## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
+- [x] [REQ-012] Load View Validation &amp; Label Updates
+- [x] [REQ-013] Queue View State &amp; UI Assembly
+- [x] [REQ-014] Backend ZIP Service &amp; Download Action
+
+## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
+- [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
+- [x] [REQ-016] Identity Domain Models &amp; Keywords
+- [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
+
+## EPIC 7: REFERENCES DATABASE INGESTION
+- [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
+- [x] [REQ-019] References Data Table View
+- [x] [REQ-020] Frontend Injection State Hook
+- [x] [REQ-021] References View Routing &amp; Assembly
+
+## Active Roadmaps
+- [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
+- [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
+- [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
+- [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
+- [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
+- [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)

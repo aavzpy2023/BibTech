@@ -67,7 +67,7 @@ export function ReferencesDataTable({ data = [] }) {
     return (
       <div style={styles.container}>
         <div style={styles.empty}>
-          No hay referencias disponibles para mostrar.
+          No references available to display.
         </div>
       </div>
     );

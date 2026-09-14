@@ -7,9 +7,10 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '20px',
-    maxWidth: '900px',
-    margin: '0 auto',
-    padding: '20px 0'
+    padding: '24px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #e1e4e8',
+    borderRadius: '8px'
   },
   header: {
     display: 'flex',
@@ -90,7 +91,7 @@ const styles = {
     fontSize: '24px',
     fontWeight: 'bold',
     color: '#24292e',
-    margin: 0
+    margin: '0 0 8px 0'
   },
   subtitle: {
     fontSize: '14px',

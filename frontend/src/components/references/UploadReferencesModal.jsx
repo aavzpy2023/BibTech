@@ -141,52 +141,52 @@ export function UploadReferencesModal({
   return (
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div style={styles.header}>
-          <h3 style={styles.title}>Nueva Ingesta de Referencias</h3>
-          <button style={styles.closeBtn} onClick={onClose} aria-label="Cerrar">
-            ✕
+    <div style={styles.header}>
+      <h3 style={styles.title}>New References Ingestion</h3>
+      <button style={styles.closeBtn} onClick={onClose} aria-label="Close">
+        ✕
           </button>
         </div>
 
-        <p style={styles.description}>
-          Ingrese el código del proyecto y seleccione un archivo .ris o .bib
-          para persistir en la base de datos.
-        </p>
+    <p style={styles.description}>
+      Enter the project code and select .ris or .bib files to
+      persist in the database.
+    </p>
 
-        <div style={styles.formGroup}>
-          <label htmlFor="modal-project-code" style={styles.label}>
-            Código o Nombre del Proyecto *
-          </label>
-          <input
-            id="modal-project-code"
-            type="text"
-            placeholder="Ej: PROJ-AI-2026"
+    <div style={styles.formGroup}>
+      <label htmlFor="modal-project-code" style={styles.label}>
+        Project Code or Name *
+      </label>
+      <input
+        id="modal-project-code"
+        type="text"
+        placeholder="Ex: PROJ-AI-2026"
             value={projectCode}
             onChange={(e) => setProjectCode(e.target.value)}
             style={styles.input}
             autoFocus
           />
-          {!isProjectReady && (
-            <p style={styles.hint}>
-              Indique un nombre de proyecto para habilitar el cargador.
-            </p>
-          )}
+      {!isProjectReady && (
+        <p style={styles.hint}>
+          Provide a project name to enable the uploader.
+        </p>
+      )}
         </div>
 
         {error && <div style={styles.errorBox}>❌ {error}</div>}
-        {isLoading && (
-          <p style={{ color: '#0366d6', fontWeight: '500', fontSize: '14px' }}>
-            Inyectando referencias en base de datos...
-          </p>
-        )}
+    {isLoading && (
+      <p style={{ color: '#0366d6', fontWeight: '500', fontSize: '14px' }}>
+        Injecting references into database...
+      </p>
+    )}
 
-        {isSuccess && (
-          <div style={styles.successBox}>
-            <p style={styles.successTitle}>¡Ingesta completada!</p>
-            <p style={{ margin: 0, fontSize: '13px' }}>
-              Se insertaron <strong>{insertedCount}</strong> artículos en el
-              proyecto <strong>{projectCode}</strong>.
-            </p>
+    {isSuccess && (
+      <div style={styles.successBox}>
+        <p style={styles.successTitle}>Ingestion completed!</p>
+        <p style={{ margin: 0, fontSize: '13px' }}>
+          Inserted <strong>{insertedCount}</strong> articles into
+          project <strong>{projectCode}</strong>.
+        </p>
           </div>
         )}
 
@@ -206,11 +206,11 @@ export function UploadReferencesModal({
           />
         </div>
 
-        <div style={styles.footer}>
-          <button style={styles.cancelBtn} onClick={onClose}>
-            {isSuccess ? 'Cerrar' : 'Cancelar'}
-          </button>
-        </div>
+    <div style={styles.footer}>
+      <button style={styles.cancelBtn} onClick={onClose}>
+        {isSuccess ? 'Close' : 'Cancel'}
+      </button>
+    </div>
       </div>
     </div>
   );

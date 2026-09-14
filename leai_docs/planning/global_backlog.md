@@ -39,8 +39,8 @@
 
 ## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
 - [ ] [REQ-022] Multiple File Upload Logic (FIFO Queue)
-- [ ] [REQ-023] References Tab Translation to English
-- [ ] [REQ-024] UI Standardization (Width & Headers)
+- [x] [REQ-023] References Tab Translation to English
+- [x] [REQ-024] UI Standardization (Width & Headers)
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)

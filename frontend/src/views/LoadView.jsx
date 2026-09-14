@@ -10,8 +10,10 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '24px',
-    maxWidth: '900px',
-    margin: '0 auto'
+    padding: '24px',
+    backgroundColor: '#ffffff',
+    border: '1px solid #e1e4e8',
+    borderRadius: '8px'
   },
   header: {
     borderBottom: '1px solid #e1e4e8',

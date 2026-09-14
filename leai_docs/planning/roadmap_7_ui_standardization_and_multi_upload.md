@@ -13,8 +13,9 @@ complexity_aggregate: "MEDIUM"
   Layered Technical Breakdown:
   [ID-7.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Append EPIC 8, its [REQ-022] to [REQ-024] list, and the Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md]. Type: Task.
 
-- [ ] Story 7.1: UI Standardization (Width & Headers) | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 7.1: UI Standardization (Width & Headers) | [MoSCoW: MUST] | [Complexity: EASY]
   Business Requirement: Standardize layout width (matching Analysis tab) and header typography/positioning (matching Load tab) across all views. (&lt;-- REQ-024)
+  > Files touched: frontend/src/App.jsx, frontend/src/views/LoadView.jsx, frontend/src/views/QueueView.jsx, frontend/src/views/ReferencesView.jsx
   Story Context Radius: {"frontend/src/App.jsx": ["DashboardView"], "frontend/src/views/LoadView.jsx": ["styles"], "frontend/src/views/QueueView.jsx": ["styles"], "frontend/src/views/ReferencesView.jsx": ["styles"], "leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown:
   [ID-7.1.1] [TESTING/TDE]: [1. Arrange: Mount DashboardView in a test environment. 2. Act: Query the main container and header elements. 3. Assert: Verify the computed styles or inline styles match the standardized padding (24px) and typography (24px, bold, #24292e)]. Type: Task.
@@ -23,8 +24,9 @@ complexity_aggregate: "MEDIUM"
   [ID-7.1.4] [UI/VIEW]: [1. Open frontend/src/views/ReferencesView.jsx. 2. In styles.container, remove maxWidth: '1000px' and margin: '0 auto'. Add backgroundColor: '#ffffff', border: '1px solid #e1e4e8', borderRadius: '8px'. 3. Update styles.title to exactly match fontSize: '24px', fontWeight: 'bold', color: '#24292e', margin: '0 0 8px 0']. Type: Task.
   [ID-7.1.5] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md and check - [x] for Story 7.1. 2. Append &gt; Files touched: frontend/src/App.jsx, frontend/src/views/LoadView.jsx, frontend/src/views/QueueView.jsx, frontend/src/views/ReferencesView.jsx under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-024]]. Type: Task.
 
-- [ ] Story 7.2: References Tab Translation to English | [MoSCoW: MUST] | [Complexity: TRIVIAL]
+- [x] Story 7.2: References Tab Translation to English | [MoSCoW: MUST] | [Complexity: TRIVIAL]
   Business Requirement: Translate all Spanish text in the References tab (Views, Modals, and Data Tables) strictly to English. (&lt;-- REQ-023)
+  > Files touched: frontend/src/views/ReferencesView.jsx, frontend/src/components/references/UploadReferencesModal.jsx, frontend/src/components/references/ReferencesDataTable.jsx
   Story Context Radius: {"frontend/src/views/ReferencesView.jsx": [""], "frontend/src/components/references/UploadReferencesModal.jsx": [""], "frontend/src/components/references/ReferencesDataTable.jsx": [""], "leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown:
   [ID-7.2.1] [TESTING/TDE]: [1. Arrange: Mount ReferencesView and UploadReferencesModal. 2. Act: Trigger render. 3. Assert: Verify the presence of English strings (e.g., "Bibliographic References", "New References Ingestion") and absence of Spanish strings]. Type: Task.

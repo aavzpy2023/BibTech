@@ -7,9 +7,10 @@ const styles = {
   container: {
     fontFamily: 'system-ui, sans-serif',
     padding: '32px',
-    maxWidth: '1000px',
-    margin: '0 auto',
     color: '#24292e',
+    backgroundColor: '#ffffff',
+    border: '1px solid #e1e4e8',
+    borderRadius: '8px',
   },
   header: {
     display: 'flex',
@@ -39,11 +40,10 @@ const styles = {
     marginBottom: '24px',
   },
   title: {
-    marginTop: 0,
-    fontSize: '22px',
-    fontWeight: '600',
-    color: '#1b1f23',
-    marginBottom: '8px',
+    fontSize: '24px',
+    fontWeight: 'bold',
+    color: '#24292e',
+    margin: '0 0 8px 0'
   },
   description: {
     fontSize: '14px',
@@ -149,10 +149,10 @@ export function ReferencesView() {
     }
     const newEntry = {
       id: Date.now(),
-      title: file.name.replace(/\.[^/.]+$/, ''),
-      author: 'Archivo: ' + file.name,
-      year: new Date().getFullYear(),
-      journal: projectCode || 'Proyecto',
+    title: file.name.replace(/\.[^/.]+$/, ''),
+    author: 'File: ' + file.name,
+    year: new Date().getFullYear(),
+    journal: projectCode || 'Project',
     };
     setTableData((prev) => [newEntry, ...prev]);
   };
@@ -161,25 +161,25 @@ export function ReferencesView() {
     <div style={styles.container}>
       <div style={styles.header}>
         <div>
-          <h2 style={{ ...styles.title, margin: 0 }}>
-            Referencias Bibliográficas
-          </h2>
-          <p style={{ ...styles.description, margin: '4px 0 0 0' }}>
-            Visualice y administre las publicaciones persistidas.
-            {projectCode && (
-              <span> Proyecto activo: <strong>{projectCode}</strong></span>
-            )}
+      <h2 style={{ ...styles.title, margin: 0 }}>
+        Bibliographic References
+      </h2>
+      <p style={{ ...styles.description, margin: '4px 0 0 0' }}>
+        View and manage persisted publications.
+        {projectCode && (
+          <span> Active project: <strong>{projectCode}</strong></span>
+        )}
           </p>
         </div>
         <button
           style={styles.modalBtn}
-          onClick={() => {
-            if (resetStatus) resetStatus();
-            setIsModalOpen(true);
-          }}
-        >
-          + Cargar Referencias
-        </button>
+      onClick={() => {
+        if (resetStatus) resetStatus();
+        setIsModalOpen(true);
+      }}
+    >
+      + Upload References
+    </button>
       </div>
 
       <div style={styles.card}>
