@@ -2,9 +2,14 @@ import os
 from typing import List
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
-from .schemas import ParsedReference, BatchDownloadRequest
+from .schemas import (
+    ParsedReference,
+    BatchDownloadRequest,
+    ZipDownloadRequest,
+)
 from .parser_service import parse_bibliography_content
 from .download_service import execute_batch_download
+from .zip_service import create_zip_from_pdfs
 
 router = APIRouter()
 
@@ -58,4 +63,18 @@ async def batch_download(request: BatchDownloadRequest):
     return StreamingResponse(
         sse_generator(),
         media_type="text/event-stream"
+    )
+
+
+@router.post("/download-zip")
+async def download_zip(request: ZipDownloadRequest):
+    zip_io = create_zip_from_pdfs(request.batch_name, request.dois)
+    return StreamingResponse(
+        zip_io,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": (
+                f"attachment; filename={request.batch_name}.zip"
+            )
+        },
     )

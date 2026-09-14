@@ -53,8 +53,9 @@ complexity_aggregate: "HARD"
   - [ ] [ID-4.4.2] [CORE/IO]: [1. Create backend/src/bibliography/zip_service.py. 2. Implement def create_zip_from_pdfs(batch_name: str, dois: list[str]) -> BytesIO:. 3. Initialize io.BytesIO(). 4. Use zipfile.ZipFile to write files. 5. Iterate DOIs, sanitize them to match saved filenames, check if file exists in batch_name folder, and write to zip. 6. Return the BytesIO object after seeking to 0. (Strict 25-line limit)]. Type: Task.
   - [ ] [ID-4.4.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_4_download_queue_and_zip.md and check - [x] for Story 4.4. 2. Append > Files touched: backend/src/bibliography/zip_service.py, backend/tests/bibliography/test_zip_service.py under the story]. Type: Task.
 
-- [ ] Story 4.5: Backend ZIP Endpoint (Boundary Marshal & Semantic Primacy) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 4.5: Backend ZIP Endpoint (Boundary Marshal & Semantic Primacy) | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Expose the ZIP service via a FastAPI endpoint with strict, semantically documented DTOs. (<-- REQ-014)
+  > Files touched: backend/src/bibliography/schemas.py, backend/src/bibliography/router.py, backend/tests/bibliography/test_router.py
   Story Context Radius: {"backend/src/bibliography/schemas.py": [""], "backend/src/bibliography/router.py": [""], "backend/src/bibliography/zip_service.py": ["def create_zip_from_pdfs"], "backend/tests/bibliography/test_router.py": [""], "leai_docs/planning/roadmap_4_download_queue_and_zip.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown:
   - [ ] [ID-4.5.1] [TESTING/TDE]: [1. Arrange: Mock create_zip_from_pdfs to return a dummy BytesIO. 2. Act: Send POST to /api/bibliography/download-zip with {"batch_name": "test", "dois": []}. 3. Assert: Verify status 200 and content-type is application/zip]. Type: Task.

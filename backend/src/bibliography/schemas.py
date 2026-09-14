@@ -3,6 +3,19 @@ from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class ZipDownloadRequest(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    batch_name: str = Field(
+        ...,
+        description="The name of the batch folder containing the PDFs.",
+    )
+    dois: List[str] = Field(
+        ...,
+        description="List of DOIs to include in the ZIP archive.",
+    )
+
+
 class BatchDownloadRequest(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 

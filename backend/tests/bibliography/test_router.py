@@ -25,8 +25,12 @@ except (RuntimeError, ImportError):
 from backend.src.bibliography.router import (
     upload_bibliography,
     batch_download,
+    download_zip,
 )
-from backend.src.bibliography.schemas import BatchDownloadRequest
+from backend.src.bibliography.schemas import (
+    BatchDownloadRequest,
+    ZipDownloadRequest,
+)
 
 def test_upload_bibliography_direct_success():
     mock_ref = ParsedReference(
@@ -144,3 +148,43 @@ def test_batch_download_endpoint_client():
         assert response.status_code == 200
         assert "text/event-stream" in response.headers["content-type"]
         assert 'data: {"log": "test"}\n\n' in response.text
+
+
+async def _run_download_zip_direct():
+    dummy_io = BytesIO(b"PK\x03\x04fakezip")
+    req = ZipDownloadRequest(batch_name="test", dois=[])
+    with patch(
+        "backend.src.bibliography.router.create_zip_from_pdfs",
+        return_value=dummy_io,
+    ) as mock_service:
+        response = await download_zip(req)
+        assert response.media_type == "application/zip"
+        assert (
+            response.headers["Content-Disposition"]
+            == "attachment; filename=test.zip"
+        )
+        mock_service.assert_called_once_with("test", [])
+
+
+def test_download_zip_endpoint_direct():
+    asyncio.run(_run_download_zip_direct())
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+def test_download_zip_endpoint_client():
+    dummy_io = BytesIO(b"PK\x03\x04fakezip")
+    payload = {"batch_name": "test", "dois": []}
+    with patch(
+        "backend.src.bibliography.router.create_zip_from_pdfs",
+        return_value=dummy_io,
+    ) as mock_service:
+        response = client.post(
+            "/api/bibliography/download-zip", json=payload
+        )
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/zip"
+        assert (
+            response.headers["content-disposition"]
+            == "attachment; filename=test.zip"
+        )
+        mock_service.assert_called_once_with("test", [])
