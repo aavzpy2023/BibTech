@@ -127,8 +127,9 @@ complexity_aggregate: "MEDIUM"
     for Story 2.3. 2. Append &gt; Files touched:
     frontend/src/hooks/useBibliography.js under the story]. Type: Task.
 
-- [ ] Story 2.4: Frontend Dumb Views (UI &amp; Wiring) | [MoSCoW: MUST] |
+- [x] Story 2.4: Frontend Dumb Views (UI &amp; Wiring) | [MoSCoW: MUST] |
   [Complexity: EASY]
+  > Files touched: frontend/src/App.jsx, frontend/src/components/BibliographyUploader.jsx, frontend/src/components/ReferenceTable.jsx
   Business Requirement: Implement pure, dumb UI components for Drag &amp; Drop
   and Table display, wired to the custom hook. (&lt;-- REQ-001, REQ-003)
   Story Context Radius:

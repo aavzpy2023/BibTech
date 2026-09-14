@@ -18,6 +18,8 @@
 │   │   │   │   ├── LoadView.jsx
 │   │   │   ├── hooks/
 │   │   │   │   ├── useBatchLoad.js
+│   │   │   │   ├── useBibliography.js
+│   │   │   │   ├── useBibliography.test.js
 │   │   │   ├── components/
 │   │   │   │   ├── Layout.jsx
 │   │   │   │   ├── load/
@@ -37,10 +39,12 @@
 │   │   ├── src/
 │   │   │   ├── bibliography/
 │   │   │   │   ├── parser_service.py
+│   │   │   │   ├── router.py
 │   │   │   │   ├── schemas.py
 │   │   ├── tests/
 │   │   │   ├── bibliography/
 │   │   │   │   ├── test_parser.py
+│   │   │   │   ├── test_router.py
 │   ├── _scripts/
 │   │   ├── dev/
 │   │   │   ├── auto_sync_accounts.py

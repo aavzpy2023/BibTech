@@ -5,9 +5,9 @@
 - [x] Story 1.1: Project Dependencies &amp; Context Genesis
 
 ## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
-- [ ] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
+- [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
 - [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
-- [ ] [REQ-003] Bibliography Data Display &amp; Table View
+- [x] [REQ-003] Bibliography Data Display &amp; Table View
 
 ## EPIC 3: BATCH LOAD INTERFACE
 - [x] [REQ-004] Frontend Routing &amp; Main Layout

@@ -1,30 +1,79 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 15:23:53
+Date: 2026-09-14 15:27:40
 AST Mode: True
 Line Numbers: False
-Modules: main.py, global_backlog.md, roadmap_1_bibliography_ingestion.md
+Modules: App.jsx, global_backlog.md, roadmap_1_bibliography_ingestion.md
 Processed Files: 3
 ===========================
 
 
 
-// --- backend/main.py ---
+// --- frontend/src/App.jsx ---
 
-from fastapi import FastAPI
-import sys
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import LoadView from './views/LoadView';
 
-app = FastAPI()
+function DashboardView() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
 
-@app.get("/api/requirements")
-def get_requirements():
-    return {
-        "python_version": sys.version.split()[0],
-        "framework": "FastAPI 0.110.0",
-        "database": "POSTGRES (Versión: 16)",
-        "proxy": "Nginx (Puerto 80)" if True else "Directo (Puerto 5173/8000)",
-        "status": "¡Entorno moderno con pyproject.toml listo! 🚀"
-    }
+  useEffect(() => {
+    fetch('/api/requirements')
+      .then(res => {
+        if (!res.ok) throw new Error('Error al conectar con el servidor');
+        return res.json();
+      })
+      .then(data => setData(data))
+      .catch(err => setError(err.message));
+  }, []);
+
+  const styles = {
+    container: { fontFamily: 'system-ui, sans-serif', padding: '40px', maxWidth: '600px', margin: '0 auto', textAlign: 'center', color: '#333' },
+    card: { border: '1px solid #e1e4e8', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', backgroundColor: '#fff', textAlign: 'left' },
+    badge: { backgroundColor: '#e2f5ea', color: '#137333', padding: '6px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: 'bold', display: 'inline-block', marginBottom: '15px' }
+  };
+
+  return (
+    <div style={styles.container}>
+      <h1>¡Proyecto bibtech Inicializado! 🎉</h1>
+      <div style={styles.card}>
+        <h3>Parámetros Modernos Detectados:</h3>
+        {error && <p style={{color: 'red'}}>❌ {error}</p>}
+        {!data && !error && <p>Cargando requerimientos...</p>}
+        {data && (
+          <div>
+            <span style={styles.badge}>{data.status}</span>
+            <ul>
+              <li><strong>Estructura:</strong> bibtech</li>
+              <li><strong>Configuración Backend:</strong> pyproject.toml (PEP 621)</li>
+              <li><strong>Base de Datos:</strong> {data.database}</li>
+              <li><strong>Ruteo/Proxy:</strong> {data.proxy}</li>
+              <li><strong>Backend Framework:</strong> Python + {data.framework}</li>
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<DashboardView />} />
+          <Route path="load" element={<LoadView />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
 
 
 
@@ -38,7 +87,7 @@ def get_requirements():
 
 ## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
 - [ ] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
-- [ ] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
+- [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
 - [ ] [REQ-003] Bibliography Data Display &amp; Table View
 
 ## EPIC 3: BATCH LOAD INTERFACE
@@ -132,8 +181,9 @@ complexity_aggregate: "MEDIUM"
     backend/src/bibliography/parser_service.py,
     backend/tests/bibliography/test_parser.py under the story]. Type: Task.
 
-- [ ] Story 2.2: Backend Upload Endpoint (I/O &amp; Wiring) | [MoSCoW: MUST] |
+- [x] Story 2.2: Backend Upload Endpoint (I/O &amp; Wiring) | [MoSCoW: MUST] |
   [Complexity: EASY]
+  > Files touched: backend/src/bibliography/router.py, backend/main.py, backend/tests/bibliography/test_router.py
   Business Requirement: Expose a FastAPI endpoint to receive files and
   return parsed data. (&lt;-- REQ-002)
   Story Context Radius:
@@ -162,8 +212,9 @@ complexity_aggregate: "MEDIUM"
     leai_docs/planning/global_backlog.md and check - [x] for REQ-002].
     Type: Task.
 
-- [ ] Story 2.3: Frontend State Management (Hooks) | [MoSCoW: MUST] |
+- [x] Story 2.3: Frontend State Management (Hooks) | [MoSCoW: MUST] |
   [Complexity: MEDIUM]
+  > Files touched: frontend/src/hooks/useBibliography.js, frontend/src/hooks/useBibliography.test.js
   Business Requirement: Isolate React state and API calling logic from the
   UI components. (&lt;-- REQ-001, REQ-003)
   Story Context Radius:

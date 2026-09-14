@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import LoadView from './views/LoadView';
+import BibliographyUploader from './components/BibliographyUploader';
+import ReferenceTable from './components/ReferenceTable';
+import { useBibliography } from './hooks/useBibliography';
 
 function DashboardView() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const { references, isLoading, error: uploadError, uploadFile } = useBibliography();
 
   useEffect(() => {
     fetch('/api/requirements')
@@ -27,6 +31,15 @@ function DashboardView() {
     <div style={styles.container}>
       <h1>¡Proyecto bibtech Inicializado! 🎉</h1>
       <div style={styles.card}>
+        <h3>Ingesta de Bibliografía</h3>
+        {uploadError && <p style={{color: 'red', fontWeight: 'bold'}}>❌ {uploadError}</p>}
+        {isLoading && <p style={{color: '#0366d6'}}>Procesando archivo...</p>}
+        
+        <BibliographyUploader onUpload={uploadFile} />
+        <ReferenceTable references={references} />
+        
+        <hr style={{margin: '32px 0', border: 'none', borderTop: '1px solid #e1e4e8'}} />
+        
         <h3>Parámetros Modernos Detectados:</h3>
         {error && <p style={{color: 'red'}}>❌ {error}</p>}
         {!data && !error && <p>Cargando requerimientos...</p>}
