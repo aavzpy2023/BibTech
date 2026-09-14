@@ -18,6 +18,7 @@
 │   │   │   ├── App.jsx
 │   │   │   ├── main.jsx
 │   │   │   ├── views/
+│   │   │   │   ├── AnalysisView.jsx
 │   │   │   │   ├── LoadView.jsx
 │   │   │   │   ├── QueueView.jsx
 │   │   │   │   ├── QueueView.test.jsx
@@ -42,6 +43,7 @@
 │   │   ├── Dockerfile
 │   │   ├── __init__.py
 │   │   ├── main.py
+│   │   ├── pyproject.toml
 │   │   ├── bibtech_backend.egg-info/
 │   │   │   ├── SOURCES.txt
 │   │   │   ├── dependency_links.txt
