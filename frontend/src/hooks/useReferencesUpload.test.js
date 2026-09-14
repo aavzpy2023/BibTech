@@ -5,6 +5,13 @@ import { useReferencesUpload } from './useReferencesUpload';
 describe('useReferencesUpload', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it('should initialize projectCode from localStorage if present', () => {
+    localStorage.setItem('last_project_code', 'DEFAULT-PROJ');
+    const { result } = renderHook(() => useReferencesUpload());
+    expect(result.current.projectCode).toBe('DEFAULT-PROJ');
   });
 
   it('should upload and inject references successfully', async () => {
@@ -38,9 +45,10 @@ describe('useReferencesUpload', () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();
     expect(result.current.insertedCount).toBe(5);
+    expect(localStorage.getItem('last_project_code')).toBe('TEST');
   });
 
-  it('should abort and set error if project code is missing', async () => {
+  it('should abort and set error if project code is missing', async () =>>
     const mockFile = new File(['content'], 'test.ris', {
       type: 'text/plain',
     });

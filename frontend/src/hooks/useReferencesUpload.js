@@ -1,7 +1,13 @@
 import { useState, useCallback } from 'react';
 
 export function useReferencesUpload() {
-  const [projectCode, setProjectCode] = useState('');
+  const [projectCode, setProjectCode] = useState(() => {
+    try {
+      return localStorage.getItem('last_project_code') || '';
+    } catch {
+      return '';
+    }
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState(null);
@@ -43,6 +49,9 @@ export function useReferencesUpload() {
         }
 
         const data = await response.json();
+        try {
+          localStorage.setItem('last_project_code', projectCode.trim());
+        } catch {}
         setIsSuccess(true);
         setInsertedCount(data.inserted ?? 0);
       } catch (err) {
@@ -55,6 +64,11 @@ export function useReferencesUpload() {
     [projectCode]
   );
 
+  const resetStatus = useCallback(() => {
+    setIsSuccess(false);
+    setError(null);
+  }, []);
+
   return {
     projectCode,
     setProjectCode,
@@ -63,6 +77,7 @@ export function useReferencesUpload() {
     error,
     insertedCount,
     uploadAndInject,
+    resetStatus,
   };
 }
 

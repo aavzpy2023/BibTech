@@ -138,6 +138,7 @@ export function ReferencesView() {
     error,
     insertedCount,
     uploadAndInject,
+    resetStatus,
   } = useReferencesUpload();
 
   const handleUploadSuccess = (file) => {
@@ -159,12 +160,18 @@ export function ReferencesView() {
             Referencias Bibliográficas
           </h2>
           <p style={{ ...styles.description, margin: '4px 0 0 0' }}>
-            Visualice y administre las publicaciones persistidas en sus proyectos.
+            Visualice y administre las publicaciones persistidas.
+            {projectCode && (
+              <span> Proyecto activo: <strong>{projectCode}</strong></span>
+            )}
           </p>
         </div>
         <button
           style={styles.modalBtn}
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            if (resetStatus) resetStatus();
+            setIsModalOpen(true);
+          }}
         >
           + Cargar Referencias
         </button>
@@ -191,8 +198,6 @@ export function ReferencesView() {
     </div>
   );
 }
-
-export default ReferencesView;
 
 function _legacyUnused() {
   return (
