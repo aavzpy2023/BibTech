@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import useBatchLoad from '../hooks/useBatchLoad';
 import BatchInput from '../components/load/BatchInput';
 import BatchConfig from '../components/load/BatchConfig';
@@ -30,6 +31,7 @@ const styles = {
 };
 
 export function LoadView() {
+  const navigate = useNavigate();
   const {
     input,
     config,
@@ -71,7 +73,9 @@ export function LoadView() {
         total={monitor.total}
         logs={monitor.logs}
         disabled={!isValid}
-        onStart={startBatch}
+        onStart={() =>
+          navigate('/queue', { state: { dois: input.dois, config } })
+        }
       />
     </div>
   );

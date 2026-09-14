@@ -24,8 +24,9 @@ complexity_aggregate: "HARD"
   - [ ] [ID-4.1.4] [UI/WIRING]: [1. Open frontend/src/views/LoadView.jsx. 2. Extract isValidEmail from useBatchLoad. 3. Update the isValid boolean to require isValidEmail === true]. Type: Task.
   - [ ] [ID-4.1.5] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_4_download_queue_and_zip.md and check - [x] for Story 4.1. 2. Append > Files touched: frontend/src/hooks/useBatchLoad.js, frontend/src/components/load/BatchConfig.jsx, frontend/src/views/LoadView.jsx under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-012]]. Type: Task.
 
-- [ ] Story 4.2: Queue View State & Routing (State Fractality) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 4.2: Queue View State & Routing (State Fractality) | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Isolate Queue state logic into a custom hook and wire the router redirection. (<-- REQ-013)
+  > Files touched: frontend/src/hooks/useQueueState.js, frontend/src/views/LoadView.jsx, frontend/src/App.jsx
   Story Context Radius: {"frontend/src/hooks/useQueueState.js": [""], "frontend/src/views/LoadView.jsx": [""], "frontend/src/App.jsx": [""], "leai_docs/planning/roadmap_4_download_queue_and_zip.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown:
   - [ ] [ID-4.2.1] [TESTING/TDE]: [1. Arrange: Mock react-router-dom useLocation to return { state: { dois: "10.1", config: { destination: "batch1" } } }. 2. Act: Render useQueueState. 3. Assert: Verify initial state extracts DOIs into an array and initializes selectedDois as empty]. Type: Task.
