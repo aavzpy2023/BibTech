@@ -21,7 +21,13 @@
 - [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
 - [x] [REQ-011] Frontend SSE Hook State Integration
 
+## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
+- [ ] [REQ-012] Load View Validation &amp; Label Updates
+- [ ] [REQ-013] Queue View State &amp; UI Assembly
+- [ ] [REQ-014] Backend ZIP Service &amp; Download Action
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
 - [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
+- [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)

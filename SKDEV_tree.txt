@@ -8,6 +8,7 @@
 │   ├── create_project.py
 │   ├── docker-compose.yml
 │   ├── execution_output.txt
+│   ├── mine/
 │   ├── frontend/
 │   │   ├── Dockerfile
 │   │   ├── index.html
