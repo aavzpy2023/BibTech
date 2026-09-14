@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import LoadView from './views/LoadView';
 import QueueView from './views/QueueView';
+import AnalysisView from './views/AnalysisView';
 import BibliographyUploader from './components/BibliographyUploader';
 import ReferenceTable from './components/ReferenceTable';
 import { useBibliography } from './hooks/useBibliography';
@@ -69,6 +70,7 @@ function App() {
           <Route index element={<DashboardView />} />
           <Route path="load" element={<LoadView />} />
           <Route path="queue" element={<QueueView />} />
+          <Route path="analysis" element={<AnalysisView />} />
         </Route>
       </Routes>
     </BrowserRouter>

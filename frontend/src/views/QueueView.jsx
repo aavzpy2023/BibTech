@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import useQueueState from '../hooks/useQueueState';
 import useBatchLoad from '../hooks/useBatchLoad';
 
@@ -42,6 +42,22 @@ const styles = {
     backgroundColor: '#94d3a2',
     cursor: 'not-allowed',
     opacity: 0.6
+  },
+  filterBar: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: '12px',
+    marginBottom: '8px'
+  },
+  filterLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '13px',
+    fontWeight: '500',
+    color: '#24292e',
+    cursor: 'pointer'
   },
   statusBadge: {
     padding: '4px 10px',
@@ -214,7 +230,13 @@ export function QueueView() {
     }
   };
 
-  const selectableDois = (dois || []).filter(
+  const [showOnlyDownloaded, setShowOnlyDownloaded] = useState(false);
+
+  const displayedDois = showOnlyDownloaded
+    ? (dois || []).filter((doi) => statuses[doi] === 'downloaded')
+    : (dois || []);
+
+  const selectableDois = displayedDois.filter(
     (doi) => statuses[doi] !== 'not_found' && statuses[doi] !== 'failed'
   );
 
@@ -277,6 +299,17 @@ export function QueueView() {
         </div>
       </div>
 
+      <div style={styles.filterBar}>
+        <label style={styles.filterLabel}>
+          <input
+            type="checkbox"
+            checked={showOnlyDownloaded}
+            onChange={(e) => setShowOnlyDownloaded(e.target.checked)}
+          />
+          Show only downloaded PDFs
+        </label>
+      </div>
+
       <table style={styles.table}>
         <thead>
           <tr>
@@ -294,14 +327,16 @@ export function QueueView() {
           </tr>
         </thead>
         <tbody>
-          {dois.length === 0 ? (
+          {displayedDois.length === 0 ? (
             <tr>
               <td colSpan={3} style={{ ...styles.td, textAlign: 'center' }}>
-                No DOIs in queue.
+                {showOnlyDownloaded
+                  ? 'No downloaded PDFs found.'
+                  : 'No DOIs in queue.'}
               </td>
             </tr>
           ) : (
-            dois.map((doi) => {
+            displayedDois.map((doi) => {
               const isUnavailable =
                 statuses[doi] === 'not_found' || statuses[doi] === 'failed';
               const isSelected = !isUnavailable && selectedDois.includes(doi);

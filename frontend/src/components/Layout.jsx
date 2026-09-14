@@ -7,6 +7,7 @@ const navItems = [
   { name: 'Search', path: '/search' },
   { name: 'Load', path: '/load' },
   { name: 'Download queue', path: '/queue' },
+  { name: 'Analysis', path: '/analysis' },
   { name: 'References', path: '/references' }
 ];
 

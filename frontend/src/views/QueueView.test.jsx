@@ -150,4 +150,40 @@ describe('QueueView component', () => {
     fireEvent.click(missingBtn);
     expect(mockDownloadMissing).toHaveBeenCalledWith(['10.1'], 'mine');
   });
+
+  it('filters table to show only downloaded PDFs when filter checkbox is checked', () => {
+    vi.spyOn(queueHook, 'useQueueState').mockReturnValue({
+      dois: ['10.1000/182', '10.1000/183'],
+      config: { destination: 'mine' },
+      selectedDois: [],
+      toggleSelection: vi.fn(),
+      toggleAll: vi.fn(),
+      downloadZip: vi.fn(),
+      downloadMissingDois: vi.fn()
+    });
+
+    vi.spyOn(batchHook, 'useBatchLoad').mockReturnValue({
+      input: { dois: '10.1000/182\n10.1000/183', files: [] },
+      config: { destination: 'mine' },
+      monitor: { progress: 2, total: 2, logs: [] },
+      statuses: { '10.1000/182': 'downloaded', '10.1000/183': 'failed' },
+      updateInput: vi.fn(),
+      updateConfig: vi.fn(),
+      updateMonitor: vi.fn(),
+      startBatch: vi.fn()
+    });
+
+    render(<QueueView />);
+
+    expect(screen.getByText('10.1000/182')).toBeInTheDocument();
+    expect(screen.getByText('10.1000/183')).toBeInTheDocument();
+
+    const filterCheckbox = screen.getByLabelText(
+      /show only downloaded pdfs/i
+    );
+    fireEvent.click(filterCheckbox);
+
+    expect(screen.getByText('10.1000/182')).toBeInTheDocument();
+    expect(screen.queryByText('10.1000/183')).toBeNull();
+  });
 });
