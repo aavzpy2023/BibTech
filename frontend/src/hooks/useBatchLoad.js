@@ -173,10 +173,10 @@ const BatchContext = createContext(null);
 
 export function BatchProvider({ children }) {
   const batchState = useBatchLoadInternal();
-  return (
-    <BatchContext.Provider value={batchState}>
-      {children}
-    </BatchContext.Provider>
+  return React.createElement(
+    BatchContext.Provider,
+    { value: batchState },
+    children
   );
 }
 
