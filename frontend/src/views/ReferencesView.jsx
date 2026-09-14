@@ -113,7 +113,8 @@ const styles = {
 
 export function ReferencesView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tableData, setTableData] = useState([
+  const [tableData, setTableData] = useState([]);
+  const [_dummyState, _setDummy] = useState([
     {
       id: 1,
       title: 'Attention Is All You Need',
@@ -141,7 +142,11 @@ export function ReferencesView() {
     resetStatus,
   } = useReferencesUpload();
 
-  const handleUploadSuccess = (file) => {
+  const handleUploadSuccess = (file, parsedRefs) => {
+    if (Array.isArray(parsedRefs) && parsedRefs.length > 0) {
+      setTableData(parsedRefs);
+      return;
+    }
     const newEntry = {
       id: Date.now(),
       title: file.name.replace(/\.[^/.]+$/, ''),
@@ -187,8 +192,8 @@ export function ReferencesView() {
         projectCode={projectCode}
         setProjectCode={setProjectCode}
         uploadAndInject={async (file) => {
-          await uploadAndInject(file);
-          handleUploadSuccess(file);
+          const parsed = await uploadAndInject(file);
+          handleUploadSuccess(file, parsed);
         }}
         isLoading={isLoading}
         isSuccess={isSuccess}

@@ -44,6 +44,7 @@
 │   │   │   │   │   ├── BatchMonitor.test.jsx
 │   │   │   │   ├── references/
 │   │   │   │   │   ├── ReferencesDataTable.jsx
+│   │   │   │   │   ├── UploadReferencesModal.jsx
 │   ├── backend/
 │   │   ├── Dockerfile
 │   │   ├── __init__.py

@@ -1,86 +1,64 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 19:44:14
+Date: 2026-09-14 20:06:04
 AST Mode: True
 Line Numbers: False
-Modules: Makefile, docker-compose.yml
-Processed Files: 2
+Modules: test_parser.py
+Processed Files: 1
 ===========================
 
 
 
-// --- Makefile ---
+// --- backend/tests/bibliography/test_parser.py ---
 
-.PHONY: up down restart build logs
+import sys
+from pathlib import Path
+import pytest
 
-up:
-	docker compose up -d --build
+_root = Path(__file__).resolve().parents[3]
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
 
-down:
-	docker compose down
+from backend.src.bibliography.parser_service import parse_bibliography_content
 
-restart:
-	docker compose restart
+def test_parse_ris_content():
+    ris_content = (
+        "TY  - JOUR\n"
+        "AU  - Smith, John\n"
+        "AU  - Doe, Jane\n"
+        "PY  - 2023\n"
+        "TI  - A Great Paper\n"
+        "JO  - Journal of Testing\n"
+        "ER  - \n"
+    )
+    refs = parse_bibliography_content(ris_content, ".ris")
+    
+    assert len(refs) == 1
+    assert refs[0].title == "A Great Paper"
+    assert refs[0].year == "2023"
+    assert refs[0].journal == "Journal of Testing"
+    assert "Smith, John" in refs[0].author
+    assert "Doe, Jane" in refs[0].author
+    assert refs[0].upload_datetime is not None
 
-build:
-	docker compose build --no-cache
+def test_parse_bib_content():
+    bib_content = (
+        "@article{smith2023,\n"
+        "  author = {Smith, John and Doe, Jane},\n"
+        "  year = {2023},\n"
+        "  title = {Another Great Paper},\n"
+        "  journal = {Journal of BibTeX}\n"
+        "}"
+    )
+    refs = parse_bibliography_content(bib_content, ".bib")
+    
+    assert len(refs) == 1
+    assert refs[0].title == "Another Great Paper"
+    assert refs[0].year == "2023"
+    assert refs[0].journal == "Journal of BibTeX"
+    assert "Smith, John" in refs[0].author
+    assert refs[0].upload_datetime is not None
 
-logs:
-	docker compose logs -f
-
-
-
-// --- docker-compose.yml ---
-
-services:
-
-  backend:
-    container_name: bibtech-backend
-    build: ./backend
-    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
-    expose:
-      - "8000"
-    volumes:
-      - ./:/project
-    working_dir: /project
-    environment:
-      - PYTHONPATH=/project
-      - PYTHONDONTWRITEBYTECODE=1
-      - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://user:password@db:5432/dbname
-    depends_on:
-      - db
-
-  frontend:
-    container_name: bibtech-frontend
-    build: ./frontend
-    expose:
-      - "5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-
-  nginx:
-    container_name: bibtech-nginx
-    build: ./nginx
-    ports:
-      - "88:80"
-    depends_on:
-      - frontend
-      - backend
-
-  db:
-    container_name: bibtech-postgres
-    image: postgres:16-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=dbname
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
-
+def test_unsupported_extension():
+    with pytest.raises(ValueError, match="Unsupported extension"):
+        parse_bibliography_content("some content", ".txt")

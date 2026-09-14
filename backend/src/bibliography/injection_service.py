@@ -36,6 +36,7 @@ def inject_references_to_db(
             title=ref.title or "Untitled",
             journal=ref.journal,
             year=year_val,
+            doi=getattr(ref, "doi", None),
         )
         db.add(article)
         db.flush()

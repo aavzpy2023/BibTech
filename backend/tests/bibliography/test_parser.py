@@ -49,3 +49,40 @@ def test_parse_bib_content():
 def test_unsupported_extension():
     with pytest.raises(ValueError, match="Unsupported extension"):
         parse_bibliography_content("some content", ".txt")
+
+
+def test_parse_wos_ris_multiple_papers_with_varied_tags():
+    ris_content = (
+        "TY  - JOUR\n"
+        "TI  - First Paper Title\n"
+        "AU  - Author One\n"
+        "AU  - Author Two\n"
+        "T2  - Journal of Science\n"
+        "PY  - 2021///\n"
+        "DO  - 10.1000/182\n"
+        "ER  - \n\n"
+        "TY  - JOUR\n"
+        "T1  - Second Paper Title\n"
+        "A1  - Author Three\n"
+        "JO  - Nature Communications\n"
+        "Y1  - 2022/03/15/\n"
+        "ER  - \n\n"
+        "TY  - JOUR\n"
+        "TI  - Third Paper Title\n"
+        "AU  - Author Four\n"
+        "JF  - Physical Review B\n"
+        "PY  - 2023\n"
+        "ER  - \n"
+    )
+    refs = parse_bibliography_content(ris_content, ".ris")
+    assert len(refs) == 3
+    assert refs[0].title == "First Paper Title"
+    assert refs[0].journal == "Journal of Science"
+    assert refs[0].year == "2021"
+    assert refs[0].doi == "10.1000/182"
+    assert refs[1].title == "Second Paper Title"
+    assert refs[1].journal == "Nature Communications"
+    assert refs[1].year == "2022"
+    assert refs[2].title == "Third Paper Title"
+    assert refs[2].journal == "Physical Review B"
+    assert refs[2].year == "2023"

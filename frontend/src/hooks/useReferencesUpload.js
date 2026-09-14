@@ -54,6 +54,19 @@ export function useReferencesUpload() {
         } catch {}
         setIsSuccess(true);
         setInsertedCount(data.inserted ?? 0);
+
+        try {
+          const uploadForm = new FormData();
+          uploadForm.append('file', file);
+          const parseRes = await fetch('/api/bibliography/upload', {
+            method: 'POST',
+            body: uploadForm,
+          });
+          if (parseRes.ok) {
+            return await parseRes.json();
+          }
+        } catch {}
+        return [];
       } catch (err) {
         setError(err.message || 'Error inesperado durante la carga');
         setIsSuccess(false);

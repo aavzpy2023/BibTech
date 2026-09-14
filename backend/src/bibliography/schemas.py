@@ -46,4 +46,5 @@ class ParsedReference(BaseModel):
     year: Optional[str] = None
     title: Optional[str] = None
     journal: Optional[str] = None
+    doi: Optional[str] = None
     upload_datetime: datetime
