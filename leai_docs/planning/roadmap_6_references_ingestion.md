@@ -109,7 +109,7 @@ complexity_aggregate: "MEDIUM"
     [REQ-020]]. Type: Task.
   > Files touched: useReferencesUpload.js, useReferencesUpload.test.js
 
-- [ ] Story 6.4: Frontend Dumb Views & Routing Assembly | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 6.4: Frontend Dumb Views & Routing Assembly | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Implement strict Dumb Components for the table and
   hover modal, then assemble the view via Dependency Injection from the hook.
   (<-- REQ-019, REQ-021)
@@ -145,3 +145,4 @@ complexity_aggregate: "MEDIUM"
     ReferencesView.jsx, App.jsx under the story. 3. Open
     leai_docs/planning/global_backlog.md and check - [x] for [REQ-019],
     [REQ-021]]. Type: Task.
+  > Files touched: ReferencesDataTable.jsx, ReferencesView.jsx, App.jsx

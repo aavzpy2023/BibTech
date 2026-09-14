@@ -33,9 +33,9 @@
 
 ## EPIC 7: REFERENCES DATABASE INGESTION
 - [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
-- [ ] [REQ-019] References Data Table View
+- [x] [REQ-019] References Data Table View
 - [x] [REQ-020] Frontend Injection State Hook
-- [ ] [REQ-021] References View Routing &amp; Assembly
+- [x] [REQ-021] References View Routing &amp; Assembly
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)

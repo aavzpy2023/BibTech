@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import LoadView from './views/LoadView';
 import QueueView from './views/QueueView';
 import AnalysisView from './views/AnalysisView';
+import ReferencesView from './views/ReferencesView';
 import BibliographyUploader from './components/BibliographyUploader';
 import ReferenceTable from './components/ReferenceTable';
 import { useBibliography } from './hooks/useBibliography';
@@ -71,6 +72,7 @@ function App() {
           <Route path="load" element={<LoadView />} />
           <Route path="queue" element={<QueueView />} />
           <Route path="analysis" element={<AnalysisView />} />
+          <Route path="references" element={<ReferencesView />} />
         </Route>
       </Routes>
     </BrowserRouter>
