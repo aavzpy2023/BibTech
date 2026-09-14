@@ -32,6 +32,7 @@ export function useQueueState() {
   }, [rawDois]);
 
   const [selectedDois, setSelectedDois] = useState([]);
+  const [isZipping, setIsZipping] = useState(false);
 
   const toggleSelection = useCallback((doi) => {
     setSelectedDois((prev) =>
@@ -58,6 +59,7 @@ export function useQueueState() {
 
       if (targetDois.length === 0) return;
 
+      setIsZipping(true);
       const batchName = config.destination || 'download_batch';
     try {
       const response = await fetch('/api/bibliography/download-zip', {
@@ -84,6 +86,8 @@ export function useQueueState() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Failed to download ZIP archive', err);
+    } finally {
+      setIsZipping(false);
     }
   },
   [config.destination, selectedDois]
@@ -117,7 +121,8 @@ export function useQueueState() {
     toggleSelection,
     toggleAll,
     downloadZip,
-    downloadMissingDois
+    downloadMissingDois,
+    isZipping
   };
 }
 

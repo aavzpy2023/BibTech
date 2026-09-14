@@ -1,170 +1,600 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 18:42:39
+Date: 2026-09-14 19:07:37
 AST Mode: True
 Line Numbers: False
-Modules: App.jsx, Layout.jsx
-Processed Files: 2
+Modules: QueueView.jsx, useQueueState.js, router.py
+Processed Files: 3
 ===========================
 
 
 
-// --- frontend/src/App.jsx ---
+// --- frontend/src/views/QueueView.jsx ---
 
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
-import LoadView from './views/LoadView';
-import QueueView from './views/QueueView';
-import AnalysisView from './views/AnalysisView';
-import BibliographyUploader from './components/BibliographyUploader';
-import ReferenceTable from './components/ReferenceTable';
-import { useBibliography } from './hooks/useBibliography';
-
-function DashboardView() {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
-  const { references, isLoading, error: uploadError, uploadFile } = useBibliography();
-
-  useEffect(() => {
-    fetch('/api/requirements')
-      .then(res => {
-        if (!res.ok) throw new Error('Error al conectar con el servidor');
-        return res.json();
-      })
-      .then(data => setData(data))
-      .catch(err => setError(err.message));
-  }, []);
-
-  const styles = {
-    container: { fontFamily: 'system-ui, sans-serif', padding: '40px', maxWidth: '600px', margin: '0 auto', textAlign: 'center', color: '#333' },
-    card: { border: '1px solid #e1e4e8', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', backgroundColor: '#fff', textAlign: 'left' },
-    badge: { backgroundColor: '#e2f5ea', color: '#137333', padding: '6px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: 'bold', display: 'inline-block', marginBottom: '15px' }
-  };
-
-  return (
-    <div style={styles.container}>
-      <h1>¡Proyecto bibtech Inicializado! 🎉</h1>
-      <div style={styles.card}>
-        <h3>Ingesta de Bibliografía</h3>
-        {uploadError && <p style={{color: 'red', fontWeight: 'bold'}}>❌ {uploadError}</p>}
-        {isLoading && <p style={{color: '#0366d6'}}>Procesando archivo...</p>}
-        
-        <BibliographyUploader onUpload={uploadFile} />
-        <ReferenceTable references={references} />
-        
-        <hr style={{margin: '32px 0', border: 'none', borderTop: '1px solid #e1e4e8'}} />
-        
-        <h3>Parámetros Modernos Detectados:</h3>
-        {error && <p style={{color: 'red'}}>❌ {error}</p>}
-        {!data && !error && <p>Cargando requerimientos...</p>}
-        {data && (
-          <div>
-            <span style={styles.badge}>{data.status}</span>
-            <ul>
-              <li><strong>Estructura:</strong> bibtech</li>
-              <li><strong>Configuración Backend:</strong> pyproject.toml (PEP 621)</li>
-              <li><strong>Base de Datos:</strong> {data.database}</li>
-              <li><strong>Ruteo/Proxy:</strong> {data.proxy}</li>
-              <li><strong>Backend Framework:</strong> Python + {data.framework}</li>
-            </ul>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<DashboardView />} />
-          <Route path="load" element={<LoadView />} />
-          <Route path="queue" element={<QueueView />} />
-          <Route path="analysis" element={<AnalysisView />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  );
-}
-
-export default App;
-
-
-
-// --- frontend/src/components/Layout.jsx ---
-
-import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { BatchProvider } from '../hooks/useBatchLoad';
-
-const navItems = [
-  { name: 'Dashboard', path: '/' },
-  { name: 'Search', path: '/search' },
-  { name: 'Load', path: '/load' },
-  { name: 'Download queue', path: '/queue' },
-  { name: 'Analysis', path: '/analysis' },
-  { name: 'References', path: '/references' }
-];
+import useQueueState from '../hooks/useQueueState';
+import useBatchLoad from '../hooks/useBatchLoad';
 
 const styles = {
-  header: {
-    borderBottom: '1px solid #e1e4e8',
-    padding: '0 20px',
-    backgroundColor: '#ffffff'
-  },
-  nav: {
+  container: {
     display: 'flex',
-    gap: '24px',
-    alignItems: 'center'
+    flexDirection: 'column',
+    gap: '20px',
+    maxWidth: '900px',
+    margin: '0 auto',
+    padding: '20px 0'
   },
-  link: {
-    padding: '16px 4px',
-    textDecoration: 'none',
-    color: '#586069',
-    fontWeight: 500,
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid #e1e4e8',
+    paddingBottom: '16px'
+  },
+  downloadButton: {
+    backgroundColor: '#2ea44f',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '8px 16px',
     fontSize: '14px',
-    borderBottom: '2px solid transparent'
+    fontWeight: '600',
+    cursor: 'pointer'
   },
-  activeLink: {
-    color: '#0366d6',
-    borderBottom: '2px solid #0366d6'
+  secondaryButton: {
+    backgroundColor: '#fff',
+    color: '#24292e',
+    border: '1px solid #d1d5da',
+    borderRadius: '6px',
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer'
   },
-  main: {
-    padding: '24px',
-    maxWidth: '1200px',
-    margin: '0 auto'
+  disabledButton: {
+    backgroundColor: '#94d3a2',
+    cursor: 'not-allowed',
+    opacity: 0.6
+  },
+  filterBar: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: '12px',
+    marginBottom: '8px'
+  },
+  filterLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '13px',
+    fontWeight: '500',
+    color: '#24292e',
+    cursor: 'pointer'
+  },
+  statusBadge: {
+    padding: '4px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '600',
+    display: 'inline-block'
+  },
+  statusQueued: {
+    backgroundColor: '#f1f8ff',
+    color: '#0366d6'
+  },
+  statusResolving: {
+    backgroundColor: '#fffbdd',
+    color: '#735c0f'
+  },
+  statusDownloaded: {
+    backgroundColor: '#dcffe4',
+    color: '#1a7f37'
+  },
+  statusNotFound: {
+    backgroundColor: '#f6f8fa',
+    color: '#57606a'
+  },
+  statusFailed: {
+    backgroundColor: '#ffebe9',
+    color: '#cf222e'
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: 'bold',
+    color: '#24292e',
+    margin: 0
+  },
+  subtitle: {
+    fontSize: '14px',
+    color: '#586069',
+    marginTop: '4px'
+  },
+  progressTrack: {
+    width: '100%',
+    height: '10px',
+    backgroundColor: '#e1e4e8',
+    borderRadius: '5px',
+    overflow: 'hidden',
+    marginTop: '8px'
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#0366d6',
+    transition: 'width 0.3s ease'
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    marginTop: '16px',
+    border: '1px solid #e1e4e8',
+    borderRadius: '6px'
+  },
+  th: {
+    backgroundColor: '#f6f8fa',
+    padding: '12px',
+    textAlign: 'left',
+    borderBottom: '1px solid #e1e4e8',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#24292e'
+  },
+  td: {
+    padding: '12px',
+    borderBottom: '1px solid #e1e4e8',
+    fontSize: '14px',
+    color: '#24292e'
+  },
+  row: {
+    backgroundColor: '#fff'
   }
 };
 
-function Layout() {
+export function QueueView() {
+  const {
+    dois,
+    config,
+    selectedDois,
+    toggleSelection,
+    toggleAll,
+    downloadZip,
+    downloadMissingDois
+  } = useQueueState();
+  const {
+    monitor,
+    statuses = {},
+    startBatch,
+    isDownloading
+  } = useBatchLoad();
+
+  useEffect(() => {
+    if (
+      !isDownloading &&
+      (monitor?.progress ?? 0) === 0 &&
+      dois &&
+      dois.length > 0
+    ) {
+      startBatch(dois, config);
+    }
+  }, [dois, config, startBatch, isDownloading, monitor?.progress]);
+
+  const downloadedDois = (dois || []).filter(
+    (doi) => statuses[doi] === 'downloaded'
+  );
+  const canDownload = selectedDois.length > 0 || downloadedDois.length > 0;
+
+  useEffect(() => {
+    if (downloadedDois.length > 0) {
+      downloadedDois.forEach((doi) => {
+        if (!selectedDois.includes(doi)) {
+          toggleSelection(doi);
+        }
+      });
+    }
+  }, [statuses, dois, selectedDois, toggleSelection]);
+
+  const missingDois = (dois || []).filter(
+    (doi) => statuses[doi] === 'not_found' || statuses[doi] === 'failed'
+  );
+  const hasMissing = missingDois.length > 0;
+
+  const handleDownload = () => {
+    const target =
+      selectedDois.length > 0 ? selectedDois : downloadedDois;
+    downloadZip(target);
+  };
+
+  const handleDownloadMissing = () => {
+    downloadMissingDois(missingDois, config.destination);
+  };
+
+  const renderStatus = (statusKey) => {
+    switch (statusKey) {
+      case 'downloaded':
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusDownloaded }}>
+            ✓ Downloaded
+          </span>
+        );
+      case 'resolving':
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusResolving }}>
+            ⏳ Resolving...
+          </span>
+        );
+      case 'not_found':
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusNotFound }}>
+            ⊘ PDF Not Available
+          </span>
+        );
+      case 'failed':
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusNotFound }}>
+            ⊘ PDF Not Available
+          </span>
+        );
+      default:
+        return (
+          <span style={{ ...styles.statusBadge, ...styles.statusQueued }}>
+            Queued
+          </span>
+        );
+    }
+  };
+
+  const [showOnlyDownloaded, setShowOnlyDownloaded] = useState(false);
+
+  const displayedDois = showOnlyDownloaded
+    ? (dois || []).filter((doi) => statuses[doi] === 'downloaded')
+    : (dois || []);
+
+  const selectableDois = displayedDois.filter(
+    (doi) => statuses[doi] !== 'not_found' && statuses[doi] !== 'failed'
+  );
+
+  const allSelected =
+    selectableDois.length > 0 &&
+    selectableDois.every((doi) => selectedDois.includes(doi));
+
   return (
-    <div>
-      <header style={styles.header}>
-        <nav style={styles.nav}>
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              style={({ isActive }) => ({
-                ...styles.link,
-                ...(isActive ? styles.activeLink : {})
-              })}
-            >
-              {item.name}
-            </NavLink>
-          ))}
-        </nav>
-      </header>
-      <main style={styles.main}>
-        <BatchProvider>
-          <Outlet />
-        </BatchProvider>
-      </main>
+    <div style={styles.container} data-testid="queue-view">
+      <div style={styles.header}>
+        <div>
+          <h2 style={styles.title}>Download Queue</h2>
+          <p style={styles.subtitle}>
+          Batch: {config.destination || 'Default'} | Progress: {monitor?.progress ?? 0}/{monitor?.total || dois.length}
+        </p>
+        <div style={styles.progressTrack}>
+          <div
+            data-testid="queue-progress-bar-fill"
+            style={{
+              ...styles.progressFill,
+              width: `${
+                (monitor?.total || dois.length) > 0
+                  ? Math.min(
+                      100,
+                      Math.round(
+                        ((monitor?.progress ?? 0) /
+                          (monitor?.total || dois.length)) *
+                          100
+                      )
+                    )
+                  : 0
+              }%`
+            }}
+          />
+        </div>
+      </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <label style={styles.filterLabel}>
+            <input
+              type="checkbox"
+              checked={showOnlyDownloaded}
+              onChange={(e) => setShowOnlyDownloaded(e.target.checked)}
+            />
+            <span>Only PDFs</span>
+          </label>
+          <button
+            type="button"
+            disabled={!hasMissing}
+            style={{
+              ...styles.secondaryButton,
+              ...(!hasMissing ? styles.disabledButton : {})
+            }}
+            onClick={handleDownloadMissing}
+          >
+            Export Missing DOIs (.txt)
+          </button>
+          <button
+            type="button"
+            disabled={!canDownload}
+            style={{
+            ...styles.downloadButton,
+            ...(!canDownload ? styles.disabledButton : {})
+          }}
+          onClick={handleDownload}
+        >
+          Download PDFs
+        </button>
+        </div>
+      </div>
+
+
+
+
+      <table style={styles.table}>
+        <thead>
+          <tr>
+            <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+              <input
+                type="checkbox"
+                aria-label="Select all"
+                checked={allSelected}
+                disabled={selectableDois.length === 0}
+                onChange={() => toggleAll(selectableDois)}
+              />
+            </th>
+            <th style={styles.th}>DOI</th>
+            <th style={styles.th}>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {displayedDois.length === 0 ? (
+            <tr>
+              <td colSpan={3} style={{ ...styles.td, textAlign: 'center' }}>
+                {showOnlyDownloaded
+                  ? 'No downloaded PDFs found.'
+                  : 'No DOIs in queue.'}
+              </td>
+            </tr>
+          ) : (
+            displayedDois.map((doi) => {
+              const isUnavailable =
+                statuses[doi] === 'not_found' || statuses[doi] === 'failed';
+              const isSelected = !isUnavailable && selectedDois.includes(doi);
+              return (
+                <tr key={doi} style={styles.row}>
+                  <td style={{ ...styles.td, textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${doi}`}
+                      checked={isSelected}
+                      disabled={isUnavailable}
+                      style={{
+                        cursor: isUnavailable ? 'not-allowed' : 'pointer'
+                      }}
+                      onChange={() => {
+                        if (!isUnavailable) {
+                          toggleSelection(doi);
+                        }
+                      }}
+                    />
+                  </td>
+                  <td style={styles.td}>{doi}</td>
+                  <td style={styles.td}>
+                    {renderStatus(statuses[doi] || 'queued')}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-export default Layout;
+export default QueueView;
+
+
+// --- frontend/src/hooks/useQueueState.js ---
+
+import { useState, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useBatchLoad } from './useBatchLoad';
+
+export function useQueueState() {
+  const location = useLocation();
+  const { input, config: batchConfig, activeDois, statuses } =
+    useBatchLoad();
+
+  const rawDois =
+    (activeDois && activeDois.length > 0 ? activeDois : null) ||
+    location.state?.dois ||
+    input?.dois ||
+    Object.keys(statuses || {});
+
+  const config =
+    location.state?.config ||
+    batchConfig ||
+    {};
+
+  const dois = useMemo(() => {
+    if (Array.isArray(rawDois)) {
+      return rawDois;
+    }
+    if (typeof rawDois === 'string') {
+      return rawDois
+        .split('\n')
+        .map((d) => d.trim())
+        .filter((d) => d.length > 0);
+    }
+    return [];
+  }, [rawDois]);
+
+  const [selectedDois, setSelectedDois] = useState([]);
+
+  const toggleSelection = useCallback((doi) => {
+    setSelectedDois((prev) =>
+      prev.includes(doi) ? prev.filter((d) => d !== doi) : [...prev, doi]
+    );
+  }, []);
+
+  const toggleAll = useCallback(
+    (allDois) => {
+      const targetList = allDois ?? dois;
+      setSelectedDois((prev) =>
+        prev.length === targetList.length ? [] : [...targetList]
+      );
+    },
+    [dois]
+  );
+
+  const downloadZip = useCallback(
+    async (overrideDois) => {
+      const targetDois =
+        overrideDois && overrideDois.length > 0
+          ? overrideDois
+          : selectedDois;
+
+      if (targetDois.length === 0) return;
+
+      const batchName = config.destination || 'download_batch';
+    try {
+      const response = await fetch('/api/bibliography/download-zip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          batch_name: batchName,
+          dois: targetDois
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${batchName}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download ZIP archive', err);
+    }
+  },
+  [config.destination, selectedDois]
+  );
+
+  const downloadMissingDois = useCallback(
+    (missingList, batchNameOverride) => {
+      if (!missingList || missingList.length === 0) return;
+
+      const batchName =
+        batchNameOverride || config.destination || 'batch';
+      const blob = new Blob([missingList.join('\n')], {
+        type: 'text/plain;charset=utf-8'
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${batchName}_missing_dois.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    },
+    [config.destination]
+  );
+
+  return {
+    dois,
+    config,
+    selectedDois,
+    toggleSelection,
+    toggleAll,
+    downloadZip,
+    downloadMissingDois
+  };
+}
+
+export default useQueueState;
+
+
+// --- backend/src/bibliography/router.py ---
+
+import os
+from typing import List
+from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi.responses import StreamingResponse
+from .schemas import (
+    ParsedReference,
+    BatchDownloadRequest,
+    ZipDownloadRequest,
+)
+from .parser_service import parse_bibliography_content
+from .download_service import execute_batch_download
+from .zip_service import create_zip_from_pdfs
+
+router = APIRouter()
+
+try:
+    import multipart
+    HAS_MULTIPART = True
+except ImportError:
+    HAS_MULTIPART = False
+
+async def _process_upload(file: UploadFile) -> List[ParsedReference]:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
+    _, ext = os.path.splitext(file.filename)
+    if ext.lower() not in [".ris", ".bib"]:
+        raise HTTPException(status_code=400, detail="Unsupported file extension")
+    
+    try:
+        content_bytes = await file.read()
+        content_str = content_bytes.decode("utf-8")
+        refs = parse_bibliography_content(content_str, ext)
+        return refs
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error during parsing"
+        )
+
+if HAS_MULTIPART:
+    @router.post("/upload", response_model=List[ParsedReference])
+    async def upload_bibliography(file: UploadFile = File(...)):
+        return await _process_upload(file)
+else:
+    async def upload_bibliography(file: UploadFile):
+        return await _process_upload(file)
+
+
+@router.post("/batch-download")
+async def batch_download(request: BatchDownloadRequest):
+    async def sse_generator():
+        async for event in execute_batch_download(
+            request.dois,
+            request.destination,
+            request.email,
+            request.delay,
+        ):
+            yield f"data: {event}\n\n"
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream"
+    )
+
+
+@router.post("/download-zip")
+async def download_zip(request: ZipDownloadRequest):
+    zip_io = create_zip_from_pdfs(request.batch_name, request.dois)
+    return StreamingResponse(
+        zip_io,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": (
+                f"attachment; filename={request.batch_name}.zip"
+            )
+        },
+    )

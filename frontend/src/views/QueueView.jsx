@@ -145,7 +145,8 @@ export function QueueView() {
     toggleSelection,
     toggleAll,
     downloadZip,
-    downloadMissingDois
+    downloadMissingDois,
+    isZipping
   } = useQueueState();
   const {
     monitor,
@@ -295,14 +296,14 @@ export function QueueView() {
           </button>
           <button
             type="button"
-            disabled={!canDownload}
+            disabled={!canDownload || isZipping}
             style={{
             ...styles.downloadButton,
-            ...(!canDownload ? styles.disabledButton : {})
+            ...(!canDownload || isZipping ? styles.disabledButton : {})
           }}
           onClick={handleDownload}
         >
-          Download PDFs
+          {isZipping ? 'Zipping PDFs...' : 'Download PDFs'}
         </button>
         </div>
       </div>
