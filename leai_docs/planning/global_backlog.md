@@ -31,9 +31,16 @@
 - [x] [REQ-016] Identity Domain Models &amp; Keywords
 - [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
 
+## EPIC 7: REFERENCES DATABASE INGESTION
+- [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
+- [ ] [REQ-019] References Data Table View
+- [ ] [REQ-020] Frontend Injection State Hook
+- [ ] [REQ-021] References View Routing &amp; Assembly
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
 - [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
 - [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
 - [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
+- [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)

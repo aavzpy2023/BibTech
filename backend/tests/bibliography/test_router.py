@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 from io import BytesIO
 import asyncio
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone
 import pytest
 
@@ -26,6 +26,7 @@ from backend.src.bibliography.router import (
     upload_bibliography,
     batch_download,
     download_zip,
+    inject_bibliography,
 )
 from backend.src.bibliography.schemas import (
     BatchDownloadRequest,
@@ -188,3 +189,87 @@ def test_download_zip_endpoint_client():
             == "attachment; filename=test.zip"
         )
         mock_service.assert_called_once_with("test", [])
+
+
+def test_inject_bibliography_direct_success():
+    mock_ref = ParsedReference(
+        author="Test Author",
+        year="2024",
+        title="Test Title",
+        journal="Test Journal",
+        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    with patch(
+        "backend.src.bibliography.router.parse_bibliography_content",
+        return_value=[mock_ref],
+    ), patch(
+        "backend.src.bibliography.router.inject_references_to_db",
+        return_value=10,
+    ):
+        file = UploadFile(
+            filename="references.ris",
+            file=BytesIO(b"fake ris content"),
+        )
+        fake_db = MagicMock()
+        result = asyncio.run(
+            inject_bibliography(file, "PROJ-1", fake_db)
+        )
+        assert result == {"message": "Success", "inserted": 10}
+
+
+def test_inject_bibliography_direct_invalid_extension():
+    file = UploadFile(
+        filename="references.txt",
+        file=BytesIO(b"fake txt content"),
+    )
+    fake_db = MagicMock()
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(inject_bibliography(file, "PROJ-1", fake_db))
+    assert exc_info.value.status_code == 400
+    assert "Unsupported file extension" in exc_info.value.detail
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+@patch("backend.src.bibliography.router.inject_references_to_db")
+@patch("backend.src.bibliography.router.parse_bibliography_content")
+def test_inject_bibliography_endpoint_success(mock_parse, mock_inject):
+    from backend.src.bibliography.router import get_db
+
+    mock_db = MagicMock()
+    app.dependency_overrides[get_db] = lambda: mock_db
+    try:
+        mock_ref = ParsedReference(
+            author="Test Author",
+            year="2024",
+            title="Test Title",
+            journal="Test Journal",
+            upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        )
+        mock_parse.return_value = [mock_ref]
+        mock_inject.return_value = 10
+
+        file_content = b"fake ris content"
+        files = {"file": ("test.ris", file_content, "text/plain")}
+        data = {"project_code": "PROJ-1"}
+
+        response = client.post(
+            "/api/bibliography/inject", files=files, data=data
+        )
+        assert response.status_code == 200
+        assert response.json() == {"message": "Success", "inserted": 10}
+        mock_inject.assert_called_once_with(mock_db, [mock_ref], "PROJ-1")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+def test_inject_bibliography_endpoint_invalid_extension():
+    file_content = b"fake txt content"
+    files = {"file": ("test.txt", file_content, "text/plain")}
+    data = {"project_code": "PROJ-1"}
+
+    response = client.post(
+        "/api/bibliography/inject", files=files, data=data
+    )
+    assert response.status_code == 400
+    assert "Unsupported file extension" in response.json()["detail"]

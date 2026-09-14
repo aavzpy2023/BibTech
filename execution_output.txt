@@ -1,5 +1,6 @@
 === PATCH OPERATIONS APPLIED ===
-- [Successful] CREATE -> leai_docs/planning/roadmap_3_batch_download_execution.md
+- [Successful] CREATE -> leai_docs/planning/roadmap_6_references_ingestion.md
+- [Successful] EDIT -> leai_docs/planning/global_backlog.md
 - [Successful] EDIT -> leai_docs/planning/global_backlog.md
 
 === VALIDATION COMMAND OUTPUT (PART 7) ===
