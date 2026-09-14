@@ -6,14 +6,6 @@ try:
     from .schemas import ParsedReference
     from ..database.models.core import Article, Project, ProjectArticle
 except (ImportError, ValueError):
-    try:
-        from src.bibliography.schemas import ParsedReference
-        from src.database.models.core import (
-            Article,
-            Project,
-            ProjectArticle,
-        )
-    except ImportError:
     from backend.src.bibliography.schemas import ParsedReference
     from backend.src.database.models.core import (
         Article,
@@ -30,6 +22,7 @@ def inject_references_to_db(
     if not project:
         project = Project(name=project_code)
         db.add(project)
+        db.flush()
 
     for ref in refs:
         year_val: Optional[int] = None
@@ -44,7 +37,9 @@ def inject_references_to_db(
             journal=ref.journal,
             year=year_val,
         )
-        db.add(ProjectArticle(project=project, article=article))
+        db.add(article)
+        db.flush()
+        db.add(ProjectArticle(project_id=project.id, article_id=article.id))
 
     db.commit()
     return len(refs)

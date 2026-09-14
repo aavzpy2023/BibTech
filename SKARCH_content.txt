@@ -1,101 +1,62 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 19:33:13
+Date: 2026-09-14 19:41:17
 AST Mode: True
 Line Numbers: False
-Modules: __init__.py, identity.py, tracking.py, main.py
-Processed Files: 4
+Modules: injection_service.py
+Processed Files: 1
 ===========================
 
 
 
-// --- backend/src/database/models/__init__.py ---
+// --- backend/src/bibliography/injection_service.py ---
 
-"""Database models package."""
-from src.database.models.core import Article, Project, ProjectArticle
-from src.database.models.identity import (
-    Affiliation,
-    Author,
-    AuthorArticle,
-    Keyword,
-    KeywordArticle,
-)
-from src.database.models.tracking import Download, Funding, Reference
+"""Service for persisting bibliographic references into the database."""
+from typing import List, Optional
+from sqlalchemy.orm import Session
 
-__all__ = [
-    "Affiliation",
-    "Article",
-    "Author",
-    "AuthorArticle",
-    "Keyword",
-    "KeywordArticle",
-    "Project",
-    "ProjectArticle",
-    "Reference",
-    "Funding",
-    "Download",
-]
+try:
+    from .schemas import ParsedReference
+    from ..database.models.core import Article, Project, ProjectArticle
+except (ImportError, ValueError):
+    try:
 
 
-// --- backend/src/database/models/identity.py ---
-
-"""Identity domain models for affiliations, authors, and article authorship."""
-from datetime import datetime, timezone
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, UniqueConstraint
-from sqlalchemy.orm import relationship
-from src.database.session import Base
-
-class Affiliation(Base):
-    """..."""
-
-class Author(Base):
-    """..."""
-
-class AuthorArticle(Base):
-    """..."""
-
-class Keyword(Base):
-    """..."""
-
-class KeywordArticle(Base):
-    """..."""
+        from backend.src.bibliography.schemas import ParsedReference
+        from backend.src.database.models.core import (
+            Article,
+            Project,
+            ProjectArticle,
+        )
 
 
-// --- backend/src/database/models/tracking.py ---
+def inject_references_to_db(
+    db: Session, refs: List[ParsedReference], project_code: str
+) -> int:
+    """Persist parsed references and associate them with a project."""
+    project = db.query(Project).filter(Project.name == project_code).first()
+    if not project:
+        project = Project(name=project_code)
+        db.add(project)
+        db.flush()
 
-"""Extended tracking models for citations, funding, and paper downloads."""
-from datetime import datetime, timezone
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import relationship
-from src.database.session import Base
+    for ref in refs:
+        year_val: Optional[int] = None
+        if ref.year:
+            try:
+                year_val = int(float(str(ref.year).strip()))
+            except (ValueError, TypeError):
+                year_val = None
 
-class Reference(Base):
-    """..."""
+        article = Article(
+            title=ref.title or "Untitled",
+            journal=ref.journal,
+            year=year_val,
+        )
+        db.add(article)
+        db.flush()
+        db.add(ProjectArticle(project_id=project.id, article_id=article.id))
 
-class Funding(Base):
-    """..."""
-
-class Download(Base):
-    """..."""
-
-
-// --- backend/main.py ---
-
-from fastapi import FastAPI
-import sys
-from backend.src.bibliography.router import router as bibliography_router
-
-app = FastAPI()
-
-app.include_router(bibliography_router, prefix="/api/bibliography", tags=["bibliography"])
-
-@app.get("/api/requirements")
-def get_requirements():
-    return {
-        "python_version": sys.version.split()[0],
-        "framework": "FastAPI 0.110.0",
-        "database": "POSTGRES (Versión: 16)",
-        "proxy": "Nginx (Puerto 80)" if True else "Directo (Puerto 5173/8000)",
-        "status": "¡Entorno moderno con pyproject.toml listo! 🚀"
-    }
+    db.commit()
+    return len(refs)
 

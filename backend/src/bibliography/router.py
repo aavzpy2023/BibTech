@@ -71,10 +71,12 @@ async def _process_inject(
         return {"message": "Success", "inserted": inserted}
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
-    except Exception:
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=500,
-            detail="Internal server error during injection",
+            detail=f"Internal server error during injection: {str(exc)}",
         )
 
 if HAS_MULTIPART:
