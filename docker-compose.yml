@@ -27,7 +27,7 @@ services:
     container_name: bibtech-nginx
     build: ./nginx
     ports:
-      - "80:80"
+      - "88:80"
     depends_on:
       - frontend
       - backend

@@ -1,0 +1,173 @@
+import React from 'react';
+
+const AVAILABLE_SOURCES = [
+  'Unpaywall',
+  'CrossRef',
+  'Semantic Scholar',
+  'OpenAlex',
+  'PubMed'
+];
+
+const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+    marginBottom: '24px',
+    padding: '20px',
+    backgroundColor: '#fafbfc',
+    border: '1px solid #e1e4e8',
+    borderRadius: '8px'
+  },
+  section: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px'
+  },
+  label: {
+    fontWeight: 'bold',
+    fontSize: '14px',
+    color: '#24292e'
+  },
+  sliderContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px'
+  },
+  slider: {
+    flex: 1,
+    cursor: 'pointer'
+  },
+  checkboxGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: '10px'
+  },
+  checkboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    fontSize: '13px',
+    cursor: 'pointer'
+  },
+  inputsGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '16px'
+  },
+  input: {
+    padding: '8px 12px',
+    borderRadius: '6px',
+    border: '1px solid #d1d5da',
+    fontSize: '14px'
+  }
+};
+
+export function BatchConfig({
+  delay = 5,
+  sources = [],
+  destination = '',
+  email = '',
+  config,
+  onConfigUpdate
+}) {
+  const currentDelay = config?.delay ?? delay;
+  const currentSources = config?.sources ?? sources;
+  const currentDestination = config?.destination ?? destination;
+  const currentEmail = config?.email ?? email;
+
+  const handleSourceToggle = (sourceName) => {
+    if (!onConfigUpdate) return;
+    const exists = currentSources.includes(sourceName);
+    const updated = exists
+      ? currentSources.filter((s) => s !== sourceName)
+      : [...currentSources, sourceName];
+    onConfigUpdate('sources', updated);
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.section}>
+        <label htmlFor="delay-slider" style={styles.label}>
+          Retardo entre descargas: {currentDelay}s
+        </label>
+        <div style={styles.sliderContainer}>
+          <input
+            id="delay-slider"
+            role="slider"
+            type="range"
+            min="5"
+            max="60"
+            step="5"
+            value={currentDelay}
+            style={styles.slider}
+            onChange={(e) => {
+              if (onConfigUpdate) {
+                onConfigUpdate('delay', Number(e.target.value));
+              }
+            }}
+          />
+          <span style={{ fontSize: '12px', color: '#586069' }}>
+            [5s, 15s, 30s, 60s]
+          </span>
+        </div>
+      </div>
+
+      <div style={styles.section}>
+        <span style={styles.label}>Fuentes de Recuperación (5 Fuentes)</span>
+        <div style={styles.checkboxGrid}>
+          {AVAILABLE_SOURCES.map((source) => (
+            <label key={source} style={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={currentSources.includes(source)}
+                onChange={() => handleSourceToggle(source)}
+              />
+              {source}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div style={styles.inputsGrid}>
+        <div style={styles.section}>
+          <label htmlFor="destination-input" style={styles.label}>
+            Carpeta de Destino
+          </label>
+          <input
+            id="destination-input"
+            type="text"
+            style={styles.input}
+            placeholder="Carpeta o ruta de descarga"
+            value={currentDestination}
+            onChange={(e) => {
+              if (onConfigUpdate) {
+                onConfigUpdate('destination', e.target.value);
+              }
+            }}
+          />
+        </div>
+
+        <div style={styles.section}>
+          <label htmlFor="email-input" style={styles.label}>
+            Correo Electrónico (Polite Pool)
+          </label>
+          <input
+            id="email-input"
+            type="email"
+            style={styles.input}
+            placeholder="Correo para APIs académicas"
+            value={currentEmail}
+            onChange={(e) => {
+              if (onConfigUpdate) {
+                onConfigUpdate('email', e.target.value);
+              }
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default BatchConfig;

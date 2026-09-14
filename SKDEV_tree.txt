@@ -1,0 +1,44 @@
+Árbol de directorios de archivos exportados:
+
+--- Raíz de escaneo: . ---
+│   ├── Makefile
+│   ├── README.md
+│   ├── context.md
+│   ├── create_project.py
+│   ├── docker-compose.yml
+│   ├── execution_output.txt
+│   ├── frontend/
+│   │   ├── Dockerfile
+│   │   ├── index.html
+│   │   ├── package.json
+│   │   ├── src/
+│   │   │   ├── App.jsx
+│   │   │   ├── main.jsx
+│   ├── backend/
+│   │   ├── Dockerfile
+│   │   ├── main.py
+│   │   ├── bibtech_backend.egg-info/
+│   │   │   ├── SOURCES.txt
+│   │   │   ├── dependency_links.txt
+│   │   │   ├── requires.txt
+│   │   │   ├── top_level.txt
+│   ├── _scripts/
+│   │   ├── dev/
+│   │   │   ├── auto_sync_accounts.py
+│   │   │   ├── cli.py
+│   │   │   ├── compression.py
+│   │   │   ├── config.py
+│   │   │   ├── discovery.py
+│   │   │   ├── export_project.py
+│   │   │   ├── export_project_old.py
+│   │   │   ├── generator.py
+│   │   │   ├── kill_zombies.sh
+│   │   │   ├── ts_compressor.js
+│   ├── leai_docs/
+│   │   ├── planning/
+│   │   │   ├── global_backlog.md
+│   │   │   ├── roadmap_1_bibliography_ingestion.md
+│   │   │   ├── roadmap_2_batch_load.md
+│   ├── nginx/
+│   │   ├── Dockerfile
+│   │   ├── nginx.conf

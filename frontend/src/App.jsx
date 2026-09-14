@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
 
-function App() {
+function DashboardView() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
@@ -43,4 +45,18 @@ function App() {
     </div>
   );
 }
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<DashboardView />} />
+          <Route path="load" element={<div>Load View</div>} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
 export default App;
