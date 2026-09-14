@@ -1,8 +1,5 @@
 import React from 'react';
 
-
-
-
 const styles = {
   container: {
     display: 'flex',
@@ -33,18 +30,6 @@ const styles = {
     flex: 1,
     cursor: 'pointer'
   },
-  checkboxGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-    gap: '10px'
-  },
-  checkboxLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontSize: '13px',
-    cursor: 'pointer'
-  },
   inputsGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
@@ -68,9 +53,6 @@ export function BatchConfig({
   const currentDelay = config?.delay ?? delay;
   const currentDestination = config?.destination ?? destination;
   const currentEmail = config?.email ?? email;
-
-
-
 
   return (
     <div style={styles.container}>
@@ -97,12 +79,6 @@ export function BatchConfig({
           <span style={{ fontSize: '12px', color: '#586069' }}>
             [5s, 15s, 30s, 60s]
           </span>
-        </div>
-      </div>
-
-
-
-
         </div>
       </div>
 
