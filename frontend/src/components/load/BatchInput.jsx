@@ -2,11 +2,16 @@ import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 
 export function extractDoisFromText(text, filename = '') {
-  const isRis = filename.toLowerCase().endsWith('.ris');
   const isBib = filename.toLowerCase().endsWith('.bib');
   const foundDois = [];
+  const missingDoisAlerts = [];
 
-  if (isRis || (!isBib && text.includes('DO  -'))) {
+  if (!isBib) {
+    return { foundDois, missingDoisAlerts };
+  }
+
+  // Fallback para evitar errores en variables no usadas (isRis)
+  if (false) {
     const risRegex = /^[ \t]*DO\s+-\s+(.+)$/gim;
     let match;
     while ((match = risRegex.exec(text)) !== null) {
@@ -17,18 +22,48 @@ export function extractDoisFromText(text, filename = '') {
     }
   }
 
-  if (isBib || (!isRis && (text.includes('DOI =') || text.includes('doi =')))) {
-    const bibRegex = /\bdoi\s*=\s*(?:\{([^}]+)\}|"([^"]+)")/gi;
-    let match;
-    while ((match = bibRegex.exec(text)) !== null) {
-      const doi = (match[1] || match[2] || '').trim();
-      if (doi && !foundDois.includes(doi)) {
-        foundDois.push(doi);
+  if (isBib) {
+    const entryRegex = /@\w+\s*{\s*([^,]+)/gi;
+    let entryMatch;
+    
+    while ((entryMatch = entryRegex.exec(text)) !== null) {
+      const citationKey = entryMatch[1].trim();
+      
+      const startIndex = entryMatch.index;
+      let openBraces = 0;
+      let endIndex = startIndex;
+      let started = false;
+      
+      for (let i = startIndex; i < text.length; i++) {
+        if (text[i] === '{') {
+          openBraces++;
+          started = true;
+        } else if (text[i] === '}') {
+          openBraces--;
+        }
+        if (started && openBraces === 0) {
+          endIndex = i;
+          break;
+        }
+      }
+      
+      const entryText = text.substring(startIndex, endIndex + 1);
+      
+      const bibRegex = /\bdoi\s*=\s*(?:\{([^}]+)\}|"([^"]+)")/i;
+      const doiMatch = bibRegex.exec(entryText);
+      
+      if (doiMatch) {
+        const doi = (doiMatch[1] || doiMatch[2] || '').trim();
+        if (doi && !foundDois.includes(doi)) {
+          foundDois.push(doi);
+        }
+      } else {
+        missingDoisAlerts.push(`Citation key [${citationKey}] is missing a DOI.`);
       }
     }
   }
 
-  if (foundDois.length === 0) {
+  if (false && foundDois.length === 0) {
     const genericRegex = /\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+\b/gi;
     let match;
     while ((match = genericRegex.exec(text)) !== null) {
@@ -39,7 +74,7 @@ export function extractDoisFromText(text, filename = '') {
     }
   }
 
-  return foundDois;
+  return { foundDois, missingDoisAlerts };
 }
 
 const styles = {
@@ -109,30 +144,40 @@ export function BatchInput({
   onInputUpdate
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [missingDois, setMissingDois] = useState([]);
   const currentFiles = input?.files ?? files;
   const currentDois = input?.dois ?? dois;
 
   const onDrop = async (acceptedFiles) => {
     const validFiles = (acceptedFiles || []).filter((file) => {
       const ext = file.name.toLowerCase().split('.').pop();
-      return ext === 'bib' || ext === 'ris';
+      return ext === 'bib';
     });
 
-    if (validFiles.length === 0) return;
+    if (validFiles.length === 0) {
+      alert("Only .bib files are accepted for this operation.");
+      return;
+    }
 
     if (onInputUpdate) {
       onInputUpdate('files', validFiles);
     }
 
     const allExtractedDois = [];
+    const allMissingAlerts = [];
     for (const file of validFiles) {
       try {
         const text = await file.text();
-        const extracted = extractDoisFromText(text, file.name);
-        allExtractedDois.push(...extracted);
+        const { foundDois, missingDoisAlerts } = extractDoisFromText(text, file.name);
+        allExtractedDois.push(...foundDois);
+        allMissingAlerts.push(...missingDoisAlerts);
       } catch (err) {
         console.error('Failed to read file for DOI extraction', err);
       }
+    }
+
+    if (allMissingAlerts.length > 0) {
+      setMissingDois(allMissingAlerts);
     }
 
     if (allExtractedDois.length > 0 && onInputUpdate) {
@@ -151,9 +196,8 @@ export function BatchInput({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'text/plain': ['.bib', '.ris'],
-      'application/x-bibtex': ['.bib'],
-      'application/x-research-info-systems': ['.ris']
+      'text/plain': ['.bib'],
+      'application/x-bibtex': ['.bib']
     }
   });
 
@@ -185,7 +229,7 @@ export function BatchInput({
               <h3 style={{ margin: 0, fontSize: '18px' }}>Extract DOIs</h3>
               <button type="button" onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
             </div>
-            <p style={{ fontSize: '14px', color: '#586069', marginBottom: '16px' }}>Select .bib or .ris files to automatically extract DOIs.</p>
+            <p style={{ fontSize: '14px', color: '#586069', marginBottom: '16px' }}>Select .bib files to automatically extract DOIs.</p>
         <div
           {...getRootProps()}
           style={{
@@ -195,7 +239,7 @@ export function BatchInput({
         >
           <input {...getInputProps()} />
           <p style={{ margin: 0, color: '#444' }}>
-            Drag or select files here / Arrastra o selecciona archivos (.bib, .ris)
+            Drag or select files here / Arrastra o selecciona archivos (.bib)
           </p>
           {currentFiles && currentFiles.length > 0 && (
             <div style={styles.fileList}>
@@ -203,6 +247,30 @@ export function BatchInput({
             </div>
           )}
         </div>
+          </div>
+        </div>
+      )}
+
+      {missingDois.length > 0 && (
+        <div style={styles.modalOverlay} onClick={() => setMissingDois([])}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.headerRow}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#cb2431' }}>Missing DOIs</h3>
+              <button type="button" onClick={() => setMissingDois([])} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            <p style={{ fontSize: '14px', color: '#586069', marginBottom: '16px' }}>
+              The following citation keys did not have a valid DOI associated with them:
+            </p>
+            <ul style={{ fontSize: '13px', color: '#24292e', maxHeight: '200px', overflowY: 'auto', paddingLeft: '20px', margin: '0 0 16px 0', fontFamily: 'monospace' }}>
+              {missingDois.map((msg, idx) => (
+                <li key={idx} style={{ marginBottom: '6px' }}>{msg}</li>
+              ))}
+            </ul>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setMissingDois([])} style={{ ...styles.uploadBtn, backgroundColor: '#f6f8fa', color: '#24292e', border: '1px solid #d1d5da' }}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
