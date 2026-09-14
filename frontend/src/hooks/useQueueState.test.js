@@ -81,4 +81,52 @@ describe('useQueueState hook', () => {
     });
     expect(result.current.selectedDois).toEqual([]);
   });
+
+  it('triggers downloadZip with selected DOIs and cleans up object URL', async () => {
+    const originalFetch = global.fetch;
+    const mockBlob = new Blob(['dummy zip'], { type: 'application/zip' });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      blob: vi.fn().mockResolvedValue(mockBlob)
+    });
+
+    const mockCreateObjectURL = vi.fn().mockReturnValue('blob:dummy-url');
+    const mockRevokeObjectURL = vi.fn();
+    window.URL.createObjectURL = mockCreateObjectURL;
+    window.URL.revokeObjectURL = mockRevokeObjectURL;
+
+    vi.mocked(router.useLocation).mockReturnValue({
+      state: {
+        dois: '10.1\n10.2',
+        config: { destination: 'my-batch' }
+      }
+    });
+
+    const { result } = renderHook(() => useQueueState());
+
+    act(() => {
+      result.current.toggleSelection('10.1');
+    });
+
+    await act(async () => {
+      await result.current.downloadZip();
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/bibliography/download-zip',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          batch_name: 'my-batch',
+          dois: ['10.1']
+        })
+      })
+    );
+
+    expect(mockCreateObjectURL).toHaveBeenCalledWith(mockBlob);
+    expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:dummy-url');
+
+    global.fetch = originalFetch;
+  });
 });

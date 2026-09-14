@@ -63,8 +63,9 @@ complexity_aggregate: "HARD"
   - [ ] [ID-4.5.3] [EXTERNAL/IO]: [1. Open backend/src/bibliography/router.py. 2. Add @router.post("/download-zip"). 3. Call create_zip_from_pdfs(request.batch_name, request.dois). 4. Return StreamingResponse(zip_io, media_type="application/zip", headers={"Content-Disposition": f"attachment; filename={request.batch_name}.zip"})]. Type: Task.
   - [ ] [ID-4.5.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_4_download_queue_and_zip.md and check - [x] for Story 4.5. 2. Append > Files touched: backend/src/bibliography/schemas.py, backend/src/bibliography/router.py, backend/tests/bibliography/test_router.py under the story]. Type: Task.
 
-- [ ] Story 4.6: Frontend ZIP Download Action (State Fractality) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 4.6: Frontend ZIP Download Action (State Fractality) | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Implement the Blob download logic in the state hook and wire it to a dumb button in the view. (<-- REQ-014)
+  > Files touched: frontend/src/hooks/useQueueState.js, frontend/src/views/QueueView.jsx
   Story Context Radius: {"frontend/src/hooks/useQueueState.js": [""], "frontend/src/views/QueueView.jsx": [""], "leai_docs/planning/roadmap_4_download_queue_and_zip.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown:
   - [ ] [ID-4.6.1] [TESTING/TDE]: [1. Arrange: Mock window.fetch to return a Blob and mock URL.createObjectURL. 2. Act: Call downloadZip from useQueueState. 3. Assert: Verify fetch was called with the correct endpoint and payload]. Type: Task.

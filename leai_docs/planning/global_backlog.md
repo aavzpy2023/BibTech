@@ -24,7 +24,7 @@
 ## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
 - [x] [REQ-012] Load View Validation &amp; Label Updates
 - [x] [REQ-013] Queue View State &amp; UI Assembly
-- [ ] [REQ-014] Backend ZIP Service &amp; Download Action
+- [x] [REQ-014] Backend ZIP Service &amp; Download Action
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)

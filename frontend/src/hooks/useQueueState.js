@@ -37,12 +37,45 @@ export function useQueueState() {
     [dois]
   );
 
+  const downloadZip = useCallback(async () => {
+    if (selectedDois.length === 0) return;
+
+    const batchName = config.destination || 'download_batch';
+    try {
+      const response = await fetch('/api/bibliography/download-zip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          batch_name: batchName,
+          dois: selectedDois
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${batchName}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download ZIP archive', err);
+    }
+  }, [config.destination, selectedDois]);
+
   return {
     dois,
     config,
     selectedDois,
     toggleSelection,
-    toggleAll
+    toggleAll,
+    downloadZip
   };
 }
 

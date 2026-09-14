@@ -12,8 +12,26 @@ const styles = {
     padding: '20px 0'
   },
   header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderBottom: '1px solid #e1e4e8',
     paddingBottom: '16px'
+  },
+  downloadButton: {
+    backgroundColor: '#2ea44f',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '8px 16px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer'
+  },
+  disabledButton: {
+    backgroundColor: '#94d3a2',
+    cursor: 'not-allowed',
+    opacity: 0.6
   },
   title: {
     fontSize: '24px',
@@ -54,8 +72,14 @@ const styles = {
 };
 
 export function QueueView() {
-  const { dois, config, selectedDois, toggleSelection, toggleAll } =
-    useQueueState();
+  const {
+    dois,
+    config,
+    selectedDois,
+    toggleSelection,
+    toggleAll,
+    downloadZip
+  } = useQueueState();
   const { startBatch } = useBatchLoad();
 
   useEffect(() => {
@@ -68,10 +92,23 @@ export function QueueView() {
   return (
     <div style={styles.container} data-testid="queue-view">
       <div style={styles.header}>
-        <h2 style={styles.title}>Download Queue</h2>
-        <p style={styles.subtitle}>
-          Batch: {config.destination || 'Default'} | Total DOIs: {dois.length}
-        </p>
+        <div>
+          <h2 style={styles.title}>Download Queue</h2>
+          <p style={styles.subtitle}>
+            Batch: {config.destination || 'Default'} | Total DOIs: {dois.length}
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={selectedDois.length === 0}
+          style={{
+            ...styles.downloadButton,
+            ...(selectedDois.length === 0 ? styles.disabledButton : {})
+          }}
+          onClick={downloadZip}
+        >
+          Download PDFs
+        </button>
       </div>
 
       <table style={styles.table}>
