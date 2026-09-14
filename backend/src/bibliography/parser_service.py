@@ -7,24 +7,44 @@ from .schemas import ParsedReference
 
 
 def _extract_bib_field(entry, key: str) -> Optional[str]:
+    target_keys = {key.lower()}
+    if key.lower() == "journal":
+        target_keys.update(
+            {"journaltitle", "booktitle", "series", "journal-iso"}
+        )
+    elif key.lower() == "title":
+        target_keys.update({"booktitle"})
+    elif key.lower() == "year":
+        target_keys.update({"date", "py"})
+
+    val = None
     if isinstance(entry, dict):
-        val = entry.get(key)
-    elif hasattr(entry, "fields_dict") and key in entry.fields_dict:
-        field = entry.fields_dict[key]
-        val = getattr(field, "value", str(field))
+        for k, v in entry.items():
+            if str(k).lower() in target_keys:
+                val = v
+                break
+    elif hasattr(entry, "fields_dict"):
+        for k, v in entry.fields_dict.items():
+            if str(k).lower() in target_keys:
+                val = getattr(v, "value", str(v))
+                break
     elif hasattr(entry, "fields"):
-        val = None
         for field in entry.fields:
-            if getattr(field, "key", None) == key:
+            f_key = getattr(field, "key", None)
+            if f_key and str(f_key).lower() in target_keys:
                 val = getattr(field, "value", str(field))
                 break
     elif hasattr(entry, key):
         val = getattr(entry, key)
     elif hasattr(entry, "get"):
-        try:
-            val = entry.get(key)
-        except Exception:
-            val = None
+        for tk in target_keys:
+            try:
+                v = entry.get(tk) or entry.get(tk.capitalize())
+                if v is not None:
+                    val = v
+                    break
+            except Exception:
+                pass
     else:
         val = None
 
@@ -32,12 +52,15 @@ def _extract_bib_field(entry, key: str) -> Optional[str]:
         if hasattr(val, "value"):
             val = val.value
         cleaned = str(val).strip()
-        if cleaned.startswith("{") and cleaned.endswith("}"):
+        while (cleaned.startswith("{") and cleaned.endswith("}")) or (
+            cleaned.startswith('"') and cleaned.endswith('"')
+        ):
             cleaned = cleaned[1:-1].strip()
-        if cleaned.startswith('"') and cleaned.endswith('"'):
-            cleaned = cleaned[1:-1].strip()
+        cleaned = re.sub(r"\s+", " ", cleaned)
         if key.lower() == "year":
             match = re.search(r"\b(19\d\d|20\d\d)\b", cleaned)
+
+
             return match.group(1) if match else (cleaned or None)
         return cleaned or None
     return None
@@ -220,7 +243,8 @@ def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
                     year=_extract_bib_field(entry, "year"),
                     title=_extract_bib_field(entry, "title"),
                     journal=_extract_bib_field(entry, "journal"),
-                    upload_datetime=now
+                    doi=_extract_bib_field(entry, "doi"),
+                    upload_datetime=now,
                 )
             )
     else:

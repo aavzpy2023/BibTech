@@ -51,6 +51,27 @@ def test_unsupported_extension():
         parse_bibliography_content("some content", ".txt")
 
 
+def test_parse_wos_bib_content_capitalized_fields():
+    bib_content = (
+        "@article{WOS:000621765000076,\n"
+        "  Author = {Vinajera, Andrey and Perez, Juan},\n"
+        "  Title = {Deep Learning Bibliometrics in Modern Architecture},\n"
+        "  Journal = {Scientometrics},\n"
+        "  Year = {2021},\n"
+        "  Volume = {126},\n"
+        "  Number = {3},\n"
+        "  DOI = {10.1007/s11192-021-03890-w}\n"
+        "}\n"
+    )
+    refs = parse_bibliography_content(bib_content, ".bib")
+    assert len(refs) == 1
+    assert refs[0].title == "Deep Learning Bibliometrics in Modern Architecture"
+    assert "Vinajera, Andrey" in refs[0].author
+    assert refs[0].journal == "Scientometrics"
+    assert refs[0].year == "2021"
+    assert refs[0].doi == "10.1007/s11192-021-03890-w"
+
+
 def test_parse_wos_ris_multiple_papers_with_varied_tags():
     ris_content = (
         "TY  - JOUR\n"
