@@ -18,7 +18,7 @@
 ## EPIC 4: BATCH DOWNLOAD EXECUTION
 - [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
 - [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
-- [ ] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
+- [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
 - [ ] [REQ-011] Frontend SSE Hook State Integration
 
 ## Active Roadmaps

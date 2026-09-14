@@ -35,7 +35,8 @@ complexity_aggregate: "HARD"
   - [ID-3.2.2] [CORE/LOGIC]: [1. Create backend/src/bibliography/resolver_service.py. 2. Implement async resolve_pdf_url(doi: str, email: str) -&gt; str | None. 3. Try Unpaywall GET /v2/{doi}?email={email}. Return best_oa_location.url_for_pdf if valid. 4. If Unpaywall fails, catch exception and try OpenAlex GET /works/doi:{doi}. Return open_access.oa_url if valid. 5. Return None if both fail. (Keep under 25 lines)]. Type: Task.
   - [ID-3.2.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_3_batch_download_execution.md and check - [x] for Story 3.2. 2. Append &gt; Files touched: resolver_service.py, test_resolver.py. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-009]]. Type: Task.
 
-- [ ] Story 3.3: Micro-fractal IO &amp; Async Batch Orchestrator | [MoSCoW: MUST] | [Complexity: HARD]
+- [x] Story 3.3: Micro-fractal IO &amp; Async Batch Orchestrator | [MoSCoW: MUST] | [Complexity: HARD]
+  &gt; Files touched: file_storage_service.py, download_service.py, test_download.py
   Business Requirement: Separate File I/O from the execution generator to ensure code atomic limits and stream live events. (&lt;-- REQ-010)
   Story Context Radius: {"backend/src/bibliography/resolver_service.py": [""], "backend/src/bibliography/file_storage_service.py": [""], "backend/src/bibliography/download_service.py": [""], "backend/tests/bibliography/test_download.py": [""], "leai_docs/planning/roadmap_3_batch_download_execution.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown:
