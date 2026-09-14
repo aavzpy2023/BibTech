@@ -1,15 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useReferencesUpload } from '../hooks/useReferencesUpload';
-import BibliographyUploader from '../components/BibliographyUploader';
 import ReferencesDataTable from '../components/references/ReferencesDataTable';
+import UploadReferencesModal from '../components/references/UploadReferencesModal';
 
 const styles = {
   container: {
     fontFamily: 'system-ui, sans-serif',
     padding: '32px',
-    maxWidth: '900px',
+    maxWidth: '1000px',
     margin: '0 auto',
     color: '#24292e',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+    flexWrap: 'wrap',
+    gap: '12px',
+  },
+  modalBtn: {
+    backgroundColor: '#0366d6',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '10px 18px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
   },
   card: {
     border: '1px solid #e1e4e8',
@@ -93,6 +112,24 @@ const styles = {
 };
 
 export function ReferencesView() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [tableData, setTableData] = useState([
+    {
+      id: 1,
+      title: 'Attention Is All You Need',
+      author: 'Vaswani, A. et al.',
+      year: 2017,
+      journal: 'NeurIPS',
+    },
+    {
+      id: 2,
+      title: 'Deep Residual Learning for Image Recognition',
+      author: 'He, K. et al.',
+      year: 2016,
+      journal: 'CVPR',
+    },
+  ]);
+
   const {
     projectCode,
     setProjectCode,
@@ -103,12 +140,65 @@ export function ReferencesView() {
     uploadAndInject,
   } = useReferencesUpload();
 
-  const isProjectReady = Boolean(projectCode && projectCode.trim());
+  const handleUploadSuccess = (file) => {
+    const newEntry = {
+      id: Date.now(),
+      title: file.name.replace(/\.[^/.]+$/, ''),
+      author: 'Archivo: ' + file.name,
+      year: new Date().getFullYear(),
+      journal: projectCode || 'Proyecto',
+    };
+    setTableData((prev) => [newEntry, ...prev]);
+  };
 
   return (
     <div style={styles.container}>
+      <div style={styles.header}>
+        <div>
+          <h2 style={{ ...styles.title, margin: 0 }}>
+            Referencias Bibliográficas
+          </h2>
+          <p style={{ ...styles.description, margin: '4px 0 0 0' }}>
+            Visualice y administre las publicaciones persistidas en sus proyectos.
+          </p>
+        </div>
+        <button
+          style={styles.modalBtn}
+          onClick={() => setIsModalOpen(true)}
+        >
+          + Cargar Referencias
+        </button>
+      </div>
+
       <div style={styles.card}>
-        <h2 style={styles.title}>Ingesta de Referencias en Base de Datos</h2>
+        <ReferencesDataTable data={tableData} />
+      </div>
+
+      <UploadReferencesModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        projectCode={projectCode}
+        setProjectCode={setProjectCode}
+        uploadAndInject={async (file) => {
+          await uploadAndInject(file);
+          handleUploadSuccess(file);
+        }}
+        isLoading={isLoading}
+        isSuccess={isSuccess}
+        error={error}
+        insertedCount={insertedCount}
+      />
+    </div>
+  );
+}
+
+export default ReferencesView;
+
+function _legacyUnused() {
+  return (
+    <div>
+      <div>
+        <h2>Ingesta</h2>
         <p style={styles.description}>
           Asocie archivos bibliográficos (.ris o .bib) a un proyecto de
           investigación para persistir sus artículos.
