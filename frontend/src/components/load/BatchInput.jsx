@@ -211,6 +211,18 @@ export function BatchInput({
     }
   };
 
+  const downloadMissingTxt = () => {
+    const blob = new Blob([missingDois.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'missing_dois.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.headerRow}>
@@ -266,7 +278,10 @@ export function BatchInput({
                 <li key={idx} style={{ marginBottom: '6px' }}>{msg}</li>
               ))}
             </ul>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button type="button" onClick={downloadMissingTxt} style={{ ...styles.uploadBtn, backgroundColor: '#2ea44f' }}>
+                Download .txt
+              </button>
               <button type="button" onClick={() => setMissingDois([])} style={{ ...styles.uploadBtn, backgroundColor: '#f6f8fa', color: '#24292e', border: '1px solid #d1d5da' }}>
                 Close
               </button>
