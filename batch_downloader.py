@@ -51,7 +51,11 @@ def main():
                     except json.JSONDecodeError:
                         pass
     except Exception as e:
-        print(f"\nError de red: {e}. ¿Está corriendo el backend (localhost:8000)?")
+        print(f"\n[X] Error de conexión: {e}")
+        print("    -> El backend de FastAPI no está respondiendo en http://localhost:8000")
+        print("    -> Solución: Abre OTRA pestaña en tu terminal y levanta el servidor backend")
+        print("       (ej: 'docker-compose up' o 'uvicorn backend.main:app --port 8000').")
+        print("    -> Una vez que el backend esté corriendo, vuelve a ejecutar este script.")
 
     print("\n\nDescarga finalizada.")
 
