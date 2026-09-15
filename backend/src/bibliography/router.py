@@ -36,7 +36,7 @@ async def _process_upload(file: UploadFile) -> List[ParsedReference]:
         raise HTTPException(status_code=400, detail="No file provided")
     
     _, ext = os.path.splitext(file.filename)
-    if ext.lower() not in [".ris", ".bib"]:
+    if ext.lower() not in [".bib"]:
         raise HTTPException(status_code=400, detail="Unsupported file extension")
     
     try:
@@ -60,7 +60,7 @@ async def _process_inject(
         raise HTTPException(status_code=400, detail="No file provided")
 
     _, ext = os.path.splitext(file.filename)
-    if ext.lower() not in [".ris", ".bib"]:
+    if ext.lower() not in [".bib"]:
         raise HTTPException(
             status_code=400, detail="Unsupported file extension"
         )
@@ -69,8 +69,16 @@ async def _process_inject(
         content_bytes = await file.read()
         content_str = content_bytes.decode("utf-8")
         refs = parse_bibliography_content(content_str, ext)
-        inserted = inject_references_to_db(db, refs, project_code)
+        try:
+            inserted = inject_references_to_db(db, refs, project_code)
+        except RuntimeError:
+            raise HTTPException(
+                status_code=503,
+                detail="Error de conexión a la base de datos. Intente nuevamente."
+            )
         return {"message": "Success", "inserted": inserted}
+    except HTTPException:
+        raise
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as exc:

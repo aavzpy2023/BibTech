@@ -63,7 +63,7 @@
 
 ## EPIC 13: BIB ONLY INGESTION & INJECTION RESILIENCE
 - [x] Story 12.0: Roadmap & Planning Initialization
-- [ ] [REQ-036] Backend Router Boundary Marshal (.bib Restriction)
+- [x] [REQ-036] Backend Router Boundary Marshal (.bib Restriction)
 - [ ] [REQ-038] Backend Parser Core Logic (.bib Extraction)
 - [ ] [REQ-039] Backend Injection DB Resilience
 - [ ] [REQ-037] Frontend Hook State Fractality (.bib Validation)
