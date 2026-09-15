@@ -42,6 +42,10 @@
 - [x] [REQ-023] References Tab Translation to English
 - [x] [REQ-024] UI Standardization (Width & Headers)
 
+## EPIC 9: LOCAL FILE BATCH DOWNLOAD
+- [ ] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
+- [ ] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
@@ -50,3 +54,4 @@
 - [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
 - [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
 - [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
+- [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
