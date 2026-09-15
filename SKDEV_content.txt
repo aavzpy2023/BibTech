@@ -1,566 +1,150 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-14 21:06:18
+Date: 2026-09-14 21:19:12
 AST Mode: False
 Line Numbers: True
-Modules: Layout.jsx, BatchConfig.jsx, useQueueState.js, router.py, download_service.py
-Processed Files: 5
+Modules: LoadView.jsx
+Processed Files: 1
 ===========================
 
 
 
-// --- frontend/src/components/Layout.jsx ---
+// --- frontend/src/views/LoadView.jsx ---
 
 [L001, S0] import React from 'react';
-[L002, S0] import { NavLink, Outlet } from 'react-router-dom';
-[L003, S0] import { BatchProvider } from '../hooks/useBatchLoad';
-[L004, S0] 
-[L005, S0] const navItems = [
-[L006, S2]   { name: 'Dashboard', path: '/' },
-[L007, S2]   { name: 'Search', path: '/search' },
-[L008, S2]   { name: 'Load', path: '/load' },
-[L009, S2]   { name: 'Download queue', path: '/queue' },
-[L010, S2]   { name: 'Analysis', path: '/analysis' },
-[L011, S2]   { name: 'References', path: '/references' }
-[L012, S0] ];
-[L013, S0] 
-[L014, S0] const styles = {
-[L015, S2]   container: {
-[L016, S4]     display: 'flex',
-[L017, S4]     flexDirection: 'column',
-[L018, S4]     minHeight: '100vh'
-[L019, S2]   },
-[L020, S2]   header: {
-[L021, S4]     borderBottom: '1px solid #e1e4e8',
-[L022, S4]     padding: '0 20px',
-[L023, S4]     backgroundColor: '#ffffff'
-[L024, S2]   },
-[L025, S2]   nav: {
-[L026, S4]     display: 'flex',
-[L027, S4]     gap: '24px',
-[L028, S4]     alignItems: 'center',
-[L029, S4]     justifyContent: 'center'
-[L030, S2]   },
-[L031, S2]   link: {
-[L032, S4]     padding: '16px 4px',
-[L033, S4]     textDecoration: 'none',
-[L034, S4]     color: '#586069',
-[L035, S4]     fontWeight: 500,
-[L036, S4]     fontSize: '14px',
-[L037, S4]     borderBottom: '2px solid transparent'
-[L038, S2]   },
-[L039, S2]   activeLink: {
-[L040, S4]     color: '#0366d6',
-[L041, S4]     borderBottom: '2px solid #0366d6'
-[L042, S2]   },
-[L043, S2]   main: {
-[L044, S4]     flex: 1,
-[L045, S4]     width: '100%',
-[L046, S4]     padding: '24px',
-[L047, S4]     maxWidth: '1200px',
-[L048, S4]     margin: '0 auto',
-[L049, S4]     boxSizing: 'border-box'
-[L050, S2]   },
-[L051, S2]   footer: {
-[L052, S4]     padding: '24px',
-[L053, S4]     textAlign: 'center',
-[L054, S4]     borderTop: '1px solid #e1e4e8',
-[L055, S4]     backgroundColor: '#ffffff',
-[L056, S4]     color: '#586069',
-[L057, S4]     fontSize: '14px'
-[L058, S2]   }
-[L059, S0] };
-[L060, S0] 
-[L061, S0] function Layout() {
-[L062, S2]   const currentYear = new Date().getFullYear();
-[L063, S2]   return (
-[L064, S4]     <div style={styles.container}>
-[L065, S6]       <header style={styles.header}>
-[L066, S8]         <nav style={styles.nav}>
-[L067, S10]           {navItems.map((item) => (
-[L068, S12]             <NavLink
-[L069, S14]               key={item.path}
-[L070, S14]               to={item.path}
-[L071, S14]               style={({ isActive }) => ({
-[L072, S16]                 ...styles.link,
-[L073, S16]                 ...(isActive ? styles.activeLink : {})
-[L074, S14]               })}
-[L075, S12]             >
-[L076, S14]               {item.name}
-[L077, S12]             </NavLink>
-[L078, S10]           ))}
-[L079, S8]         </nav>
-[L080, S6]       </header>
-[L081, S6]       <main style={styles.main}>
-[L082, S8]         <BatchProvider>
-[L083, S10]           <Outlet />
-[L084, S8]         </BatchProvider>
-[L085, S6]       </main>
-[L086, S6]       <footer style={styles.footer}>
-[L087, S8]         &copy; {currentYear} Universidad Tecnológica Metropolitana, Santiago, Chile
-[L088, S6]       </footer>
-[L089, S4]     </div>
-[L090, S2]   );
-[L091, S0] }
-[L092, S0] 
-[L093, S0] export default Layout;
-
-
-// --- frontend/src/components/load/BatchConfig.jsx ---
-
-[L001, S0] import React from 'react';
-[L002, S0] 
-[L003, S0] const styles = {
-[L004, S2]   container: {
-[L005, S4]     display: 'flex',
-[L006, S4]     flexDirection: 'column',
-[L007, S4]     gap: '20px',
-[L008, S4]     marginBottom: '24px',
-[L009, S4]     padding: '20px',
-[L010, S4]     backgroundColor: '#fafbfc',
-[L011, S4]     border: '1px solid #e1e4e8',
-[L012, S4]     borderRadius: '8px'
-[L013, S2]   },
-[L014, S2]   section: {
-[L015, S4]     display: 'flex',
-[L016, S4]     flexDirection: 'column',
-[L017, S4]     gap: '8px'
-[L018, S2]   },
-[L019, S2]   label: {
-[L020, S4]     fontWeight: 'bold',
-[L021, S4]     fontSize: '14px',
-[L022, S4]     color: '#24292e'
-[L023, S2]   },
-[L024, S2]   sliderContainer: {
-[L025, S4]     display: 'flex',
-[L026, S4]     alignItems: 'center',
-[L027, S4]     gap: '16px'
-[L028, S2]   },
-[L029, S2]   slider: {
-[L030, S4]     flex: 1,
-[L031, S4]     cursor: 'pointer'
-[L032, S2]   },
-[L033, S2]   inputsGrid: {
-[L034, S4]     display: 'grid',
-[L035, S4]     gridTemplateColumns: '1fr 1fr',
-[L036, S4]     gap: '16px'
-[L037, S2]   },
-[L038, S2]   input: {
-[L039, S4]     padding: '8px 12px',
-[L040, S4]     borderRadius: '6px',
-[L041, S4]     border: '1px solid #d1d5da',
-[L042, S4]     fontSize: '14px'
-[L043, S2]   }
-[L044, S0] };
-[L045, S0] 
-[L046, S0] export function BatchConfig({
-[L047, S2]   delay = 5,
-[L048, S2]   destination = '',
-[L049, S2]   email = '',
-[L050, S2]   config,
-[L051, S2]   onConfigUpdate
-[L052, S0] }) {
-[L053, S2]   const currentDelay = config?.delay ?? delay;
-[L054, S2]   const currentDestination = config?.destination ?? destination;
-[L055, S2]   const currentEmail = config?.email ?? email;
-[L056, S0] 
-[L057, S2]   return (
-[L058, S4]     <div style={styles.container}>
-[L059, S6]       <div style={styles.section}>
-[L060, S8]         <label htmlFor="delay-slider" style={styles.label}>
-[L061, S10]           Delay between downloads: {currentDelay}s
-[L062, S8]         </label>
-[L063, S8]         <div style={styles.sliderContainer}>
-[L064, S10]           <input
-[L065, S12]             id="delay-slider"
-[L066, S12]             role="slider"
-[L067, S12]             type="range"
-[L068, S12]             min="5"
-[L069, S12]             max="60"
-[L070, S12]             step="5"
-[L071, S12]             value={currentDelay}
-[L072, S12]             style={styles.slider}
-[L073, S12]             onChange={(e) => {
-[L074, S14]               if (onConfigUpdate) {
-[L075, S16]                 onConfigUpdate('delay', Number(e.target.value));
-[L076, S14]               }
-[L077, S12]             }}
-[L078, S10]           />
-[L079, S10]           <span style={{ fontSize: '12px', color: '#586069' }}>
-[L080, S12]             [5s, 15s, 30s, 60s]
-[L081, S10]           </span>
-[L082, S8]         </div>
-[L083, S6]       </div>
-[L084, S0] 
-[L085, S6]       <div style={styles.inputsGrid}>
-[L086, S8]         <div style={styles.section}>
-[L087, S10]           <label htmlFor="destination-input" style={styles.label}>
-[L088, S12]             Destination Folder
-[L089, S10]           </label>
-[L090, S10]           <input
-[L091, S12]             id="destination-input"
-[L092, S12]             type="text"
-[L093, S12]             style={styles.input}
-[L094, S12]             placeholder="Download folder or path"
-[L095, S12]             value={currentDestination}
-[L096, S12]             onChange={(e) => {
-[L097, S14]               if (onConfigUpdate) {
-[L098, S16]                 onConfigUpdate('destination', e.target.value);
-[L099, S14]               }
-[L100, S12]             }}
-[L101, S10]           />
-[L102, S8]         </div>
-[L103, S0] 
-[L104, S8]         <div style={styles.section}>
-[L105, S10]           <label htmlFor="email-input" style={styles.label}>
-[L106, S12]             Email Address (Polite Pool)
-[L107, S10]           </label>
-[L108, S10]           <input
-[L109, S12]             id="email-input"
-[L110, S12]             type="email"
-[L111, S12]             style={styles.input}
-[L112, S12]             placeholder="Email for academic APIs"
-[L113, S12]             value={currentEmail}
-[L114, S12]             onChange={(e) => {
-[L115, S14]               if (onConfigUpdate) {
-[L116, S16]                 onConfigUpdate('email', e.target.value);
-[L117, S14]               }
-[L118, S12]             }}
-[L119, S10]           />
-[L120, S8]         </div>
-[L121, S6]       </div>
-[L122, S4]     </div>
-[L123, S2]   );
-[L124, S0] }
-[L125, S0] 
-[L126, S0] export default BatchConfig;
-
-
-// --- frontend/src/hooks/useQueueState.js ---
-
-[L001, S0] import { useState, useMemo, useCallback } from 'react';
-[L002, S0] import { useLocation } from 'react-router-dom';
-[L003, S0] import { useBatchLoad } from './useBatchLoad';
-[L004, S0] 
-[L005, S0] export function useQueueState() {
-[L006, S2]   const location = useLocation();
-[L007, S2]   const { input, config: batchConfig, activeDois, statuses } =
-[L008, S4]     useBatchLoad();
-[L009, S0] 
-[L010, S2]   const rawDois =
-[L011, S4]     (activeDois && activeDois.length > 0 ? activeDois : null) ||
-[L012, S4]     location.state?.dois ||
-[L013, S4]     input?.dois ||
-[L014, S4]     Object.keys(statuses || {});
-[L015, S0] 
-[L016, S2]   const config =
-[L017, S4]     location.state?.config ||
-[L018, S4]     batchConfig ||
-[L019, S4]     {};
-[L020, S0] 
-[L021, S2]   const dois = useMemo(() => {
-[L022, S4]     if (Array.isArray(rawDois)) {
-[L023, S6]       return rawDois;
-[L024, S4]     }
-[L025, S4]     if (typeof rawDois === 'string') {
-[L026, S6]       return rawDois
-[L027, S8]         .split('\n')
-[L028, S8]         .map((d) => d.trim())
-[L029, S8]         .filter((d) => d.length > 0);
-[L030, S4]     }
-[L031, S4]     return [];
-[L032, S2]   }, [rawDois]);
-[L033, S0] 
-[L034, S2]   const [selectedDois, setSelectedDois] = useState([]);
-[L035, S2]   const [isZipping, setIsZipping] = useState(false);
-[L036, S0] 
-[L037, S2]   const toggleSelection = useCallback((doi) => {
-[L038, S4]     setSelectedDois((prev) =>
-[L039, S6]       prev.includes(doi) ? prev.filter((d) => d !== doi) : [...prev, doi]
-[L040, S4]     );
-[L041, S2]   }, []);
-[L042, S0] 
-[L043, S2]   const toggleAll = useCallback(
-[L044, S4]     (allDois) => {
-[L045, S6]       const targetList = allDois ?? dois;
-[L046, S6]       setSelectedDois((prev) =>
-[L047, S8]         prev.length === targetList.length ? [] : [...targetList]
-[L048, S6]       );
-[L049, S4]     },
-[L050, S4]     [dois]
-[L051, S2]   );
-[L052, S0] 
-[L053, S2]   const downloadZip = useCallback(
-[L054, S4]     async (overrideDois) => {
-[L055, S6]       const targetDois =
-[L056, S8]         overrideDois && overrideDois.length > 0
-[L057, S10]           ? overrideDois
-[L058, S10]           : selectedDois;
-[L059, S0] 
-[L060, S6]       if (targetDois.length === 0) return;
-[L061, S0] 
-[L062, S6]       setIsZipping(true);
-[L063, S6]       const batchName = config.destination || 'download_batch';
-[L064, S4]     try {
-[L065, S6]       const response = await fetch('/api/bibliography/download-zip', {
-[L066, S8]         method: 'POST',
-[L067, S8]         headers: { 'Content-Type': 'application/json' },
-[L068, S8]         body: JSON.stringify({
-[L069, S10]           batch_name: batchName,
-[L070, S10]           dois: targetDois
-[L071, S8]         })
-[L072, S6]       });
-[L073, S0] 
-[L074, S6]       if (!response.ok) {
-[L075, S8]         throw new Error(`Download failed with status ${response.status}`);
-[L076, S6]       }
-[L077, S0] 
-[L078, S6]       const blob = await response.blob();
-[L079, S6]       const url = window.URL.createObjectURL(blob);
-[L080, S6]       const a = document.createElement('a');
-[L081, S6]       a.href = url;
-[L082, S6]       a.download = `${batchName}.zip`;
-[L083, S6]       document.body.appendChild(a);
-[L084, S6]       a.click();
-[L085, S6]       document.body.removeChild(a);
-[L086, S6]       window.URL.revokeObjectURL(url);
-[L087, S4]     } catch (err) {
-[L088, S6]       console.error('Failed to download ZIP archive', err);
-[L089, S4]     } finally {
-[L090, S6]       setIsZipping(false);
-[L091, S4]     }
-[L092, S2]   },
-[L093, S2]   [config.destination, selectedDois]
-[L094, S2]   );
-[L095, S0] 
-[L096, S2]   const downloadMissingDois = useCallback(
-[L097, S4]     (missingList, batchNameOverride) => {
-[L098, S6]       if (!missingList || missingList.length === 0) return;
-[L099, S0] 
-[L100, S6]       const batchName =
-[L101, S8]         batchNameOverride || config.destination || 'batch';
-[L102, S6]       const blob = new Blob([missingList.join('\n')], {
-[L103, S8]         type: 'text/plain;charset=utf-8'
-[L104, S6]       });
-[L105, S6]       const url = window.URL.createObjectURL(blob);
-[L106, S6]       const a = document.createElement('a');
-[L107, S6]       a.href = url;
-[L108, S6]       a.download = `${batchName}_missing_dois.txt`;
-[L109, S6]       document.body.appendChild(a);
-[L110, S6]       a.click();
-[L111, S6]       document.body.removeChild(a);
-[L112, S6]       window.URL.revokeObjectURL(url);
-[L113, S4]     },
-[L114, S4]     [config.destination]
-[L115, S2]   );
-[L116, S0] 
-[L117, S2]   return {
-[L118, S4]     dois,
-[L119, S4]     config,
-[L120, S4]     selectedDois,
-[L121, S4]     toggleSelection,
-[L122, S4]     toggleAll,
-[L123, S4]     downloadZip,
-[L124, S4]     downloadMissingDois,
-[L125, S4]     isZipping
-[L126, S2]   };
-[L127, S0] }
-[L128, S0] 
-[L129, S0] export default useQueueState;
-
-
-// --- backend/src/bibliography/router.py ---
-
-[L001, S0] import os
-[L002, S0] from typing import List
-[L003, S0] from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-[L004, S0] from fastapi.responses import StreamingResponse
-[L005, S0] from sqlalchemy.orm import Session
-[L006, S0] from .schemas import (
-[L007, S4]     ParsedReference,
-[L008, S4]     BatchDownloadRequest,
-[L009, S4]     ZipDownloadRequest,
-[L010, S0] )
-[L011, S0] from .parser_service import parse_bibliography_content
-[L012, S0] from .download_service import execute_batch_download
-[L013, S0] from .zip_service import create_zip_from_pdfs
-[L014, S0] from .injection_service import inject_references_to_db
-[L015, S0] 
-[L016, S0] try:
-[L017, S4]     from ..database.session import get_db
-[L018, S0] except (ImportError, ValueError):
-[L019, S4]     try:
-[L020, S8]         from src.database.session import get_db
-[L021, S4]     except ImportError:
-[L022, S8]         from backend.src.database.session import get_db
-[L023, S0] 
-[L024, S0] router = APIRouter()
-[L025, S0] 
-[L026, S0] try:
-[L027, S4]     import multipart
-[L028, S4]     HAS_MULTIPART = True
-[L029, S0] except ImportError:
-[L030, S4]     HAS_MULTIPART = False
-[L031, S0] 
-[L032, S0] async def _process_upload(file: UploadFile) -> List[ParsedReference]:
-[L033, S4]     if not file.filename:
-[L034, S8]         raise HTTPException(status_code=400, detail="No file provided")
-[L035, S4]     
-[L036, S4]     _, ext = os.path.splitext(file.filename)
-[L037, S4]     if ext.lower() not in [".ris", ".bib"]:
-[L038, S8]         raise HTTPException(status_code=400, detail="Unsupported file extension")
-[L039, S4]     
-[L040, S4]     try:
-[L041, S8]         content_bytes = await file.read()
-[L042, S8]         content_str = content_bytes.decode("utf-8")
-[L043, S8]         refs = parse_bibliography_content(content_str, ext)
-[L044, S8]         return refs
-[L045, S4]     except ValueError as ve:
-[L046, S8]         raise HTTPException(status_code=400, detail=str(ve))
-[L047, S4]     except Exception as e:
-[L048, S8]         raise HTTPException(
-[L049, S12]             status_code=500,
-[L050, S12]             detail="Internal server error during parsing"
-[L051, S8]         )
-[L052, S0] 
-[L053, S0] 
-[L054, S0] async def _process_inject(
-[L055, S4]     file: UploadFile, project_code: str, db: Session
-[L056, S0] ) -> dict:
-[L057, S4]     if not file.filename:
-[L058, S8]         raise HTTPException(status_code=400, detail="No file provided")
-[L059, S0] 
-[L060, S4]     _, ext = os.path.splitext(file.filename)
-[L061, S4]     if ext.lower() not in [".ris", ".bib"]:
-[L062, S8]         raise HTTPException(
-[L063, S12]             status_code=400, detail="Unsupported file extension"
-[L064, S8]         )
-[L065, S0] 
-[L066, S4]     try:
-[L067, S8]         content_bytes = await file.read()
-[L068, S8]         content_str = content_bytes.decode("utf-8")
-[L069, S8]         refs = parse_bibliography_content(content_str, ext)
-[L070, S8]         inserted = inject_references_to_db(db, refs, project_code)
-[L071, S8]         return {"message": "Success", "inserted": inserted}
-[L072, S4]     except ValueError as ve:
-[L073, S8]         raise HTTPException(status_code=400, detail=str(ve))
-[L074, S4]     except Exception as exc:
-[L075, S8]         import traceback
-[L076, S8]         traceback.print_exc()
-[L077, S8]         raise HTTPException(
-[L078, S12]             status_code=500,
-[L079, S12]             detail=f"Internal server error during injection: {str(exc)}",
-[L080, S8]         )
-[L081, S0] 
-[L082, S0] if HAS_MULTIPART:
-[L083, S4]     @router.post("/upload", response_model=List[ParsedReference])
-[L084, S4]     async def upload_bibliography(file: UploadFile = File(...)):
-[L085, S8]         return await _process_upload(file)
-[L086, S0] 
-[L087, S4]     @router.post("/inject")
-[L088, S4]     async def inject_bibliography(
-[L089, S8]         file: UploadFile = File(...),
-[L090, S8]         project_code: str = Form(...),
-[L091, S8]         db: Session = Depends(get_db),
-[L092, S4]     ):
-[L093, S8]         return await _process_inject(file, project_code, db)
-[L094, S0] else:
-[L095, S4]     async def upload_bibliography(file: UploadFile):
-[L096, S8]         return await _process_upload(file)
-[L097, S0] 
-[L098, S4]     async def inject_bibliography(
-[L099, S8]         file: UploadFile,
-[L100, S8]         project_code: str,
-[L101, S8]         db: Session,
-[L102, S4]     ):
-[L103, S8]         return await _process_inject(file, project_code, db)
-[L104, S0] 
-[L105, S0] 
-[L106, S0] @router.post("/batch-download")
-[L107, S0] async def batch_download(request: BatchDownloadRequest):
-[L108, S4]     async def sse_generator():
-[L109, S8]         async for event in execute_batch_download(
-[L110, S12]             request.dois,
-[L111, S12]             request.destination,
-[L112, S12]             request.email,
-[L113, S12]             request.delay,
-[L114, S8]         ):
-[L115, S12]             yield f"data: {event}\n\n"
-[L116, S0] 
-[L117, S4]     return StreamingResponse(
-[L118, S8]         sse_generator(),
-[L119, S8]         media_type="text/event-stream"
-[L120, S4]     )
-[L121, S0] 
-[L122, S0] 
-[L123, S0] @router.post("/download-zip")
-[L124, S0] async def download_zip(request: ZipDownloadRequest):
-[L125, S4]     zip_io = create_zip_from_pdfs(request.batch_name, request.dois)
-[L126, S4]     return StreamingResponse(
-[L127, S8]         zip_io,
-[L128, S8]         media_type="application/zip",
-[L129, S8]         headers={
-[L130, S12]             "Content-Disposition": (
-[L131, S16]                 f"attachment; filename={request.batch_name}.zip"
-[L132, S12]             )
-[L133, S8]         },
-[L134, S4]     )
-
-
-// --- backend/src/bibliography/download_service.py ---
-
-[L001, S0] import asyncio
-[L002, S0] import json
-[L003, S0] from typing import AsyncGenerator, List
-[L004, S0] import httpx
-[L005, S0] from .resolver_service import resolve_pdf_url
-[L006, S0] from .file_storage_service import save_pdf_bytes
+[L002, S0] import { useNavigate } from 'react-router-dom';
+[L003, S0] import useBatchLoad from '../hooks/useBatchLoad';
+[L004, S0] import BatchInput from '../components/load/BatchInput';
+[L005, S0] import BatchConfig from '../components/load/BatchConfig';
+[L006, S0] import BatchMonitor from '../components/load/BatchMonitor';
 [L007, S0] 
-[L008, S0] 
-[L009, S0] async def _download_and_save(dest: str, doi: str, url: str) -> str:
-[L010, S4]     async with httpx.AsyncClient(timeout=30.0) as client:
-[L011, S8]         res = await client.get(url)
-[L012, S8]         res.raise_for_status()
-[L013, S8]         return await save_pdf_bytes(dest, doi, res.content)
-[L014, S0] 
-[L015, S0] 
-[L016, S0] async def execute_batch_download(
-[L017, S4]     dois: List[str], dest: str, email: str, delay: int
-[L018, S0] ) -> AsyncGenerator[str, None]:
-[L019, S4]     total, completed = len(dois), 0
-[L020, S4]     for doi in dois:
-[L021, S8]         yield json.dumps({
-[L022, S12]             "progress": completed,
-[L023, S12]             "total": total,
-[L024, S12]             "log": f"Resolving: {doi}",
-[L025, S12]             "doi": doi,
-[L026, S12]             "status": "resolving",
-[L027, S8]         })
-[L028, S8]         try:
-[L029, S12]             url = await resolve_pdf_url(doi, email)
-[L030, S12]             if url:
-[L031, S16]                 path = await _download_and_save(dest, doi, url)
-[L032, S16]                 log = f'Downloaded {doi} to {path}'
-[L033, S16]                 status = 'downloaded'
-[L034, S12]             else:
-[L035, S16]                 log = f'No open access URL found for {doi}'
-[L036, S16]                 status = 'not_found'
-[L037, S8]         except Exception as err:
-[L038, S12]             log = f'Failed {doi}: {err}'
-[L039, S12]             status = 'failed'
-[L040, S8]         completed += 1
-[L041, S8]         yield json.dumps({
-[L042, S12]             'progress': completed,
-[L043, S12]             'total': total,
-[L044, S12]             'log': log,
-[L045, S12]             'doi': doi,
-[L046, S12]             'status': status,
-[L047, S12]             "log": log
-[L048, S8]         })
-[L049, S8]         if delay > 0 and completed < total:
-[L050, S12]             await asyncio.sleep(delay)
-[L051, S4]     yield json.dumps({
-[L052, S8]         "progress": total,
-[L053, S8]         "total": total,
-[L054, S8]         "log": "Batch processing finished"
-[L055, S4]     })
+[L008, S0] const styles = {
+[L009, S2]   container: {
+[L010, S4]     display: 'flex',
+[L011, S4]     flexDirection: 'column',
+[L012, S4]     gap: '24px',
+[L013, S4]     padding: '24px',
+[L014, S4]     backgroundColor: '#ffffff',
+[L015, S4]     border: '1px solid #e1e4e8',
+[L016, S4]     borderRadius: '8px'
+[L017, S2]   },
+[L018, S2]   header: {
+[L019, S4]     borderBottom: '1px solid #e1e4e8',
+[L020, S4]     paddingBottom: '16px'
+[L021, S2]   },
+[L022, S2]   headerRow: {
+[L023, S4]     display: 'flex',
+[L024, S4]     justifyContent: 'space-between',
+[L025, S4]     alignItems: 'center'
+[L026, S2]   },
+[L027, S2]   newBatchBtn: {
+[L028, S4]     backgroundColor: '#fff',
+[L029, S4]     border: '1px solid #d1d5da',
+[L030, S4]     borderRadius: '6px',
+[L031, S4]     padding: '6px 14px',
+[L032, S4]     fontSize: '13px',
+[L033, S4]     fontWeight: '600',
+[L034, S4]     color: '#24292e',
+[L035, S4]     cursor: 'pointer'
+[L036, S2]   },
+[L037, S2]   title: {
+[L038, S4]     fontSize: '24px',
+[L039, S4]     fontWeight: 'bold',
+[L040, S4]     color: '#24292e',
+[L041, S4]     margin: '0 0 8px 0'
+[L042, S2]   },
+[L043, S2]   subtitle: {
+[L044, S4]     fontSize: '14px',
+[L045, S4]     color: '#586069',
+[L046, S4]     margin: 0
+[L047, S2]   }
+[L048, S0] };
+[L049, S0] 
+[L050, S0] export function LoadView() {
+[L051, S2]   const navigate = useNavigate();
+[L052, S2]   const {
+[L053, S4]     input,
+[L054, S4]     config,
+[L055, S4]     monitor,
+[L056, S4]     updateInput,
+[L057, S4]     updateConfig,
+[L058, S4]     isValidEmail,
+[L059, S4]     isDownloading,
+[L060, S4]     resetBatch,
+[L061, S4]     startBatch,
+[L062, S4]     addDoisToQueue
+[L063, S2]   } = useBatchLoad();
+[L064, S0] 
+[L065, S2]   const isValid =
+[L066, S4]     input.dois.trim() !== '' &&
+[L067, S4]     config.destination.trim() !== '' &&
+[L068, S4]     isValidEmail;
+[L069, S0] 
+[L070, S2]   const hasDois = Boolean(input.dois && input.dois.trim().length > 0);
+[L071, S0] 
+[L072, S2]   const handleAddToQueue = () => {
+[L073, S4]     if (!input.dois.trim()) return;
+[L074, S4]     if (addDoisToQueue) {
+[L075, S6]       addDoisToQueue(input.dois, config);
+[L076, S4]     }
+[L077, S4]     navigate('/queue', { state: { dois: input.dois, config } });
+[L078, S2]   };
+[L079, S0] 
+[L080, S2]   return (
+[L081, S4]     config.email.trim() !== '';
+[L082, S0] 
+[L083, S2]   return (
+[L084, S4]     <div style={styles.container}>
+[L085, S6]       <div style={styles.header}>
+[L086, S8]         <div style={styles.headerRow}>
+[L087, S10]           <div>
+[L088, S12]             <h2 style={styles.title}>Batch Bibliography Load</h2>
+[L089, S12]             <p style={styles.subtitle}>
+[L090, S10]           Enter bibliographic files or DOI identifiers for automatic download.
+[L091, S12]             </p>
+[L092, S10]           </div>
+[L093, S10]           <button
+[L094, S12]             type="button"
+[L095, S12]             style={styles.newBatchBtn}
+[L096, S12]             onClick={resetBatch}
+[L097, S10]           >
+[L098, S12]             New batch
+[L099, S10]           </button>
+[L100, S8]         </div>
+[L101, S6]       </div>
+[L102, S0] 
+[L103, S6]       <BatchInput
+[L104, S8]         files={input.files}
+[L105, S8]         dois={input.dois}
+[L106, S8]         onInputUpdate={updateInput}
+[L107, S6]       />
+[L108, S0] 
+[L109, S6]       <BatchConfig
+[L110, S8]         delay={config.delay}
+[L111, S8]         destination={config.destination}
+[L112, S8]         email={config.email}
+[L113, S8]         onConfigUpdate={updateConfig}
+[L114, S6]       />
+[L115, S0] 
+[L116, S6]       <BatchMonitor
+[L117, S8]         progress={monitor.progress}
+[L118, S8]         total={monitor.total}
+[L119, S8]         logs={monitor.logs}
+[L120, S8]         disabled={!isValid}
+[L121, S8]         isDownloading={isDownloading}
+[L122, S8]         hasDois={hasDois}
+[L123, S8]         onAddToQueue={handleAddToQueue}
+[L124, S8]         onStart={() => {
+[L125, S10]           if (isDownloading && addDoisToQueue) {
+[L126, S12]             addDoisToQueue(input.dois, config);
+[L127, S10]           } else {
+[L128, S12]             startBatch();
+[L129, S10]           }
+[L130, S10]           navigate('/queue', { state: { dois: input.dois, config } });
+[L131, S8]         }}
+[L132, S6]       />
+[L133, S4]     </div>
+[L134, S2]   );
+[L135, S0] }
+[L136, S0] 
+[L137, S0] export default LoadView;

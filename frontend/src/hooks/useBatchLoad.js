@@ -67,10 +67,6 @@ function useBatchLoadInternal() {
   const resetBatch = useCallback(() => {
     setInput(initialInputState);
     setConfig(initialConfigState);
-    setMonitor(initialMonitorState);
-    setStatuses({});
-    setActiveDois([]);
-    setIsDownloading(false);
   }, []);
 
   const startBatch = useCallback(

@@ -66,7 +66,21 @@ export function LoadView() {
     input.dois.trim() !== '' &&
     config.destination.trim() !== '' &&
     isValidEmail;
-    config.email.trim() !== '';
+
+  const hasDois = Boolean(input.dois && input.dois.trim().length > 0);
+
+  const handleAddToQueue = () => {
+    if (!input.dois.trim()) return;
+    const currentDois = input.dois;
+    if (addDoisToQueue) {
+      addDoisToQueue(currentDois, config);
+    }
+    updateInput('dois', '');
+    updateInput('files', []);
+    navigate('/queue', { state: { dois: currentDois, config } });
+  };
+
+
 
   return (
     <div style={styles.container}>
@@ -107,12 +121,16 @@ export function LoadView() {
         logs={monitor.logs}
         disabled={!isValid}
         isDownloading={isDownloading}
+        hasDois={hasDois}
+        onAddToQueue={handleAddToQueue}
         onStart={() => {
           if (isDownloading && addDoisToQueue) {
             addDoisToQueue(input.dois, config);
           } else {
             startBatch();
           }
+          updateInput('dois', '');
+          updateInput('files', []);
           navigate('/queue', { state: { dois: input.dois, config } });
         }}
       />

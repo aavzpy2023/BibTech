@@ -25,6 +25,21 @@ const styles = {
     fontSize: '14px',
     cursor: 'pointer'
   },
+  secondaryButton: {
+    padding: '10px 18px',
+    backgroundColor: '#fff',
+    color: '#24292e',
+    border: '1px solid #d1d5da',
+    borderRadius: '6px',
+    fontWeight: '600',
+    fontSize: '14px',
+    cursor: 'pointer'
+  },
+  actions: {
+    display: 'flex',
+    gap: '10px',
+    alignItems: 'center'
+  },
   progressContainer: {
     display: 'flex',
     flexDirection: 'column',
@@ -70,7 +85,9 @@ export function BatchMonitor({
   disabled = false,
   isDownloading = false,
   monitor,
-  onStart
+  onStart,
+  onAddToQueue,
+  hasDois = false
 }) {
   const currentProgress = monitor?.progress ?? progress;
   const currentTotal = monitor?.total ?? total;
@@ -87,8 +104,21 @@ export function BatchMonitor({
         <h3 style={{ margin: 0, fontSize: '16px', color: '#24292e' }}>
           Load and Download Monitor
         </h3>
-        <button
-          type="button"
+        <div style={styles.actions}>
+          <button
+            type="button"
+            disabled={!hasDois}
+            style={{
+              ...styles.secondaryButton,
+              opacity: !hasDois ? 0.6 : 1,
+              cursor: !hasDois ? 'not-allowed' : 'pointer'
+            }}
+            onClick={hasDois ? onAddToQueue : undefined}
+          >
+            + Add to Queue
+          </button>
+          <button
+            type="button"
           disabled={disabled || isDownloading}
           style={{
             ...styles.button,
@@ -99,6 +129,7 @@ export function BatchMonitor({
         >
           {isDownloading ? 'Downloading...' : 'Start Download'}
         </button>
+        </div>
       </div>
 
       <div style={styles.progressContainer}>

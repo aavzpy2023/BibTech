@@ -293,16 +293,8 @@ export function QueueView() {
         </div>
       </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <button
-            type="button"
-            style={styles.secondaryButton}
-            onClick={() => {
-              setAddFeedback(null);
-              setIsAddModalOpen(true);
-            }}
-          >
-            + Add DOIs
-          </button>
+
+
           <label style={styles.filterLabel}>
             <input
               type="checkbox"
