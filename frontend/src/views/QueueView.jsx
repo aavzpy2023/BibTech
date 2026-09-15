@@ -6,11 +6,7 @@ const styles = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px',
-    padding: '24px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e1e4e8',
-    borderRadius: '8px'
+    gap: '16px'
   },
   header: {
     display: 'flex',
@@ -90,7 +86,7 @@ const styles = {
   title: {
     fontSize: '24px',
     fontWeight: 'bold',
-    color: '#24292e',
+    color: '#f0f6fc',
     margin: '0 0 8px 0'
   },
   subtitle: {
@@ -101,7 +97,7 @@ const styles = {
   progressTrack: {
     width: '100%',
     height: '10px',
-    backgroundColor: '#e1e4e8',
+    backgroundColor: '#21262d',
     borderRadius: '5px',
     overflow: 'hidden',
     marginTop: '8px'
@@ -119,10 +115,10 @@ const styles = {
     borderRadius: '6px'
   },
   th: {
-    backgroundColor: '#f6f8fa',
+    backgroundColor: '#161b22',
     padding: '12px',
     textAlign: 'left',
-    borderBottom: '1px solid #e1e4e8',
+    borderBottom: '1px solid #30363d',
     fontSize: '14px',
     fontWeight: '600',
     color: '#24292e'
@@ -134,7 +130,7 @@ const styles = {
     color: '#24292e'
   },
   row: {
-    backgroundColor: '#fff'
+    backgroundColor: '#161b22'
   }
 };
 

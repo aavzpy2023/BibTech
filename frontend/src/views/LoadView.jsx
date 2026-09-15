@@ -9,11 +9,7 @@ const styles = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '24px',
-    padding: '24px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e1e4e8',
-    borderRadius: '8px'
+    gap: '16px'
   },
   header: {
     borderBottom: 'none',

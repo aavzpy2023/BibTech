@@ -7,12 +7,12 @@ const styles = {
   title: {
     fontSize: '24px',
     fontWeight: 'bold',
-    color: '#24292e',
+    color: '#f0f6fc',
     margin: '0 0 8px 0'
   },
   subtitle: {
     fontSize: '14px',
-    color: '#586069',
+    color: '#8b949e',
     margin: 0
   }
 };

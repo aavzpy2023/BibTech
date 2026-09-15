@@ -1,6 +1,6 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-14 21:19:12
+Date: 2026-09-14 21:36:03
 AST Mode: False
 Line Numbers: True
 Modules: LoadView.jsx
@@ -29,8 +29,8 @@ Processed Files: 1
 [L016, S4]     borderRadius: '8px'
 [L017, S2]   },
 [L018, S2]   header: {
-[L019, S4]     borderBottom: '1px solid #e1e4e8',
-[L020, S4]     paddingBottom: '16px'
+[L019, S4]     borderBottom: 'none',
+[L020, S4]     paddingBottom: '8px'
 [L021, S2]   },
 [L022, S2]   headerRow: {
 [L023, S4]     display: 'flex',
@@ -38,24 +38,24 @@ Processed Files: 1
 [L025, S4]     alignItems: 'center'
 [L026, S2]   },
 [L027, S2]   newBatchBtn: {
-[L028, S4]     backgroundColor: '#fff',
-[L029, S4]     border: '1px solid #d1d5da',
+[L028, S4]     backgroundColor: '#21262d',
+[L029, S4]     border: '1px solid #30363d',
 [L030, S4]     borderRadius: '6px',
 [L031, S4]     padding: '6px 14px',
 [L032, S4]     fontSize: '13px',
 [L033, S4]     fontWeight: '600',
-[L034, S4]     color: '#24292e',
+[L034, S4]     color: '#f0f6fc',
 [L035, S4]     cursor: 'pointer'
 [L036, S2]   },
 [L037, S2]   title: {
 [L038, S4]     fontSize: '24px',
 [L039, S4]     fontWeight: 'bold',
-[L040, S4]     color: '#24292e',
+[L040, S4]     color: '#f0f6fc',
 [L041, S4]     margin: '0 0 8px 0'
 [L042, S2]   },
 [L043, S2]   subtitle: {
 [L044, S4]     fontSize: '14px',
-[L045, S4]     color: '#586069',
+[L045, S4]     color: '#8b949e',
 [L046, S4]     margin: 0
 [L047, S2]   }
 [L048, S0] };
@@ -84,67 +84,71 @@ Processed Files: 1
 [L071, S0] 
 [L072, S2]   const handleAddToQueue = () => {
 [L073, S4]     if (!input.dois.trim()) return;
-[L074, S4]     if (addDoisToQueue) {
-[L075, S6]       addDoisToQueue(input.dois, config);
-[L076, S4]     }
-[L077, S4]     navigate('/queue', { state: { dois: input.dois, config } });
-[L078, S2]   };
-[L079, S0] 
-[L080, S2]   return (
-[L081, S4]     config.email.trim() !== '';
+[L074, S4]     const currentDois = input.dois;
+[L075, S4]     if (addDoisToQueue) {
+[L076, S6]       addDoisToQueue(currentDois, config);
+[L077, S4]     }
+[L078, S4]     updateInput('dois', '');
+[L079, S4]     updateInput('files', []);
+[L080, S4]     navigate('/queue', { state: { dois: currentDois, config } });
+[L081, S2]   };
 [L082, S0] 
-[L083, S2]   return (
-[L084, S4]     <div style={styles.container}>
-[L085, S6]       <div style={styles.header}>
-[L086, S8]         <div style={styles.headerRow}>
-[L087, S10]           <div>
-[L088, S12]             <h2 style={styles.title}>Batch Bibliography Load</h2>
-[L089, S12]             <p style={styles.subtitle}>
-[L090, S10]           Enter bibliographic files or DOI identifiers for automatic download.
-[L091, S12]             </p>
-[L092, S10]           </div>
-[L093, S10]           <button
-[L094, S12]             type="button"
-[L095, S12]             style={styles.newBatchBtn}
-[L096, S12]             onClick={resetBatch}
-[L097, S10]           >
-[L098, S12]             New batch
-[L099, S10]           </button>
-[L100, S8]         </div>
-[L101, S6]       </div>
-[L102, S0] 
-[L103, S6]       <BatchInput
-[L104, S8]         files={input.files}
-[L105, S8]         dois={input.dois}
-[L106, S8]         onInputUpdate={updateInput}
-[L107, S6]       />
-[L108, S0] 
-[L109, S6]       <BatchConfig
-[L110, S8]         delay={config.delay}
-[L111, S8]         destination={config.destination}
-[L112, S8]         email={config.email}
-[L113, S8]         onConfigUpdate={updateConfig}
-[L114, S6]       />
-[L115, S0] 
-[L116, S6]       <BatchMonitor
-[L117, S8]         progress={monitor.progress}
-[L118, S8]         total={monitor.total}
-[L119, S8]         logs={monitor.logs}
-[L120, S8]         disabled={!isValid}
-[L121, S8]         isDownloading={isDownloading}
-[L122, S8]         hasDois={hasDois}
-[L123, S8]         onAddToQueue={handleAddToQueue}
-[L124, S8]         onStart={() => {
-[L125, S10]           if (isDownloading && addDoisToQueue) {
-[L126, S12]             addDoisToQueue(input.dois, config);
-[L127, S10]           } else {
-[L128, S12]             startBatch();
-[L129, S10]           }
-[L130, S10]           navigate('/queue', { state: { dois: input.dois, config } });
-[L131, S8]         }}
-[L132, S6]       />
-[L133, S4]     </div>
-[L134, S2]   );
-[L135, S0] }
-[L136, S0] 
-[L137, S0] export default LoadView;
+[L083, S0] 
+[L084, S0] 
+[L085, S2]   return (
+[L086, S4]     <div style={styles.container}>
+[L087, S6]       <div style={styles.header}>
+[L088, S8]         <div style={styles.headerRow}>
+[L089, S10]           <div>
+[L090, S12]             <h2 style={styles.title}>Batch Bibliography Load</h2>
+[L091, S12]             <p style={styles.subtitle}>
+[L092, S10]           Enter bibliographic files or DOI identifiers for automatic download.
+[L093, S12]             </p>
+[L094, S10]           </div>
+[L095, S10]           <button
+[L096, S12]             type="button"
+[L097, S12]             style={styles.newBatchBtn}
+[L098, S12]             onClick={resetBatch}
+[L099, S10]           >
+[L100, S12]             New batch
+[L101, S10]           </button>
+[L102, S8]         </div>
+[L103, S6]       </div>
+[L104, S0] 
+[L105, S6]       <BatchInput
+[L106, S8]         files={input.files}
+[L107, S8]         dois={input.dois}
+[L108, S8]         onInputUpdate={updateInput}
+[L109, S6]       />
+[L110, S0] 
+[L111, S6]       <BatchConfig
+[L112, S8]         delay={config.delay}
+[L113, S8]         destination={config.destination}
+[L114, S8]         email={config.email}
+[L115, S8]         onConfigUpdate={updateConfig}
+[L116, S6]       />
+[L117, S0] 
+[L118, S6]       <BatchMonitor
+[L119, S8]         progress={monitor.progress}
+[L120, S8]         total={monitor.total}
+[L121, S8]         logs={monitor.logs}
+[L122, S8]         disabled={!isValid}
+[L123, S8]         isDownloading={isDownloading}
+[L124, S8]         hasDois={hasDois}
+[L125, S8]         onAddToQueue={handleAddToQueue}
+[L126, S8]         onStart={() => {
+[L127, S10]           if (isDownloading && addDoisToQueue) {
+[L128, S12]             addDoisToQueue(input.dois, config);
+[L129, S10]           } else {
+[L130, S12]             startBatch();
+[L131, S10]           }
+[L132, S10]           updateInput('dois', '');
+[L133, S10]           updateInput('files', []);
+[L134, S10]           navigate('/queue', { state: { dois: input.dois, config } });
+[L135, S8]         }}
+[L136, S6]       />
+[L137, S4]     </div>
+[L138, S2]   );
+[L139, S0] }
+[L140, S0] 
+[L141, S0] export default LoadView;

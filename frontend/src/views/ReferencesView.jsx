@@ -29,17 +29,17 @@ const styles = {
     boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
   },
   card: {
-    border: '1px solid #e1e4e8',
+    border: 'none',
     borderRadius: '10px',
     padding: '24px',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#161b22',
     boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
     marginBottom: '24px',
   },
   title: {
     fontSize: '24px',
     fontWeight: 'bold',
-    color: '#24292e',
+    color: '#f0f6fc',
     margin: '0 0 8px 0'
   },
   description: {
