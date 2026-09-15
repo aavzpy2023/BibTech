@@ -13,13 +13,14 @@ Story Context Radius: {"leai_docs/planning/global_backlog.md": ["*"]}
 Layered Technical Breakdown:
 [ID-10.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Append EPIC 11, its [REQ-029] to [REQ-031] list, and the Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_10_cookie_authentication.md]. Type: Task.
 
-- [ ] Story 10.1: Frontend UI State Fractality (Custom Hook) | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 10.1: Frontend UI State Fractality (Custom Hook) | [MoSCoW: MUST] | [Complexity: EASY]
 Business Requirement: Expand the Batch Load configuration state strictly within the custom hook without touching the UI. (<-- REQ-029)
 Story Context Radius: {"frontend/src/hooks/useBatchLoad.js": [""], "frontend/src/hooks/useBatchLoad.test.js": [""], "leai_docs/planning/roadmap_10_cookie_authentication.md": [""], "leai_docs/planning/global_backlog.md": [""]}
 Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-10.1.1] [TESTING/TDE]: [1. Arrange: Render useBatchLoad hook. 2. Act: Call updateConfig('cookies', 'session_id=123'). 3. Assert: Verify result.current.config.cookies matches the injected string]. Type: Task.
 [ID-10.1.2] [UI/STATE]: [1. Open frontend/src/hooks/useBatchLoad.js. 2. Add cookies: '' to initialConfigState. 3. In startBatch, include cookies: activeConfig.cookies ?? '' in the JSON body payload of the fetch call]. Type: Task.
 [ID-10.1.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_10_cookie_authentication.md and check - [x] for Story 10.1. 2. Append > Files touched: frontend/src/hooks/useBatchLoad.js, frontend/src/hooks/useBatchLoad.test.js under the story]. Type: Task.
+> Files touched: frontend/src/hooks/useBatchLoad.js, frontend/src/hooks/useBatchLoad.test.js
 
 - [ ] Story 10.2: Frontend UI Dumb View & Wiring | [MoSCoW: MUST] | [Complexity: EASY]
 Business Requirement: Implement the purely presentational input field for session cookies. (<-- REQ-029)

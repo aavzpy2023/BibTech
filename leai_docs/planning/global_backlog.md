@@ -51,7 +51,7 @@
 - [x] [REQ-028] Cascading Resolver Fallback Chain Integration
 
 ## EPIC 11: COOKIE AUTHENTICATION PASSTHROUGH
-- [ ] [REQ-029] Frontend UI State Fractality & Dumb View Wiring (Cookies)
+- [~] [REQ-029] Frontend UI State Fractality & Dumb View Wiring (Cookies)
 - [ ] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
 - [ ] [REQ-031] CLI Argument Cookie Support (Script OCP)
 

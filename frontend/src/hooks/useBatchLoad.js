@@ -14,7 +14,8 @@ const initialInputState = {
 const initialConfigState = {
   delay: 5,
   destination: '',
-  email: ''
+  email: '',
+  cookies: ''
 };
 
 const initialMonitorState = {
@@ -103,7 +104,8 @@ function useBatchLoadInternal() {
           dois,
           delay: Number(activeConfig.delay ?? 5),
           destination: activeConfig.destination ?? '',
-          email: activeConfig.email ?? ''
+          email: activeConfig.email ?? '',
+          cookies: activeConfig.cookies ?? ''
         })
       });
 
