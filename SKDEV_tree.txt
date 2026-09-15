@@ -99,6 +99,7 @@
 │   │   │   │   ├── test_parser.py
 │   │   │   │   ├── test_resolver.py
 │   │   │   │   ├── test_router.py
+│   │   │   │   ├── test_schemas.py
 │   │   │   │   ├── test_zip_service.py
 │   │   │   ├── database/
 │   │   │   │   ├── __init__.py
@@ -128,6 +129,7 @@
 │   │   │   ├── roadmap_5_database_schema.md
 │   │   │   ├── roadmap_6_references_ingestion.md
 │   │   │   ├── roadmap_7_ui_standardization_and_multi_upload.md
+│   │   │   ├── roadmap_8_local_file_batch_download.md
 │   ├── nginx/
 │   │   ├── Dockerfile
 │   │   ├── nginx.conf

@@ -1,7 +1,7 @@
 === PATCH OPERATIONS APPLIED ===
 - [Successful] EDIT -> leai_docs/planning/global_backlog.md
 - [Successful] EDIT -> leai_docs/planning/global_backlog.md
-- [Successful] CREATE -> leai_docs/planning/roadmap_7_ui_standardization_and_multi_upload.md
+- [Successful] CREATE -> leai_docs/planning/roadmap_8_local_file_batch_download.md
 
 === VALIDATION COMMAND OUTPUT (PART 7) ===
 Pruebas omitidas o sin comandos bash ejecutados (# N/A).

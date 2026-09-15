@@ -43,8 +43,8 @@
 - [x] [REQ-024] UI Standardization (Width & Headers)
 
 ## EPIC 9: LOCAL FILE BATCH DOWNLOAD
-- [ ] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
-- [ ] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
+- [x] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
+- [x] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)

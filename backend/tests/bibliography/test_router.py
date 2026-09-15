@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 from io import BytesIO
 import asyncio
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, mock_open
 from datetime import datetime, timezone
 import pytest
 
@@ -31,6 +31,7 @@ from backend.src.bibliography.router import (
 from backend.src.bibliography.schemas import (
     BatchDownloadRequest,
     ZipDownloadRequest,
+    LocalBatchDownloadRequest,
 )
 
 def test_upload_bibliography_direct_success():
@@ -273,3 +274,31 @@ def test_inject_bibliography_endpoint_invalid_extension():
     )
     assert response.status_code == 400
     assert "Unsupported file extension" in response.json()["detail"]
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+def test_batch_download_local_endpoint_client():
+    async def mock_generator(*args, **kwargs):
+        yield '{"log": "local test"}'
+
+    payload = {
+        "file_path": "/fake/path.bib",
+        "delay": 0,
+        "destination": "/tmp/downloads",
+        "email": "test@example.com",
+    }
+    fake_bib = "Some content with DOI: 10.1000/182 and another 10.1000/182"
+
+    with patch("builtins.open", mock_open(read_data=fake_bib)), patch(
+        "backend.src.bibliography.router.execute_batch_download",
+        side_effect=mock_generator,
+    ) as mock_exec:
+        response = client.post(
+            "/api/bibliography/batch-download-local", json=payload
+        )
+        assert response.status_code == 200
+        assert "text/event-stream" in response.headers["content-type"]
+        assert 'data: {"log": "local test"}\n\n' in response.text
+        
+        args, _ = mock_exec.call_args
+        assert args[0] == ["10.1000/182"]

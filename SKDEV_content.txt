@@ -1,154 +1,70 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-14 21:36:03
+Date: 2026-09-14 21:47:33
 AST Mode: False
 Line Numbers: True
-Modules: LoadView.jsx
+Modules: global_backlog.md
 Processed Files: 1
 ===========================
 
 
 
-// --- frontend/src/views/LoadView.jsx ---
+// --- leai_docs/planning/global_backlog.md ---
 
-[L001, S0] import React from 'react';
-[L002, S0] import { useNavigate } from 'react-router-dom';
-[L003, S0] import useBatchLoad from '../hooks/useBatchLoad';
-[L004, S0] import BatchInput from '../components/load/BatchInput';
-[L005, S0] import BatchConfig from '../components/load/BatchConfig';
-[L006, S0] import BatchMonitor from '../components/load/BatchMonitor';
-[L007, S0] 
-[L008, S0] const styles = {
-[L009, S2]   container: {
-[L010, S4]     display: 'flex',
-[L011, S4]     flexDirection: 'column',
-[L012, S4]     gap: '24px',
-[L013, S4]     padding: '24px',
-[L014, S4]     backgroundColor: '#ffffff',
-[L015, S4]     border: '1px solid #e1e4e8',
-[L016, S4]     borderRadius: '8px'
-[L017, S2]   },
-[L018, S2]   header: {
-[L019, S4]     borderBottom: 'none',
-[L020, S4]     paddingBottom: '8px'
-[L021, S2]   },
-[L022, S2]   headerRow: {
-[L023, S4]     display: 'flex',
-[L024, S4]     justifyContent: 'space-between',
-[L025, S4]     alignItems: 'center'
-[L026, S2]   },
-[L027, S2]   newBatchBtn: {
-[L028, S4]     backgroundColor: '#21262d',
-[L029, S4]     border: '1px solid #30363d',
-[L030, S4]     borderRadius: '6px',
-[L031, S4]     padding: '6px 14px',
-[L032, S4]     fontSize: '13px',
-[L033, S4]     fontWeight: '600',
-[L034, S4]     color: '#f0f6fc',
-[L035, S4]     cursor: 'pointer'
-[L036, S2]   },
-[L037, S2]   title: {
-[L038, S4]     fontSize: '24px',
-[L039, S4]     fontWeight: 'bold',
-[L040, S4]     color: '#f0f6fc',
-[L041, S4]     margin: '0 0 8px 0'
-[L042, S2]   },
-[L043, S2]   subtitle: {
-[L044, S4]     fontSize: '14px',
-[L045, S4]     color: '#8b949e',
-[L046, S4]     margin: 0
-[L047, S2]   }
-[L048, S0] };
-[L049, S0] 
-[L050, S0] export function LoadView() {
-[L051, S2]   const navigate = useNavigate();
-[L052, S2]   const {
-[L053, S4]     input,
-[L054, S4]     config,
-[L055, S4]     monitor,
-[L056, S4]     updateInput,
-[L057, S4]     updateConfig,
-[L058, S4]     isValidEmail,
-[L059, S4]     isDownloading,
-[L060, S4]     resetBatch,
-[L061, S4]     startBatch,
-[L062, S4]     addDoisToQueue
-[L063, S2]   } = useBatchLoad();
-[L064, S0] 
-[L065, S2]   const isValid =
-[L066, S4]     input.dois.trim() !== '' &&
-[L067, S4]     config.destination.trim() !== '' &&
-[L068, S4]     isValidEmail;
-[L069, S0] 
-[L070, S2]   const hasDois = Boolean(input.dois && input.dois.trim().length > 0);
-[L071, S0] 
-[L072, S2]   const handleAddToQueue = () => {
-[L073, S4]     if (!input.dois.trim()) return;
-[L074, S4]     const currentDois = input.dois;
-[L075, S4]     if (addDoisToQueue) {
-[L076, S6]       addDoisToQueue(currentDois, config);
-[L077, S4]     }
-[L078, S4]     updateInput('dois', '');
-[L079, S4]     updateInput('files', []);
-[L080, S4]     navigate('/queue', { state: { dois: currentDois, config } });
-[L081, S2]   };
-[L082, S0] 
-[L083, S0] 
-[L084, S0] 
-[L085, S2]   return (
-[L086, S4]     <div style={styles.container}>
-[L087, S6]       <div style={styles.header}>
-[L088, S8]         <div style={styles.headerRow}>
-[L089, S10]           <div>
-[L090, S12]             <h2 style={styles.title}>Batch Bibliography Load</h2>
-[L091, S12]             <p style={styles.subtitle}>
-[L092, S10]           Enter bibliographic files or DOI identifiers for automatic download.
-[L093, S12]             </p>
-[L094, S10]           </div>
-[L095, S10]           <button
-[L096, S12]             type="button"
-[L097, S12]             style={styles.newBatchBtn}
-[L098, S12]             onClick={resetBatch}
-[L099, S10]           >
-[L100, S12]             New batch
-[L101, S10]           </button>
-[L102, S8]         </div>
-[L103, S6]       </div>
-[L104, S0] 
-[L105, S6]       <BatchInput
-[L106, S8]         files={input.files}
-[L107, S8]         dois={input.dois}
-[L108, S8]         onInputUpdate={updateInput}
-[L109, S6]       />
-[L110, S0] 
-[L111, S6]       <BatchConfig
-[L112, S8]         delay={config.delay}
-[L113, S8]         destination={config.destination}
-[L114, S8]         email={config.email}
-[L115, S8]         onConfigUpdate={updateConfig}
-[L116, S6]       />
-[L117, S0] 
-[L118, S6]       <BatchMonitor
-[L119, S8]         progress={monitor.progress}
-[L120, S8]         total={monitor.total}
-[L121, S8]         logs={monitor.logs}
-[L122, S8]         disabled={!isValid}
-[L123, S8]         isDownloading={isDownloading}
-[L124, S8]         hasDois={hasDois}
-[L125, S8]         onAddToQueue={handleAddToQueue}
-[L126, S8]         onStart={() => {
-[L127, S10]           if (isDownloading && addDoisToQueue) {
-[L128, S12]             addDoisToQueue(input.dois, config);
-[L129, S10]           } else {
-[L130, S12]             startBatch();
-[L131, S10]           }
-[L132, S10]           updateInput('dois', '');
-[L133, S10]           updateInput('files', []);
-[L134, S10]           navigate('/queue', { state: { dois: input.dois, config } });
-[L135, S8]         }}
-[L136, S6]       />
-[L137, S4]     </div>
-[L138, S2]   );
-[L139, S0] }
-[L140, S0] 
-[L141, S0] export default LoadView;
+[L001, S0] # Global Backlog
+[L002, S0] 
+[L003, S0] ## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
+[L004, S0] - [x] Story 1.0: Roadmap &amp; Planning Initialization
+[L005, S0] - [x] Story 1.1: Project Dependencies &amp; Context Genesis
+[L006, S0] 
+[L007, S0] ## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
+[L008, S0] - [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
+[L009, S0] - [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
+[L010, S0] - [x] [REQ-003] Bibliography Data Display &amp; Table View
+[L011, S0] 
+[L012, S0] ## EPIC 3: BATCH LOAD INTERFACE
+[L013, S0] - [x] [REQ-004] Frontend Routing &amp; Main Layout
+[L014, S0] - [x] [REQ-005] Load View - State Fractality (Custom Hook)
+[L015, S0] - [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
+[L016, S0] - [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
+[L017, S0] 
+[L018, S0] ## EPIC 4: BATCH DOWNLOAD EXECUTION
+[L019, S0] - [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
+[L020, S0] - [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
+[L021, S0] - [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
+[L022, S0] - [x] [REQ-011] Frontend SSE Hook State Integration
+[L023, S0] 
+[L024, S0] ## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
+[L025, S0] - [x] [REQ-012] Load View Validation &amp; Label Updates
+[L026, S0] - [x] [REQ-013] Queue View State &amp; UI Assembly
+[L027, S0] - [x] [REQ-014] Backend ZIP Service &amp; Download Action
+[L028, S0] 
+[L029, S0] ## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
+[L030, S0] - [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
+[L031, S0] - [x] [REQ-016] Identity Domain Models &amp; Keywords
+[L032, S0] - [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
+[L033, S0] 
+[L034, S0] ## EPIC 7: REFERENCES DATABASE INGESTION
+[L035, S0] - [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
+[L036, S0] - [x] [REQ-019] References Data Table View
+[L037, S0] - [x] [REQ-020] Frontend Injection State Hook
+[L038, S0] - [x] [REQ-021] References View Routing &amp; Assembly
+[L039, S0] 
+[L040, S0] ## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
+[L041, S0] - [x] [REQ-022] Multiple File Upload Logic (FIFO Queue)
+[L042, S0] - [x] [REQ-023] References Tab Translation to English
+[L043, S0] - [x] [REQ-024] UI Standardization (Width & Headers)
+[L044, S0] 
+[L045, S0] ## EPIC 9: LOCAL FILE BATCH DOWNLOAD
+[L046, S0] - [x] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
+[L047, S0] - [ ] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
+[L048, S0] 
+[L049, S0] ## Active Roadmaps
+[L050, S0] - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
+[L051, S0] - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
+[L052, S0] - [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
+[L053, S0] - [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
+[L054, S0] - [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
+[L055, S0] - [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
+[L056, S0] - [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
+[L057, S0] - [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)

@@ -1,4 +1,5 @@
 import os
+import re
 from typing import List
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -7,6 +8,7 @@ from .schemas import (
     ParsedReference,
     BatchDownloadRequest,
     ZipDownloadRequest,
+    LocalBatchDownloadRequest,
 )
 from .parser_service import parse_bibliography_content
 from .download_service import execute_batch_download
@@ -118,6 +120,25 @@ async def batch_download(request: BatchDownloadRequest):
         sse_generator(),
         media_type="text/event-stream"
     )
+
+
+@router.post("/batch-download-local")
+async def batch_download_local(request: LocalBatchDownloadRequest):
+    try:
+        with open(request.file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
+    
+    dois = list(set(re.findall(r"\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b", content, re.I)))
+
+    async def sse_generator():
+        async for event in execute_batch_download(
+            dois, request.destination, request.email, request.delay
+        ):
+            yield f"data: {event}\n\n"
+
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")
 
 
 @router.post("/download-zip")
