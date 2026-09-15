@@ -40,8 +40,9 @@ complexity_aggregate: "MEDIUM"
   [ID-11.3.2] [UI/STATE]: [1. Create frontend/src/hooks/useReferencesTable.js. 2. Initialize useState for currentPage (default 1) and searchQuery (default ''). 3. Create a derived array filteredData filtering input data where title or author includes searchQuery (case-insensitive). 4. Create paginatedData by slicing filteredData from (currentPage - 1) * pageSize to currentPage * pageSize. 5. Export searchQuery, setSearchQuery, currentPage, setCurrentPage, paginatedData, and totalPages]. Type: Task.
   [ID-11.3.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_11_references_ui_and_bugfixes.md and check - [ ] for Story 11.3. 2. Append &gt; Files touched: useReferencesTable.js, useReferencesTable.test.js under the story. 3. Open global_backlog.md and check - [ ] for [REQ-034]]. Type: Task.
 
-- [ ] Story 11.4: References Table Dumb View Wiring | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 11.4: References Table Dumb View Wiring | [MoSCoW: MUST] | [Complexity: EASY]
   Business Requirement: Wire the UI Table to consume the custom hook, rendering the search bar and pagination controls. (&lt;-- REQ-035)
+  &gt; Files touched: ReferencesDataTable.jsx, ReferencesDataTable.test.jsx
   Story Context Radius: {"frontend/src/components/references/ReferencesDataTable.jsx": [""], "frontend/src/hooks/useReferencesTable.js": [""], "leai_docs/planning/roadmap_11_references_ui_and_bugfixes.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
   [ID-11.4.1] [TESTING/TDE]: [1. Arrange: Render ReferencesDataTable with a mock data array. 2. Act: Click the "Next" pagination button. 3. Assert: Verify the table rows update to reflect the next page chunk of data]. Type: Task.

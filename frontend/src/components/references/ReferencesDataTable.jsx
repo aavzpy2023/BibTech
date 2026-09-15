@@ -1,6 +1,42 @@
 import React, { useState } from 'react';
+import { useReferencesTable } from '../../hooks/useReferencesTable';
 
 const styles = {
+  controls: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  },
+  searchInput: {
+    padding: '8px 12px',
+    borderRadius: '6px',
+    border: '1px solid #30363d',
+    backgroundColor: '#0d1117',
+    color: '#f0f6fc',
+    width: '300px',
+    outline: 'none',
+  },
+  pagination: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: '16px',
+    padding: '8px 0',
+  },
+  pageBtn: {
+    padding: '6px 12px',
+    backgroundColor: '#21262d',
+    border: '1px solid #30363d',
+    color: '#f0f6fc',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px',
+  },
+  pageBtnDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
   container: {
     width: '100%',
     overflowX: 'auto',
@@ -63,6 +99,15 @@ export function ReferencesDataTable({ data = [] }) {
   const [hoveredRow, setHoveredRow] = useState(null);
   const [coords, setCoords] = useState({ x: 0, y: 0 });
 
+  const {
+    searchQuery,
+    setSearchQuery,
+    currentPage,
+    setCurrentPage,
+    paginatedData,
+    totalPages,
+  } = useReferencesTable(data, 13);
+
   if (!data || data.length === 0) {
     return (
       <div style={styles.container}>
@@ -84,6 +129,18 @@ export function ReferencesDataTable({ data = [] }) {
 
   return (
     <div style={styles.container}>
+      <div style={styles.controls}>
+        <input
+          type="text"
+          placeholder="Search by title or author..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={styles.searchInput}
+        />
+        <span style={{ fontSize: '13px', color: '#8b949e' }}>
+          Total References: {data.length}
+        </span>
+      </div>
       <table style={styles.table}>
         <thead>
           <tr>
@@ -94,7 +151,7 @@ export function ReferencesDataTable({ data = [] }) {
           </tr>
         </thead>
         <tbody>
-          {data.map((row, index) => (
+          {paginatedData.map((row, index) => (
             <tr
               key={row.id || index}
               style={styles.tr}
@@ -109,6 +166,28 @@ export function ReferencesDataTable({ data = [] }) {
           ))}
         </tbody>
       </table>
+
+      {totalPages > 1 && (
+        <div style={styles.pagination}>
+          <button
+            style={{ ...styles.pageBtn, ...(currentPage === 1 ? styles.pageBtnDisabled : {}) }}
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+          <span style={{ fontSize: '14px', color: '#8b949e' }}>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            style={{ ...styles.pageBtn, ...(currentPage === totalPages ? styles.pageBtnDisabled : {}) }}
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {hoveredRow && (
         <div

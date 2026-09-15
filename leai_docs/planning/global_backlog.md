@@ -59,7 +59,7 @@
 - [x] [REQ-032] Backend Typing Bugfix (Micro-Surgery)
 - [x] [REQ-033] UploadReferencesModal Dark Mode Compliance
 - [x] [REQ-034] References Table Pagination & Search State (State Fractality)
-- [ ] [REQ-035] References Table Dumb View Wiring
+- [x] [REQ-035] References Table Dumb View Wiring
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
