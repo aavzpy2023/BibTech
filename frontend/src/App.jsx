@@ -25,10 +25,10 @@ export function DashboardView() {
   }, []);
 
   const styles = {
-    container: { fontFamily: 'system-ui, sans-serif', padding: '0', textAlign: 'center', color: '#333' },
-    card: { border: '1px solid #e1e4e8', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', backgroundColor: '#fff', textAlign: 'left' },
-    badge: { backgroundColor: '#e2f5ea', color: '#137333', padding: '6px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: 'bold', display: 'inline-block', marginBottom: '15px' },
-    title: { fontSize: '24px', fontWeight: 'bold', color: '#24292e', margin: '0 0 8px 0' }
+    container: { fontFamily: 'system-ui, sans-serif', padding: '0', textAlign: 'center', color: '#f0f6fc' },
+    card: { border: 'none', borderRadius: '12px', padding: '24px', backgroundColor: '#161b22', textAlign: 'left' },
+    badge: { backgroundColor: '#1f6feb22', color: '#58a6ff', padding: '6px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: 'bold', display: 'inline-block', marginBottom: '15px' },
+    title: { fontSize: '24px', fontWeight: 'bold', color: '#f0f6fc', margin: '0 0 8px 0' }
   };
 
   return (
@@ -42,7 +42,7 @@ export function DashboardView() {
         <BibliographyUploader onUpload={uploadFile} />
         <ReferenceTable references={references} />
         
-        <hr style={{margin: '32px 0', border: 'none', borderTop: '1px solid #e1e4e8'}} />
+        <hr style={{margin: '32px 0', border: 'none', borderTop: '1px solid #30363d'}} />
         
         <h3>Parámetros Modernos Detectados:</h3>
         {error && <p style={{color: 'red'}}>❌ {error}</p>}

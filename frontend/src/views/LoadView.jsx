@@ -25,24 +25,24 @@ const styles = {
     alignItems: 'center'
   },
   newBatchBtn: {
-    backgroundColor: '#fff',
-    border: '1px solid #d1d5da',
+    backgroundColor: '#21262d',
+    border: '1px solid #30363d',
     borderRadius: '6px',
     padding: '6px 14px',
     fontSize: '13px',
     fontWeight: '600',
-    color: '#24292e',
+    color: '#f0f6fc',
     cursor: 'pointer'
   },
   title: {
     fontSize: '24px',
     fontWeight: 'bold',
-    color: '#24292e',
+    color: '#f0f6fc',
     margin: '0 0 8px 0'
   },
   subtitle: {
     fontSize: '14px',
-    color: '#586069',
+    color: '#8b949e',
     margin: 0
   }
 };

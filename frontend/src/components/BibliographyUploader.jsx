@@ -8,7 +8,8 @@ const styles = {
     padding: '40px',
     textAlign: 'center',
     cursor: 'pointer',
-    backgroundColor: '#f6f8fa',
+    backgroundColor: '#161b22',
+    border: '2px dashed #30363d',
     marginBottom: '24px',
     transition: 'background-color 0.2s ease'
   },
@@ -18,13 +19,13 @@ const styles = {
   },
   text: {
     margin: 0,
-    color: '#24292e',
+    color: '#f0f6fc',
     fontSize: '16px',
     fontWeight: '500'
   },
   subtext: {
     margin: '8px 0 0 0',
-    color: '#586069',
+    color: '#8b949e',
     fontSize: '14px'
   }
 };

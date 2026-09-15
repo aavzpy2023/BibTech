@@ -19,7 +19,7 @@ const styles = {
   label: {
     fontWeight: 'bold',
     fontSize: '14px',
-    color: '#24292e'
+    color: '#f0f6fc'
   },
   sliderContainer: {
     display: 'flex',

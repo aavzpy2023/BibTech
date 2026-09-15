@@ -27,9 +27,9 @@ const styles = {
   },
   secondaryButton: {
     padding: '10px 18px',
-    backgroundColor: '#fff',
-    color: '#24292e',
-    border: '1px solid #d1d5da',
+    backgroundColor: '#21262d',
+    color: '#f0f6fc',
+    border: '1px solid #30363d',
     borderRadius: '6px',
     fontWeight: '600',
     fontSize: '14px',
@@ -47,14 +47,14 @@ const styles = {
   },
   progressText: {
     fontSize: '13px',
-    color: '#586069',
+    color: '#8b949e',
     display: 'flex',
     justifyContent: 'space-between'
   },
   track: {
     width: '100%',
     height: '16px',
-    backgroundColor: '#e1e4e8',
+    backgroundColor: '#21262d',
     borderRadius: '8px',
     overflow: 'hidden'
   },
@@ -101,9 +101,9 @@ export function BatchMonitor({
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h3 style={{ margin: 0, fontSize: '16px', color: '#24292e' }}>
-          Load and Download Monitor
-        </h3>
+    <h3 style={{ margin: 0, fontSize: '16px', color: '#f0f6fc' }}>
+      Load and Download Monitor
+    </h3>
         <div style={styles.actions}>
           <button
             type="button"

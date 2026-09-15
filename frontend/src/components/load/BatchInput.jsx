@@ -90,7 +90,8 @@ const styles = {
     padding: '24px',
     textAlign: 'center',
     cursor: 'pointer',
-    backgroundColor: '#f6f8fa'
+    backgroundColor: '#161b22',
+    border: '2px dashed #30363d'
   },
   dropzoneActive: {
     backgroundColor: '#e1f5fe',
@@ -101,7 +102,9 @@ const styles = {
     minHeight: '300px',
     padding: '12px',
     borderRadius: '6px',
-    border: '1px solid #d1d5da',
+    border: '1px solid #30363d',
+    backgroundColor: '#0d1117',
+    color: '#f0f6fc',
     fontFamily: 'monospace',
     fontSize: '13px',
     boxSizing: 'border-box'
@@ -109,7 +112,7 @@ const styles = {
   label: {
     fontWeight: 'bold',
     fontSize: '14px',
-    color: '#24292e',
+    color: '#f0f6fc',
     marginBottom: '6px',
     display: 'block'
   },
@@ -127,10 +130,10 @@ const styles = {
     backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
   },
   modalContent: {
-    backgroundColor: '#fff', padding: '24px', borderRadius: '8px', width: '450px', maxWidth: '90%'
+    backgroundColor: '#161b22', color: '#f0f6fc', border: '1px solid #30363d', padding: '24px', borderRadius: '8px', width: '450px', maxWidth: '90%'
   },
   badge: {
-    backgroundColor: '#e1e4e8', color: '#24292e', padding: '4px 8px', borderRadius: '12px', fontSize: '12px', marginLeft: '8px'
+    backgroundColor: '#21262d', color: '#f0f6fc', padding: '4px 8px', borderRadius: '12px', fontSize: '12px', marginLeft: '8px'
   },
   headerRow: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'
