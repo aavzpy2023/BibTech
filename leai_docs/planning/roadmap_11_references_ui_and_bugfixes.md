@@ -13,8 +13,9 @@ complexity_aggregate: "MEDIUM"
   Layered Technical Breakdown:
   [ID-11.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Append EPIC 12, its [REQ-032] to [REQ-035] list, and the Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_11_references_ui_and_bugfixes.md]. Type: Task.
 
-- [ ] Story 11.1: Backend Typing Bugfix (Micro-Surgery) | [MoSCoW: MUST] | [Complexity: TRIVIAL]
+- [x] Story 11.1: Backend Typing Bugfix (Micro-Surgery) | [MoSCoW: MUST] | [Complexity: TRIVIAL]
   Business Requirement: Resolve the NameError crashing the backend by properly importing typing generics. (&lt;-- REQ-032)
+  &gt; Files touched: download_service.py, schemas.py, resolver_service.py
   Story Context Radius: {"backend/src/bibliography/download_service.py": [""], "backend/src/bibliography/schemas.py": [""], "backend/src/bibliography/resolver_service.py": [""], "leai_docs/planning/roadmap_11_references_ui_and_bugfixes.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
   [ID-11.1.1] [TESTING/TDE]: [1. Arrange: Boot the FastAPI application context. 2. Act: Import execute_batch_download from download_service.py. 3. Assert: Verify the module loads successfully without throwing a NameError]. Type: Task.

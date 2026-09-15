@@ -1,7 +1,7 @@
 import asyncio
 import json
 import random
-from typing import AsyncGenerator, List
+from typing import Optional, List, Dict, Any, AsyncGenerator
 import httpx
 from .resolver_service import resolve_pdf_url, _BROWSER_HEADERS
 from .file_storage_service import save_pdf_bytes

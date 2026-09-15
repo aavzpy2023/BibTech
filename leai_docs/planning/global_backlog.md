@@ -56,7 +56,7 @@
 - [x] [REQ-031] CLI Argument Cookie Support (Script OCP)
 
 ## EPIC 12: REFERENCES UI REFINEMENT & BACKEND BUGFIX
-- [ ] [REQ-032] Backend Typing Bugfix (Micro-Surgery)
+- [x] [REQ-032] Backend Typing Bugfix (Micro-Surgery)
 - [ ] [REQ-033] UploadReferencesModal Dark Mode Compliance
 - [ ] [REQ-034] References Table Pagination & Search State (State Fractality)
 - [ ] [REQ-035] References Table Dumb View Wiring
