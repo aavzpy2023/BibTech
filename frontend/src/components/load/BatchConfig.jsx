@@ -4,11 +4,11 @@ const styles = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px',
-    marginBottom: '24px',
-    padding: '20px',
-    backgroundColor: '#fafbfc',
-    border: '1px solid #e1e4e8',
+    gap: '12px',
+    marginBottom: '12px',
+    padding: '16px',
+    backgroundColor: '#161b22',
+    border: 'none',
     borderRadius: '8px'
   },
   section: {
@@ -38,7 +38,9 @@ const styles = {
   input: {
     padding: '8px 12px',
     borderRadius: '6px',
-    border: '1px solid #d1d5da',
+    border: '1px solid #30363d',
+    backgroundColor: '#0d1117',
+    color: '#f0f6fc',
     fontSize: '14px'
   }
 };

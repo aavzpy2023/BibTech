@@ -4,10 +4,10 @@ const styles = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
-    padding: '20px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e1e4e8',
+    gap: '12px',
+    padding: '16px',
+    backgroundColor: '#161b22',
+    border: 'none',
     borderRadius: '8px'
   },
   header: {

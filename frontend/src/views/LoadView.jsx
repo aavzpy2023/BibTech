@@ -16,8 +16,8 @@ const styles = {
     borderRadius: '8px'
   },
   header: {
-    borderBottom: '1px solid #e1e4e8',
-    paddingBottom: '16px'
+    borderBottom: 'none',
+    paddingBottom: '8px'
   },
   headerRow: {
     display: 'flex',

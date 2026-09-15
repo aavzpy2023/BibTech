@@ -16,13 +16,15 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     height: '100vh',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    backgroundColor: '#0d1117',
+    color: '#f0f6fc'
   },
   header: {
     flexShrink: 0,
-    borderBottom: '1px solid #e1e4e8',
-    padding: '0 20px',
-    backgroundColor: '#ffffff'
+    borderBottom: 'none',
+    padding: '0 16px',
+    backgroundColor: '#161b22'
   },
   nav: {
     display: 'flex',
@@ -31,30 +33,31 @@ const styles = {
     justifyContent: 'center'
   },
   link: {
-    padding: '16px 4px',
+    padding: '12px 4px',
     textDecoration: 'none',
-    color: '#586069',
+    color: '#8b949e',
     fontWeight: 500,
     fontSize: '14px',
     borderBottom: '2px solid transparent'
   },
   activeLink: {
-    color: '#0366d6',
-    borderBottom: '2px solid #0366d6'
+    color: '#58a6ff',
+    borderBottom: '2px solid #58a6ff'
   },
   main: {
     flex: 1,
     width: '100%',
-    padding: '20px 24px',
+    padding: '8px 16px',
     overflowY: 'auto',
+    backgroundColor: '#0d1117',
     boxSizing: 'border-box'
   },
   footer: {
     flexShrink: 0,
-    padding: '10px 20px',
+    padding: '6px 16px',
     textAlign: 'center',
-    borderTop: '1px solid #e1e4e8',
-    backgroundColor: '#ffffff',
+    borderTop: 'none',
+    backgroundColor: '#161b22',
     color: '#586069',
     fontSize: '14px'
   }
@@ -70,6 +73,27 @@ function Layout() {
           padding: 0;
           height: 100%;
           overflow: hidden;
+          background-color: #0d1117;
+          color: #f0f6fc;
+        }
+        h1, h2, h3, h4, label {
+          color: #f0f6fc !important;
+        }
+        input, textarea, select {
+          background-color: #0d1117 !important;
+          color: #f0f6fc !important;
+          border-color: #30363d !important;
+        }
+        table, th, td {
+          border-color: #30363d !important;
+        }
+        th {
+          background-color: #161b22 !important;
+          color: #f0f6fc !important;
+        }
+        tr {
+          background-color: #0d1117 !important;
+          color: #f0f6fc !important;
         }
       `}</style>
       <header style={styles.header}>
