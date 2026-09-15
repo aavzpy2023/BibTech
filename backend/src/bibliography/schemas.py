@@ -17,6 +17,9 @@ class ZipDownloadRequest(BaseModel):
 
 
 class BatchDownloadRequest(BaseModel):
+    cookies: Optional[str] = Field(
+        None, description="Optional raw session cookies to bypass 403 blocks."
+    )
     model_config = ConfigDict(strict=True, extra="forbid")
 
     dois: List[str] = Field(
@@ -41,6 +44,9 @@ class BatchDownloadRequest(BaseModel):
 
 
 class LocalBatchDownloadRequest(BaseModel):
+    cookies: Optional[str] = Field(
+        None, description="Optional raw session cookies to bypass 403 blocks."
+    )
     model_config = ConfigDict(strict=True, extra="forbid")
 
     file_path: str = Field(
