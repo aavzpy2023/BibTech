@@ -130,7 +130,12 @@ async def batch_download_local(request: LocalBatchDownloadRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
     
-    dois = list(set(re.findall(r"\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b", content, re.I)))
+    _, ext = os.path.splitext(request.file_path)
+    try:
+        refs = parse_bibliography_content(content, ext)
+        dois = list(set(ref.doi for ref in refs if ref.doi))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Parse error: {str(e)}")
 
     async def sse_generator():
         async for event in execute_batch_download(

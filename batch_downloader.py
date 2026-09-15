@@ -20,7 +20,7 @@ def main():
             "file_path": container_file_path,
             "destination": container_dest_path,
             "email": email,
-            "delay": 2,
+            "delay": 0,
         }
     ).encode("utf-8")
 
@@ -31,6 +31,8 @@ def main():
     print(f"\nConectando al backend ({url})...")
 
     pdf_count = 0
+    final_progress = 0
+    final_total = 0
     try:
         with urllib.request.urlopen(req) as response:
             for line in response:
@@ -47,6 +49,9 @@ def main():
 
                         if status == "downloaded":
                             pdf_count += 1
+                        
+                        final_progress = progress
+                        final_total = total
 
                         # Formato estricto solicitado: "23/78 processed, 15 PDFs"
                         msg = f"{progress}/{total} processed, {pdf_count} PDFs"
@@ -55,6 +60,9 @@ def main():
                         sys.stdout.flush()
                     except json.JSONDecodeError:
                         pass
+                        
+            if final_total > 0 and final_progress < final_total:
+                print("\n\n[!] Advertencia: La conexión se cerró antes de completar (posible Timeout de Nginx).")
     except urllib.error.HTTPError as e:
         error_body = e.read().decode("utf-8", errors="replace")
         print(f"\n[X] Error del Servidor (HTTP {e.code}):")
