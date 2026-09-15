@@ -1,505 +1,72 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-14 21:44:12
+Date: 2026-09-15 12:38:59
 AST Mode: True
 Line Numbers: False
-Modules: global_backlog.md, schemas.py, router.py, test_router.py, download_service.py
-Processed Files: 5
+Modules: resolver_service.py, download_service.py, test_download.py, test_resolver.py
+Processed Files: 4
 ===========================
 
 
 
-// --- leai_docs/planning/global_backlog.md ---
+// --- backend/src/bibliography/resolver_service.py ---
 
-# Global Backlog
+import re
+from typing import Optional
+from urllib.parse import urljoin
+import httpx
+_BROWSER_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
+_PDF_META_PATTERNS = [re.compile('<meta[^>]+name=["\\\']citation_pdf_url["\\\'][^>]+content=["\\\']([^"\\\']+)["\\\']', re.IGNORECASE), re.compile('<meta[^>]+content=["\\\']([^"\\\']+)["\\\'][^>]+name=["\\\']citation_pdf_url["\\\']', re.IGNORECASE), re.compile('<link[^>]+type=["\\\']application/pdf["\\\'][^>]+href=["\\\']([^"\\\']+)["\\\']', re.IGNORECASE)]
 
-## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
-- [x] Story 1.0: Roadmap &amp; Planning Initialization
-- [x] Story 1.1: Project Dependencies &amp; Context Genesis
-
-## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
-- [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
-- [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
-- [x] [REQ-003] Bibliography Data Display &amp; Table View
-
-## EPIC 3: BATCH LOAD INTERFACE
-- [x] [REQ-004] Frontend Routing &amp; Main Layout
-- [x] [REQ-005] Load View - State Fractality (Custom Hook)
-- [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
-- [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
-
-## EPIC 4: BATCH DOWNLOAD EXECUTION
-- [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
-- [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
-- [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
-- [x] [REQ-011] Frontend SSE Hook State Integration
-
-## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
-- [x] [REQ-012] Load View Validation &amp; Label Updates
-- [x] [REQ-013] Queue View State &amp; UI Assembly
-- [x] [REQ-014] Backend ZIP Service &amp; Download Action
-
-## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
-- [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
-- [x] [REQ-016] Identity Domain Models &amp; Keywords
-- [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
-
-## EPIC 7: REFERENCES DATABASE INGESTION
-- [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
-- [x] [REQ-019] References Data Table View
-- [x] [REQ-020] Frontend Injection State Hook
-- [x] [REQ-021] References View Routing &amp; Assembly
-
-## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
-- [x] [REQ-022] Multiple File Upload Logic (FIFO Queue)
-- [x] [REQ-023] References Tab Translation to English
-- [x] [REQ-024] UI Standardization (Width & Headers)
-
-## Active Roadmaps
-- [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
-- [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
-- [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
-- [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
-- [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
-- [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
-- [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
-
-
-// --- backend/src/bibliography/schemas.py ---
-
-from datetime import datetime
-from typing import Optional, List
-from pydantic import BaseModel, ConfigDict, Field
-
-class ZipDownloadRequest(BaseModel):
-    """..."""
-
-class BatchDownloadRequest(BaseModel):
-    model_config = ConfigDict(strict=True, extra='forbid')
-    dois: List[str] = Field(..., description='List of Digital Object Identifiers to fetch.')
-    delay: int = Field(..., ge=0, description='Delay in seconds between sequential downloads.')
-    destination: str = Field(..., min_length=1, description='Target directory path for storing downloaded PDF files.')
-    email: str = Field(..., min_length=1, description='Contact email address for academic API polite pools.')
-
-class ParsedReference(BaseModel):
-    """..."""
-
-
-// --- backend/src/bibliography/router.py ---
-
-import os
-from typing import List
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-from .schemas import (
-    ParsedReference,
-    BatchDownloadRequest,
-    ZipDownloadRequest,
-)
-from .parser_service import parse_bibliography_content
-from .download_service import execute_batch_download
-from .zip_service import create_zip_from_pdfs
-from .injection_service import inject_references_to_db
-
-try:
-    from ..database.session import get_db
-except (ImportError, ValueError):
+async def resolve_institutional_pdf_url(doi: str, client: Optional[httpx.AsyncClient]=None) -> Optional[str]:
+    doi_url = f'https://doi.org/{doi}'
+    close_client = False
+    if client is None:
+        client = httpx.AsyncClient(timeout=15.0, follow_redirects=True)
+        close_client = True
     try:
-        from src.database.session import get_db
-    except ImportError:
-        from backend.src.database.session import get_db
-
-router = APIRouter()
-
-try:
-    import multipart
-    HAS_MULTIPART = True
-except ImportError:
-    HAS_MULTIPART = False
-
-async def _process_upload(file: UploadFile) -> List[ParsedReference]:
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-    
-    _, ext = os.path.splitext(file.filename)
-    if ext.lower() not in [".ris", ".bib"]:
-        raise HTTPException(status_code=400, detail="Unsupported file extension")
-    
-    try:
-        content_bytes = await file.read()
-        content_str = content_bytes.decode("utf-8")
-        refs = parse_bibliography_content(content_str, ext)
-        return refs
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error during parsing"
-        )
-
-
-async def _process_inject(
-    file: UploadFile, project_code: str, db: Session
-) -> dict:
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-
-    _, ext = os.path.splitext(file.filename)
-    if ext.lower() not in [".ris", ".bib"]:
-        raise HTTPException(
-            status_code=400, detail="Unsupported file extension"
-        )
-
-    try:
-        content_bytes = await file.read()
-        content_str = content_bytes.decode("utf-8")
-        refs = parse_bibliography_content(content_str, ext)
-        inserted = inject_references_to_db(db, refs, project_code)
-        return {"message": "Success", "inserted": inserted}
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as exc:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal server error during injection: {str(exc)}",
-        )
-
-if HAS_MULTIPART:
-    @router.post("/upload", response_model=List[ParsedReference])
-    async def upload_bibliography(file: UploadFile = File(...)):
-        return await _process_upload(file)
-
-    @router.post("/inject")
-    async def inject_bibliography(
-        file: UploadFile = File(...),
-        project_code: str = Form(...),
-        db: Session = Depends(get_db),
-    ):
-        return await _process_inject(file, project_code, db)
-else:
-    async def upload_bibliography(file: UploadFile):
-        return await _process_upload(file)
-
-    async def inject_bibliography(
-        file: UploadFile,
-        project_code: str,
-        db: Session,
-    ):
-        return await _process_inject(file, project_code, db)
-
-
-@router.post("/batch-download")
-async def batch_download(request: BatchDownloadRequest):
-    async def sse_generator():
-        async for event in execute_batch_download(
-            request.dois,
-            request.destination,
-            request.email,
-            request.delay,
-        ):
-            yield f"data: {event}\n\n"
-
-    return StreamingResponse(
-        sse_generator(),
-        media_type="text/event-stream"
-    )
-
-
-@router.post("/download-zip")
-async def download_zip(request: ZipDownloadRequest):
-    zip_io = create_zip_from_pdfs(request.batch_name, request.dois)
-    return StreamingResponse(
-        zip_io,
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": (
-                f"attachment; filename={request.batch_name}.zip"
-            )
-        },
-    )
-
-
-// --- backend/tests/bibliography/test_router.py ---
-
-import sys
-from pathlib import Path
-from io import BytesIO
-import asyncio
-from unittest.mock import patch, MagicMock
-from datetime import datetime, timezone
-import pytest
-
-_root = Path(__file__).resolve().parents[3]
-if str(_root) not in sys.path:
-    sys.path.insert(0, str(_root))
-
-from fastapi import UploadFile, HTTPException
-from backend.main import app
-from backend.src.bibliography.schemas import ParsedReference
-
-try:
-    from fastapi.testclient import TestClient
-    client = TestClient(app)
-    HAS_TESTCLIENT = True
-except (RuntimeError, ImportError):
-    client = None
-    HAS_TESTCLIENT = False
-
-from backend.src.bibliography.router import (
-    upload_bibliography,
-    batch_download,
-    download_zip,
-    inject_bibliography,
-)
-from backend.src.bibliography.schemas import (
-    BatchDownloadRequest,
-    ZipDownloadRequest,
-)
-
-def test_upload_bibliography_direct_success():
-    mock_ref = ParsedReference(
-        author="Test Author",
-        year="2024",
-        title="Test Title",
-        journal="Test Journal",
-        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc)
-    )
-    with patch(
-        "backend.src.bibliography.router.parse_bibliography_content",
-        return_value=[mock_ref]
-    ):
-        file = UploadFile(
-            filename="test.ris",
-            file=BytesIO(b"fake ris content")
-        )
-        result = asyncio.run(upload_bibliography(file))
-        assert len(result) == 1
-        assert result[0].title == "Test Title"
-
-def test_upload_bibliography_direct_invalid_extension():
-    file = UploadFile(
-        filename="test.txt",
-        file=BytesIO(b"fake txt content")
-    )
-    with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(upload_bibliography(file))
-    assert exc_info.value.status_code == 400
-    assert "Unsupported file extension" in exc_info.value.detail
-
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx2 not installed")
-@patch("backend.src.bibliography.router.parse_bibliography_content")
-def test_upload_bibliography_success(mock_parse):
-    # Arrange
-    mock_ref = ParsedReference(
-        author="Test Author",
-        year="2024",
-        title="Test Title",
-        journal="Test Journal",
-        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc)
-    )
-    mock_parse.return_value = [mock_ref]
-
-    file_content = b"fake ris content"
-    files = {"file": ("test.ris", file_content, "text/plain")}
-    
-    # Act
-    response = client.post("/api/bibliography/upload", files=files)
-    
-    # Assert
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 1
-    assert data[0]["title"] == "Test Title"
-    assert data[0]["author"] == "Test Author"
-    mock_parse.assert_called_once_with("fake ris content", ".ris")
-
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx2 not installed")
-def test_upload_bibliography_invalid_extension():
-    # Arrange
-    file_content = b"fake txt content"
-    files = {"file": ("test.txt", file_content, "text/plain")}
-    
-    # Act
-    response = client.post("/api/bibliography/upload", files=files)
-    
-    # Assert
-    assert response.status_code == 400
-    assert "Unsupported file extension" in response.json()["detail"]
-
-
-async def _run_batch_download_direct():
-    async def mock_generator(*args, **kwargs):
-        yield '{"log": "test"}'
-
-    req = BatchDownloadRequest(
-        dois=["10.1000/182"],
-        delay=0,
-        destination="/tmp/downloads",
-        email="test@example.com",
-    )
-    with patch(
-        "backend.src.bibliography.router.execute_batch_download",
-        side_effect=mock_generator,
-    ):
-        response = await batch_download(req)
-        assert response.media_type == "text/event-stream"
-        chunks = [chunk async for chunk in response.body_iterator]
-        assert chunks == ['data: {"log": "test"}\n\n']
-
-
-def test_batch_download_endpoint_direct():
-    asyncio.run(_run_batch_download_direct())
-
-
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
-def test_batch_download_endpoint_client():
-    async def mock_generator(*args, **kwargs):
-        yield '{"log": "test"}'
-
-    payload = {
-        "dois": ["10.1000/182"],
-        "delay": 0,
-        "destination": "/tmp/downloads",
-        "email": "test@example.com",
-    }
-    with patch(
-        "backend.src.bibliography.router.execute_batch_download",
-        side_effect=mock_generator,
-    ):
-        response = client.post(
-            "/api/bibliography/batch-download", json=payload
-        )
-        assert response.status_code == 200
-        assert "text/event-stream" in response.headers["content-type"]
-        assert 'data: {"log": "test"}\n\n' in response.text
-
-
-async def _run_download_zip_direct():
-    dummy_io = BytesIO(b"PK\x03\x04fakezip")
-    req = ZipDownloadRequest(batch_name="test", dois=[])
-    with patch(
-        "backend.src.bibliography.router.create_zip_from_pdfs",
-        return_value=dummy_io,
-    ) as mock_service:
-        response = await download_zip(req)
-        assert response.media_type == "application/zip"
-        assert (
-            response.headers["Content-Disposition"]
-            == "attachment; filename=test.zip"
-        )
-        mock_service.assert_called_once_with("test", [])
-
-
-def test_download_zip_endpoint_direct():
-    asyncio.run(_run_download_zip_direct())
-
-
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
-def test_download_zip_endpoint_client():
-    dummy_io = BytesIO(b"PK\x03\x04fakezip")
-    payload = {"batch_name": "test", "dois": []}
-    with patch(
-        "backend.src.bibliography.router.create_zip_from_pdfs",
-        return_value=dummy_io,
-    ) as mock_service:
-        response = client.post(
-            "/api/bibliography/download-zip", json=payload
-        )
-        assert response.status_code == 200
-        assert response.headers["content-type"] == "application/zip"
-        assert (
-            response.headers["content-disposition"]
-            == "attachment; filename=test.zip"
-        )
-        mock_service.assert_called_once_with("test", [])
-
-
-def test_inject_bibliography_direct_success():
-    mock_ref = ParsedReference(
-        author="Test Author",
-        year="2024",
-        title="Test Title",
-        journal="Test Journal",
-        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
-    )
-    with patch(
-        "backend.src.bibliography.router.parse_bibliography_content",
-        return_value=[mock_ref],
-    ), patch(
-        "backend.src.bibliography.router.inject_references_to_db",
-        return_value=10,
-    ):
-        file = UploadFile(
-            filename="references.ris",
-            file=BytesIO(b"fake ris content"),
-        )
-        fake_db = MagicMock()
-        result = asyncio.run(
-            inject_bibliography(file, "PROJ-1", fake_db)
-        )
-        assert result == {"message": "Success", "inserted": 10}
-
-
-def test_inject_bibliography_direct_invalid_extension():
-    file = UploadFile(
-        filename="references.txt",
-        file=BytesIO(b"fake txt content"),
-    )
-    fake_db = MagicMock()
-    with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(inject_bibliography(file, "PROJ-1", fake_db))
-    assert exc_info.value.status_code == 400
-    assert "Unsupported file extension" in exc_info.value.detail
-
-
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
-@patch("backend.src.bibliography.router.inject_references_to_db")
-@patch("backend.src.bibliography.router.parse_bibliography_content")
-def test_inject_bibliography_endpoint_success(mock_parse, mock_inject):
-    from backend.src.bibliography.router import get_db
-
-    mock_db = MagicMock()
-    app.dependency_overrides[get_db] = lambda: mock_db
-    try:
-        mock_ref = ParsedReference(
-            author="Test Author",
-            year="2024",
-            title="Test Title",
-            journal="Test Journal",
-            upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
-        )
-        mock_parse.return_value = [mock_ref]
-        mock_inject.return_value = 10
-
-        file_content = b"fake ris content"
-        files = {"file": ("test.ris", file_content, "text/plain")}
-        data = {"project_code": "PROJ-1"}
-
-        response = client.post(
-            "/api/bibliography/inject", files=files, data=data
-        )
-        assert response.status_code == 200
-        assert response.json() == {"message": "Success", "inserted": 10}
-        mock_inject.assert_called_once_with(mock_db, [mock_ref], "PROJ-1")
+        res = await client.get(doi_url, headers=_BROWSER_HEADERS, follow_redirects=True)
+        if res.status_code == 200:
+            html = res.text
+            for pattern in _PDF_META_PATTERNS:
+                match = pattern.search(html)
+                if match:
+                    raw_url = match.group(1).strip()
+                    return urljoin(str(res.url), raw_url)
+    except Exception:
+        pass
     finally:
-        app.dependency_overrides.pop(get_db, None)
+        if close_client:
+            await client.aclose()
+    return None
 
-
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
-def test_inject_bibliography_endpoint_invalid_extension():
-    file_content = b"fake txt content"
-    files = {"file": ("test.txt", file_content, "text/plain")}
-    data = {"project_code": "PROJ-1"}
-
-    response = client.post(
-        "/api/bibliography/inject", files=files, data=data
-    )
-    assert response.status_code == 400
-    assert "Unsupported file extension" in response.json()["detail"]
+async def resolve_pdf_url(doi: str, email: str) -> Optional[str]:
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            url = f'https://api.unpaywall.org/v2/{doi}?email={email}'
+            res = await client.get(url)
+            if res.status_code == 200:
+                loc = res.json().get('best_oa_location') or {}
+                if (pdf_url := loc.get('url_for_pdf')):
+                    return str(pdf_url)
+        except Exception:
+            pass
+        try:
+            url = f'https://api.openalex.org/works/doi:{doi}'
+            res = await client.get(url)
+            if res.status_code == 200:
+                oa = res.json().get('open_access') or {}
+                if (oa_url := oa.get('oa_url')):
+                    return str(oa_url)
+        except Exception:
+            pass
+        try:
+            inst_url = await resolve_institutional_pdf_url(doi, client=client)
+            if inst_url:
+                return inst_url
+        except Exception:
+            pass
+    return None
 
 
 // --- backend/src/bibliography/download_service.py ---
@@ -513,7 +80,10 @@ from .resolver_service import resolve_pdf_url
 from .file_storage_service import save_pdf_bytes
 
 async def _download_and_save(dest: str, doi: str, url: str) -> str:
-    """..."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        res = await client.get(url)
+        res.raise_for_status()
+        return await save_pdf_bytes(dest, doi, res.content)
 
 async def execute_batch_download(dois: List[str], dest: str, email: str, delay: int) -> AsyncGenerator[str, None]:
     total, completed = (len(dois), 0)
@@ -538,3 +108,89 @@ async def execute_batch_download(dois: List[str], dest: str, email: str, delay: 
             if sleep_duration > 0:
                 await asyncio.sleep(sleep_duration)
     yield json.dumps({'progress': total, 'total': total, 'log': 'Batch processing finished'})
+
+
+// --- backend/tests/bibliography/test_download.py ---
+
+import sys
+from pathlib import Path
+import json
+import asyncio
+from unittest.mock import AsyncMock, patch, MagicMock
+import httpx
+import pytest
+_root = Path(__file__).resolve().parents[3]
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
+from backend.src.bibliography.file_storage_service import save_pdf_bytes
+from backend.src.bibliography.download_service import execute_batch_download
+
+def test_save_pdf_bytes(tmp_path: Path):
+    """..."""
+
+async def _collect_events(dois, dest, email, delay=0):
+    """..."""
+
+def test_execute_batch_download_success():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'%PDF mock content'
+    mock_resp.raise_for_status = MagicMock()
+    with patch('backend.src.bibliography.download_service.resolve_pdf_url', new_callable=AsyncMock, return_value='https://example.com/paper.pdf'), patch('backend.src.bibliography.download_service.save_pdf_bytes', new_callable=AsyncMock, return_value='/downloads/10.x.pdf'), patch('httpx.AsyncClient.get', new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_resp
+        events = asyncio.run(_collect_events(['10.1000/182'], '/dest', 'test@mail.com', delay=0))
+        assert len(events) == 3
+        assert events[0]['progress'] == 0
+        assert events[0]['total'] == 1
+        assert 'Resolving' in events[0]['log']
+        assert events[1]['progress'] == 1
+        assert events[1]['total'] == 1
+        assert 'Downloaded' in events[1]['log']
+        assert events[2]['progress'] == 1
+        assert events[2]['total'] == 1
+        assert 'finished' in events[2]['log']
+
+def test_execute_batch_download_no_url():
+    """..."""
+
+def test_execute_batch_download_http_error():
+    """..."""
+
+
+// --- backend/tests/bibliography/test_resolver.py ---
+
+import sys
+from pathlib import Path
+import asyncio
+from unittest.mock import AsyncMock, patch, MagicMock
+import httpx
+import pytest
+_root = Path(__file__).resolve().parents[3]
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
+from backend.src.bibliography.resolver_service import resolve_pdf_url, resolve_institutional_pdf_url
+
+def test_resolve_pdf_url_unpaywall_success():
+    """..."""
+
+def test_resolve_pdf_url_openalex_fallback():
+    """..."""
+
+def test_resolve_pdf_url_both_fail():
+    """..."""
+
+def test_resolve_institutional_pdf_url_success():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.url = 'https://link.springer.com/article/10.1007/s001'
+    mock_resp.text = '<html><head><meta name="citation_pdf_url" content="https://link.springer.com/content/pdf/10.1007/s001.pdf"></head><body></body></html>'
+    with patch('httpx.AsyncClient.get', new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_resp
+        result = asyncio.run(resolve_institutional_pdf_url('10.1007/s001'))
+        assert result == 'https://link.springer.com/content/pdf/10.1007/s001.pdf'
+
+def test_resolve_institutional_pdf_url_relative_path():
+    """..."""
+
+def test_resolve_pdf_url_institutional_fallback():
+    """..."""

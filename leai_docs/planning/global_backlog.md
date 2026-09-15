@@ -52,7 +52,7 @@
 
 ## EPIC 11: COOKIE AUTHENTICATION PASSTHROUGH
 - [x] [REQ-029] Frontend UI State Fractality & Dumb View Wiring (Cookies)
-- [ ] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
+- [x] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
 - [ ] [REQ-031] CLI Argument Cookie Support (Script OCP)
 
 ## Active Roadmaps

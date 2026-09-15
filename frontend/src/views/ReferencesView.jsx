@@ -176,7 +176,7 @@ export function ReferencesView() {
         setIsModalOpen(true);
       }}
     >
-      + Upload References
+      + Add
     </button>
       </div>
 

@@ -31,7 +31,7 @@ Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-10.2.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_10_cookie_authentication.md and check - [x] for Story 10.2. 2. Append > Files touched: frontend/src/components/load/BatchConfig.jsx, frontend/src/components/load/BatchComponents.test.jsx under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-029]]. Type: Task.
 > Files touched: frontend/src/components/load/BatchConfig.jsx, frontend/src/components/load/BatchComponents.test.jsx
 
-- [ ] Story 10.3: Backend Boundary Marshal (DTOs & Router) | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 10.3: Backend Boundary Marshal (DTOs & Router) | [MoSCoW: MUST] | [Complexity: EASY]
 Business Requirement: Force strictly primitive string payload boundaries for incoming cookies. (<-- REQ-030)
 Story Context Radius: {"backend/src/bibliography/schemas.py": [""], "backend/src/bibliography/router.py": [""], "backend/tests/bibliography/test_schemas.py": [""], "backend/tests/bibliography/test_router.py": [""], "leai_docs/planning/roadmap_10_cookie_authentication.md": [""], "leai_docs/planning/global_backlog.md": [""]}
 Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
@@ -39,8 +39,9 @@ Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-10.3.2] [EXTERNAL/DTO]: [1. Open backend/src/bibliography/schemas.py. 2. Add cookies: Optional[str] = Field(None, description="Optional raw session cookies to bypass 403 blocks.") to BatchDownloadRequest and LocalBatchDownloadRequest]. Type: Task.
 [ID-10.3.3] [EXTERNAL/IO]: [1. Open backend/src/bibliography/router.py. 2. In batch_download, pass request.cookies as the 5th argument to execute_batch_download. 3. In batch_download_local, pass request.cookies as the 5th argument to execute_batch_download]. Type: Task.
 [ID-10.3.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_10_cookie_authentication.md and check - [x] for Story 10.3. 2. Append > Files touched: backend/src/bibliography/schemas.py, backend/src/bibliography/router.py, backend/tests/bibliography/test_schemas.py, backend/tests/bibliography/test_router.py under the story]. Type: Task.
+> Files touched: backend/src/bibliography/schemas.py, backend/src/bibliography/router.py, backend/tests/bibliography/test_schemas.py, backend/tests/bibliography/test_router.py
 
-- [ ] Story 10.4: Core Resolver & Downloader (Micro-Surgery & OCP) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 10.4: Core Resolver & Downloader (Micro-Surgery & OCP) | [MoSCoW: MUST] | [Complexity: MEDIUM]
 Business Requirement: Atomically inject cookies into the httpx.AsyncClient execution blocks without modifying core logical flows. (<-- REQ-030)
 Story Context Radius: {"backend/src/bibliography/resolver_service.py": [""], "backend/src/bibliography/download_service.py": [""], "backend/tests/bibliography/test_resolver.py": [""], "backend/tests/bibliography/test_download.py": [""], "leai_docs/planning/roadmap_10_cookie_authentication.md": [""], "leai_docs/planning/global_backlog.md": [""]}
 Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
@@ -48,6 +49,7 @@ Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-10.4.2] [CORE/LOGIC]: [1. Open backend/src/bibliography/resolver_service.py. 2. Add cookies: Optional[str] = None to resolve_pdf_url and resolve_institutional_pdf_url. 3. In resolve_institutional_pdf_url, if cookies is a string, parse it (parsed_cookies = dict(x.split('=') for x in cookies.split('; '))). 4. Pass cookies=parsed_cookies and headers=_BROWSER_HEADERS to client.get()]. Type: Task.
 [ID-10.4.3] [CORE/LOGIC]: [1. Open backend/src/bibliography/download_service.py. 2. Add cookies: Optional[str] = None to execute_batch_download and pass it down. 3. In _download_and_save, import _BROWSER_HEADERS from .resolver_service, add cookies: Optional[str] = None to signature, parse it, and execute client.get(url, headers=_BROWSER_HEADERS, cookies=parsed_cookies)]. Type: Task.
 [ID-10.4.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_10_cookie_authentication.md and check - [x] for Story 10.4. 2. Append > Files touched: backend/src/bibliography/resolver_service.py, backend/src/bibliography/download_service.py, backend/tests/bibliography/test_resolver.py, backend/tests/bibliography/test_download.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-030]]. Type: Task.
+> Files touched: backend/src/bibliography/resolver_service.py, backend/src/bibliography/download_service.py, backend/tests/bibliography/test_resolver.py, backend/tests/bibliography/test_download.py
 
 - [ ] Story 10.5: CLI Argument Cookie Support (Script OCP) | [MoSCoW: MUST] | [Complexity: EASY]
 Business Requirement: Extend the standalone batch script to consume cookies without breaking its standalone paradigm. (<-- REQ-031)

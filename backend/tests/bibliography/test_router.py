@@ -114,6 +114,7 @@ async def _run_batch_download_direct():
         delay=0,
         destination="/tmp/downloads",
         email="test@example.com",
+        cookies="auth=123",
     )
     with patch(
         "backend.src.bibliography.router.execute_batch_download",
@@ -139,6 +140,7 @@ def test_batch_download_endpoint_client():
         "delay": 0,
         "destination": "/tmp/downloads",
         "email": "test@example.com",
+        "cookies": "auth=123",
     }
     with patch(
         "backend.src.bibliography.router.execute_batch_download",
@@ -286,6 +288,7 @@ def test_batch_download_local_endpoint_client():
         "delay": 0,
         "destination": "/tmp/downloads",
         "email": "test@example.com",
+        "cookies": "auth=123",
     }
     fake_bib = "Some content with DOI: 10.1000/182 and another 10.1000/182"
 

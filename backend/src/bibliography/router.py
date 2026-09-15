@@ -113,6 +113,7 @@ async def batch_download(request: BatchDownloadRequest):
             request.destination,
             request.email,
             request.delay,
+            request.cookies,
         ):
             yield f"data: {event}\n\n"
 
@@ -139,7 +140,11 @@ async def batch_download_local(request: LocalBatchDownloadRequest):
 
     async def sse_generator():
         async for event in execute_batch_download(
-            dois, request.destination, request.email, request.delay
+            dois,
+            request.destination,
+            request.email,
+            request.delay,
+            request.cookies,
         ):
             yield f"data: {event}\n\n"
 

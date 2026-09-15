@@ -11,8 +11,21 @@ if str(_root) not in sys.path:
     sys.path.insert(0, str(_root))
 
 from backend.src.bibliography.file_storage_service import save_pdf_bytes
-from backend.src.bibliography.download_service import execute_batch_download
+from backend.src.bibliography.download_service import execute_batch_download, _download_and_save
 
+def test_download_and_save_with_cookies():
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'%PDF'
+    with patch('httpx.AsyncClient.get', new_callable=AsyncMock) as mock_get, patch(
+        'backend.src.bibliography.download_service.save_pdf_bytes',
+        new_callable=AsyncMock,
+        return_value='/dest/x.pdf'
+    ):
+        mock_get.return_value = mock_resp
+        asyncio.run(_download_and_save('/dest', '10.x', 'http://url', cookies="auth=123"))
+        mock_get.assert_called_once()
+        assert mock_get.call_args.kwargs.get('cookies') == {'auth': '123'}
 
 def test_save_pdf_bytes(tmp_path: Path):
     dest_dir = str(tmp_path / "downloads")

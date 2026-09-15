@@ -29,19 +29,16 @@ _PDF_META_PATTERNS = [
 ]
 
 
-async def resolve_institutional_pdf_url(
-    doi: str, client: Optional[httpx.AsyncClient] = None
-) -> Optional[str]:
-    doi_url = f"https://doi.org/{doi}"
+async def resolve_institutional_pdf_url(doi: str, client: Optional[httpx.AsyncClient]=None, cookies: Optional[str] = None) -> Optional[str]:
+    doi_url = f'https://doi.org/{doi}'
     close_client = False
     if client is None:
         client = httpx.AsyncClient(timeout=15.0, follow_redirects=True)
         close_client = True
 
+    parsed_cookies = dict(x.split('=', 1) for x in cookies.split('; ') if '=' in x) if isinstance(cookies, str) and cookies.strip() else None
     try:
-        res = await client.get(
-            doi_url, headers=_BROWSER_HEADERS, follow_redirects=True
-        )
+        res = await client.get(doi_url, headers=_BROWSER_HEADERS, follow_redirects=True, cookies=parsed_cookies)
         if res.status_code == 200:
             html = res.text
             for pattern in _PDF_META_PATTERNS:
@@ -58,7 +55,7 @@ async def resolve_institutional_pdf_url(
     return None
 
 
-async def resolve_pdf_url(doi: str, email: str) -> Optional[str]:
+async def resolve_pdf_url(doi: str, email: str, cookies: Optional[str] = None) -> Optional[str]:
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             url = f"https://api.unpaywall.org/v2/{doi}?email={email}"
@@ -79,7 +76,7 @@ async def resolve_pdf_url(doi: str, email: str) -> Optional[str]:
         except Exception:
             pass
         try:
-            inst_url = await resolve_institutional_pdf_url(doi, client=client)
+            inst_url = await resolve_institutional_pdf_url(doi, client=client, cookies=cookies)
             if inst_url:
                 return inst_url
         except Exception:

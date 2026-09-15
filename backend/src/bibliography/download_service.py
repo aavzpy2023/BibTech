@@ -3,21 +3,19 @@ import json
 import random
 from typing import AsyncGenerator, List
 import httpx
-from .resolver_service import resolve_pdf_url
+from .resolver_service import resolve_pdf_url, _BROWSER_HEADERS
 from .file_storage_service import save_pdf_bytes
 
-
-async def _download_and_save(dest: str, doi: str, url: str) -> str:
+async def _download_and_save(dest: str, doi: str, url: str, cookies: Optional[str] = None) -> str:
+    parsed_cookies = dict(x.split('=', 1) for x in cookies.split('; ') if '=' in x) if isinstance(cookies, str) and cookies.strip() else None
     async with httpx.AsyncClient(timeout=30.0) as client:
-        res = await client.get(url)
+        res = await client.get(url, headers=_BROWSER_HEADERS, cookies=parsed_cookies)
         res.raise_for_status()
         return await save_pdf_bytes(dest, doi, res.content)
 
 
-async def execute_batch_download(
-    dois: List[str], dest: str, email: str, delay: int
-) -> AsyncGenerator[str, None]:
-    total, completed = len(dois), 0
+async def execute_batch_download(dois: List[str], dest: str, email: str, delay: int, cookies: Optional[str] = None) -> AsyncGenerator[str, None]:
+    total, completed = (len(dois), 0)
     for doi in dois:
         yield json.dumps({
             "progress": completed,
@@ -27,9 +25,9 @@ async def execute_batch_download(
             "status": "resolving",
         })
         try:
-            url = await resolve_pdf_url(doi, email)
+            url = await resolve_pdf_url(doi, email, cookies)
             if url:
-                path = await _download_and_save(dest, doi, url)
+                path = await _download_and_save(dest, doi, url, cookies)
                 log = f'Downloaded {doi} to {path}'
                 status = 'downloaded'
             else:

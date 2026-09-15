@@ -68,11 +68,13 @@ def test_resolve_institutional_pdf_url_success():
         'content="https://link.springer.com/content/pdf/10.1007/s001.pdf">'
         '</head><body></body></html>'
     )
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+    with patch('httpx.AsyncClient.get', new_callable=AsyncMock) as mock_get:
         mock_get.return_value = mock_resp
-        result = asyncio.run(resolve_institutional_pdf_url("10.1007/s001"))
-        assert result == (
-            "https://link.springer.com/content/pdf/10.1007/s001.pdf"
+        result = asyncio.run(resolve_institutional_pdf_url('10.1007/s001', cookies="auth=123"))
+        assert result == 'https://link.springer.com/content/pdf/10.1007/s001.pdf'
+        mock_get.assert_called_once()
+        kwargs = mock_get.call_args.kwargs
+        assert kwargs.get('cookies') == {'auth': '123'}
         )
 
 

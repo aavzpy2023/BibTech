@@ -308,7 +308,7 @@ export function QueueView() {
             }}
             onClick={handleDownloadMissing}
           >
-            Export Missing DOIs (.txt)
+            Export Missing DOIs
           </button>
           <button
             type="button"
