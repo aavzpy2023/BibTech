@@ -61,6 +61,13 @@
 - [x] [REQ-034] References Table Pagination & Search State (State Fractality)
 - [x] [REQ-035] References Table Dumb View Wiring
 
+## EPIC 13: BIB ONLY INGESTION & INJECTION RESILIENCE
+- [x] Story 12.0: Roadmap & Planning Initialization
+- [ ] [REQ-036] Backend Router Boundary Marshal (.bib Restriction)
+- [ ] [REQ-038] Backend Parser Core Logic (.bib Extraction)
+- [ ] [REQ-039] Backend Injection DB Resilience
+- [ ] [REQ-037] Frontend Hook State Fractality (.bib Validation)
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
@@ -73,3 +80,4 @@
 - [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
 - [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
 - [Roadmap 11: References UI Refinement & Backend Bugfix](roadmap_11_references_ui_and_bugfixes.md)
+- [Roadmap 12: Bib Only Ingestion & Injection Resilience](roadmap_12_bib_only_and_injection_fix.md)
