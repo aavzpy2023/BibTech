@@ -289,7 +289,18 @@ def test_batch_download_local_endpoint_client():
     }
     fake_bib = "Some content with DOI: 10.1000/182 and another 10.1000/182"
 
+    mock_ref = ParsedReference(
+        author="Test Author",
+        year="2024",
+        title="Test Title",
+        journal="Test Journal",
+        doi="10.1000/182",
+        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
     with patch("builtins.open", mock_open(read_data=fake_bib)), patch(
+        "backend.src.bibliography.router.parse_bibliography_content",
+        return_value=[mock_ref],
+    ), patch(
         "backend.src.bibliography.router.execute_batch_download",
         side_effect=mock_generator,
     ) as mock_exec:
