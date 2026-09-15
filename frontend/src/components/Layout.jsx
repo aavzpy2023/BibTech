@@ -15,9 +15,11 @@ const styles = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    minHeight: '100vh'
+    height: '100vh',
+    overflow: 'hidden'
   },
   header: {
+    flexShrink: 0,
     borderBottom: '1px solid #e1e4e8',
     padding: '0 20px',
     backgroundColor: '#ffffff'
@@ -43,13 +45,13 @@ const styles = {
   main: {
     flex: 1,
     width: '100%',
-    padding: '24px',
-    maxWidth: '1200px',
-    margin: '0 auto',
+    padding: '20px 24px',
+    overflowY: 'auto',
     boxSizing: 'border-box'
   },
   footer: {
-    padding: '24px',
+    flexShrink: 0,
+    padding: '10px 20px',
     textAlign: 'center',
     borderTop: '1px solid #e1e4e8',
     backgroundColor: '#ffffff',
@@ -62,6 +64,14 @@ function Layout() {
   const currentYear = new Date().getFullYear();
   return (
     <div style={styles.container}>
+      <style>{`
+        html, body {
+          margin: 0;
+          padding: 0;
+          height: 100%;
+          overflow: hidden;
+        }
+      `}</style>
       <header style={styles.header}>
         <nav style={styles.nav}>
           {navItems.map((item) => (

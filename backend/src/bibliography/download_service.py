@@ -1,5 +1,6 @@
 import asyncio
 import json
+import random
 from typing import AsyncGenerator, List
 import httpx
 from .resolver_service import resolve_pdf_url
@@ -46,8 +47,12 @@ async def execute_batch_download(
             'status': status,
             "log": log
         })
-        if delay > 0 and completed < total:
-            await asyncio.sleep(delay)
+        if completed < total:
+            sleep_duration = (
+                random.uniform(2.0, 5.0) if delay != 0 else 0
+            )
+            if sleep_duration > 0:
+                await asyncio.sleep(sleep_duration)
     yield json.dumps({
         "progress": total,
         "total": total,

@@ -153,8 +153,25 @@ export function QueueView() {
     monitor,
     statuses = {},
     startBatch,
-    isDownloading
+    isDownloading,
+    addDoisToQueue
   } = useBatchLoad();
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newDoisText, setNewDoisText] = useState('');
+  const [addFeedback, setAddFeedback] = useState(null);
+
+  const handleAddDois = () => {
+    if (!newDoisText.trim()) return;
+    const added = addDoisToQueue ? addDoisToQueue(newDoisText, config) : 0;
+    if (added === 0) {
+      setAddFeedback('All entered DOIs are already in the queue.');
+    } else {
+      setAddFeedback(null);
+      setNewDoisText('');
+      setIsAddModalOpen(false);
+    }
+  };
 
   useEffect(() => {
     if (
@@ -276,6 +293,16 @@ export function QueueView() {
         </div>
       </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <button
+            type="button"
+            style={styles.secondaryButton}
+            onClick={() => {
+              setAddFeedback(null);
+              setIsAddModalOpen(true);
+            }}
+          >
+            + Add DOIs
+          </button>
           <label style={styles.filterLabel}>
             <input
               type="checkbox"
@@ -370,6 +397,120 @@ export function QueueView() {
           )}
         </tbody>
       </table>
+
+      {isAddModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setIsAddModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '24px',
+              borderRadius: '8px',
+              width: '450px',
+              maxWidth: '90%'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '12px'
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#24292e' }}>
+                Add DOIs to Queue
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '18px',
+                  cursor: 'pointer'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <p
+              style={{
+                fontSize: '13px',
+                color: '#586069',
+                margin: '0 0 12px 0'
+              }}
+            >
+              Enter DOIs (one per line). Existing DOIs in the queue will be
+              skipped.
+            </p>
+            {addFeedback && (
+              <div
+                style={{
+                  color: '#cb2431',
+                  fontSize: '13px',
+                  marginBottom: '10px'
+                }}
+              >
+                {addFeedback}
+              </div>
+            )}
+            <textarea
+              style={{
+                width: '100%',
+                minHeight: '130px',
+                padding: '10px',
+                borderRadius: '6px',
+                border: '1px solid #d1d5da',
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                boxSizing: 'border-box',
+                marginBottom: '16px'
+              }}
+              placeholder="10.1000/182&#10;10.1000/183"
+              value={newDoisText}
+              onChange={(e) => setNewDoisText(e.target.value)}
+            />
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '10px'
+              }}
+            >
+              <button
+                type="button"
+                style={styles.secondaryButton}
+                onClick={() => setIsAddModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                style={styles.downloadButton}
+                disabled={!newDoisText.trim()}
+                onClick={handleAddDois}
+              >
+                Add to Queue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

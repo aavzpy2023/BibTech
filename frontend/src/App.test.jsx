@@ -28,10 +28,8 @@ describe('DashboardView UI Standardization', () => {
     
     const dashboardContainer = container.firstChild;
     expect(dashboardContainer).toHaveStyle({
-      padding: '24px',
-      backgroundColor: '#ffffff',
-      border: '1px solid #e1e4e8',
-      borderRadius: '8px'
+      padding: '0',
+      textAlign: 'center'
     });
     
     const title = getByRole('heading', { level: 1 });

@@ -2,7 +2,8 @@ import React, {
   createContext,
   useContext,
   useState,
-  useCallback
+  useCallback,
+  useRef
 } from 'react';
 
 const initialInputState = {
@@ -29,6 +30,12 @@ function useBatchLoadInternal() {
   const [statuses, setStatuses] = useState({});
   const [isDownloading, setIsDownloading] = useState(false);
   const [activeDois, setActiveDois] = useState([]);
+  const pendingQueueRef = useRef([]);
+  const isDownloadingRef = useRef(false);
+  const activeDoisRef = useRef([]);
+
+  activeDoisRef.current = activeDois;
+  isDownloadingRef.current = isDownloading;
 
   const updateInput = useCallback((fieldOrUpdates, maybeValue) => {
     setInput((prev) => {
@@ -151,9 +158,56 @@ function useBatchLoadInternal() {
         logs: [...prev.logs, `Error: ${err.message}`]
       }));
     } finally {
-      setIsDownloading(false);
+      if (pendingQueueRef.current.length > 0) {
+        const nextBatch = [...pendingQueueRef.current];
+        pendingQueueRef.current = [];
+        startBatch(nextBatch, activeConfig);
+      } else {
+        setIsDownloading(false);
+      }
     }
   }, [input.dois, config.delay, config.destination, config.email]);
+
+  const addDoisToQueue = useCallback(
+    (incomingDois, overrideConfig) => {
+      const list = (Array.isArray(incomingDois)
+        ? incomingDois
+        : String(incomingDois || '')
+            .split('\n')
+            .map((d) => d.trim())
+            .filter(Boolean));
+
+      const existing = new Set(activeDoisRef.current);
+      const uniqueNew = list.filter((d) => !existing.has(d));
+
+      if (uniqueNew.length === 0) return 0;
+
+      const activeConfig = overrideConfig ?? config;
+
+      setActiveDois((prev) => [...prev, ...uniqueNew]);
+      setStatuses((prev) => {
+        const next = { ...prev };
+        uniqueNew.forEach((d) => {
+          next[d] = 'queued';
+        });
+        return next;
+      });
+      setMonitor((prev) => ({
+        ...prev,
+        total: prev.total + uniqueNew.length,
+        logs: [...prev.logs, `Queued ${uniqueNew.length} new DOIs`]
+      }));
+
+      if (isDownloadingRef.current) {
+        pendingQueueRef.current.push(...uniqueNew);
+      } else {
+        startBatch(uniqueNew, activeConfig);
+      }
+
+      return uniqueNew.length;
+    },
+    [config, startBatch]
+  );
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.email);
 
@@ -169,7 +223,8 @@ function useBatchLoadInternal() {
     updateInput,
     updateConfig,
     updateMonitor,
-    startBatch
+    startBatch,
+    addDoisToQueue
   };
 }
 

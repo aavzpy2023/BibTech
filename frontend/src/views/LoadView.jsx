@@ -58,14 +58,14 @@ export function LoadView() {
     isValidEmail,
     isDownloading,
     resetBatch,
-    startBatch
+    startBatch,
+    addDoisToQueue
   } = useBatchLoad();
 
   const isValid =
     input.dois.trim() !== '' &&
     config.destination.trim() !== '' &&
-    isValidEmail &&
-    !isDownloading;
+    isValidEmail;
     config.email.trim() !== '';
 
   return (
@@ -108,7 +108,11 @@ export function LoadView() {
         disabled={!isValid}
         isDownloading={isDownloading}
         onStart={() => {
-          startBatch();
+          if (isDownloading && addDoisToQueue) {
+            addDoisToQueue(input.dois, config);
+          } else {
+            startBatch();
+          }
           navigate('/queue', { state: { dois: input.dois, config } });
         }}
       />

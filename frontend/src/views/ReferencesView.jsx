@@ -6,11 +6,8 @@ import UploadReferencesModal from '../components/references/UploadReferencesModa
 const styles = {
   container: {
     fontFamily: 'system-ui, sans-serif',
-    padding: '32px',
+    padding: '0',
     color: '#24292e',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e1e4e8',
-    borderRadius: '8px',
   },
   header: {
     display: 'flex',

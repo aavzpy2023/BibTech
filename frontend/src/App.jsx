@@ -25,7 +25,7 @@ export function DashboardView() {
   }, []);
 
   const styles = {
-    container: { fontFamily: 'system-ui, sans-serif', padding: '24px', backgroundColor: '#ffffff', border: '1px solid #e1e4e8', borderRadius: '8px', textAlign: 'center', color: '#333' },
+    container: { fontFamily: 'system-ui, sans-serif', padding: '0', textAlign: 'center', color: '#333' },
     card: { border: '1px solid #e1e4e8', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', backgroundColor: '#fff', textAlign: 'left' },
     badge: { backgroundColor: '#e2f5ea', color: '#137333', padding: '6px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: 'bold', display: 'inline-block', marginBottom: '15px' },
     title: { fontSize: '24px', fontWeight: 'bold', color: '#24292e', margin: '0 0 8px 0' }

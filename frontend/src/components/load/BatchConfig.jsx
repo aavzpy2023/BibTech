@@ -56,7 +56,7 @@ export function BatchConfig({
 
   return (
     <div style={styles.container}>
-      <div style={styles.section}>
+      <div style={{ display: 'none' }}>
         <label htmlFor="delay-slider" style={styles.label}>
           Delay between downloads: {currentDelay}s
         </label>
