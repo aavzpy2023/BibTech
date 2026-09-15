@@ -40,6 +40,8 @@
 │   │   │   ├── components/
 │   │   │   │   ├── BibliographyUploader.jsx
 │   │   │   │   ├── Layout.jsx
+│   │   │   │   ├── Modal.jsx
+│   │   │   │   ├── Modal.test.jsx
 │   │   │   │   ├── ReferenceTable.jsx
 │   │   │   │   ├── load/
 │   │   │   │   │   ├── BatchComponents.test.jsx

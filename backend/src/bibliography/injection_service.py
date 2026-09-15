@@ -32,15 +32,32 @@ def inject_references_to_db(
             except (ValueError, TypeError):
                 year_val = None
 
-        article = Article(
-            title=ref.title or "Untitled",
-            journal=ref.journal,
-            year=year_val,
-            doi=getattr(ref, "doi", None),
-        )
-        db.add(article)
-        db.flush()
-        db.add(ProjectArticle(project_id=project.id, article_id=article.id))
+        doi_val = getattr(ref, "doi", None)
+        article = None
+        
+        if doi_val:
+            article = db.query(Article).filter(Article.doi == doi_val).first()
+        if not article:
+            title_val = ref.title or "Untitled"
+            article = db.query(Article).filter(Article.title == title_val).first()
+            
+        if not article:
+            article = Article(
+                title=ref.title or "Untitled",
+                journal=ref.journal,
+                year=year_val,
+                doi=doi_val,
+            )
+            db.add(article)
+            db.flush()
+
+        link = db.query(ProjectArticle).filter(
+            ProjectArticle.project_id == project.id,
+            ProjectArticle.article_id == article.id
+        ).first()
+        
+        if not link:
+            db.add(ProjectArticle(project_id=project.id, article_id=article.id))
 
     db.commit()
     return len(refs)

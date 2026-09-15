@@ -235,7 +235,11 @@ def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
             )
             
     elif ext.lower() == ".bib":
-        entries = _parse_bibtex_entries(content)
+        try:
+            entries = _parse_bibtex_entries(content)
+        except Exception:
+            entries = []
+            
         for entry in entries:
             parsed_refs.append(
                 ParsedReference(

@@ -1,774 +1,723 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-15 20:28:30
+Date: 2026-09-15 20:35:30
 AST Mode: True
 Line Numbers: False
-Modules: BibliographyUploader.jsx, BatchInput.jsx, BatchConfig.jsx, UploadReferencesModal.jsx
-Processed Files: 4
+Modules: download_service.py, schemas.py, resolver_service.py, injection_service.py, parser_service.py, router.py
+Processed Files: 6
 ===========================
 
 
 
-// --- frontend/src/components/BibliographyUploader.jsx ---
+// --- backend/src/bibliography/download_service.py ---
 
-import React from 'react';
-import { useDropzone } from 'react-dropzone';
+import asyncio
+import json
+import random
+from typing import Optional, List, Dict, Any, AsyncGenerator
+import httpx
+from .resolver_service import resolve_pdf_url, _BROWSER_HEADERS
+from .file_storage_service import save_pdf_bytes
 
-const styles = {
-  dropzone: {
-    border: '2px dashed #0366d6',
-    borderRadius: '8px',
-    padding: '40px',
-    textAlign: 'center',
-    cursor: 'pointer',
-    backgroundColor: '#161b22',
-    border: '2px dashed #30363d',
-    marginBottom: '24px',
-    transition: 'background-color 0.2s ease'
-  },
-  dropzoneActive: {
-    backgroundColor: '#e1f5fe',
-    borderColor: '#0288d1'
-  },
-  text: {
-    margin: 0,
-    color: '#f0f6fc',
-    fontSize: '16px',
-    fontWeight: '500'
-  },
-  subtext: {
-    margin: '8px 0 0 0',
-    color: '#8b949e',
-    fontSize: '14px'
-  }
-};
-
-export function BibliographyUploader({ onUpload }) {
-  const onDrop = (acceptedFiles) => {
-    if (acceptedFiles.length > 0 && onUpload) {
-      onUpload(acceptedFiles);
-    }
-  };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'text/plain': ['.ris', '.bib']
-    },
-    multiple: true
-  });
-
-  return (
-    <div
-      {...getRootProps()}
-      style={{
-        ...styles.dropzone,
-        ...(isDragActive ? styles.dropzoneActive : {})
-      }}
-    >
-      <input {...getInputProps()} />
-      <p style={styles.text}>
-        Arrastra y suelta un archivo bibliográfico aquí, o haz clic para seleccionar
-      </p>
-      <p style={styles.subtext}>Formatos soportados: .ris, .bib</p>
-    </div>
-  );
-}
-
-export default BibliographyUploader;
+async def _download_and_save(dest: str, doi: str, url: str, cookies: Optional[str] = None) -> str:
+    parsed_cookies = dict(x.split('=', 1) for x in cookies.split('; ') if '=' in x) if isinstance(cookies, str) and cookies.strip() else None
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        res = await client.get(url, headers=_BROWSER_HEADERS, cookies=parsed_cookies)
+        res.raise_for_status()
+        return await save_pdf_bytes(dest, doi, res.content)
 
 
-// --- frontend/src/components/load/BatchInput.jsx ---
+async def execute_batch_download(dois: List[str], dest: str, email: str, delay: int, cookies: Optional[str] = None) -> AsyncGenerator[str, None]:
+    total, completed = (len(dois), 0)
+    for doi in dois:
+        yield json.dumps({
+            "progress": completed,
+            "total": total,
+            "log": f"Resolving: {doi}",
+            "doi": doi,
+            "status": "resolving",
+        })
+        try:
+            url = await resolve_pdf_url(doi, email, cookies)
+            if url:
+                path = await _download_and_save(dest, doi, url, cookies)
+                log = f'Downloaded {doi} to {path}'
+                status = 'downloaded'
+            else:
+                log = f'No open access URL found for {doi}'
+                status = 'not_found'
+        except Exception as err:
+            log = f'Failed {doi}: {err}'
+            status = 'failed'
+        completed += 1
+        yield json.dumps({
+            'progress': completed,
+            'total': total,
+            'log': log,
+            'doi': doi,
+            'status': status,
+            "log": log
+        })
+        if completed < total:
+            sleep_duration = (
+                random.uniform(2.0, 5.0) if delay != 0 else 0
+            )
+            if sleep_duration > 0:
+                await asyncio.sleep(sleep_duration)
+    yield json.dumps({
+        "progress": total,
+        "total": total,
+        "log": "Batch processing finished"
+    })
 
-import React, { useState } from 'react';
-import { useDropzone } from 'react-dropzone';
 
-export function extractDoisFromText(text, filename = '') {
-  const isBib = filename.toLowerCase().endsWith('.bib');
-  const foundDois = [];
-  const missingDoisAlerts = [];
 
-  if (!isBib) {
-    return { foundDois, missingDoisAlerts };
-  }
+// --- backend/src/bibliography/schemas.py ---
 
-  // Fallback para evitar errores en variables no usadas (isRis)
-  if (false) {
-    const risRegex = /^[ \t]*DO\s+-\s+(.+)$/gim;
-    let match;
-    while ((match = risRegex.exec(text)) !== null) {
-      const doi = match[1].trim();
-      if (doi && !foundDois.includes(doi)) {
-        foundDois.push(doi);
-      }
-    }
-  }
+from datetime import datetime
+from typing import Optional, List, Dict, Any, AsyncGenerator
+from pydantic import BaseModel, ConfigDict, Field
 
-  if (isBib) {
-    const entryRegex = /@\w+\s*{\s*([^,]+)/gi;
-    let entryMatch;
+
+class ZipDownloadRequest(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    batch_name: str = Field(
+        ...,
+        description="The name of the batch folder containing the PDFs.",
+    )
+    dois: List[str] = Field(
+        ...,
+        description="List of DOIs to include in the ZIP archive.",
+    )
+
+
+class BatchDownloadRequest(BaseModel):
+    cookies: Optional[str] = Field(
+        None, description="Optional raw session cookies to bypass 403 blocks."
+    )
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    dois: List[str] = Field(
+        ...,
+        description="List of Digital Object Identifiers to fetch."
+    )
+    delay: int = Field(
+        ...,
+        ge=0,
+        description="Delay in seconds between sequential downloads."
+    )
+    destination: str = Field(
+        ...,
+        min_length=1,
+        description="Target directory path for storing downloaded PDF files."
+    )
+    email: str = Field(
+        ...,
+        min_length=1,
+        description="Contact email address for academic API polite pools."
+    )
+
+
+class LocalBatchDownloadRequest(BaseModel):
+    cookies: Optional[str] = Field(
+        None, description="Optional raw session cookies to bypass 403 blocks."
+    )
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    file_path: str = Field(
+        ...,
+        min_length=1,
+        description="Absolute or relative path to the local bibliography file."
+    )
+    destination: str = Field(
+        ...,
+        min_length=1,
+        description="Target directory path for storing downloaded PDF files."
+    )
+    email: str = Field(
+        ...,
+        min_length=1,
+        description="Contact email address for academic API polite pools."
+    )
+    delay: int = Field(
+        5,
+        ge=0,
+        description="Delay in seconds between sequential downloads."
+    )
+
+
+class ParsedReference(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
     
-    while ((entryMatch = entryRegex.exec(text)) !== null) {
-      const citationKey = entryMatch[1].trim();
-      
-      const startIndex = entryMatch.index;
-      let openBraces = 0;
-      let endIndex = startIndex;
-      let started = false;
-      
-      for (let i = startIndex; i < text.length; i++) {
-        if (text[i] === '{') {
-          openBraces++;
-          started = true;
-        } else if (text[i] === '}') {
-          openBraces--;
-        }
-        if (started && openBraces === 0) {
-          endIndex = i;
-          break;
-        }
-      }
-      
-      const entryText = text.substring(startIndex, endIndex + 1);
-      
-      const bibRegex = /\bdoi\s*=\s*(?:\{([^}]+)\}|"([^"]+)")/i;
-      const doiMatch = bibRegex.exec(entryText);
-      
-      if (doiMatch) {
-        const doi = (doiMatch[1] || doiMatch[2] || '').trim();
-        if (doi && !foundDois.includes(doi)) {
-          foundDois.push(doi);
-        }
-      } else {
-        missingDoisAlerts.push(`Citation key [${citationKey}] is missing a DOI.`);
-      }
-    }
-  }
+    author: Optional[str] = None
+    year: Optional[str] = None
+    title: Optional[str] = None
+    journal: Optional[str] = None
+    doi: Optional[str] = None
+    upload_datetime: datetime
 
-  if (false && foundDois.length === 0) {
-    const genericRegex = /\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+\b/gi;
-    let match;
-    while ((match = genericRegex.exec(text)) !== null) {
-      const doi = match[0].trim();
-      if (doi && !foundDois.includes(doi)) {
-        foundDois.push(doi);
-      }
-    }
-  }
 
-  return { foundDois, missingDoisAlerts };
+// --- backend/src/bibliography/resolver_service.py ---
+
+import re
+from typing import Optional, List, Dict, Any, AsyncGenerator
+from urllib.parse import urljoin
+import httpx
+
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+    ),
 }
 
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-    marginBottom: '24px'
-  },
-  dropzone: {
-    border: '2px dashed #0366d6',
-    borderRadius: '8px',
-    padding: '24px',
-    textAlign: 'center',
-    cursor: 'pointer',
-    backgroundColor: '#161b22',
-    border: '2px dashed #30363d'
-  },
-  dropzoneActive: {
-    backgroundColor: '#e1f5fe',
-    borderColor: '#0288d1'
-  },
-  textarea: {
-    width: '100%',
-    minHeight: '300px',
-    padding: '12px',
-    borderRadius: '6px',
-    border: '1px solid #30363d',
-    backgroundColor: '#0d1117',
-    color: '#f0f6fc',
-    fontFamily: 'monospace',
-    fontSize: '13px',
-    boxSizing: 'border-box'
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: '14px',
-    color: '#f0f6fc',
-    marginBottom: '6px',
-    display: 'block'
-  },
-  fileList: {
-    marginTop: '8px',
-    fontSize: '13px',
-    color: '#586069'
-  },
-  uploadBtn: {
-    backgroundColor: '#0366d6', color: '#ffffff', border: 'none', borderRadius: '6px',
-    padding: '8px 16px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
-  },
-  modalOverlay: {
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-  },
-  modalContent: {
-    backgroundColor: '#161b22', color: '#f0f6fc', border: '1px solid #30363d', padding: '24px', borderRadius: '8px', width: '450px', maxWidth: '90%'
-  },
-  badge: {
-    backgroundColor: '#21262d', color: '#f0f6fc', padding: '4px 8px', borderRadius: '12px', fontSize: '12px', marginLeft: '8px'
-  },
-  headerRow: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'
-  }
-};
-
-export function BatchInput({
-  files = [],
-  dois = '',
-  input,
-  onInputUpdate
-}) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [missingDois, setMissingDois] = useState([]);
-  const currentFiles = input?.files ?? files;
-  const currentDois = input?.dois ?? dois;
-
-  const onDrop = async (acceptedFiles) => {
-    const validFiles = (acceptedFiles || []).filter((file) => {
-      const ext = file.name.toLowerCase().split('.').pop();
-      return ext === 'bib';
-    });
-
-    if (validFiles.length === 0) {
-      alert("Only .bib files are accepted for this operation.");
-      return;
-    }
-
-    if (onInputUpdate) {
-      onInputUpdate('files', validFiles);
-    }
-
-    const allExtractedDois = [];
-    const allMissingAlerts = [];
-    for (const file of validFiles) {
-      try {
-        const text = await file.text();
-        const { foundDois, missingDoisAlerts } = extractDoisFromText(text, file.name);
-        allExtractedDois.push(...foundDois);
-        allMissingAlerts.push(...missingDoisAlerts);
-      } catch (err) {
-        console.error('Failed to read file for DOI extraction', err);
-      }
-    }
-
-    if (allMissingAlerts.length > 0) {
-      setMissingDois(allMissingAlerts);
-    }
-
-    if (allExtractedDois.length > 0 && onInputUpdate) {
-      const existing = currentDois
-        ? currentDois
-            .split('\n')
-            .map((d) => d.trim())
-            .filter(Boolean)
-        : [];
-      const merged = Array.from(new Set([...existing, ...allExtractedDois]));
-      onInputUpdate('dois', merged.join('\n'));
-    }
-    setIsModalOpen(false);
-  };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'text/plain': ['.bib'],
-      'application/x-bibtex': ['.bib']
-    }
-  });
-
-  const doiList = currentDois ? currentDois.split('\n').map(d => d.trim()).filter(Boolean) : [];
-  const uniqueDois = Array.from(new Set(doiList));
-  const doiCount = uniqueDois.length;
-
-  const handleBlur = () => {
-    if (currentDois && onInputUpdate) {
-      onInputUpdate('dois', uniqueDois.join('\n'));
-    }
-  };
-
-  const downloadMissingTxt = () => {
-    const blob = new Blob([missingDois.join('\n')], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'missing_dois.txt';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  return (
-    <div style={styles.container}>
-      <div style={styles.headerRow}>
-        <label htmlFor="batch-dois-textarea" style={{ ...styles.label, marginBottom: 0 }}>
-          List of DOIs (one per line)
-          <span style={styles.badge}>{doiCount} PDFs to download</span>
-        </label>
-        <button type="button" style={styles.uploadBtn} onClick={() => setIsModalOpen(true)}>
-          + Upload files
-        </button>
-      </div>
-      {isModalOpen && (
-        <div style={styles.modalOverlay} onClick={() => setIsModalOpen(false)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.headerRow}>
-              <h3 style={{ margin: 0, fontSize: '18px' }}>Extract DOIs</h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
-            </div>
-            <p style={{ fontSize: '14px', color: '#586069', marginBottom: '16px' }}>Select .bib files to automatically extract DOIs.</p>
-        <div
-          {...getRootProps()}
-          style={{
-            ...styles.dropzone,
-            ...(isDragActive ? styles.dropzoneActive : {})
-          }}
-        >
-          <input {...getInputProps()} />
-          <p style={{ margin: 0, color: '#444' }}>
-            Drag or select files here / Arrastra o selecciona archivos (.bib)
-          </p>
-          {currentFiles && currentFiles.length > 0 && (
-            <div style={styles.fileList}>
-              {currentFiles.length} file(s) selected
-            </div>
-          )}
-        </div>
-          </div>
-        </div>
-      )}
-
-      {missingDois.length > 0 && (
-        <div style={styles.modalOverlay} onClick={() => setMissingDois([])}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.headerRow}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#cb2431' }}>Missing DOIs</h3>
-              <button type="button" onClick={() => setMissingDois([])} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
-            </div>
-            <p style={{ fontSize: '14px', color: '#586069', marginBottom: '16px' }}>
-              The following citation keys did not have a valid DOI associated with them:
-            </p>
-            <ul style={{ fontSize: '13px', color: '#24292e', maxHeight: '200px', overflowY: 'auto', paddingLeft: '20px', margin: '0 0 16px 0', fontFamily: 'monospace' }}>
-              {missingDois.map((msg, idx) => (
-                <li key={idx} style={{ marginBottom: '6px' }}>{msg}</li>
-              ))}
-            </ul>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button type="button" onClick={downloadMissingTxt} style={{ ...styles.uploadBtn, backgroundColor: '#2ea44f' }}>
-                Download .txt
-              </button>
-              <button type="button" onClick={() => setMissingDois([])} style={{ ...styles.uploadBtn, backgroundColor: '#f6f8fa', color: '#24292e', border: '1px solid #d1d5da' }}>
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-        <textarea
-          onBlur={handleBlur}
-          id="batch-dois-textarea"
-          style={styles.textarea}
-          placeholder="10.1000/182&#10;10.1000/183"
-          value={currentDois}
-          onChange={(e) => {
-            if (onInputUpdate) {
-              onInputUpdate('dois', e.target.value);
-            }
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-export default BatchInput;
+_PDF_META_PATTERNS = [
+    re.compile(
+        r'<meta[^>]+name=["\']citation_pdf_url["\'][^>]+content=["\']([^"\']+)["\']',
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']citation_pdf_url["\']',
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r'<link[^>]+type=["\']application/pdf["\'][^>]+href=["\']([^"\']+)["\']',
+        re.IGNORECASE,
+    ),
+]
 
 
-// --- frontend/src/components/load/BatchConfig.jsx ---
+async def resolve_institutional_pdf_url(doi: str, client: Optional[httpx.AsyncClient]=None, cookies: Optional[str] = None) -> Optional[str]:
+    doi_url = f'https://doi.org/{doi}'
+    close_client = False
+    if client is None:
+        client = httpx.AsyncClient(timeout=15.0, follow_redirects=True)
+        close_client = True
 
-import React from 'react';
+    parsed_cookies = dict(x.split('=', 1) for x in cookies.split('; ') if '=' in x) if isinstance(cookies, str) and cookies.strip() else None
+    try:
+        res = await client.get(doi_url, headers=_BROWSER_HEADERS, follow_redirects=True, cookies=parsed_cookies)
+        if res.status_code == 200:
+            html = res.text
+            for pattern in _PDF_META_PATTERNS:
+                match = pattern.search(html)
+                if match:
+                    raw_url = match.group(1).strip()
+                    return urljoin(str(res.url), raw_url)
+    except Exception:
+        pass
+    finally:
+        if close_client:
+            await client.aclose()
 
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    marginBottom: '12px',
-    padding: '16px',
-    backgroundColor: '#161b22',
-    border: 'none',
-    borderRadius: '8px'
-  },
-  section: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px'
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: '14px',
-    color: '#f0f6fc'
-  },
-  sliderContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px'
-  },
-  slider: {
-    flex: 1,
-    cursor: 'pointer'
-  },
-  inputsGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '16px'
-  },
-  input: {
-    padding: '8px 12px',
-    borderRadius: '6px',
-    border: '1px solid #30363d',
-    backgroundColor: '#0d1117',
-    color: '#f0f6fc',
-    fontSize: '14px'
-  }
-};
-
-export function BatchConfig({
-  delay = 5,
-  destination = '',
-  email = '',
-  cookies = '',
-  config,
-  onConfigUpdate
-}) {
-  const currentDelay = config?.delay ?? delay;
-  const currentDestination = config?.destination ?? destination;
-  const currentEmail = config?.email ?? email;
-  const currentCookies = config?.cookies ?? cookies;
-
-  return (
-    <div style={styles.container}>
-      <div style={{ display: 'none' }}>
-        <label htmlFor="delay-slider" style={styles.label}>
-          Delay between downloads: {currentDelay}s
-        </label>
-        <div style={styles.sliderContainer}>
-          <input
-            id="delay-slider"
-            role="slider"
-            type="range"
-            min="5"
-            max="60"
-            step="5"
-            value={currentDelay}
-            style={styles.slider}
-            onChange={(e) => {
-              if (onConfigUpdate) {
-                onConfigUpdate('delay', Number(e.target.value));
-              }
-            }}
-          />
-          <span style={{ fontSize: '12px', color: '#586069' }}>
-            [5s, 15s, 30s, 60s]
-          </span>
-        </div>
-      </div>
-
-      <div style={styles.inputsGrid}>
-        <div style={styles.section}>
-          <label htmlFor="destination-input" style={styles.label}>
-            Destination Folder
-          </label>
-          <input
-            id="destination-input"
-            type="text"
-            style={styles.input}
-            placeholder="Download folder or path"
-            value={currentDestination}
-            onChange={(e) => {
-              if (onConfigUpdate) {
-                onConfigUpdate('destination', e.target.value);
-              }
-            }}
-          />
-        </div>
-
-        <div style={styles.section}>
-          <label htmlFor="email-input" style={styles.label}>
-            Email Address (Polite Pool)
-          </label>
-          <input
-            id="email-input"
-            type="email"
-            style={styles.input}
-            placeholder="Email for academic APIs"
-            value={currentEmail}
-            onChange={(e) => {
-              if (onConfigUpdate) {
-                onConfigUpdate('email', e.target.value);
-              }
-            }}
-          />
-        </div>
-
-        <div style={styles.section}>
-          <label htmlFor="cookies-input" style={styles.label}>
-            Session Cookies (Optional)
-          </label>
-          <input
-            id="cookies-input"
-            type="text"
-            style={styles.input}
-            placeholder="e.g. session=abc;"
-            value={currentCookies}
-            onChange={(e) => {
-              if (onConfigUpdate) {
-                onConfigUpdate('cookies', e.target.value);
-              }
-            }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default BatchConfig;
+    return None
 
 
-// --- frontend/src/components/references/UploadReferencesModal.jsx ---
+async def resolve_pdf_url(doi: str, email: str, cookies: Optional[str] = None) -> Optional[str]:
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            url = f"https://api.unpaywall.org/v2/{doi}?email={email}"
+            res = await client.get(url)
+            if res.status_code == 200:
+                loc = res.json().get("best_oa_location") or {}
+                if pdf_url := loc.get("url_for_pdf"):
+                    return str(pdf_url)
+        except Exception:
+            pass
+        try:
+            url = f"https://api.openalex.org/works/doi:{doi}"
+            res = await client.get(url)
+            if res.status_code == 200:
+                oa = res.json().get("open_access") or {}
+                if oa_url := oa.get("oa_url"):
+                    return str(oa_url)
+        except Exception:
+            pass
+        try:
+            inst_url = await resolve_institutional_pdf_url(doi, client=client, cookies=cookies)
+            if inst_url:
+                return inst_url
+        except Exception:
+            pass
+    return None
 
-import React from 'react';
-import BibliographyUploader from '../BibliographyUploader';
 
-const styles = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    backdropFilter: 'blur(2px)',
-  },
-  modal: {
-    backgroundColor: '#161b22',
-    border: '1px solid #30363d',
-    borderRadius: '12px',
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.18)',
-    width: '100%',
-    maxWidth: '560px',
-    padding: '28px',
-    boxSizing: 'border-box',
-    position: 'relative',
-    maxHeight: '90vh',
-    overflowY: 'auto',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '16px',
-  },
-  title: {
-    margin: 0,
-    fontSize: '20px',
-    fontWeight: '600',
-    color: '#f0f6fc',
-  },
-  closeBtn: {
-    background: 'none',
-    border: 'none',
-    fontSize: '20px',
-    cursor: 'pointer',
-    color: '#6a737d',
-    padding: '4px 8px',
-    borderRadius: '4px',
-  },
-  description: {
-    fontSize: '14px',
-    color: '#8b949e',
-    marginTop: 0,
-    marginBottom: '20px',
-  },
-  formGroup: {
-    marginBottom: '20px',
-  },
-  label: {
-    display: 'block',
-    fontSize: '14px',
-    fontWeight: '500',
-    marginBottom: '8px',
-    color: '#f0f6fc',
-  },
-  input: {
-    width: '100%',
-    padding: '10px 12px',
-    fontSize: '14px',
-    backgroundColor: '#0d1117',
-    color: '#f0f6fc',
-    border: '1px solid #30363d',
-    borderRadius: '6px',
-    boxSizing: 'border-box',
-    outline: 'none',
-  },
-  hint: {
-    fontSize: '12px',
-    color: '#8b949e',
-    marginTop: '6px',
-    marginBottom: 0,
-  },
-  uploaderWrapper: {
-    transition: 'opacity 0.2s ease',
-  },
-  errorBox: {
-    backgroundColor: '#ffeef0',
-    color: '#cb2431',
-    border: '1px solid #f97583',
-    padding: '10px 14px',
-    borderRadius: '6px',
-    marginBottom: '16px',
-    fontSize: '13px',
-  },
-  successBox: {
-    backgroundColor: '#dcffe4',
-    color: '#165c26',
-    border: '1px solid #85e89d',
-    padding: '14px 16px',
-    borderRadius: '6px',
-    marginTop: '16px',
-    marginBottom: '16px',
-  },
-  successTitle: {
-    margin: '0 0 6px 0',
-    fontWeight: '600',
-    fontSize: '15px',
-  },
-  footer: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '12px',
-    marginTop: '20px',
-  },
-  cancelBtn: {
-    padding: '8px 16px',
-    fontSize: '14px',
-    color: '#f0f6fc',
-    backgroundColor: '#21262d',
-    border: '1px solid #30363d',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: '500',
-  },
-};
+// --- backend/src/bibliography/injection_service.py ---
 
-export function UploadReferencesModal({
-  isOpen,
-  onClose,
-  projectCode,
-  setProjectCode,
-  uploadAndInject,
-  isLoading,
-  isSuccess,
-  error,
-  insertedCount,
-}) {
-  if (!isOpen) return null;
+"""Service for persisting bibliographic references into the database."""
+from typing import List, Optional
+from sqlalchemy.orm import Session
 
-  const isProjectReady = Boolean(projectCode && projectCode.trim());
+try:
+    from .schemas import ParsedReference
+    from ..database.models.core import Article, Project, ProjectArticle
+except (ImportError, ValueError):
+    from backend.src.bibliography.schemas import ParsedReference
+    from backend.src.database.models.core import (
+        Article,
+        Project,
+        ProjectArticle,
+    )
 
-  return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()} data-testid="upload-modal-container">
-    <div style={styles.header}>
-      <h3 style={styles.title}>New References Ingestion</h3>
-      <button style={styles.closeBtn} onClick={onClose} aria-label="Close">
-        ✕
-          </button>
-        </div>
 
-    <p style={styles.description}>
-      Enter the project code and select .ris or .bib files to
-      persist in the database.
-    </p>
+def inject_references_to_db(
+    db: Session, refs: List[ParsedReference], project_code: str
+) -> int:
+    """Persist parsed references and associate them with a project."""
+    project = db.query(Project).filter(Project.name == project_code).first()
+    if not project:
+        project = Project(name=project_code)
+        db.add(project)
+        db.flush()
 
-    <div style={styles.formGroup}>
-      <label htmlFor="modal-project-code" style={styles.label}>
-        Project Code or Name *
-      </label>
-      <input
-        id="modal-project-code"
-        type="text"
-        placeholder="Ex: PROJ-AI-2026"
-            value={projectCode}
-            onChange={(e) => setProjectCode(e.target.value)}
-            style={styles.input}
-            autoFocus
-          />
-      {!isProjectReady && (
-        <p style={styles.hint}>
-          Provide a project name to enable the uploader.
-        </p>
-      )}
-        </div>
+    for ref in refs:
+        year_val: Optional[int] = None
+        if ref.year:
+            try:
+                year_val = int(float(str(ref.year).strip()))
+            except (ValueError, TypeError):
+                year_val = None
 
-        {error && <div style={styles.errorBox}>❌ {error}</div>}
-    {isLoading && (
-      <p style={{ color: '#0366d6', fontWeight: '500', fontSize: '14px' }}>
-        Injecting references into database...
-      </p>
-    )}
+        article = Article(
+            title=ref.title or "Untitled",
+            journal=ref.journal,
+            year=year_val,
+            doi=getattr(ref, "doi", None),
+        )
+        db.add(article)
+        db.flush()
+        db.add(ProjectArticle(project_id=project.id, article_id=article.id))
 
-    {isSuccess && (
-      <div style={styles.successBox}>
-        <p style={styles.successTitle}>Ingestion completed!</p>
-        <p style={{ margin: 0, fontSize: '13px' }}>
-          Inserted <strong>{insertedCount}</strong> articles into
-          project <strong>{projectCode}</strong>.
-        </p>
-          </div>
-        )}
+    db.commit()
+    return len(refs)
 
-        <div
-          style={{
-            ...styles.uploaderWrapper,
-            opacity: isProjectReady ? 1 : 0.45,
-            pointerEvents: isProjectReady ? 'auto' : 'none',
-          }}
-        >
-          <BibliographyUploader
-            onUpload={(file) => {
-              if (isProjectReady) {
-                uploadAndInject(file);
-              }
-            }}
-          />
-        </div>
 
-    <div style={styles.footer}>
-      <button style={styles.cancelBtn} onClick={onClose}>
-        {isSuccess ? 'Close' : 'Cancel'}
-      </button>
-    </div>
-      </div>
-    </div>
-  );
-}
 
-export default UploadReferencesModal;
+// --- backend/src/bibliography/parser_service.py ---
+
+import datetime
+from typing import List, Optional
+import re
+import rispy
+import bibtexparser
+from .schemas import ParsedReference
+
+
+def _extract_bib_field(entry, key: str) -> Optional[str]:
+    target_keys = {key.lower()}
+    if key.lower() == "journal":
+        target_keys.update(
+            {"journaltitle", "booktitle", "series", "journal-iso"}
+        )
+    elif key.lower() == "title":
+        target_keys.update({"booktitle"})
+    elif key.lower() == "year":
+        target_keys.update({"date", "py"})
+
+    val = None
+    if isinstance(entry, dict):
+        for k, v in entry.items():
+            if str(k).lower() in target_keys:
+                val = v
+                break
+    elif hasattr(entry, "fields_dict"):
+        for k, v in entry.fields_dict.items():
+            if str(k).lower() in target_keys:
+                val = getattr(v, "value", str(v))
+                break
+    elif hasattr(entry, "fields"):
+        for field in entry.fields:
+            f_key = getattr(field, "key", None)
+            if f_key and str(f_key).lower() in target_keys:
+                val = getattr(field, "value", str(field))
+                break
+    elif hasattr(entry, key):
+        val = getattr(entry, key)
+    elif hasattr(entry, "get"):
+        for tk in target_keys:
+            try:
+                v = entry.get(tk) or entry.get(tk.capitalize())
+                if v is not None:
+                    val = v
+                    break
+            except Exception:
+                pass
+    else:
+        val = None
+
+    if val is not None:
+        if hasattr(val, "value"):
+            val = val.value
+        cleaned = str(val).strip()
+        while (cleaned.startswith("{") and cleaned.endswith("}")) or (
+            cleaned.startswith('"') and cleaned.endswith('"')
+        ):
+            cleaned = cleaned[1:-1].strip()
+        cleaned = re.sub(r"\s+", " ", cleaned)
+        if key.lower() == "year":
+            match = re.search(r"\b(19\d\d|20\d\d)\b", cleaned)
+
+
+            return match.group(1) if match else (cleaned or None)
+        return cleaned or None
+    return None
+
+
+def _parse_bibtex_entries(content: str) -> list:
+    if hasattr(bibtexparser, "parse_string"):
+        result = bibtexparser.parse_string(content)
+        return list(getattr(result, "entries", getattr(result, "blocks", [])))
+    if hasattr(bibtexparser, "loads"):
+        result = bibtexparser.loads(content)
+        return list(getattr(result, "entries", []))
+    if hasattr(bibtexparser, "bparser"):
+        parser = bibtexparser.bparser.BibTexParser()
+        result = parser.parse(content)
+        return list(getattr(result, "entries", []))
+    return []
+
+
+def _clean_year(val: Optional[str]) -> Optional[str]:
+    if not val:
+        return None
+    match = re.search(r"\b(19\d\d|20\d\d)\b", str(val))
+    if match:
+        return match.group(1)
+    cleaned = re.sub(r"[^\d]", "", str(val))
+    return cleaned[:4] if len(cleaned) >= 4 else (cleaned or None)
+
+
+def _extract_ris_title(entry: dict) -> Optional[str]:
+    return (
+        entry.get("title")
+        or entry.get("primary_title")
+        or entry.get("TI")
+        or entry.get("T1")
+        or entry.get("CT")
+        or None
+    )
+
+
+def _extract_ris_journal(entry: dict) -> Optional[str]:
+    return (
+        entry.get("journal_name")
+        or entry.get("secondary_title")
+        or entry.get("alternate_title1")
+        or entry.get("alternate_title2")
+        or entry.get("alternate_title3")
+        or entry.get("source")
+        or entry.get("SO")
+        or entry.get("T2")
+        or entry.get("JO")
+        or entry.get("JF")
+        or entry.get("JA")
+        or entry.get("J2")
+        or None
+    )
+
+
+def _extract_ris_authors(entry: dict) -> Optional[str]:
+    authors = (
+        entry.get("authors")
+        or entry.get("primary_authors")
+        or entry.get("AU")
+        or entry.get("A1")
+        or []
+    )
+    if isinstance(authors, list):
+        clean_authors = [str(a).strip() for a in authors if str(a).strip()]
+        return " and ".join(clean_authors) if clean_authors else None
+    if isinstance(authors, str) and authors.strip():
+        return authors.strip()
+    return None
+
+
+def _extract_ris_year(entry: dict) -> Optional[str]:
+    raw_year = (
+        entry.get("year")
+        or entry.get("publication_year")
+        or entry.get("PY")
+        or entry.get("Y1")
+        or entry.get("DA")
+        or None
+    )
+    return _clean_year(raw_year)
+
+
+def _extract_ris_doi(entry: dict) -> Optional[str]:
+    doi = entry.get("doi") or entry.get("DO") or entry.get("DI") or None
+    if doi:
+        return (
+            str(doi)
+            .strip()
+            .replace("https://doi.org/", "")
+            .replace("http://doi.org/", "")
+        )
+    return None
+
+
+def _parse_ris_fallback(content: str) -> list:
+    entries = []
+    current_entry = {}
+    current_tag = None
+
+    for line in content.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        match = re.match(r"^([A-Z0-9]{2})\s*-\s*(.*)$", line)
+        if match:
+            tag, val = match.group(1), match.group(2).strip()
+            current_tag = tag
+            if tag == "TY":
+                if current_entry and (
+                    current_entry.get("TI")
+                    or current_entry.get("title")
+                    or current_entry.get("AU")
+                ):
+                    entries.append(current_entry)
+                current_entry = {"TY": val, "authors": []}
+            elif tag == "ER":
+                if current_entry:
+                    entries.append(current_entry)
+                    current_entry = {}
+            elif tag in ("AU", "A1"):
+                if "authors" not in current_entry:
+                    current_entry["authors"] = []
+                current_entry["authors"].append(val)
+            else:
+                current_entry[tag] = val
+        elif current_tag and current_entry:
+            if current_tag not in ("AU", "A1") and current_tag in current_entry:
+                current_entry[current_tag] += " " + line
+
+    if current_entry and (
+        current_entry.get("TI")
+        or current_entry.get("title")
+        or current_entry.get("AU")
+    ):
+        entries.append(current_entry)
+
+    return entries
+
+
+def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
+    parsed_refs: List[ParsedReference] = []
+    now = datetime.datetime.now(datetime.timezone.utc)
+    
+    if ext.lower() == ".ris":
+        entries = []
+        try:
+            entries = rispy.loads(content, skip_unknown_tags=True)
+        except Exception:
+            entries = []
+
+        fallback_entries = _parse_ris_fallback(content)
+        if len(fallback_entries) > len(entries):
+            entries = fallback_entries
+
+        for entry in entries:
+            authors = entry.get("authors", [])
+            author_str = " and ".join(authors) if isinstance(authors, list) else authors
+            
+            parsed_refs.append(
+                ParsedReference(
+                    author=_extract_ris_authors(entry),
+                    year=_extract_ris_year(entry),
+                    title=_extract_ris_title(entry),
+                    journal=_extract_ris_journal(entry),
+                    doi=_extract_ris_doi(entry),
+                    upload_datetime=now,
+                )
+            )
+            
+    elif ext.lower() == ".bib":
+        entries = _parse_bibtex_entries(content)
+        for entry in entries:
+            parsed_refs.append(
+                ParsedReference(
+                    author=_extract_bib_field(entry, "author"),
+                    year=_extract_bib_field(entry, "year"),
+                    title=_extract_bib_field(entry, "title"),
+                    journal=_extract_bib_field(entry, "journal"),
+                    doi=_extract_bib_field(entry, "doi"),
+                    upload_datetime=now,
+                )
+            )
+    else:
+        raise ValueError(f"Unsupported extension: {ext}")
+        
+    return parsed_refs
+
+
+// --- backend/src/bibliography/router.py ---
+
+import os
+import re
+from typing import List
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+from .schemas import (
+    ParsedReference,
+    BatchDownloadRequest,
+    ZipDownloadRequest,
+    LocalBatchDownloadRequest,
+)
+from .parser_service import parse_bibliography_content
+from .download_service import execute_batch_download
+from .zip_service import create_zip_from_pdfs
+from .injection_service import inject_references_to_db
+
+try:
+    from ..database.session import get_db
+except (ImportError, ValueError):
+    try:
+        from src.database.session import get_db
+    except ImportError:
+        from backend.src.database.session import get_db
+
+router = APIRouter()
+
+try:
+    import multipart
+    HAS_MULTIPART = True
+except ImportError:
+    HAS_MULTIPART = False
+
+async def _process_upload(file: UploadFile) -> List[ParsedReference]:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
+    _, ext = os.path.splitext(file.filename)
+    if ext.lower() not in [".ris", ".bib"]:
+        raise HTTPException(status_code=400, detail="Unsupported file extension")
+    
+    try:
+        content_bytes = await file.read()
+        content_str = content_bytes.decode("utf-8")
+        refs = parse_bibliography_content(content_str, ext)
+        return refs
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error during parsing"
+        )
+
+
+async def _process_inject(
+    file: UploadFile, project_code: str, db: Session
+) -> dict:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    _, ext = os.path.splitext(file.filename)
+    if ext.lower() not in [".ris", ".bib"]:
+        raise HTTPException(
+            status_code=400, detail="Unsupported file extension"
+        )
+
+    try:
+        content_bytes = await file.read()
+        content_str = content_bytes.decode("utf-8")
+        refs = parse_bibliography_content(content_str, ext)
+        inserted = inject_references_to_db(db, refs, project_code)
+        return {"message": "Success", "inserted": inserted}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error during injection: {str(exc)}",
+        )
+
+if HAS_MULTIPART:
+    @router.post("/upload", response_model=List[ParsedReference])
+    async def upload_bibliography(file: UploadFile = File(...)):
+        return await _process_upload(file)
+
+    @router.post("/inject")
+    async def inject_bibliography(
+        file: UploadFile = File(...),
+        project_code: str = Form(...),
+        db: Session = Depends(get_db),
+    ):
+        return await _process_inject(file, project_code, db)
+else:
+    async def upload_bibliography(file: UploadFile):
+        return await _process_upload(file)
+
+    async def inject_bibliography(
+        file: UploadFile,
+        project_code: str,
+        db: Session,
+    ):
+        return await _process_inject(file, project_code, db)
+
+
+@router.post("/batch-download")
+async def batch_download(request: BatchDownloadRequest):
+    async def sse_generator():
+        async for event in execute_batch_download(
+            request.dois,
+            request.destination,
+            request.email,
+            request.delay,
+            request.cookies,
+        ):
+            yield f"data: {event}\n\n"
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream"
+    )
+
+
+@router.post("/batch-download-local")
+async def batch_download_local(request: LocalBatchDownloadRequest):
+    try:
+        with open(request.file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
+    
+    _, ext = os.path.splitext(request.file_path)
+    try:
+        refs = parse_bibliography_content(content, ext)
+        dois = list(set(ref.doi for ref in refs if ref.doi))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Parse error: {str(e)}")
+
+    async def sse_generator():
+        async for event in execute_batch_download(
+            dois,
+            request.destination,
+            request.email,
+            request.delay,
+            request.cookies,
+        ):
+            yield f"data: {event}\n\n"
+
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")
+
+
+@router.post("/download-zip")
+async def download_zip(request: ZipDownloadRequest):
+    zip_io = create_zip_from_pdfs(request.batch_name, request.dois)
+    return StreamingResponse(
+        zip_io,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": (
+                f"attachment; filename={request.batch_name}.zip"
+            )
+        },
+    )
