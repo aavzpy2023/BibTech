@@ -46,6 +46,10 @@
 - [x] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
 - [x] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
 
+## EPIC 10: INSTITUTIONAL IP DIRECT RESOLVER
+- [x] [REQ-027] Institutional Direct PDF URL Extractor (Landing Page Metadata)
+- [x] [REQ-028] Cascading Resolver Fallback Chain Integration
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
@@ -55,3 +59,4 @@
 - [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
 - [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
 - [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
+- [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)

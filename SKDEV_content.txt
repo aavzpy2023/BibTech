@@ -1,28 +1,98 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-14 22:01:31
+Date: 2026-09-14 22:25:11
 AST Mode: False
 Line Numbers: True
-Modules: nginx.conf
-Processed Files: 1
+Modules: resolver_service.py, test_resolver.py
+Processed Files: 2
 ===========================
 
 
 
-// --- nginx/nginx.conf ---
+// --- backend/src/bibliography/resolver_service.py ---
 
-[L001, S0] server {
-[L002, S4]     listen 80;
-[L003, S4]     server_name localhost;
-[L004, S4]     location /api {
-[L005, S8]         proxy_pass http://backend:8000;
-[L006, S8]         proxy_set_header Host $host;
-[L007, S4]     }
-[L008, S4]     location / {
-[L009, S8]         proxy_pass http://frontend:5173;
-[L010, S8]         proxy_set_header Host $host;
-[L011, S8]         proxy_http_version 1.1;
-[L012, S8]         proxy_set_header Upgrade $http_upgrade;
-[L013, S8]         proxy_set_header Connection "upgrade";
-[L014, S4]     }
-[L015, S0] }
+[L001, S0] from typing import Optional
+[L002, S0] import httpx
+[L003, S0] 
+[L004, S0] 
+[L005, S0] async def resolve_pdf_url(doi: str, email: str) -> Optional[str]:
+[L006, S4]     async with httpx.AsyncClient(timeout=10.0) as client:
+[L007, S8]         try:
+[L008, S12]             url = f"https://api.unpaywall.org/v2/{doi}?email={email}"
+[L009, S12]             res = await client.get(url)
+[L010, S12]             if res.status_code == 200:
+[L011, S16]                 loc = res.json().get("best_oa_location") or {}
+[L012, S16]                 if pdf_url := loc.get("url_for_pdf"):
+[L013, S20]                     return str(pdf_url)
+[L014, S8]         except Exception:
+[L015, S12]             pass
+[L016, S8]         try:
+[L017, S12]             url = f"https://api.openalex.org/works/doi:{doi}"
+[L018, S12]             res = await client.get(url)
+[L019, S12]             if res.status_code == 200:
+[L020, S16]                 oa = res.json().get("open_access") or {}
+[L021, S16]                 if oa_url := oa.get("oa_url"):
+[L022, S20]                     return str(oa_url)
+[L023, S8]         except Exception:
+[L024, S12]             pass
+[L025, S4]     return None
+
+
+// --- backend/tests/bibliography/test_resolver.py ---
+
+[L001, S0] import sys
+[L002, S0] from pathlib import Path
+[L003, S0] import asyncio
+[L004, S0] from unittest.mock import AsyncMock, patch, MagicMock
+[L005, S0] import httpx
+[L006, S0] import pytest
+[L007, S0] 
+[L008, S0] _root = Path(__file__).resolve().parents[3]
+[L009, S0] if str(_root) not in sys.path:
+[L010, S4]     sys.path.insert(0, str(_root))
+[L011, S0] 
+[L012, S0] from backend.src.bibliography.resolver_service import resolve_pdf_url
+[L013, S0] 
+[L014, S0] 
+[L015, S0] def test_resolve_pdf_url_unpaywall_success():
+[L016, S4]     mock_response = MagicMock()
+[L017, S4]     mock_response.status_code = 200
+[L018, S4]     mock_response.json.return_value = {
+[L019, S8]         "is_oa": True,
+[L020, S8]         "best_oa_location": {
+[L021, S12]             "url_for_pdf": "http://pdf"
+[L022, S8]         }
+[L023, S4]     }
+[L024, S4]     with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+[L025, S8]         mock_get.return_value = mock_response
+[L026, S8]         result = asyncio.run(resolve_pdf_url("10.mock", "e@mail.com"))
+[L027, S8]         assert result == "http://pdf"
+[L028, S8]         mock_get.assert_called_once()
+[L029, S8]         called_url = mock_get.call_args[0][0]
+[L030, S8]         assert "api.unpaywall.org/v2/10.mock" in called_url
+[L031, S0] 
+[L032, S0] 
+[L033, S0] def test_resolve_pdf_url_openalex_fallback():
+[L034, S4]     unpaywall_resp = MagicMock()
+[L035, S4]     unpaywall_resp.status_code = 404
+[L036, S0] 
+[L037, S4]     openalex_resp = MagicMock()
+[L038, S4]     openalex_resp.status_code = 200
+[L039, S4]     openalex_resp.json.return_value = {
+[L040, S8]         "open_access": {
+[L041, S12]             "oa_url": "https://openalex.org/pdf/paper.pdf"
+[L042, S8]         }
+[L043, S4]     }
+[L044, S0] 
+[L045, S4]     with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+[L046, S8]         mock_get.side_effect = [unpaywall_resp, openalex_resp]
+[L047, S8]         result = asyncio.run(resolve_pdf_url("10.1000/182", "e@mail.com"))
+[L048, S8]         assert result == "https://openalex.org/pdf/paper.pdf"
+[L049, S8]         assert mock_get.call_count == 2
+[L050, S0] 
+[L051, S0] 
+[L052, S0] def test_resolve_pdf_url_both_fail():
+[L053, S4]     with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+[L054, S8]         mock_get.side_effect = httpx.ConnectError("Network failure")
+[L055, S8]         result = asyncio.run(resolve_pdf_url("10.mock", "e@mail.com"))
+[L056, S8]         assert result is None
