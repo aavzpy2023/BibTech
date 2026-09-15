@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
+import Modal from '../Modal';
 
 export function extractDoisFromText(text, filename = '') {
   const isBib = filename.toLowerCase().endsWith('.bib');
@@ -237,14 +238,12 @@ export function BatchInput({
           + Upload files
         </button>
       </div>
-      {isModalOpen && (
-        <div style={styles.modalOverlay} onClick={() => setIsModalOpen(false)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.headerRow}>
-              <h3 style={{ margin: 0, fontSize: '18px' }}>Extract DOIs</h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
-            </div>
-            <p style={{ fontSize: '14px', color: '#586069', marginBottom: '16px' }}>Select .bib files to automatically extract DOIs.</p>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Extract DOIs"
+        description="Select .bib files to automatically extract DOIs."
+      >
         <div
           {...getRootProps()}
           style={{
@@ -262,20 +261,15 @@ export function BatchInput({
             </div>
           )}
         </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
-      {missingDois.length > 0 && (
-        <div style={styles.modalOverlay} onClick={() => setMissingDois([])}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.headerRow}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#cb2431' }}>Missing DOIs</h3>
-              <button type="button" onClick={() => setMissingDois([])} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
-            </div>
-            <p style={{ fontSize: '14px', color: '#586069', marginBottom: '16px' }}>
-              The following citation keys did not have a valid DOI associated with them:
-            </p>
+      <Modal
+        isOpen={missingDois.length > 0}
+        onClose={() => setMissingDois([])}
+        title="Missing DOIs"
+        titleColor="#cb2431"
+        description="The following citation keys did not have a valid DOI associated with them:"
+      >
             <ul style={{ fontSize: '13px', color: '#24292e', maxHeight: '200px', overflowY: 'auto', paddingLeft: '20px', margin: '0 0 16px 0', fontFamily: 'monospace' }}>
               {missingDois.map((msg, idx) => (
                 <li key={idx} style={{ marginBottom: '6px' }}>{msg}</li>
@@ -289,9 +283,7 @@ export function BatchInput({
                 Close
               </button>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
         <textarea

@@ -1,5 +1,6 @@
 import React from 'react';
 import BibliographyUploader from '../BibliographyUploader';
+import Modal from '../Modal';
 
 const styles = {
   overlay: {
@@ -141,20 +142,12 @@ export function UploadReferencesModal({
   const isProjectReady = Boolean(projectCode && projectCode.trim());
 
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()} data-testid="upload-modal-container">
-    <div style={styles.header}>
-      <h3 style={styles.title}>New References Ingestion</h3>
-      <button style={styles.closeBtn} onClick={onClose} aria-label="Close">
-        ✕
-          </button>
-        </div>
-
-    <p style={styles.description}>
-      Enter the project code and select .ris or .bib files to
-      persist in the database.
-    </p>
-
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="New References Ingestion"
+      description="Enter the project code and select .ris or .bib files to persist in the database."
+    >
     <div style={styles.formGroup}>
       <label htmlFor="modal-project-code" style={styles.label}>
         Project Code or Name *
@@ -213,8 +206,7 @@ export function UploadReferencesModal({
         {isSuccess ? 'Close' : 'Cancel'}
       </button>
     </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
