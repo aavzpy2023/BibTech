@@ -50,6 +50,11 @@
 - [x] [REQ-027] Institutional Direct PDF URL Extractor (Landing Page Metadata)
 - [x] [REQ-028] Cascading Resolver Fallback Chain Integration
 
+## EPIC 11: COOKIE AUTHENTICATION PASSTHROUGH
+- [ ] [REQ-029] Frontend UI State Fractality & Dumb View Wiring (Cookies)
+- [ ] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
+- [ ] [REQ-031] CLI Argument Cookie Support (Script OCP)
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
@@ -60,3 +65,4 @@
 - [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
 - [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
 - [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
+- [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
