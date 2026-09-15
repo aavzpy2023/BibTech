@@ -75,7 +75,6 @@ def test_resolve_institutional_pdf_url_success():
         mock_get.assert_called_once()
         kwargs = mock_get.call_args.kwargs
         assert kwargs.get('cookies') == {'auth': '123'}
-        )
 
 
 def test_resolve_institutional_pdf_url_relative_path():

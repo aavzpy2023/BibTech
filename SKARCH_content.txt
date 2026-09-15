@@ -1,160 +1,12 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-15 12:38:59
+Date: 2026-09-15 12:42:45
 AST Mode: True
 Line Numbers: False
-Modules: resolver_service.py, download_service.py, test_download.py, test_resolver.py
-Processed Files: 4
+Modules: test_resolver.py
+Processed Files: 1
 ===========================
 
-
-
-// --- backend/src/bibliography/resolver_service.py ---
-
-import re
-from typing import Optional
-from urllib.parse import urljoin
-import httpx
-_BROWSER_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
-_PDF_META_PATTERNS = [re.compile('<meta[^>]+name=["\\\']citation_pdf_url["\\\'][^>]+content=["\\\']([^"\\\']+)["\\\']', re.IGNORECASE), re.compile('<meta[^>]+content=["\\\']([^"\\\']+)["\\\'][^>]+name=["\\\']citation_pdf_url["\\\']', re.IGNORECASE), re.compile('<link[^>]+type=["\\\']application/pdf["\\\'][^>]+href=["\\\']([^"\\\']+)["\\\']', re.IGNORECASE)]
-
-async def resolve_institutional_pdf_url(doi: str, client: Optional[httpx.AsyncClient]=None) -> Optional[str]:
-    doi_url = f'https://doi.org/{doi}'
-    close_client = False
-    if client is None:
-        client = httpx.AsyncClient(timeout=15.0, follow_redirects=True)
-        close_client = True
-    try:
-        res = await client.get(doi_url, headers=_BROWSER_HEADERS, follow_redirects=True)
-        if res.status_code == 200:
-            html = res.text
-            for pattern in _PDF_META_PATTERNS:
-                match = pattern.search(html)
-                if match:
-                    raw_url = match.group(1).strip()
-                    return urljoin(str(res.url), raw_url)
-    except Exception:
-        pass
-    finally:
-        if close_client:
-            await client.aclose()
-    return None
-
-async def resolve_pdf_url(doi: str, email: str) -> Optional[str]:
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        try:
-            url = f'https://api.unpaywall.org/v2/{doi}?email={email}'
-            res = await client.get(url)
-            if res.status_code == 200:
-                loc = res.json().get('best_oa_location') or {}
-                if (pdf_url := loc.get('url_for_pdf')):
-                    return str(pdf_url)
-        except Exception:
-            pass
-        try:
-            url = f'https://api.openalex.org/works/doi:{doi}'
-            res = await client.get(url)
-            if res.status_code == 200:
-                oa = res.json().get('open_access') or {}
-                if (oa_url := oa.get('oa_url')):
-                    return str(oa_url)
-        except Exception:
-            pass
-        try:
-            inst_url = await resolve_institutional_pdf_url(doi, client=client)
-            if inst_url:
-                return inst_url
-        except Exception:
-            pass
-    return None
-
-
-// --- backend/src/bibliography/download_service.py ---
-
-import asyncio
-import json
-import random
-from typing import AsyncGenerator, List
-import httpx
-from .resolver_service import resolve_pdf_url
-from .file_storage_service import save_pdf_bytes
-
-async def _download_and_save(dest: str, doi: str, url: str) -> str:
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        res = await client.get(url)
-        res.raise_for_status()
-        return await save_pdf_bytes(dest, doi, res.content)
-
-async def execute_batch_download(dois: List[str], dest: str, email: str, delay: int) -> AsyncGenerator[str, None]:
-    total, completed = (len(dois), 0)
-    for doi in dois:
-        yield json.dumps({'progress': completed, 'total': total, 'log': f'Resolving: {doi}', 'doi': doi, 'status': 'resolving'})
-        try:
-            url = await resolve_pdf_url(doi, email)
-            if url:
-                path = await _download_and_save(dest, doi, url)
-                log = f'Downloaded {doi} to {path}'
-                status = 'downloaded'
-            else:
-                log = f'No open access URL found for {doi}'
-                status = 'not_found'
-        except Exception as err:
-            log = f'Failed {doi}: {err}'
-            status = 'failed'
-        completed += 1
-        yield json.dumps({'progress': completed, 'total': total, 'log': log, 'doi': doi, 'status': status, 'log': log})
-        if completed < total:
-            sleep_duration = random.uniform(2.0, 5.0) if delay != 0 else 0
-            if sleep_duration > 0:
-                await asyncio.sleep(sleep_duration)
-    yield json.dumps({'progress': total, 'total': total, 'log': 'Batch processing finished'})
-
-
-// --- backend/tests/bibliography/test_download.py ---
-
-import sys
-from pathlib import Path
-import json
-import asyncio
-from unittest.mock import AsyncMock, patch, MagicMock
-import httpx
-import pytest
-_root = Path(__file__).resolve().parents[3]
-if str(_root) not in sys.path:
-    sys.path.insert(0, str(_root))
-from backend.src.bibliography.file_storage_service import save_pdf_bytes
-from backend.src.bibliography.download_service import execute_batch_download
-
-def test_save_pdf_bytes(tmp_path: Path):
-    """..."""
-
-async def _collect_events(dois, dest, email, delay=0):
-    """..."""
-
-def test_execute_batch_download_success():
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.content = b'%PDF mock content'
-    mock_resp.raise_for_status = MagicMock()
-    with patch('backend.src.bibliography.download_service.resolve_pdf_url', new_callable=AsyncMock, return_value='https://example.com/paper.pdf'), patch('backend.src.bibliography.download_service.save_pdf_bytes', new_callable=AsyncMock, return_value='/downloads/10.x.pdf'), patch('httpx.AsyncClient.get', new_callable=AsyncMock) as mock_get:
-        mock_get.return_value = mock_resp
-        events = asyncio.run(_collect_events(['10.1000/182'], '/dest', 'test@mail.com', delay=0))
-        assert len(events) == 3
-        assert events[0]['progress'] == 0
-        assert events[0]['total'] == 1
-        assert 'Resolving' in events[0]['log']
-        assert events[1]['progress'] == 1
-        assert events[1]['total'] == 1
-        assert 'Downloaded' in events[1]['log']
-        assert events[2]['progress'] == 1
-        assert events[2]['total'] == 1
-        assert 'finished' in events[2]['log']
-
-def test_execute_batch_download_no_url():
-    """..."""
-
-def test_execute_batch_download_http_error():
-    """..."""
 
 
 // --- backend/tests/bibliography/test_resolver.py ---
@@ -165,32 +17,120 @@ import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 import httpx
 import pytest
+
 _root = Path(__file__).resolve().parents[3]
 if str(_root) not in sys.path:
     sys.path.insert(0, str(_root))
-from backend.src.bibliography.resolver_service import resolve_pdf_url, resolve_institutional_pdf_url
+
+from backend.src.bibliography.resolver_service import (
+    resolve_pdf_url,
+    resolve_institutional_pdf_url,
+)
+
 
 def test_resolve_pdf_url_unpaywall_success():
-    """..."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "is_oa": True,
+        "best_oa_location": {
+            "url_for_pdf": "http://pdf"
+        }
+    }
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_response
+        result = asyncio.run(resolve_pdf_url("10.mock", "e@mail.com"))
+        assert result == "http://pdf"
+        mock_get.assert_called_once()
+        called_url = mock_get.call_args[0][0]
+        assert "api.unpaywall.org/v2/10.mock" in called_url
+
 
 def test_resolve_pdf_url_openalex_fallback():
-    """..."""
+    unpaywall_resp = MagicMock()
+    unpaywall_resp.status_code = 404
+
+    openalex_resp = MagicMock()
+    openalex_resp.status_code = 200
+    openalex_resp.json.return_value = {
+        "open_access": {
+            "oa_url": "https://openalex.org/pdf/paper.pdf"
+        }
+    }
+
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.side_effect = [unpaywall_resp, openalex_resp]
+        result = asyncio.run(resolve_pdf_url("10.1000/182", "e@mail.com"))
+        assert result == "https://openalex.org/pdf/paper.pdf"
+        assert mock_get.call_count == 2
+
 
 def test_resolve_pdf_url_both_fail():
-    """..."""
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.side_effect = httpx.ConnectError("Network failure")
+        result = asyncio.run(resolve_pdf_url("10.mock", "e@mail.com"))
+        assert result is None
+
 
 def test_resolve_institutional_pdf_url_success():
     mock_resp = MagicMock()
     mock_resp.status_code = 200
-    mock_resp.url = 'https://link.springer.com/article/10.1007/s001'
-    mock_resp.text = '<html><head><meta name="citation_pdf_url" content="https://link.springer.com/content/pdf/10.1007/s001.pdf"></head><body></body></html>'
+    mock_resp.url = "https://link.springer.com/article/10.1007/s001"
+    mock_resp.text = (
+        '<html><head><meta name="citation_pdf_url" '
+        'content="https://link.springer.com/content/pdf/10.1007/s001.pdf">'
+        '</head><body></body></html>'
+    )
     with patch('httpx.AsyncClient.get', new_callable=AsyncMock) as mock_get:
         mock_get.return_value = mock_resp
-        result = asyncio.run(resolve_institutional_pdf_url('10.1007/s001'))
+        result = asyncio.run(resolve_institutional_pdf_url('10.1007/s001', cookies="auth=123"))
         assert result == 'https://link.springer.com/content/pdf/10.1007/s001.pdf'
+        mock_get.assert_called_once()
+        kwargs = mock_get.call_args.kwargs
+        assert kwargs.get('cookies') == {'auth': '123'}
+        )
+
 
 def test_resolve_institutional_pdf_url_relative_path():
-    """..."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.url = "https://sciencedirect.com/science/article/pii/S123"
+    mock_resp.text = (
+        '<html><head><meta name="citation_pdf_url" '
+        'content="/science/article/pii/S123/pdfft?md5=abc">'
+        '</head></html>'
+    )
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_resp
+        result = asyncio.run(resolve_institutional_pdf_url("10.1016/S123"))
+        assert result == (
+            "https://sciencedirect.com/science/article/pii/S123/pdfft?md5=abc"
+        )
+
 
 def test_resolve_pdf_url_institutional_fallback():
-    """..."""
+    unpaywall_resp = MagicMock()
+    unpaywall_resp.status_code = 404
+
+    openalex_resp = MagicMock()
+    openalex_resp.status_code = 200
+    openalex_resp.json.return_value = {"open_access": {"oa_url": None}}
+
+    inst_resp = MagicMock()
+    inst_resp.status_code = 200
+    inst_resp.url = "https://ieeexplore.ieee.org/document/12345"
+    inst_resp.text = (
+        '<html><head><meta name="citation_pdf_url" '
+        'content="https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=12345">'
+        '</head></html>'
+    )
+
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.side_effect = [unpaywall_resp, openalex_resp, inst_resp]
+        result = asyncio.run(
+            resolve_pdf_url("10.1109/12345", "test@mail.com")
+        )
+        assert result == (
+            "https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=12345"
+        )
+        assert mock_get.call_count == 3
