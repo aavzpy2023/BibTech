@@ -1,6 +1,7 @@
 """Service for persisting bibliographic references into the database."""
 from typing import List, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError
 
 try:
     from .schemas import ParsedReference
@@ -15,6 +16,15 @@ except (ImportError, ValueError):
 
 
 def inject_references_to_db(
+    db: Session, refs: List[ParsedReference], project_code: str
+) -> int:
+    try:
+        return _inject_references_inner(db, refs, project_code)
+    except OperationalError:
+        raise RuntimeError("Database connection failed")
+
+
+def _inject_references_inner(
     db: Session, refs: List[ParsedReference], project_code: str
 ) -> int:
     """Persist parsed references and associate them with a project."""

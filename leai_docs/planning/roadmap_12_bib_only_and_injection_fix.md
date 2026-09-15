@@ -28,14 +28,15 @@ complexity_aggregate: "MEDIUM"
   - [ID-12.2.2] [LOGIC/CORE]: [1. Open backend/src/bibliography/parser_service.py. 2. Delete all .ris parsing functions (_extract_ris_*, _parse_ris_fallback) and the .ris branch in parse_bibliography_content. 3. In parse_bibliography_content, if entries is empty after _parse_bibtex_entries, raise ValueError("No se encontraron items válidos en el archivo .bib")]. Type: Task.
   - [ID-12.2.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.2. 2. Append > Files touched: backend/src/bibliography/parser_service.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-038]. Type: Task.
 
-- [ ] Story 12.3: Backend Injection DB Resilience | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-039)
+- [x] Story 12.3: Backend Injection DB Resilience | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-039)
   Story Context Radius: `{"backend/src/bibliography/injection_service.py": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
   - [ID-12.3.1] [TESTING/TDE]: [1. Arrange: Mock the SQLAlchemy Session so that db.query() raises sqlalchemy.exc.OperationalError. 2. Act: Invoke inject_references_to_db. 3. Assert: Verify that a RuntimeError is raised]. Type: Task.
   - [ID-12.3.2] [LOGIC/DB]: [1. Open backend/src/bibliography/injection_service.py. 2. Import OperationalError from sqlalchemy.exc. 3. Wrap the DB query and commit logic inside inject_references_to_db in a try...except OperationalError block. 4. If caught, raise RuntimeError("Database connection failed")]. Type: Task.
   - [ID-12.3.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.3. 2. Append > Files touched: backend/src/bibliography/injection_service.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-039]. Type: Task.
+  > Files touched: backend/src/bibliography/injection_service.py
 
-- [ ] Story 12.4: Frontend Hook State Fractality (.bib Validation) | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-037)
+- [ ] Story 12.4: Frontend Hook State Fractality (.bib Validation)
   Story Context Radius: `{"frontend/src/hooks/useReferencesUpload.js": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
   - [ID-12.4.1] [TESTING/TDE]: [1. Arrange: Mock a file object with name "test.ris". 2. Act: Invoke uploadAndInject with the mock file. 3. Assert: Verify that setError is called with "Solo se permiten archivos .bib" and no fetch request is executed]. Type: Task.

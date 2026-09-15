@@ -179,3 +179,17 @@ def test_models_and_router_imports_resolve_without_src_package():
     assert hasattr(models_pkg, "Article")
     assert hasattr(models_pkg, "Project")
     assert hasattr(models_pkg, "ProjectArticle")
+
+
+def test_inject_references_db_operational_error():
+    from sqlalchemy.exc import OperationalError
+    from unittest.mock import MagicMock
+
+    now = datetime.now(timezone.utc)
+    mock_refs = [ParsedReference(title="Test", upload_datetime=now)]
+    
+    mock_db = MagicMock()
+    mock_db.query.side_effect = OperationalError("mock", "mock", "mock")
+    
+    with pytest.raises(RuntimeError, match="Database connection failed"):
+        inject_references_to_db(mock_db, mock_refs, "ERR-PROJ")

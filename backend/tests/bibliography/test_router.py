@@ -47,8 +47,8 @@ def test_upload_bibliography_direct_success():
         return_value=[mock_ref]
     ):
         file = UploadFile(
-            filename="test.ris",
-            file=BytesIO(b"fake ris content")
+            filename="test.bib",
+            file=BytesIO(b"fake bib content")
         )
         result = asyncio.run(upload_bibliography(file))
         assert len(result) == 1
@@ -56,8 +56,8 @@ def test_upload_bibliography_direct_success():
 
 def test_upload_bibliography_direct_invalid_extension():
     file = UploadFile(
-        filename="test.txt",
-        file=BytesIO(b"fake txt content")
+        filename="test.ris",
+        file=BytesIO(b"fake ris content")
     )
     with pytest.raises(HTTPException) as exc_info:
         asyncio.run(upload_bibliography(file))
@@ -77,8 +77,8 @@ def test_upload_bibliography_success(mock_parse):
     )
     mock_parse.return_value = [mock_ref]
 
-    file_content = b"fake ris content"
-    files = {"file": ("test.ris", file_content, "text/plain")}
+    file_content = b"fake bib content"
+    files = {"file": ("test.bib", file_content, "text/plain")}
     
     # Act
     response = client.post("/api/bibliography/upload", files=files)
@@ -89,13 +89,13 @@ def test_upload_bibliography_success(mock_parse):
     assert len(data) == 1
     assert data[0]["title"] == "Test Title"
     assert data[0]["author"] == "Test Author"
-    mock_parse.assert_called_once_with("fake ris content", ".ris")
+    mock_parse.assert_called_once_with("fake bib content", ".bib")
 
 @pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx2 not installed")
 def test_upload_bibliography_invalid_extension():
     # Arrange
-    file_content = b"fake txt content"
-    files = {"file": ("test.txt", file_content, "text/plain")}
+    file_content = b"fake ris content"
+    files = {"file": ("test.ris", file_content, "text/plain")}
     
     # Act
     response = client.post("/api/bibliography/upload", files=files)
@@ -210,8 +210,8 @@ def test_inject_bibliography_direct_success():
         return_value=10,
     ):
         file = UploadFile(
-            filename="references.ris",
-            file=BytesIO(b"fake ris content"),
+            filename="references.bib",
+            file=BytesIO(b"fake bib content"),
         )
         fake_db = MagicMock()
         result = asyncio.run(
@@ -222,8 +222,8 @@ def test_inject_bibliography_direct_success():
 
 def test_inject_bibliography_direct_invalid_extension():
     file = UploadFile(
-        filename="references.txt",
-        file=BytesIO(b"fake txt content"),
+        filename="references.ris",
+        file=BytesIO(b"fake ris content"),
     )
     fake_db = MagicMock()
     with pytest.raises(HTTPException) as exc_info:
@@ -251,8 +251,8 @@ def test_inject_bibliography_endpoint_success(mock_parse, mock_inject):
         mock_parse.return_value = [mock_ref]
         mock_inject.return_value = 10
 
-        file_content = b"fake ris content"
-        files = {"file": ("test.ris", file_content, "text/plain")}
+        file_content = b"fake bib content"
+        files = {"file": ("test.bib", file_content, "text/plain")}
         data = {"project_code": "PROJ-1"}
 
         response = client.post(
@@ -267,8 +267,8 @@ def test_inject_bibliography_endpoint_success(mock_parse, mock_inject):
 
 @pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
 def test_inject_bibliography_endpoint_invalid_extension():
-    file_content = b"fake txt content"
-    files = {"file": ("test.txt", file_content, "text/plain")}
+    file_content = b"fake ris content"
+    files = {"file": ("test.ris", file_content, "text/plain")}
     data = {"project_code": "PROJ-1"}
 
     response = client.post(

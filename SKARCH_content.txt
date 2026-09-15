@@ -1,723 +1,377 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-15 20:35:30
+Date: 2026-09-15 20:52:39
 AST Mode: True
 Line Numbers: False
-Modules: download_service.py, schemas.py, resolver_service.py, injection_service.py, parser_service.py, router.py
-Processed Files: 6
+Modules: test_router.py, roadmap_12_bib_only_and_injection_fix.md
+Processed Files: 2
 ===========================
 
 
 
-// --- backend/src/bibliography/download_service.py ---
+// --- backend/tests/bibliography/test_router.py ---
 
+import sys
+from pathlib import Path
+from io import BytesIO
 import asyncio
-import json
-import random
-from typing import Optional, List, Dict, Any, AsyncGenerator
-import httpx
-from .resolver_service import resolve_pdf_url, _BROWSER_HEADERS
-from .file_storage_service import save_pdf_bytes
+from unittest.mock import patch, MagicMock, mock_open
+from datetime import datetime, timezone
+import pytest
 
-async def _download_and_save(dest: str, doi: str, url: str, cookies: Optional[str] = None) -> str:
-    parsed_cookies = dict(x.split('=', 1) for x in cookies.split('; ') if '=' in x) if isinstance(cookies, str) and cookies.strip() else None
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        res = await client.get(url, headers=_BROWSER_HEADERS, cookies=parsed_cookies)
-        res.raise_for_status()
-        return await save_pdf_bytes(dest, doi, res.content)
+_root = Path(__file__).resolve().parents[3]
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
 
-
-async def execute_batch_download(dois: List[str], dest: str, email: str, delay: int, cookies: Optional[str] = None) -> AsyncGenerator[str, None]:
-    total, completed = (len(dois), 0)
-    for doi in dois:
-        yield json.dumps({
-            "progress": completed,
-            "total": total,
-            "log": f"Resolving: {doi}",
-            "doi": doi,
-            "status": "resolving",
-        })
-        try:
-            url = await resolve_pdf_url(doi, email, cookies)
-            if url:
-                path = await _download_and_save(dest, doi, url, cookies)
-                log = f'Downloaded {doi} to {path}'
-                status = 'downloaded'
-            else:
-                log = f'No open access URL found for {doi}'
-                status = 'not_found'
-        except Exception as err:
-            log = f'Failed {doi}: {err}'
-            status = 'failed'
-        completed += 1
-        yield json.dumps({
-            'progress': completed,
-            'total': total,
-            'log': log,
-            'doi': doi,
-            'status': status,
-            "log": log
-        })
-        if completed < total:
-            sleep_duration = (
-                random.uniform(2.0, 5.0) if delay != 0 else 0
-            )
-            if sleep_duration > 0:
-                await asyncio.sleep(sleep_duration)
-    yield json.dumps({
-        "progress": total,
-        "total": total,
-        "log": "Batch processing finished"
-    })
-
-
-
-// --- backend/src/bibliography/schemas.py ---
-
-from datetime import datetime
-from typing import Optional, List, Dict, Any, AsyncGenerator
-from pydantic import BaseModel, ConfigDict, Field
-
-
-class ZipDownloadRequest(BaseModel):
-    model_config = ConfigDict(strict=True, extra="forbid")
-
-    batch_name: str = Field(
-        ...,
-        description="The name of the batch folder containing the PDFs.",
-    )
-    dois: List[str] = Field(
-        ...,
-        description="List of DOIs to include in the ZIP archive.",
-    )
-
-
-class BatchDownloadRequest(BaseModel):
-    cookies: Optional[str] = Field(
-        None, description="Optional raw session cookies to bypass 403 blocks."
-    )
-    model_config = ConfigDict(strict=True, extra="forbid")
-
-    dois: List[str] = Field(
-        ...,
-        description="List of Digital Object Identifiers to fetch."
-    )
-    delay: int = Field(
-        ...,
-        ge=0,
-        description="Delay in seconds between sequential downloads."
-    )
-    destination: str = Field(
-        ...,
-        min_length=1,
-        description="Target directory path for storing downloaded PDF files."
-    )
-    email: str = Field(
-        ...,
-        min_length=1,
-        description="Contact email address for academic API polite pools."
-    )
-
-
-class LocalBatchDownloadRequest(BaseModel):
-    cookies: Optional[str] = Field(
-        None, description="Optional raw session cookies to bypass 403 blocks."
-    )
-    model_config = ConfigDict(strict=True, extra="forbid")
-
-    file_path: str = Field(
-        ...,
-        min_length=1,
-        description="Absolute or relative path to the local bibliography file."
-    )
-    destination: str = Field(
-        ...,
-        min_length=1,
-        description="Target directory path for storing downloaded PDF files."
-    )
-    email: str = Field(
-        ...,
-        min_length=1,
-        description="Contact email address for academic API polite pools."
-    )
-    delay: int = Field(
-        5,
-        ge=0,
-        description="Delay in seconds between sequential downloads."
-    )
-
-
-class ParsedReference(BaseModel):
-    model_config = ConfigDict(strict=True, extra="forbid")
-    
-    author: Optional[str] = None
-    year: Optional[str] = None
-    title: Optional[str] = None
-    journal: Optional[str] = None
-    doi: Optional[str] = None
-    upload_datetime: datetime
-
-
-// --- backend/src/bibliography/resolver_service.py ---
-
-import re
-from typing import Optional, List, Dict, Any, AsyncGenerator
-from urllib.parse import urljoin
-import httpx
-
-_BROWSER_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept": (
-        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-    ),
-}
-
-_PDF_META_PATTERNS = [
-    re.compile(
-        r'<meta[^>]+name=["\']citation_pdf_url["\'][^>]+content=["\']([^"\']+)["\']',
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']citation_pdf_url["\']',
-        re.IGNORECASE,
-    ),
-    re.compile(
-        r'<link[^>]+type=["\']application/pdf["\'][^>]+href=["\']([^"\']+)["\']',
-        re.IGNORECASE,
-    ),
-]
-
-
-async def resolve_institutional_pdf_url(doi: str, client: Optional[httpx.AsyncClient]=None, cookies: Optional[str] = None) -> Optional[str]:
-    doi_url = f'https://doi.org/{doi}'
-    close_client = False
-    if client is None:
-        client = httpx.AsyncClient(timeout=15.0, follow_redirects=True)
-        close_client = True
-
-    parsed_cookies = dict(x.split('=', 1) for x in cookies.split('; ') if '=' in x) if isinstance(cookies, str) and cookies.strip() else None
-    try:
-        res = await client.get(doi_url, headers=_BROWSER_HEADERS, follow_redirects=True, cookies=parsed_cookies)
-        if res.status_code == 200:
-            html = res.text
-            for pattern in _PDF_META_PATTERNS:
-                match = pattern.search(html)
-                if match:
-                    raw_url = match.group(1).strip()
-                    return urljoin(str(res.url), raw_url)
-    except Exception:
-        pass
-    finally:
-        if close_client:
-            await client.aclose()
-
-    return None
-
-
-async def resolve_pdf_url(doi: str, email: str, cookies: Optional[str] = None) -> Optional[str]:
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        try:
-            url = f"https://api.unpaywall.org/v2/{doi}?email={email}"
-            res = await client.get(url)
-            if res.status_code == 200:
-                loc = res.json().get("best_oa_location") or {}
-                if pdf_url := loc.get("url_for_pdf"):
-                    return str(pdf_url)
-        except Exception:
-            pass
-        try:
-            url = f"https://api.openalex.org/works/doi:{doi}"
-            res = await client.get(url)
-            if res.status_code == 200:
-                oa = res.json().get("open_access") or {}
-                if oa_url := oa.get("oa_url"):
-                    return str(oa_url)
-        except Exception:
-            pass
-        try:
-            inst_url = await resolve_institutional_pdf_url(doi, client=client, cookies=cookies)
-            if inst_url:
-                return inst_url
-        except Exception:
-            pass
-    return None
-
-
-// --- backend/src/bibliography/injection_service.py ---
-
-"""Service for persisting bibliographic references into the database."""
-from typing import List, Optional
-from sqlalchemy.orm import Session
+from fastapi import UploadFile, HTTPException
+from backend.main import app
+from backend.src.bibliography.schemas import ParsedReference
 
 try:
-    from .schemas import ParsedReference
-    from ..database.models.core import Article, Project, ProjectArticle
-except (ImportError, ValueError):
-    from backend.src.bibliography.schemas import ParsedReference
-    from backend.src.database.models.core import (
-        Article,
-        Project,
-        ProjectArticle,
-    )
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
+    HAS_TESTCLIENT = True
+except (RuntimeError, ImportError):
+    client = None
+    HAS_TESTCLIENT = False
 
-
-def inject_references_to_db(
-    db: Session, refs: List[ParsedReference], project_code: str
-) -> int:
-    """Persist parsed references and associate them with a project."""
-    project = db.query(Project).filter(Project.name == project_code).first()
-    if not project:
-        project = Project(name=project_code)
-        db.add(project)
-        db.flush()
-
-    for ref in refs:
-        year_val: Optional[int] = None
-        if ref.year:
-            try:
-                year_val = int(float(str(ref.year).strip()))
-            except (ValueError, TypeError):
-                year_val = None
-
-        article = Article(
-            title=ref.title or "Untitled",
-            journal=ref.journal,
-            year=year_val,
-            doi=getattr(ref, "doi", None),
-        )
-        db.add(article)
-        db.flush()
-        db.add(ProjectArticle(project_id=project.id, article_id=article.id))
-
-    db.commit()
-    return len(refs)
-
-
-
-// --- backend/src/bibliography/parser_service.py ---
-
-import datetime
-from typing import List, Optional
-import re
-import rispy
-import bibtexparser
-from .schemas import ParsedReference
-
-
-def _extract_bib_field(entry, key: str) -> Optional[str]:
-    target_keys = {key.lower()}
-    if key.lower() == "journal":
-        target_keys.update(
-            {"journaltitle", "booktitle", "series", "journal-iso"}
-        )
-    elif key.lower() == "title":
-        target_keys.update({"booktitle"})
-    elif key.lower() == "year":
-        target_keys.update({"date", "py"})
-
-    val = None
-    if isinstance(entry, dict):
-        for k, v in entry.items():
-            if str(k).lower() in target_keys:
-                val = v
-                break
-    elif hasattr(entry, "fields_dict"):
-        for k, v in entry.fields_dict.items():
-            if str(k).lower() in target_keys:
-                val = getattr(v, "value", str(v))
-                break
-    elif hasattr(entry, "fields"):
-        for field in entry.fields:
-            f_key = getattr(field, "key", None)
-            if f_key and str(f_key).lower() in target_keys:
-                val = getattr(field, "value", str(field))
-                break
-    elif hasattr(entry, key):
-        val = getattr(entry, key)
-    elif hasattr(entry, "get"):
-        for tk in target_keys:
-            try:
-                v = entry.get(tk) or entry.get(tk.capitalize())
-                if v is not None:
-                    val = v
-                    break
-            except Exception:
-                pass
-    else:
-        val = None
-
-    if val is not None:
-        if hasattr(val, "value"):
-            val = val.value
-        cleaned = str(val).strip()
-        while (cleaned.startswith("{") and cleaned.endswith("}")) or (
-            cleaned.startswith('"') and cleaned.endswith('"')
-        ):
-            cleaned = cleaned[1:-1].strip()
-        cleaned = re.sub(r"\s+", " ", cleaned)
-        if key.lower() == "year":
-            match = re.search(r"\b(19\d\d|20\d\d)\b", cleaned)
-
-
-            return match.group(1) if match else (cleaned or None)
-        return cleaned or None
-    return None
-
-
-def _parse_bibtex_entries(content: str) -> list:
-    if hasattr(bibtexparser, "parse_string"):
-        result = bibtexparser.parse_string(content)
-        return list(getattr(result, "entries", getattr(result, "blocks", [])))
-    if hasattr(bibtexparser, "loads"):
-        result = bibtexparser.loads(content)
-        return list(getattr(result, "entries", []))
-    if hasattr(bibtexparser, "bparser"):
-        parser = bibtexparser.bparser.BibTexParser()
-        result = parser.parse(content)
-        return list(getattr(result, "entries", []))
-    return []
-
-
-def _clean_year(val: Optional[str]) -> Optional[str]:
-    if not val:
-        return None
-    match = re.search(r"\b(19\d\d|20\d\d)\b", str(val))
-    if match:
-        return match.group(1)
-    cleaned = re.sub(r"[^\d]", "", str(val))
-    return cleaned[:4] if len(cleaned) >= 4 else (cleaned or None)
-
-
-def _extract_ris_title(entry: dict) -> Optional[str]:
-    return (
-        entry.get("title")
-        or entry.get("primary_title")
-        or entry.get("TI")
-        or entry.get("T1")
-        or entry.get("CT")
-        or None
-    )
-
-
-def _extract_ris_journal(entry: dict) -> Optional[str]:
-    return (
-        entry.get("journal_name")
-        or entry.get("secondary_title")
-        or entry.get("alternate_title1")
-        or entry.get("alternate_title2")
-        or entry.get("alternate_title3")
-        or entry.get("source")
-        or entry.get("SO")
-        or entry.get("T2")
-        or entry.get("JO")
-        or entry.get("JF")
-        or entry.get("JA")
-        or entry.get("J2")
-        or None
-    )
-
-
-def _extract_ris_authors(entry: dict) -> Optional[str]:
-    authors = (
-        entry.get("authors")
-        or entry.get("primary_authors")
-        or entry.get("AU")
-        or entry.get("A1")
-        or []
-    )
-    if isinstance(authors, list):
-        clean_authors = [str(a).strip() for a in authors if str(a).strip()]
-        return " and ".join(clean_authors) if clean_authors else None
-    if isinstance(authors, str) and authors.strip():
-        return authors.strip()
-    return None
-
-
-def _extract_ris_year(entry: dict) -> Optional[str]:
-    raw_year = (
-        entry.get("year")
-        or entry.get("publication_year")
-        or entry.get("PY")
-        or entry.get("Y1")
-        or entry.get("DA")
-        or None
-    )
-    return _clean_year(raw_year)
-
-
-def _extract_ris_doi(entry: dict) -> Optional[str]:
-    doi = entry.get("doi") or entry.get("DO") or entry.get("DI") or None
-    if doi:
-        return (
-            str(doi)
-            .strip()
-            .replace("https://doi.org/", "")
-            .replace("http://doi.org/", "")
-        )
-    return None
-
-
-def _parse_ris_fallback(content: str) -> list:
-    entries = []
-    current_entry = {}
-    current_tag = None
-
-    for line in content.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        match = re.match(r"^([A-Z0-9]{2})\s*-\s*(.*)$", line)
-        if match:
-            tag, val = match.group(1), match.group(2).strip()
-            current_tag = tag
-            if tag == "TY":
-                if current_entry and (
-                    current_entry.get("TI")
-                    or current_entry.get("title")
-                    or current_entry.get("AU")
-                ):
-                    entries.append(current_entry)
-                current_entry = {"TY": val, "authors": []}
-            elif tag == "ER":
-                if current_entry:
-                    entries.append(current_entry)
-                    current_entry = {}
-            elif tag in ("AU", "A1"):
-                if "authors" not in current_entry:
-                    current_entry["authors"] = []
-                current_entry["authors"].append(val)
-            else:
-                current_entry[tag] = val
-        elif current_tag and current_entry:
-            if current_tag not in ("AU", "A1") and current_tag in current_entry:
-                current_entry[current_tag] += " " + line
-
-    if current_entry and (
-        current_entry.get("TI")
-        or current_entry.get("title")
-        or current_entry.get("AU")
-    ):
-        entries.append(current_entry)
-
-    return entries
-
-
-def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
-    parsed_refs: List[ParsedReference] = []
-    now = datetime.datetime.now(datetime.timezone.utc)
-    
-    if ext.lower() == ".ris":
-        entries = []
-        try:
-            entries = rispy.loads(content, skip_unknown_tags=True)
-        except Exception:
-            entries = []
-
-        fallback_entries = _parse_ris_fallback(content)
-        if len(fallback_entries) > len(entries):
-            entries = fallback_entries
-
-        for entry in entries:
-            authors = entry.get("authors", [])
-            author_str = " and ".join(authors) if isinstance(authors, list) else authors
-            
-            parsed_refs.append(
-                ParsedReference(
-                    author=_extract_ris_authors(entry),
-                    year=_extract_ris_year(entry),
-                    title=_extract_ris_title(entry),
-                    journal=_extract_ris_journal(entry),
-                    doi=_extract_ris_doi(entry),
-                    upload_datetime=now,
-                )
-            )
-            
-    elif ext.lower() == ".bib":
-        entries = _parse_bibtex_entries(content)
-        for entry in entries:
-            parsed_refs.append(
-                ParsedReference(
-                    author=_extract_bib_field(entry, "author"),
-                    year=_extract_bib_field(entry, "year"),
-                    title=_extract_bib_field(entry, "title"),
-                    journal=_extract_bib_field(entry, "journal"),
-                    doi=_extract_bib_field(entry, "doi"),
-                    upload_datetime=now,
-                )
-            )
-    else:
-        raise ValueError(f"Unsupported extension: {ext}")
-        
-    return parsed_refs
-
-
-// --- backend/src/bibliography/router.py ---
-
-import os
-import re
-from typing import List
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-from .schemas import (
-    ParsedReference,
+from backend.src.bibliography.router import (
+    upload_bibliography,
+    batch_download,
+    download_zip,
+    inject_bibliography,
+)
+from backend.src.bibliography.schemas import (
     BatchDownloadRequest,
     ZipDownloadRequest,
     LocalBatchDownloadRequest,
 )
-from .parser_service import parse_bibliography_content
-from .download_service import execute_batch_download
-from .zip_service import create_zip_from_pdfs
-from .injection_service import inject_references_to_db
 
-try:
-    from ..database.session import get_db
-except (ImportError, ValueError):
-    try:
-        from src.database.session import get_db
-    except ImportError:
-        from backend.src.database.session import get_db
-
-router = APIRouter()
-
-try:
-    import multipart
-    HAS_MULTIPART = True
-except ImportError:
-    HAS_MULTIPART = False
-
-async def _process_upload(file: UploadFile) -> List[ParsedReference]:
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-    
-    _, ext = os.path.splitext(file.filename)
-    if ext.lower() not in [".ris", ".bib"]:
-        raise HTTPException(status_code=400, detail="Unsupported file extension")
-    
-    try:
-        content_bytes = await file.read()
-        content_str = content_bytes.decode("utf-8")
-        refs = parse_bibliography_content(content_str, ext)
-        return refs
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error during parsing"
-        )
-
-
-async def _process_inject(
-    file: UploadFile, project_code: str, db: Session
-) -> dict:
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-
-    _, ext = os.path.splitext(file.filename)
-    if ext.lower() not in [".ris", ".bib"]:
-        raise HTTPException(
-            status_code=400, detail="Unsupported file extension"
-        )
-
-    try:
-        content_bytes = await file.read()
-        content_str = content_bytes.decode("utf-8")
-        refs = parse_bibliography_content(content_str, ext)
-        inserted = inject_references_to_db(db, refs, project_code)
-        return {"message": "Success", "inserted": inserted}
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as exc:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal server error during injection: {str(exc)}",
-        )
-
-if HAS_MULTIPART:
-    @router.post("/upload", response_model=List[ParsedReference])
-    async def upload_bibliography(file: UploadFile = File(...)):
-        return await _process_upload(file)
-
-    @router.post("/inject")
-    async def inject_bibliography(
-        file: UploadFile = File(...),
-        project_code: str = Form(...),
-        db: Session = Depends(get_db),
-    ):
-        return await _process_inject(file, project_code, db)
-else:
-    async def upload_bibliography(file: UploadFile):
-        return await _process_upload(file)
-
-    async def inject_bibliography(
-        file: UploadFile,
-        project_code: str,
-        db: Session,
-    ):
-        return await _process_inject(file, project_code, db)
-
-
-@router.post("/batch-download")
-async def batch_download(request: BatchDownloadRequest):
-    async def sse_generator():
-        async for event in execute_batch_download(
-            request.dois,
-            request.destination,
-            request.email,
-            request.delay,
-            request.cookies,
-        ):
-            yield f"data: {event}\n\n"
-
-    return StreamingResponse(
-        sse_generator(),
-        media_type="text/event-stream"
+def test_upload_bibliography_direct_success():
+    mock_ref = ParsedReference(
+        author="Test Author",
+        year="2024",
+        title="Test Title",
+        journal="Test Journal",
+        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc)
     )
+    with patch(
+        "backend.src.bibliography.router.parse_bibliography_content",
+        return_value=[mock_ref]
+    ):
+        file = UploadFile(
+            filename="test.ris",
+            file=BytesIO(b"fake ris content")
+        )
+        result = asyncio.run(upload_bibliography(file))
+        assert len(result) == 1
+        assert result[0].title == "Test Title"
 
-
-@router.post("/batch-download-local")
-async def batch_download_local(request: LocalBatchDownloadRequest):
-    try:
-        with open(request.file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
-    
-    _, ext = os.path.splitext(request.file_path)
-    try:
-        refs = parse_bibliography_content(content, ext)
-        dois = list(set(ref.doi for ref in refs if ref.doi))
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Parse error: {str(e)}")
-
-    async def sse_generator():
-        async for event in execute_batch_download(
-            dois,
-            request.destination,
-            request.email,
-            request.delay,
-            request.cookies,
-        ):
-            yield f"data: {event}\n\n"
-
-    return StreamingResponse(sse_generator(), media_type="text/event-stream")
-
-
-@router.post("/download-zip")
-async def download_zip(request: ZipDownloadRequest):
-    zip_io = create_zip_from_pdfs(request.batch_name, request.dois)
-    return StreamingResponse(
-        zip_io,
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": (
-                f"attachment; filename={request.batch_name}.zip"
-            )
-        },
+def test_upload_bibliography_direct_invalid_extension():
+    file = UploadFile(
+        filename="test.txt",
+        file=BytesIO(b"fake txt content")
     )
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(upload_bibliography(file))
+    assert exc_info.value.status_code == 400
+    assert "Unsupported file extension" in exc_info.value.detail
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx2 not installed")
+@patch("backend.src.bibliography.router.parse_bibliography_content")
+def test_upload_bibliography_success(mock_parse):
+    # Arrange
+    mock_ref = ParsedReference(
+        author="Test Author",
+        year="2024",
+        title="Test Title",
+        journal="Test Journal",
+        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc)
+    )
+    mock_parse.return_value = [mock_ref]
+
+    file_content = b"fake ris content"
+    files = {"file": ("test.ris", file_content, "text/plain")}
+    
+    # Act
+    response = client.post("/api/bibliography/upload", files=files)
+    
+    # Assert
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["title"] == "Test Title"
+    assert data[0]["author"] == "Test Author"
+    mock_parse.assert_called_once_with("fake ris content", ".ris")
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx2 not installed")
+def test_upload_bibliography_invalid_extension():
+    # Arrange
+    file_content = b"fake txt content"
+    files = {"file": ("test.txt", file_content, "text/plain")}
+    
+    # Act
+    response = client.post("/api/bibliography/upload", files=files)
+    
+    # Assert
+    assert response.status_code == 400
+    assert "Unsupported file extension" in response.json()["detail"]
+
+
+async def _run_batch_download_direct():
+    async def mock_generator(*args, **kwargs):
+        yield '{"log": "test"}'
+
+    req = BatchDownloadRequest(
+        dois=["10.1000/182"],
+        delay=0,
+        destination="/tmp/downloads",
+        email="test@example.com",
+        cookies="auth=123",
+    )
+    with patch(
+        "backend.src.bibliography.router.execute_batch_download",
+        side_effect=mock_generator,
+    ):
+        response = await batch_download(req)
+        assert response.media_type == "text/event-stream"
+        chunks = [chunk async for chunk in response.body_iterator]
+        assert chunks == ['data: {"log": "test"}\n\n']
+
+
+def test_batch_download_endpoint_direct():
+    asyncio.run(_run_batch_download_direct())
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+def test_batch_download_endpoint_client():
+    async def mock_generator(*args, **kwargs):
+        yield '{"log": "test"}'
+
+    payload = {
+        "dois": ["10.1000/182"],
+        "delay": 0,
+        "destination": "/tmp/downloads",
+        "email": "test@example.com",
+        "cookies": "auth=123",
+    }
+    with patch(
+        "backend.src.bibliography.router.execute_batch_download",
+        side_effect=mock_generator,
+    ):
+        response = client.post(
+            "/api/bibliography/batch-download", json=payload
+        )
+        assert response.status_code == 200
+        assert "text/event-stream" in response.headers["content-type"]
+        assert 'data: {"log": "test"}\n\n' in response.text
+
+
+async def _run_download_zip_direct():
+    dummy_io = BytesIO(b"PK\x03\x04fakezip")
+    req = ZipDownloadRequest(batch_name="test", dois=[])
+    with patch(
+        "backend.src.bibliography.router.create_zip_from_pdfs",
+        return_value=dummy_io,
+    ) as mock_service:
+        response = await download_zip(req)
+        assert response.media_type == "application/zip"
+        assert (
+            response.headers["Content-Disposition"]
+            == "attachment; filename=test.zip"
+        )
+        mock_service.assert_called_once_with("test", [])
+
+
+def test_download_zip_endpoint_direct():
+    asyncio.run(_run_download_zip_direct())
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+def test_download_zip_endpoint_client():
+    dummy_io = BytesIO(b"PK\x03\x04fakezip")
+    payload = {"batch_name": "test", "dois": []}
+    with patch(
+        "backend.src.bibliography.router.create_zip_from_pdfs",
+        return_value=dummy_io,
+    ) as mock_service:
+        response = client.post(
+            "/api/bibliography/download-zip", json=payload
+        )
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/zip"
+        assert (
+            response.headers["content-disposition"]
+            == "attachment; filename=test.zip"
+        )
+        mock_service.assert_called_once_with("test", [])
+
+
+def test_inject_bibliography_direct_success():
+    mock_ref = ParsedReference(
+        author="Test Author",
+        year="2024",
+        title="Test Title",
+        journal="Test Journal",
+        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    with patch(
+        "backend.src.bibliography.router.parse_bibliography_content",
+        return_value=[mock_ref],
+    ), patch(
+        "backend.src.bibliography.router.inject_references_to_db",
+        return_value=10,
+    ):
+        file = UploadFile(
+            filename="references.ris",
+            file=BytesIO(b"fake ris content"),
+        )
+        fake_db = MagicMock()
+        result = asyncio.run(
+            inject_bibliography(file, "PROJ-1", fake_db)
+        )
+        assert result == {"message": "Success", "inserted": 10}
+
+
+def test_inject_bibliography_direct_invalid_extension():
+    file = UploadFile(
+        filename="references.txt",
+        file=BytesIO(b"fake txt content"),
+    )
+    fake_db = MagicMock()
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(inject_bibliography(file, "PROJ-1", fake_db))
+    assert exc_info.value.status_code == 400
+    assert "Unsupported file extension" in exc_info.value.detail
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+@patch("backend.src.bibliography.router.inject_references_to_db")
+@patch("backend.src.bibliography.router.parse_bibliography_content")
+def test_inject_bibliography_endpoint_success(mock_parse, mock_inject):
+    from backend.src.bibliography.router import get_db
+
+    mock_db = MagicMock()
+    app.dependency_overrides[get_db] = lambda: mock_db
+    try:
+        mock_ref = ParsedReference(
+            author="Test Author",
+            year="2024",
+            title="Test Title",
+            journal="Test Journal",
+            upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        )
+        mock_parse.return_value = [mock_ref]
+        mock_inject.return_value = 10
+
+        file_content = b"fake ris content"
+        files = {"file": ("test.ris", file_content, "text/plain")}
+        data = {"project_code": "PROJ-1"}
+
+        response = client.post(
+            "/api/bibliography/inject", files=files, data=data
+        )
+        assert response.status_code == 200
+        assert response.json() == {"message": "Success", "inserted": 10}
+        mock_inject.assert_called_once_with(mock_db, [mock_ref], "PROJ-1")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+def test_inject_bibliography_endpoint_invalid_extension():
+    file_content = b"fake txt content"
+    files = {"file": ("test.txt", file_content, "text/plain")}
+    data = {"project_code": "PROJ-1"}
+
+    response = client.post(
+        "/api/bibliography/inject", files=files, data=data
+    )
+    assert response.status_code == 400
+    assert "Unsupported file extension" in response.json()["detail"]
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+def test_batch_download_local_endpoint_client():
+    async def mock_generator(*args, **kwargs):
+        yield '{"log": "local test"}'
+
+    payload = {
+        "file_path": "/fake/path.bib",
+        "delay": 0,
+        "destination": "/tmp/downloads",
+        "email": "test@example.com",
+        "cookies": "auth=123",
+    }
+    fake_bib = "Some content with DOI: 10.1000/182 and another 10.1000/182"
+
+    mock_ref = ParsedReference(
+        author="Test Author",
+        year="2024",
+        title="Test Title",
+        journal="Test Journal",
+        doi="10.1000/182",
+        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
+    )
+    with patch("builtins.open", mock_open(read_data=fake_bib)), patch(
+        "backend.src.bibliography.router.parse_bibliography_content",
+        return_value=[mock_ref],
+    ), patch(
+        "backend.src.bibliography.router.execute_batch_download",
+        side_effect=mock_generator,
+    ) as mock_exec:
+        response = client.post(
+            "/api/bibliography/batch-download-local", json=payload
+        )
+        assert response.status_code == 200
+        assert "text/event-stream" in response.headers["content-type"]
+        assert 'data: {"log": "local test"}\n\n' in response.text
+        
+        args, _ = mock_exec.call_args
+        assert args[0] == ["10.1000/182"]
+
+
+// --- leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md ---
+
+---
+type: "roadmap"
+epic_name: "EPIC 13: BIB ONLY INGESTION & INJECTION RESILIENCE"
+domain: "Bibliography Ingestion"
+complexity_aggregate: "MEDIUM"
+---
+
+# EPIC 13: BIB ONLY INGESTION & INJECTION RESILIENCE | BIBLIOGRAPHY VERTICAL
+
+- [x] Story 12.0: Roadmap & Planning Initialization | [MoSCoW: MUST] | [Complexity: TRIVIAL]
+  Business Requirement: Initialize sequential agentic memory state trackers ensuring DAG dependencies.
+  Story Context Radius: `{"leai_docs/planning/global_backlog.md": ["*"]}`
+  Layered Technical Breakdown:
+  - [ID-12.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Append EPIC 13, its [REQ-036] to [REQ-039] list, and the Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md]. Type: Task.
+
+- [ ] Story 12.1: Backend Router Boundary Marshal (.bib Restriction) | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-036)
+  Story Context Radius: `{"backend/src/bibliography/router.py": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
+  Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
+  - [ID-12.1.1] [TESTING/TDE]: [1. Arrange: Mock UploadFile with a .ris extension. 2. Act: Invoke _process_upload with the mock file. 3. Assert: Verify that an HTTPException with status 400 is raised]. Type: Task.
+  - [ID-12.1.2] [LOGIC/IO]: [1. Open backend/src/bibliography/router.py. 2. In _process_upload and _process_inject, modify the extension validation to strictly allow ONLY [".bib"]. 3. In _process_inject, add a try...except block around the inject_references_to_db call to catch RuntimeError and raise an HTTPException with status 503 and detail "Error de conexión a la base de datos. Intente nuevamente."]. Type: Task.
+  - [ID-12.1.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.1. 2. Append > Files touched: backend/src/bibliography/router.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-036]. Type: Task.
+
+- [ ] Story 12.2: Backend Parser Core Logic (.bib Extraction) | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-038)
+  Story Context Radius: `{"backend/src/bibliography/parser_service.py": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
+  Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
+  - [ID-12.2.1] [TESTING/TDE]: [1. Arrange: Mock a .bib string with no valid entries. 2. Act: Invoke parse_bibliography_content with the mock string and ext=".bib". 3. Assert: Verify that a ValueError is raised]. Type: Task.
+  - [ID-12.2.2] [LOGIC/CORE]: [1. Open backend/src/bibliography/parser_service.py. 2. Delete all .ris parsing functions (_extract_ris_*, _parse_ris_fallback) and the .ris branch in parse_bibliography_content. 3. In parse_bibliography_content, if entries is empty after _parse_bibtex_entries, raise ValueError("No se encontraron items válidos en el archivo .bib")]. Type: Task.
+  - [ID-12.2.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.2. 2. Append > Files touched: backend/src/bibliography/parser_service.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-038]. Type: Task.
+
+- [ ] Story 12.3: Backend Injection DB Resilience | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-039)
+  Story Context Radius: `{"backend/src/bibliography/injection_service.py": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
+  Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
+  - [ID-12.3.1] [TESTING/TDE]: [1. Arrange: Mock the SQLAlchemy Session so that db.query() raises sqlalchemy.exc.OperationalError. 2. Act: Invoke inject_references_to_db. 3. Assert: Verify that a RuntimeError is raised]. Type: Task.
+  - [ID-12.3.2] [LOGIC/DB]: [1. Open backend/src/bibliography/injection_service.py. 2. Import OperationalError from sqlalchemy.exc. 3. Wrap the DB query and commit logic inside inject_references_to_db in a try...except OperationalError block. 4. If caught, raise RuntimeError("Database connection failed")]. Type: Task.
+  - [ID-12.3.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.3. 2. Append > Files touched: backend/src/bibliography/injection_service.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-039]. Type: Task.
+
+- [ ] Story 12.4: Frontend Hook State Fractality (.bib Validation) | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-037)
+  Story Context Radius: `{"frontend/src/hooks/useReferencesUpload.js": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
+  Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
+  - [ID-12.4.1] [TESTING/TDE]: [1. Arrange: Mock a file object with name "test.ris". 2. Act: Invoke uploadAndInject with the mock file. 3. Assert: Verify that setError is called with "Solo se permiten archivos .bib" and no fetch request is executed]. Type: Task.
+  - [ID-12.4.2] [LOGIC/UI_STATE]: [1. Open frontend/src/hooks/useReferencesUpload.js. 2. In uploadAndInject, iterate over files and verify file.name.toLowerCase().endsWith('.bib'). If false, call setError('Solo se permiten archivos .bib'), setIsSuccess(false), and return. 3. Ensure backend error payloads (like the 503 DB error) are correctly passed to setError]. Type: Task.
+  - [ID-12.4.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.4. 2. Append > Files touched: frontend/src/hooks/useReferencesUpload.js under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-037]. Type: Task.

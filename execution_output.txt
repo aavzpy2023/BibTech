@@ -1,7 +1,7 @@
 === PATCH OPERATIONS APPLIED ===
+- [Successful] CREATE -> leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md
 - [Successful] EDIT -> leai_docs/planning/global_backlog.md
 - [Successful] EDIT -> leai_docs/planning/global_backlog.md
-- [Successful] CREATE -> leai_docs/planning/roadmap_11_references_ui_and_bugfixes.md
 
 === VALIDATION COMMAND OUTPUT (PART 7) ===
 Pruebas omitidas o sin comandos bash ejecutados (# N/A).

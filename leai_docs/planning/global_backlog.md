@@ -65,7 +65,7 @@
 - [x] Story 12.0: Roadmap & Planning Initialization
 - [x] [REQ-036] Backend Router Boundary Marshal (.bib Restriction)
 - [ ] [REQ-038] Backend Parser Core Logic (.bib Extraction)
-- [ ] [REQ-039] Backend Injection DB Resilience
+- [x] [REQ-039] Backend Injection DB Resilience
 - [ ] [REQ-037] Frontend Hook State Fractality (.bib Validation)
 
 ## Active Roadmaps
