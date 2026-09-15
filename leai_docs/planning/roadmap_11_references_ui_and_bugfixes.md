@@ -31,8 +31,9 @@ complexity_aggregate: "MEDIUM"
   [ID-11.2.2] [UI/VIEW]: [1. Open frontend/src/components/references/UploadReferencesModal.jsx. 2. Update styles.modal to { ...backgroundColor: '#161b22', border: '1px solid #30363d' }. 3. Update styles.title and styles.label color to #f0f6fc. 4. Update styles.description and styles.hint color to #8b949e. 5. Update styles.input background to #0d1117 and color to #f0f6fc. 6. Update styles.cancelBtn background to #21262d, border to #30363d, and color to #f0f6fc]. Type: Task.
   [ID-11.2.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_11_references_ui_and_bugfixes.md and check - [ ] for Story 11.2. 2. Append &gt; Files touched: UploadReferencesModal.jsx under the story. 3. Open global_backlog.md and check - [ ] for [REQ-033]]. Type: Task.
 
-- [ ] Story 11.3: References Table Pagination &amp; Search State (State Fractality) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 11.3: References Table Pagination &amp; Search State (State Fractality) | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Isolate the pagination (13 rows per view) and search filtering logic into a pure custom hook. (&lt;-- REQ-034)
+  &gt; Files touched: useReferencesTable.js, useReferencesTable.test.js
   Story Context Radius: {"frontend/src/hooks/useReferencesTable.js": [""], "frontend/src/hooks/useReferencesTable.test.js": [""], "leai_docs/planning/roadmap_11_references_ui_and_bugfixes.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
   [ID-11.3.1] [TESTING/TDE]: [1. Arrange: Mock an array of 20 reference objects. 2. Act: Render useReferencesTable(mockData, 13). Call setSearchQuery('test'). 3. Assert: Verify paginatedData returns strictly the filtered slice and currentPage resets to 1]. Type: Task.
