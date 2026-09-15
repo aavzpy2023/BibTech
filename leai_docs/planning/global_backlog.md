@@ -55,6 +55,12 @@
 - [x] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
 - [x] [REQ-031] CLI Argument Cookie Support (Script OCP)
 
+## EPIC 12: REFERENCES UI REFINEMENT & BACKEND BUGFIX
+- [ ] [REQ-032] Backend Typing Bugfix (Micro-Surgery)
+- [ ] [REQ-033] UploadReferencesModal Dark Mode Compliance
+- [ ] [REQ-034] References Table Pagination & Search State (State Fractality)
+- [ ] [REQ-035] References Table Dumb View Wiring
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
@@ -66,3 +72,4 @@
 - [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
 - [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
 - [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
+- [Roadmap 11: References UI Refinement & Backend Bugfix](roadmap_11_references_ui_and_bugfixes.md)
