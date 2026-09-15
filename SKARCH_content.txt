@@ -1,136 +1,551 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-15 20:19:54
+Date: 2026-09-15 20:28:30
 AST Mode: True
 Line Numbers: False
-Modules: global_backlog.md, download_service.py, schemas.py, resolver_service.py, UploadReferencesModal.jsx, ReferencesDataTable.jsx
-Processed Files: 6
+Modules: BibliographyUploader.jsx, BatchInput.jsx, BatchConfig.jsx, UploadReferencesModal.jsx
+Processed Files: 4
 ===========================
 
 
 
-// --- leai_docs/planning/global_backlog.md ---
+// --- frontend/src/components/BibliographyUploader.jsx ---
 
-# Global Backlog
+import React from 'react';
+import { useDropzone } from 'react-dropzone';
 
-## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
-- [x] Story 1.0: Roadmap &amp; Planning Initialization
-- [x] Story 1.1: Project Dependencies &amp; Context Genesis
+const styles = {
+  dropzone: {
+    border: '2px dashed #0366d6',
+    borderRadius: '8px',
+    padding: '40px',
+    textAlign: 'center',
+    cursor: 'pointer',
+    backgroundColor: '#161b22',
+    border: '2px dashed #30363d',
+    marginBottom: '24px',
+    transition: 'background-color 0.2s ease'
+  },
+  dropzoneActive: {
+    backgroundColor: '#e1f5fe',
+    borderColor: '#0288d1'
+  },
+  text: {
+    margin: 0,
+    color: '#f0f6fc',
+    fontSize: '16px',
+    fontWeight: '500'
+  },
+  subtext: {
+    margin: '8px 0 0 0',
+    color: '#8b949e',
+    fontSize: '14px'
+  }
+};
 
-## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
-- [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
-- [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
-- [x] [REQ-003] Bibliography Data Display &amp; Table View
+export function BibliographyUploader({ onUpload }) {
+  const onDrop = (acceptedFiles) => {
+    if (acceptedFiles.length > 0 && onUpload) {
+      onUpload(acceptedFiles);
+    }
+  };
 
-## EPIC 3: BATCH LOAD INTERFACE
-- [x] [REQ-004] Frontend Routing &amp; Main Layout
-- [x] [REQ-005] Load View - State Fractality (Custom Hook)
-- [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
-- [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'text/plain': ['.ris', '.bib']
+    },
+    multiple: true
+  });
 
-## EPIC 4: BATCH DOWNLOAD EXECUTION
-- [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
-- [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
-- [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
-- [x] [REQ-011] Frontend SSE Hook State Integration
+  return (
+    <div
+      {...getRootProps()}
+      style={{
+        ...styles.dropzone,
+        ...(isDragActive ? styles.dropzoneActive : {})
+      }}
+    >
+      <input {...getInputProps()} />
+      <p style={styles.text}>
+        Arrastra y suelta un archivo bibliográfico aquí, o haz clic para seleccionar
+      </p>
+      <p style={styles.subtext}>Formatos soportados: .ris, .bib</p>
+    </div>
+  );
+}
 
-## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
-- [x] [REQ-012] Load View Validation &amp; Label Updates
-- [x] [REQ-013] Queue View State &amp; UI Assembly
-- [x] [REQ-014] Backend ZIP Service &amp; Download Action
-
-## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
-- [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
-- [x] [REQ-016] Identity Domain Models &amp; Keywords
-- [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
-
-## EPIC 7: REFERENCES DATABASE INGESTION
-- [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
-- [x] [REQ-019] References Data Table View
-- [x] [REQ-020] Frontend Injection State Hook
-- [x] [REQ-021] References View Routing &amp; Assembly
-
-## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
-- [x] [REQ-022] Multiple File Upload Logic (FIFO Queue)
-- [x] [REQ-023] References Tab Translation to English
-- [x] [REQ-024] UI Standardization (Width & Headers)
-
-## EPIC 9: LOCAL FILE BATCH DOWNLOAD
-- [x] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
-- [x] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
-
-## EPIC 10: INSTITUTIONAL IP DIRECT RESOLVER
-- [x] [REQ-027] Institutional Direct PDF URL Extractor (Landing Page Metadata)
-- [x] [REQ-028] Cascading Resolver Fallback Chain Integration
-
-## EPIC 11: COOKIE AUTHENTICATION PASSTHROUGH
-- [x] [REQ-029] Frontend UI State Fractality & Dumb View Wiring (Cookies)
-- [x] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
-- [x] [REQ-031] CLI Argument Cookie Support (Script OCP)
-
-## Active Roadmaps
-- [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
-- [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
-- [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
-- [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
-- [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
-- [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
-- [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
-- [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
-- [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
-- [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
+export default BibliographyUploader;
 
 
-// --- backend/src/bibliography/download_service.py ---
+// --- frontend/src/components/load/BatchInput.jsx ---
 
-import asyncio
-import json
-import random
-from typing import AsyncGenerator, List
-import httpx
-from .resolver_service import resolve_pdf_url, _BROWSER_HEADERS
-from .file_storage_service import save_pdf_bytes
+import React, { useState } from 'react';
+import { useDropzone } from 'react-dropzone';
 
-async def _download_and_save(dest: str, doi: str, url: str, cookies: Optional[str]=None) -> str:
-    """..."""
+export function extractDoisFromText(text, filename = '') {
+  const isBib = filename.toLowerCase().endsWith('.bib');
+  const foundDois = [];
+  const missingDoisAlerts = [];
 
-async def execute_batch_download(dois: List[str], dest: str, email: str, delay: int, cookies: Optional[str]=None) -> AsyncGenerator[str, None]:
-    """..."""
+  if (!isBib) {
+    return { foundDois, missingDoisAlerts };
+  }
+
+  // Fallback para evitar errores en variables no usadas (isRis)
+  if (false) {
+    const risRegex = /^[ \t]*DO\s+-\s+(.+)$/gim;
+    let match;
+    while ((match = risRegex.exec(text)) !== null) {
+      const doi = match[1].trim();
+      if (doi && !foundDois.includes(doi)) {
+        foundDois.push(doi);
+      }
+    }
+  }
+
+  if (isBib) {
+    const entryRegex = /@\w+\s*{\s*([^,]+)/gi;
+    let entryMatch;
+    
+    while ((entryMatch = entryRegex.exec(text)) !== null) {
+      const citationKey = entryMatch[1].trim();
+      
+      const startIndex = entryMatch.index;
+      let openBraces = 0;
+      let endIndex = startIndex;
+      let started = false;
+      
+      for (let i = startIndex; i < text.length; i++) {
+        if (text[i] === '{') {
+          openBraces++;
+          started = true;
+        } else if (text[i] === '}') {
+          openBraces--;
+        }
+        if (started && openBraces === 0) {
+          endIndex = i;
+          break;
+        }
+      }
+      
+      const entryText = text.substring(startIndex, endIndex + 1);
+      
+      const bibRegex = /\bdoi\s*=\s*(?:\{([^}]+)\}|"([^"]+)")/i;
+      const doiMatch = bibRegex.exec(entryText);
+      
+      if (doiMatch) {
+        const doi = (doiMatch[1] || doiMatch[2] || '').trim();
+        if (doi && !foundDois.includes(doi)) {
+          foundDois.push(doi);
+        }
+      } else {
+        missingDoisAlerts.push(`Citation key [${citationKey}] is missing a DOI.`);
+      }
+    }
+  }
+
+  if (false && foundDois.length === 0) {
+    const genericRegex = /\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+\b/gi;
+    let match;
+    while ((match = genericRegex.exec(text)) !== null) {
+      const doi = match[0].trim();
+      if (doi && !foundDois.includes(doi)) {
+        foundDois.push(doi);
+      }
+    }
+  }
+
+  return { foundDois, missingDoisAlerts };
+}
+
+const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    marginBottom: '24px'
+  },
+  dropzone: {
+    border: '2px dashed #0366d6',
+    borderRadius: '8px',
+    padding: '24px',
+    textAlign: 'center',
+    cursor: 'pointer',
+    backgroundColor: '#161b22',
+    border: '2px dashed #30363d'
+  },
+  dropzoneActive: {
+    backgroundColor: '#e1f5fe',
+    borderColor: '#0288d1'
+  },
+  textarea: {
+    width: '100%',
+    minHeight: '300px',
+    padding: '12px',
+    borderRadius: '6px',
+    border: '1px solid #30363d',
+    backgroundColor: '#0d1117',
+    color: '#f0f6fc',
+    fontFamily: 'monospace',
+    fontSize: '13px',
+    boxSizing: 'border-box'
+  },
+  label: {
+    fontWeight: 'bold',
+    fontSize: '14px',
+    color: '#f0f6fc',
+    marginBottom: '6px',
+    display: 'block'
+  },
+  fileList: {
+    marginTop: '8px',
+    fontSize: '13px',
+    color: '#586069'
+  },
+  uploadBtn: {
+    backgroundColor: '#0366d6', color: '#ffffff', border: 'none', borderRadius: '6px',
+    padding: '8px 16px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+  },
+  modalOverlay: {
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+  },
+  modalContent: {
+    backgroundColor: '#161b22', color: '#f0f6fc', border: '1px solid #30363d', padding: '24px', borderRadius: '8px', width: '450px', maxWidth: '90%'
+  },
+  badge: {
+    backgroundColor: '#21262d', color: '#f0f6fc', padding: '4px 8px', borderRadius: '12px', fontSize: '12px', marginLeft: '8px'
+  },
+  headerRow: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'
+  }
+};
+
+export function BatchInput({
+  files = [],
+  dois = '',
+  input,
+  onInputUpdate
+}) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [missingDois, setMissingDois] = useState([]);
+  const currentFiles = input?.files ?? files;
+  const currentDois = input?.dois ?? dois;
+
+  const onDrop = async (acceptedFiles) => {
+    const validFiles = (acceptedFiles || []).filter((file) => {
+      const ext = file.name.toLowerCase().split('.').pop();
+      return ext === 'bib';
+    });
+
+    if (validFiles.length === 0) {
+      alert("Only .bib files are accepted for this operation.");
+      return;
+    }
+
+    if (onInputUpdate) {
+      onInputUpdate('files', validFiles);
+    }
+
+    const allExtractedDois = [];
+    const allMissingAlerts = [];
+    for (const file of validFiles) {
+      try {
+        const text = await file.text();
+        const { foundDois, missingDoisAlerts } = extractDoisFromText(text, file.name);
+        allExtractedDois.push(...foundDois);
+        allMissingAlerts.push(...missingDoisAlerts);
+      } catch (err) {
+        console.error('Failed to read file for DOI extraction', err);
+      }
+    }
+
+    if (allMissingAlerts.length > 0) {
+      setMissingDois(allMissingAlerts);
+    }
+
+    if (allExtractedDois.length > 0 && onInputUpdate) {
+      const existing = currentDois
+        ? currentDois
+            .split('\n')
+            .map((d) => d.trim())
+            .filter(Boolean)
+        : [];
+      const merged = Array.from(new Set([...existing, ...allExtractedDois]));
+      onInputUpdate('dois', merged.join('\n'));
+    }
+    setIsModalOpen(false);
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'text/plain': ['.bib'],
+      'application/x-bibtex': ['.bib']
+    }
+  });
+
+  const doiList = currentDois ? currentDois.split('\n').map(d => d.trim()).filter(Boolean) : [];
+  const uniqueDois = Array.from(new Set(doiList));
+  const doiCount = uniqueDois.length;
+
+  const handleBlur = () => {
+    if (currentDois && onInputUpdate) {
+      onInputUpdate('dois', uniqueDois.join('\n'));
+    }
+  };
+
+  const downloadMissingTxt = () => {
+    const blob = new Blob([missingDois.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'missing_dois.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.headerRow}>
+        <label htmlFor="batch-dois-textarea" style={{ ...styles.label, marginBottom: 0 }}>
+          List of DOIs (one per line)
+          <span style={styles.badge}>{doiCount} PDFs to download</span>
+        </label>
+        <button type="button" style={styles.uploadBtn} onClick={() => setIsModalOpen(true)}>
+          + Upload files
+        </button>
+      </div>
+      {isModalOpen && (
+        <div style={styles.modalOverlay} onClick={() => setIsModalOpen(false)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.headerRow}>
+              <h3 style={{ margin: 0, fontSize: '18px' }}>Extract DOIs</h3>
+              <button type="button" onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            <p style={{ fontSize: '14px', color: '#586069', marginBottom: '16px' }}>Select .bib files to automatically extract DOIs.</p>
+        <div
+          {...getRootProps()}
+          style={{
+            ...styles.dropzone,
+            ...(isDragActive ? styles.dropzoneActive : {})
+          }}
+        >
+          <input {...getInputProps()} />
+          <p style={{ margin: 0, color: '#444' }}>
+            Drag or select files here / Arrastra o selecciona archivos (.bib)
+          </p>
+          {currentFiles && currentFiles.length > 0 && (
+            <div style={styles.fileList}>
+              {currentFiles.length} file(s) selected
+            </div>
+          )}
+        </div>
+          </div>
+        </div>
+      )}
+
+      {missingDois.length > 0 && (
+        <div style={styles.modalOverlay} onClick={() => setMissingDois([])}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.headerRow}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#cb2431' }}>Missing DOIs</h3>
+              <button type="button" onClick={() => setMissingDois([])} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            <p style={{ fontSize: '14px', color: '#586069', marginBottom: '16px' }}>
+              The following citation keys did not have a valid DOI associated with them:
+            </p>
+            <ul style={{ fontSize: '13px', color: '#24292e', maxHeight: '200px', overflowY: 'auto', paddingLeft: '20px', margin: '0 0 16px 0', fontFamily: 'monospace' }}>
+              {missingDois.map((msg, idx) => (
+                <li key={idx} style={{ marginBottom: '6px' }}>{msg}</li>
+              ))}
+            </ul>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button type="button" onClick={downloadMissingTxt} style={{ ...styles.uploadBtn, backgroundColor: '#2ea44f' }}>
+                Download .txt
+              </button>
+              <button type="button" onClick={() => setMissingDois([])} style={{ ...styles.uploadBtn, backgroundColor: '#f6f8fa', color: '#24292e', border: '1px solid #d1d5da' }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+        <textarea
+          onBlur={handleBlur}
+          id="batch-dois-textarea"
+          style={styles.textarea}
+          placeholder="10.1000/182&#10;10.1000/183"
+          value={currentDois}
+          onChange={(e) => {
+            if (onInputUpdate) {
+              onInputUpdate('dois', e.target.value);
+            }
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+export default BatchInput;
 
 
-// --- backend/src/bibliography/schemas.py ---
+// --- frontend/src/components/load/BatchConfig.jsx ---
 
-from datetime import datetime
-from typing import Optional, List
-from pydantic import BaseModel, ConfigDict, Field
+import React from 'react';
 
-class ZipDownloadRequest(BaseModel):
-    """..."""
+const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    marginBottom: '12px',
+    padding: '16px',
+    backgroundColor: '#161b22',
+    border: 'none',
+    borderRadius: '8px'
+  },
+  section: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px'
+  },
+  label: {
+    fontWeight: 'bold',
+    fontSize: '14px',
+    color: '#f0f6fc'
+  },
+  sliderContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px'
+  },
+  slider: {
+    flex: 1,
+    cursor: 'pointer'
+  },
+  inputsGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '16px'
+  },
+  input: {
+    padding: '8px 12px',
+    borderRadius: '6px',
+    border: '1px solid #30363d',
+    backgroundColor: '#0d1117',
+    color: '#f0f6fc',
+    fontSize: '14px'
+  }
+};
 
-class BatchDownloadRequest(BaseModel):
-    """..."""
+export function BatchConfig({
+  delay = 5,
+  destination = '',
+  email = '',
+  cookies = '',
+  config,
+  onConfigUpdate
+}) {
+  const currentDelay = config?.delay ?? delay;
+  const currentDestination = config?.destination ?? destination;
+  const currentEmail = config?.email ?? email;
+  const currentCookies = config?.cookies ?? cookies;
 
-class LocalBatchDownloadRequest(BaseModel):
-    """..."""
+  return (
+    <div style={styles.container}>
+      <div style={{ display: 'none' }}>
+        <label htmlFor="delay-slider" style={styles.label}>
+          Delay between downloads: {currentDelay}s
+        </label>
+        <div style={styles.sliderContainer}>
+          <input
+            id="delay-slider"
+            role="slider"
+            type="range"
+            min="5"
+            max="60"
+            step="5"
+            value={currentDelay}
+            style={styles.slider}
+            onChange={(e) => {
+              if (onConfigUpdate) {
+                onConfigUpdate('delay', Number(e.target.value));
+              }
+            }}
+          />
+          <span style={{ fontSize: '12px', color: '#586069' }}>
+            [5s, 15s, 30s, 60s]
+          </span>
+        </div>
+      </div>
 
-class ParsedReference(BaseModel):
-    """..."""
+      <div style={styles.inputsGrid}>
+        <div style={styles.section}>
+          <label htmlFor="destination-input" style={styles.label}>
+            Destination Folder
+          </label>
+          <input
+            id="destination-input"
+            type="text"
+            style={styles.input}
+            placeholder="Download folder or path"
+            value={currentDestination}
+            onChange={(e) => {
+              if (onConfigUpdate) {
+                onConfigUpdate('destination', e.target.value);
+              }
+            }}
+          />
+        </div>
 
+        <div style={styles.section}>
+          <label htmlFor="email-input" style={styles.label}>
+            Email Address (Polite Pool)
+          </label>
+          <input
+            id="email-input"
+            type="email"
+            style={styles.input}
+            placeholder="Email for academic APIs"
+            value={currentEmail}
+            onChange={(e) => {
+              if (onConfigUpdate) {
+                onConfigUpdate('email', e.target.value);
+              }
+            }}
+          />
+        </div>
 
-// --- backend/src/bibliography/resolver_service.py ---
+        <div style={styles.section}>
+          <label htmlFor="cookies-input" style={styles.label}>
+            Session Cookies (Optional)
+          </label>
+          <input
+            id="cookies-input"
+            type="text"
+            style={styles.input}
+            placeholder="e.g. session=abc;"
+            value={currentCookies}
+            onChange={(e) => {
+              if (onConfigUpdate) {
+                onConfigUpdate('cookies', e.target.value);
+              }
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-import re
-from typing import Optional
-from urllib.parse import urljoin
-import httpx
-_BROWSER_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
-_PDF_META_PATTERNS = [re.compile('<meta[^>]+name=["\\\']citation_pdf_url["\\\'][^>]+content=["\\\']([^"\\\']+)["\\\']', re.IGNORECASE), re.compile('<meta[^>]+content=["\\\']([^"\\\']+)["\\\'][^>]+name=["\\\']citation_pdf_url["\\\']', re.IGNORECASE), re.compile('<link[^>]+type=["\\\']application/pdf["\\\'][^>]+href=["\\\']([^"\\\']+)["\\\']', re.IGNORECASE)]
-
-async def resolve_institutional_pdf_url(doi: str, client: Optional[httpx.AsyncClient]=None, cookies: Optional[str]=None) -> Optional[str]:
-    """..."""
-
-async def resolve_pdf_url(doi: str, email: str, cookies: Optional[str]=None) -> Optional[str]:
-    """..."""
+export default BatchConfig;
 
 
 // --- frontend/src/components/references/UploadReferencesModal.jsx ---
@@ -153,7 +568,8 @@ const styles = {
     backdropFilter: 'blur(2px)',
   },
   modal: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#161b22',
+    border: '1px solid #30363d',
     borderRadius: '12px',
     boxShadow: '0 8px 30px rgba(0, 0, 0, 0.18)',
     width: '100%',
@@ -174,7 +590,7 @@ const styles = {
     margin: 0,
     fontSize: '20px',
     fontWeight: '600',
-    color: '#1b1f23',
+    color: '#f0f6fc',
   },
   closeBtn: {
     background: 'none',
@@ -187,7 +603,7 @@ const styles = {
   },
   description: {
     fontSize: '14px',
-    color: '#586069',
+    color: '#8b949e',
     marginTop: 0,
     marginBottom: '20px',
   },
@@ -199,20 +615,22 @@ const styles = {
     fontSize: '14px',
     fontWeight: '500',
     marginBottom: '8px',
-    color: '#24292e',
+    color: '#f0f6fc',
   },
   input: {
     width: '100%',
     padding: '10px 12px',
     fontSize: '14px',
-    border: '1px solid #d1d5da',
+    backgroundColor: '#0d1117',
+    color: '#f0f6fc',
+    border: '1px solid #30363d',
     borderRadius: '6px',
     boxSizing: 'border-box',
     outline: 'none',
   },
   hint: {
     fontSize: '12px',
-    color: '#6a737d',
+    color: '#8b949e',
     marginTop: '6px',
     marginBottom: 0,
   },
@@ -251,9 +669,9 @@ const styles = {
   cancelBtn: {
     padding: '8px 16px',
     fontSize: '14px',
-    color: '#24292e',
-    backgroundColor: '#f6f8fa',
-    border: '1px solid #d1d5da',
+    color: '#f0f6fc',
+    backgroundColor: '#21262d',
+    border: '1px solid #30363d',
     borderRadius: '6px',
     cursor: 'pointer',
     fontWeight: '500',
@@ -277,7 +695,7 @@ export function UploadReferencesModal({
 
   return (
     <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div style={styles.modal} onClick={(e) => e.stopPropagation()} data-testid="upload-modal-container">
     <div style={styles.header}>
       <h3 style={styles.title}>New References Ingestion</h3>
       <button style={styles.closeBtn} onClick={onClose} aria-label="Close">
@@ -354,137 +772,3 @@ export function UploadReferencesModal({
 }
 
 export default UploadReferencesModal;
-
-
-// --- frontend/src/components/references/ReferencesDataTable.jsx ---
-
-import React, { useState } from 'react';
-
-const styles = {
-  container: {
-    width: '100%',
-    overflowX: 'auto',
-    marginTop: '20px',
-    position: 'relative',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    textAlign: 'left',
-    fontSize: '14px',
-    fontFamily: 'system-ui, sans-serif',
-  },
-  th: {
-    backgroundColor: '#161b22',
-    borderBottom: '1px solid #30363d',
-    padding: '10px 14px',
-    fontWeight: '600',
-    color: '#f0f6fc',
-  },
-  tr: {
-    borderBottom: '1px solid #30363d',
-    cursor: 'pointer',
-    transition: 'background-color 0.15s ease',
-  },
-  td: {
-    padding: '10px 14px',
-    color: '#f0f6fc',
-  },
-  empty: {
-    padding: '24px',
-    textAlign: 'center',
-    color: '#8b949e',
-    fontSize: '14px',
-    fontStyle: 'italic',
-  },
-  popover: {
-    position: 'fixed',
-    backgroundColor: '#1f2428',
-    color: '#f6f8fa',
-    padding: '12px 16px',
-    borderRadius: '6px',
-    fontSize: '12px',
-    maxWidth: '400px',
-    maxHeight: '260px',
-    overflow: 'auto',
-    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-    zIndex: 1000,
-    pointerEvents: 'none',
-  },
-  pre: {
-    margin: 0,
-    whiteSpace: 'pre-wrap',
-    wordBreak: 'break-word',
-    fontFamily: 'monospace',
-  },
-};
-
-export function ReferencesDataTable({ data = [] }) {
-  const [hoveredRow, setHoveredRow] = useState(null);
-  const [coords, setCoords] = useState({ x: 0, y: 0 });
-
-  if (!data || data.length === 0) {
-    return (
-      <div style={styles.container}>
-        <div style={styles.empty}>
-          No references available to display.
-        </div>
-      </div>
-    );
-  }
-
-  const handleMouseMove = (e, row) => {
-    setHoveredRow(row);
-    setCoords({ x: e.clientX + 16, y: e.clientY + 16 });
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredRow(null);
-  };
-
-  return (
-    <div style={styles.container}>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={styles.th}>Title</th>
-            <th style={styles.th}>Author</th>
-            <th style={styles.th}>Year</th>
-            <th style={styles.th}>Journal</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, index) => (
-            <tr
-              key={row.id || index}
-              style={styles.tr}
-              onMouseMove={(e) => handleMouseMove(e, row)}
-              onMouseLeave={handleMouseLeave}
-            >
-              <td style={styles.td}>{row.title || 'N/A'}</td>
-              <td style={styles.td}>{row.author || 'N/A'}</td>
-              <td style={styles.td}>{row.year || 'N/A'}</td>
-              <td style={styles.td}>{row.journal || 'N/A'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {hoveredRow && (
-        <div
-          style={{
-            ...styles.popover,
-            top: `${coords.y}px`,
-            left: `${coords.x}px`,
-          }}
-        >
-          <pre style={styles.pre}>
-            {JSON.stringify(hoveredRow, null, 2)}
-          </pre>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default ReferencesDataTable;

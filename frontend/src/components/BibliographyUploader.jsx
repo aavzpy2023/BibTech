@@ -3,28 +3,21 @@ import { useDropzone } from 'react-dropzone';
 
 const styles = {
   dropzone: {
-    border: '2px dashed #0366d6',
     borderRadius: '8px',
-    padding: '40px',
+    padding: '24px',
     textAlign: 'center',
     cursor: 'pointer',
     backgroundColor: '#161b22',
     border: '2px dashed #30363d',
     marginBottom: '24px',
-    transition: 'background-color 0.2s ease'
+    transition: 'all 0.2s ease'
   },
   dropzoneActive: {
-    backgroundColor: '#e1f5fe',
-    borderColor: '#0288d1'
+    backgroundColor: '#1f2937',
+    borderColor: '#58a6ff'
   },
   text: {
     margin: 0,
-    color: '#f0f6fc',
-    fontSize: '16px',
-    fontWeight: '500'
-  },
-  subtext: {
-    margin: '8px 0 0 0',
     color: '#8b949e',
     fontSize: '14px'
   }
@@ -55,9 +48,8 @@ export function BibliographyUploader({ onUpload }) {
     >
       <input {...getInputProps()} />
       <p style={styles.text}>
-        Arrastra y suelta un archivo bibliográfico aquí, o haz clic para seleccionar
+        Drag or select files here (.ris, .bib)
       </p>
-      <p style={styles.subtext}>Formatos soportados: .ris, .bib</p>
     </div>
   );
 }

@@ -33,6 +33,8 @@
 │   │   │   │   ├── useBibliography.test.js
 │   │   │   │   ├── useQueueState.js
 │   │   │   │   ├── useQueueState.test.js
+│   │   │   │   ├── useReferencesTable.js
+│   │   │   │   ├── useReferencesTable.test.js
 │   │   │   │   ├── useReferencesUpload.js
 │   │   │   │   ├── useReferencesUpload.test.js
 │   │   │   ├── components/
@@ -47,7 +49,9 @@
 │   │   │   │   │   ├── BatchMonitor.test.jsx
 │   │   │   │   ├── references/
 │   │   │   │   │   ├── ReferencesDataTable.jsx
+│   │   │   │   │   ├── ReferencesDataTable.test.jsx
 │   │   │   │   │   ├── UploadReferencesModal.jsx
+│   │   │   │   │   ├── UploadReferencesModal.test.jsx
 │   ├── backend/
 │   │   ├── Dockerfile
 │   │   ├── __init__.py
@@ -101,6 +105,7 @@
 │   │   │   │   ├── test_resolver.py
 │   │   │   │   ├── test_router.py
 │   │   │   │   ├── test_schemas.py
+│   │   │   │   ├── test_typing_imports.py
 │   │   │   │   ├── test_zip_service.py
 │   │   │   ├── database/
 │   │   │   │   ├── __init__.py
@@ -124,6 +129,7 @@
 │   │   ├── planning/
 │   │   │   ├── global_backlog.md
 │   │   │   ├── roadmap_10_cookie_authentication.md
+│   │   │   ├── roadmap_11_references_ui_and_bugfixes.md
 │   │   │   ├── roadmap_1_bibliography_ingestion.md
 │   │   │   ├── roadmap_2_batch_load.md
 │   │   │   ├── roadmap_3_batch_download_execution.md
