@@ -9,7 +9,7 @@ def main():
     destination = input("Folder name: ").strip()
     email = input("Correo: ").strip()
 
-    url = "http://localhost:8000/api/bibliography/batch-download-local"
+    url = "http://localhost/api/bibliography/batch-download-local"
     payload = json.dumps(
         {
             "file_path": file_path,
@@ -52,10 +52,10 @@ def main():
                         pass
     except Exception as e:
         print(f"\n[X] Error de conexión: {e}")
-        print("    -> El backend de FastAPI no está respondiendo en http://localhost:8000")
-        print("    -> Solución: Abre OTRA pestaña en tu terminal y levanta el servidor backend")
-        print("       (ej: 'docker-compose up' o 'uvicorn backend.main:app --port 8000').")
-        print("    -> Una vez que el backend esté corriendo, vuelve a ejecutar este script.")
+        print("    -> Nginx o el backend no están respondiendo en http://localhost")
+        print("    -> Solución: Asegúrate de que el contenedor de Nginx esté corriendo")
+        print("       (ej: 'docker-compose up -d').")
+        print("    -> Una vez que los contenedores estén arriba, vuelve a ejecutar este script.")
 
     print("\n\nDescarga finalizada.")
 
