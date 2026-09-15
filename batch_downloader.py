@@ -1,4 +1,5 @@
 import urllib.request
+import urllib.error
 import json
 import sys
 
@@ -9,11 +10,15 @@ def main():
     destination = input("Folder name: ").strip()
     email = input("Correo: ").strip()
 
-    url = "http://localhost/api/bibliography/batch-download-local"
+    url = "http://localhost:88/api/bibliography/batch-download-local"
+    # Mapeo automático de rutas locales al punto de montaje Docker (/project)
+    container_file_path = f"/project/{file_path}" if not file_path.startswith("/") else file_path
+    container_dest_path = f"/project/{destination}" if not destination.startswith("/") else destination
+
     payload = json.dumps(
         {
-            "file_path": file_path,
-            "destination": destination,
+            "file_path": container_file_path,
+            "destination": container_dest_path,
             "email": email,
             "delay": 2,
         }
@@ -50,6 +55,10 @@ def main():
                         sys.stdout.flush()
                     except json.JSONDecodeError:
                         pass
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8", errors="replace")
+        print(f"\n[X] Error del Servidor (HTTP {e.code}):")
+        print(f"    Detalle: {error_body}")
     except Exception as e:
         print(f"\n[X] Error de conexión: {e}")
         print("    -> Nginx o el backend no están respondiendo en http://localhost")
