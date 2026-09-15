@@ -11,6 +11,7 @@ def main():
     file_path = input("Path del .bib: ").strip()
     destination = input("Folder name: ").strip()
     email = input("Correo: ").strip()
+    cookies = input("Cookies de sesión web (Opcional, ej: session=abc): ").strip()
 
     url = "http://localhost:88/api/bibliography/batch-download-local"
     # Mapeo automático de rutas locales al punto de montaje Docker (/project)
@@ -23,6 +24,7 @@ def main():
             "destination": container_dest_path,
             "email": email,
             "delay": 0,
+            "cookies": cookies if cookies else "",
         }
     ).encode("utf-8")
 

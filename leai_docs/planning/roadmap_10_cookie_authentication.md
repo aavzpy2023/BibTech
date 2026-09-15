@@ -51,10 +51,11 @@ Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-10.4.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_10_cookie_authentication.md and check - [x] for Story 10.4. 2. Append > Files touched: backend/src/bibliography/resolver_service.py, backend/src/bibliography/download_service.py, backend/tests/bibliography/test_resolver.py, backend/tests/bibliography/test_download.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-030]]. Type: Task.
 > Files touched: backend/src/bibliography/resolver_service.py, backend/src/bibliography/download_service.py, backend/tests/bibliography/test_resolver.py, backend/tests/bibliography/test_download.py
 
-- [ ] Story 10.5: CLI Argument Cookie Support (Script OCP) | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 10.5: CLI Argument Cookie Support (Script OCP) | [MoSCoW: MUST] | [Complexity: EASY]
 Business Requirement: Extend the standalone batch script to consume cookies without breaking its standalone paradigm. (<-- REQ-031)
 Story Context Radius: {"batch_downloader.py": [""], "leai_docs/planning/roadmap_10_cookie_authentication.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
 Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-10.5.1] [TESTING/TDE]: [1. Arrange: Mock urllib.request.urlopen. 2. Act: Call the internal fetch wrapper in batch_downloader.py providing a cookie argument. 3. Assert: Verify the Request object contains the Cookie header alongside standard User-Agent headers]. Type: Task.
 [ID-10.5.2] [CORE/IO]: [1. Open batch_downloader.py. 2. Append parser.add_argument('--cookies', type=str, default='', help='Raw session cookies string') to the argparse configuration. 3. Ensure the urllib.request.Request instantiation injects {'User-Agent': 'Mozilla/5.0...'}. 4. If args.cookies is truthy, append req.add_header('Cookie', args.cookies) before urlopen]. Type: Task.
 [ID-10.5.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_10_cookie_authentication.md and check - [x] for Story 10.5. 2. Append > Files touched: batch_downloader.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-031]]. Type: Task.
+> Files touched: batch_downloader.py
