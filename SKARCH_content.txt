@@ -1,87 +1,490 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-15 13:00:43
+Date: 2026-09-15 20:19:54
 AST Mode: True
 Line Numbers: False
-Modules: docker-compose.yml, nginx.conf
-Processed Files: 2
+Modules: global_backlog.md, download_service.py, schemas.py, resolver_service.py, UploadReferencesModal.jsx, ReferencesDataTable.jsx
+Processed Files: 6
 ===========================
 
 
 
-// --- docker-compose.yml ---
+// --- leai_docs/planning/global_backlog.md ---
 
-services:
+# Global Backlog
 
-  backend:
-    container_name: bibtech-backend
-    build: ./backend
-    command: >
-      sh -c "cd /project/backend && alembic upgrade head &&
-      uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload"
-    expose:
-      - "8000"
-    volumes:
-      - ./:/project
-    working_dir: /project
-    environment:
-      - PYTHONPATH=/project
-      - PYTHONDONTWRITEBYTECODE=1
-      - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://user:password@db:5432/dbname
-    depends_on:
-      - db
+## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
+- [x] Story 1.0: Roadmap &amp; Planning Initialization
+- [x] Story 1.1: Project Dependencies &amp; Context Genesis
 
-  frontend:
-    container_name: bibtech-frontend
-    build: ./frontend
-    expose:
-      - "5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
+- [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
+- [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
+- [x] [REQ-003] Bibliography Data Display &amp; Table View
 
-  nginx:
-    container_name: bibtech-nginx
-    build: ./nginx
-    ports:
-      - "88:80"
-    depends_on:
-      - frontend
-      - backend
+## EPIC 3: BATCH LOAD INTERFACE
+- [x] [REQ-004] Frontend Routing &amp; Main Layout
+- [x] [REQ-005] Load View - State Fractality (Custom Hook)
+- [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
+- [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
 
-  db:
-    container_name: bibtech-postgres
-    image: postgres:16-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=dbname
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+## EPIC 4: BATCH DOWNLOAD EXECUTION
+- [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
+- [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
+- [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
+- [x] [REQ-011] Frontend SSE Hook State Integration
 
-volumes:
-  postgres_data:
+## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
+- [x] [REQ-012] Load View Validation &amp; Label Updates
+- [x] [REQ-013] Queue View State &amp; UI Assembly
+- [x] [REQ-014] Backend ZIP Service &amp; Download Action
+
+## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
+- [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
+- [x] [REQ-016] Identity Domain Models &amp; Keywords
+- [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
+
+## EPIC 7: REFERENCES DATABASE INGESTION
+- [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
+- [x] [REQ-019] References Data Table View
+- [x] [REQ-020] Frontend Injection State Hook
+- [x] [REQ-021] References View Routing &amp; Assembly
+
+## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
+- [x] [REQ-022] Multiple File Upload Logic (FIFO Queue)
+- [x] [REQ-023] References Tab Translation to English
+- [x] [REQ-024] UI Standardization (Width & Headers)
+
+## EPIC 9: LOCAL FILE BATCH DOWNLOAD
+- [x] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
+- [x] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
+
+## EPIC 10: INSTITUTIONAL IP DIRECT RESOLVER
+- [x] [REQ-027] Institutional Direct PDF URL Extractor (Landing Page Metadata)
+- [x] [REQ-028] Cascading Resolver Fallback Chain Integration
+
+## EPIC 11: COOKIE AUTHENTICATION PASSTHROUGH
+- [x] [REQ-029] Frontend UI State Fractality & Dumb View Wiring (Cookies)
+- [x] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
+- [x] [REQ-031] CLI Argument Cookie Support (Script OCP)
+
+## Active Roadmaps
+- [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
+- [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
+- [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
+- [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
+- [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
+- [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
+- [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
+- [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
+- [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
+- [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
 
 
+// --- backend/src/bibliography/download_service.py ---
 
-// --- nginx/nginx.conf ---
+import asyncio
+import json
+import random
+from typing import AsyncGenerator, List
+import httpx
+from .resolver_service import resolve_pdf_url, _BROWSER_HEADERS
+from .file_storage_service import save_pdf_bytes
 
-server {
-    listen 80;
-    server_name localhost;
-    location /api {
-        proxy_pass http://backend:8000;
-        proxy_set_header Host $host;
-    }
-    location / {
-        proxy_pass http://frontend:5173;
-        proxy_set_header Host $host;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
+async def _download_and_save(dest: str, doi: str, url: str, cookies: Optional[str]=None) -> str:
+    """..."""
+
+async def execute_batch_download(dois: List[str], dest: str, email: str, delay: int, cookies: Optional[str]=None) -> AsyncGenerator[str, None]:
+    """..."""
+
+
+// --- backend/src/bibliography/schemas.py ---
+
+from datetime import datetime
+from typing import Optional, List
+from pydantic import BaseModel, ConfigDict, Field
+
+class ZipDownloadRequest(BaseModel):
+    """..."""
+
+class BatchDownloadRequest(BaseModel):
+    """..."""
+
+class LocalBatchDownloadRequest(BaseModel):
+    """..."""
+
+class ParsedReference(BaseModel):
+    """..."""
+
+
+// --- backend/src/bibliography/resolver_service.py ---
+
+import re
+from typing import Optional
+from urllib.parse import urljoin
+import httpx
+_BROWSER_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}
+_PDF_META_PATTERNS = [re.compile('<meta[^>]+name=["\\\']citation_pdf_url["\\\'][^>]+content=["\\\']([^"\\\']+)["\\\']', re.IGNORECASE), re.compile('<meta[^>]+content=["\\\']([^"\\\']+)["\\\'][^>]+name=["\\\']citation_pdf_url["\\\']', re.IGNORECASE), re.compile('<link[^>]+type=["\\\']application/pdf["\\\'][^>]+href=["\\\']([^"\\\']+)["\\\']', re.IGNORECASE)]
+
+async def resolve_institutional_pdf_url(doi: str, client: Optional[httpx.AsyncClient]=None, cookies: Optional[str]=None) -> Optional[str]:
+    """..."""
+
+async def resolve_pdf_url(doi: str, email: str, cookies: Optional[str]=None) -> Optional[str]:
+    """..."""
+
+
+// --- frontend/src/components/references/UploadReferencesModal.jsx ---
+
+import React from 'react';
+import BibliographyUploader from '../BibliographyUploader';
+
+const styles = {
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    backdropFilter: 'blur(2px)',
+  },
+  modal: {
+    backgroundColor: '#ffffff',
+    borderRadius: '12px',
+    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.18)',
+    width: '100%',
+    maxWidth: '560px',
+    padding: '28px',
+    boxSizing: 'border-box',
+    position: 'relative',
+    maxHeight: '90vh',
+    overflowY: 'auto',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  },
+  title: {
+    margin: 0,
+    fontSize: '20px',
+    fontWeight: '600',
+    color: '#1b1f23',
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '20px',
+    cursor: 'pointer',
+    color: '#6a737d',
+    padding: '4px 8px',
+    borderRadius: '4px',
+  },
+  description: {
+    fontSize: '14px',
+    color: '#586069',
+    marginTop: 0,
+    marginBottom: '20px',
+  },
+  formGroup: {
+    marginBottom: '20px',
+  },
+  label: {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: '500',
+    marginBottom: '8px',
+    color: '#24292e',
+  },
+  input: {
+    width: '100%',
+    padding: '10px 12px',
+    fontSize: '14px',
+    border: '1px solid #d1d5da',
+    borderRadius: '6px',
+    boxSizing: 'border-box',
+    outline: 'none',
+  },
+  hint: {
+    fontSize: '12px',
+    color: '#6a737d',
+    marginTop: '6px',
+    marginBottom: 0,
+  },
+  uploaderWrapper: {
+    transition: 'opacity 0.2s ease',
+  },
+  errorBox: {
+    backgroundColor: '#ffeef0',
+    color: '#cb2431',
+    border: '1px solid #f97583',
+    padding: '10px 14px',
+    borderRadius: '6px',
+    marginBottom: '16px',
+    fontSize: '13px',
+  },
+  successBox: {
+    backgroundColor: '#dcffe4',
+    color: '#165c26',
+    border: '1px solid #85e89d',
+    padding: '14px 16px',
+    borderRadius: '6px',
+    marginTop: '16px',
+    marginBottom: '16px',
+  },
+  successTitle: {
+    margin: '0 0 6px 0',
+    fontWeight: '600',
+    fontSize: '15px',
+  },
+  footer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '12px',
+    marginTop: '20px',
+  },
+  cancelBtn: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    color: '#24292e',
+    backgroundColor: '#f6f8fa',
+    border: '1px solid #d1d5da',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
+  },
+};
+
+export function UploadReferencesModal({
+  isOpen,
+  onClose,
+  projectCode,
+  setProjectCode,
+  uploadAndInject,
+  isLoading,
+  isSuccess,
+  error,
+  insertedCount,
+}) {
+  if (!isOpen) return null;
+
+  const isProjectReady = Boolean(projectCode && projectCode.trim());
+
+  return (
+    <div style={styles.overlay} onClick={onClose}>
+      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+    <div style={styles.header}>
+      <h3 style={styles.title}>New References Ingestion</h3>
+      <button style={styles.closeBtn} onClick={onClose} aria-label="Close">
+        ✕
+          </button>
+        </div>
+
+    <p style={styles.description}>
+      Enter the project code and select .ris or .bib files to
+      persist in the database.
+    </p>
+
+    <div style={styles.formGroup}>
+      <label htmlFor="modal-project-code" style={styles.label}>
+        Project Code or Name *
+      </label>
+      <input
+        id="modal-project-code"
+        type="text"
+        placeholder="Ex: PROJ-AI-2026"
+            value={projectCode}
+            onChange={(e) => setProjectCode(e.target.value)}
+            style={styles.input}
+            autoFocus
+          />
+      {!isProjectReady && (
+        <p style={styles.hint}>
+          Provide a project name to enable the uploader.
+        </p>
+      )}
+        </div>
+
+        {error && <div style={styles.errorBox}>❌ {error}</div>}
+    {isLoading && (
+      <p style={{ color: '#0366d6', fontWeight: '500', fontSize: '14px' }}>
+        Injecting references into database...
+      </p>
+    )}
+
+    {isSuccess && (
+      <div style={styles.successBox}>
+        <p style={styles.successTitle}>Ingestion completed!</p>
+        <p style={{ margin: 0, fontSize: '13px' }}>
+          Inserted <strong>{insertedCount}</strong> articles into
+          project <strong>{projectCode}</strong>.
+        </p>
+          </div>
+        )}
+
+        <div
+          style={{
+            ...styles.uploaderWrapper,
+            opacity: isProjectReady ? 1 : 0.45,
+            pointerEvents: isProjectReady ? 'auto' : 'none',
+          }}
+        >
+          <BibliographyUploader
+            onUpload={(file) => {
+              if (isProjectReady) {
+                uploadAndInject(file);
+              }
+            }}
+          />
+        </div>
+
+    <div style={styles.footer}>
+      <button style={styles.cancelBtn} onClick={onClose}>
+        {isSuccess ? 'Close' : 'Cancel'}
+      </button>
+    </div>
+      </div>
+    </div>
+  );
 }
 
+export default UploadReferencesModal;
+
+
+// --- frontend/src/components/references/ReferencesDataTable.jsx ---
+
+import React, { useState } from 'react';
+
+const styles = {
+  container: {
+    width: '100%',
+    overflowX: 'auto',
+    marginTop: '20px',
+    position: 'relative',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    textAlign: 'left',
+    fontSize: '14px',
+    fontFamily: 'system-ui, sans-serif',
+  },
+  th: {
+    backgroundColor: '#161b22',
+    borderBottom: '1px solid #30363d',
+    padding: '10px 14px',
+    fontWeight: '600',
+    color: '#f0f6fc',
+  },
+  tr: {
+    borderBottom: '1px solid #30363d',
+    cursor: 'pointer',
+    transition: 'background-color 0.15s ease',
+  },
+  td: {
+    padding: '10px 14px',
+    color: '#f0f6fc',
+  },
+  empty: {
+    padding: '24px',
+    textAlign: 'center',
+    color: '#8b949e',
+    fontSize: '14px',
+    fontStyle: 'italic',
+  },
+  popover: {
+    position: 'fixed',
+    backgroundColor: '#1f2428',
+    color: '#f6f8fa',
+    padding: '12px 16px',
+    borderRadius: '6px',
+    fontSize: '12px',
+    maxWidth: '400px',
+    maxHeight: '260px',
+    overflow: 'auto',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+    zIndex: 1000,
+    pointerEvents: 'none',
+  },
+  pre: {
+    margin: 0,
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    fontFamily: 'monospace',
+  },
+};
+
+export function ReferencesDataTable({ data = [] }) {
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const [coords, setCoords] = useState({ x: 0, y: 0 });
+
+  if (!data || data.length === 0) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.empty}>
+          No references available to display.
+        </div>
+      </div>
+    );
+  }
+
+  const handleMouseMove = (e, row) => {
+    setHoveredRow(row);
+    setCoords({ x: e.clientX + 16, y: e.clientY + 16 });
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredRow(null);
+  };
+
+  return (
+    <div style={styles.container}>
+      <table style={styles.table}>
+        <thead>
+          <tr>
+            <th style={styles.th}>Title</th>
+            <th style={styles.th}>Author</th>
+            <th style={styles.th}>Year</th>
+            <th style={styles.th}>Journal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, index) => (
+            <tr
+              key={row.id || index}
+              style={styles.tr}
+              onMouseMove={(e) => handleMouseMove(e, row)}
+              onMouseLeave={handleMouseLeave}
+            >
+              <td style={styles.td}>{row.title || 'N/A'}</td>
+              <td style={styles.td}>{row.author || 'N/A'}</td>
+              <td style={styles.td}>{row.year || 'N/A'}</td>
+              <td style={styles.td}>{row.journal || 'N/A'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {hoveredRow && (
+        <div
+          style={{
+            ...styles.popover,
+            top: `${coords.y}px`,
+            left: `${coords.x}px`,
+          }}
+        >
+          <pre style={styles.pre}>
+            {JSON.stringify(hoveredRow, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ReferencesDataTable;

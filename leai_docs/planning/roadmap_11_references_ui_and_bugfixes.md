@@ -22,8 +22,9 @@ complexity_aggregate: "MEDIUM"
   [ID-11.1.2] [CORE/LOGIC]: [1. Open backend/src/bibliography/download_service.py. 2. Ensure from typing import Optional, List, Dict, Any, AsyncGenerator is present at the top of the file. 3. Repeat this check and insertion for backend/src/bibliography/schemas.py and backend/src/bibliography/resolver_service.py]. Type: Task.
   [ID-11.1.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_11_references_ui_and_bugfixes.md and check - [ ] for Story 11.1. 2. Append &gt; Files touched: download_service.py, schemas.py, resolver_service.py under the story. 3. Open global_backlog.md and check - [ ] for [REQ-032]]. Type: Task.
 
-- [ ] Story 11.2: UploadReferencesModal Dark Mode Compliance | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 11.2: UploadReferencesModal Dark Mode Compliance | [MoSCoW: MUST] | [Complexity: EASY]
   Business Requirement: Fix the invisible text issue by migrating the modal's hardcoded white theme to the global dark mode palette. (&lt;-- REQ-033)
+  &gt; Files touched: UploadReferencesModal.jsx, UploadReferencesModal.test.jsx
   Story Context Radius: {"frontend/src/components/references/UploadReferencesModal.jsx": [""], "leai_docs/planning/roadmap_11_references_ui_and_bugfixes.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
   [ID-11.2.1] [TESTING/TDE]: [1. Arrange: Render UploadReferencesModal with isOpen={true}. 2. Act: Query the modal container div. 3. Assert: Verify the backgroundColor style matches #161b22 and text elements do not use dark hex codes]. Type: Task.

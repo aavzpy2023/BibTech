@@ -16,7 +16,8 @@ const styles = {
     backdropFilter: 'blur(2px)',
   },
   modal: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#161b22',
+    border: '1px solid #30363d',
     borderRadius: '12px',
     boxShadow: '0 8px 30px rgba(0, 0, 0, 0.18)',
     width: '100%',
@@ -37,7 +38,7 @@ const styles = {
     margin: 0,
     fontSize: '20px',
     fontWeight: '600',
-    color: '#1b1f23',
+    color: '#f0f6fc',
   },
   closeBtn: {
     background: 'none',
@@ -50,7 +51,7 @@ const styles = {
   },
   description: {
     fontSize: '14px',
-    color: '#586069',
+    color: '#8b949e',
     marginTop: 0,
     marginBottom: '20px',
   },
@@ -62,20 +63,22 @@ const styles = {
     fontSize: '14px',
     fontWeight: '500',
     marginBottom: '8px',
-    color: '#24292e',
+    color: '#f0f6fc',
   },
   input: {
     width: '100%',
     padding: '10px 12px',
     fontSize: '14px',
-    border: '1px solid #d1d5da',
+    backgroundColor: '#0d1117',
+    color: '#f0f6fc',
+    border: '1px solid #30363d',
     borderRadius: '6px',
     boxSizing: 'border-box',
     outline: 'none',
   },
   hint: {
     fontSize: '12px',
-    color: '#6a737d',
+    color: '#8b949e',
     marginTop: '6px',
     marginBottom: 0,
   },
@@ -114,9 +117,9 @@ const styles = {
   cancelBtn: {
     padding: '8px 16px',
     fontSize: '14px',
-    color: '#24292e',
-    backgroundColor: '#f6f8fa',
-    border: '1px solid #d1d5da',
+    color: '#f0f6fc',
+    backgroundColor: '#21262d',
+    border: '1px solid #30363d',
     borderRadius: '6px',
     cursor: 'pointer',
     fontWeight: '500',
@@ -140,7 +143,7 @@ export function UploadReferencesModal({
 
   return (
     <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div style={styles.modal} onClick={(e) => e.stopPropagation()} data-testid="upload-modal-container">
     <div style={styles.header}>
       <h3 style={styles.title}>New References Ingestion</h3>
       <button style={styles.closeBtn} onClick={onClose} aria-label="Close">
