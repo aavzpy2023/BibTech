@@ -22,13 +22,14 @@ Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-10.1.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_10_cookie_authentication.md and check - [x] for Story 10.1. 2. Append > Files touched: frontend/src/hooks/useBatchLoad.js, frontend/src/hooks/useBatchLoad.test.js under the story]. Type: Task.
 > Files touched: frontend/src/hooks/useBatchLoad.js, frontend/src/hooks/useBatchLoad.test.js
 
-- [ ] Story 10.2: Frontend UI Dumb View & Wiring | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 10.2: Frontend UI Dumb View & Wiring | [MoSCoW: MUST] | [Complexity: EASY]
 Business Requirement: Implement the purely presentational input field for session cookies. (<-- REQ-029)
 Story Context Radius: {"frontend/src/components/load/BatchConfig.jsx": [""], "frontend/src/components/load/BatchComponents.test.jsx": [""], "frontend/src/hooks/useBatchLoad.js": ["const initialConfigState"], "leai_docs/planning/roadmap_10_cookie_authentication.md": [""], "leai_docs/planning/global_backlog.md": [""]}
 Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-10.2.1] [TESTING/TDE]: [1. Arrange: Render BatchConfig with a mock onConfigUpdate. 2. Act: Type "token=abc" into the new Cookies input. 3. Assert: Verify onConfigUpdate is called with ('cookies', 'token=abc')]. Type: Task.
 [ID-10.2.2] [UI/VIEW]: [1. Open frontend/src/components/load/BatchConfig.jsx. 2. Add cookies = '' to component signature defaults and extract currentCookies. 3. Add a new <div> inside styles.inputsGrid mimicking the Email section, with a label "Session Cookies (Optional)" and a text <input> wired to onConfigUpdate('cookies', e.target.value)]. Type: Task.
 [ID-10.2.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_10_cookie_authentication.md and check - [x] for Story 10.2. 2. Append > Files touched: frontend/src/components/load/BatchConfig.jsx, frontend/src/components/load/BatchComponents.test.jsx under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-029]]. Type: Task.
+> Files touched: frontend/src/components/load/BatchConfig.jsx, frontend/src/components/load/BatchComponents.test.jsx
 
 - [ ] Story 10.3: Backend Boundary Marshal (DTOs & Router) | [MoSCoW: MUST] | [Complexity: EASY]
 Business Requirement: Force strictly primitive string payload boundaries for incoming cookies. (<-- REQ-030)

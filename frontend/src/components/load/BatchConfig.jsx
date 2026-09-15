@@ -49,12 +49,14 @@ export function BatchConfig({
   delay = 5,
   destination = '',
   email = '',
+  cookies = '',
   config,
   onConfigUpdate
 }) {
   const currentDelay = config?.delay ?? delay;
   const currentDestination = config?.destination ?? destination;
   const currentEmail = config?.email ?? email;
+  const currentCookies = config?.cookies ?? cookies;
 
   return (
     <div style={styles.container}>
@@ -116,6 +118,24 @@ export function BatchConfig({
             onChange={(e) => {
               if (onConfigUpdate) {
                 onConfigUpdate('email', e.target.value);
+              }
+            }}
+          />
+        </div>
+
+        <div style={styles.section}>
+          <label htmlFor="cookies-input" style={styles.label}>
+            Session Cookies (Optional)
+          </label>
+          <input
+            id="cookies-input"
+            type="text"
+            style={styles.input}
+            placeholder="e.g. session=abc;"
+            value={currentCookies}
+            onChange={(e) => {
+              if (onConfigUpdate) {
+                onConfigUpdate('cookies', e.target.value);
               }
             }}
           />
