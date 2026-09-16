@@ -54,7 +54,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.4.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-050]]. Type: Task.
   > Files touched: OverviewLeftColumn.jsx, OverviewLeftColumn.test.jsx
 
-- [ ] Story 17.5: Overview Tab - Right Column & Metrics Dumb Views | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 17.5: Overview Tab - Right Column & Metrics Dumb Views | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Implement the right column (Affiliations, IDs, Funding) and footer metrics grids as pure visual functions.
   Story Context Radius: {"frontend/src/components/references/OverviewRightColumn.jsx": [""], "frontend/src/components/references/MetricsFooterCards.jsx": [""], "frontend/src/components/references/OverviewRightColumn.test.jsx": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
@@ -62,6 +62,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.5.1] [TESTING/TDE]: [1. Arrange: Render both components in test with mock OA status and email string. 2. Act: Click copy email. 3. Assert: Verify the external onCopy prop is fired]. Type: Task.
   [ID-17.5.2] [FRONTEND/DUMB_VIEW]: [1. Create frontend/src/components/references/OverviewRightColumn.jsx. Render Affiliation/Funding boxes with external trigger links. 2. Create frontend/src/components/references/MetricsFooterCards.jsx. Render fixed-width grid properties and apply CSS conditionals for OA badge colors based strictly on passed strings]. Type: Task.
   [ID-17.5.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-050]]. Type: Task.
+  > Files touched: OverviewRightColumn.jsx, MetricsFooterCards.jsx, OverviewRightColumn.test.jsx
 
 - [ ] Story 17.6: Secondary Deep-Dive Drawer Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Build the slide-out panel for Lists and Authors as a dumb display component dependent entirely on parent props.

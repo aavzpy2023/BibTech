@@ -89,7 +89,7 @@
 - [x] [REQ-047] Backend Reference Serialization Audit & Boundary Marshal
 - [x] [REQ-048] Reusable Base Modal Architecture (ModalTemplate) Dumb View
 - [x] [REQ-049] Reference Details - Hero Ribbon Dumb View
-- [ ] [REQ-050] Overview Tab - Left & Right Columns & Metrics Dumb Views (Partial: Left Column Done)
+- [x] [REQ-050] Overview Tab - Left & Right Columns & Metrics Dumb Views
 - [ ] [REQ-051] Secondary Deep-Dive Drawer Dumb View & Hook State Fractality
 
 ## Active Roadmaps
