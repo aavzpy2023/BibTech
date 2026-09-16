@@ -237,11 +237,26 @@ export default function useReferenceDetails(article = null) {
     }
 
     const affiliationsSet = new Set(
-      authorsDetail.map((a) => a && a.affiliation).filter(Boolean)
+      authorsDetail
+        .map((a) => a && a.affiliation)
+        .filter((aff) => typeof aff === 'string' && aff.trim() !== '')
     );
     let affiliations = Array.from(affiliationsSet).join('; ');
+    
     if (!affiliations) {
-        affiliations = parsedBib['affiliation'] || parsedBib['affiliations'] || '';
+      const rawAffil = parsedBib['affiliation'] || parsedBib['affiliations'] || '';
+      if (typeof rawAffil === 'string' && rawAffil.includes('=')) {
+        // Fallback for extremely chaotic WOS Affiliation fields that contain authors in the raw text
+        const matched = rawAffil.match(/\[.*?\]\s*([^.]+)/g);
+        if (matched) {
+          const cleaned = matched.map((m) => m.replace(/\[.*?\]\s*/, '').trim());
+          affiliations = Array.from(new Set(cleaned)).join('; ');
+        } else {
+          affiliations = rawAffil;
+        }
+      } else {
+        affiliations = rawAffil;
+      }
     }
 
     return {
