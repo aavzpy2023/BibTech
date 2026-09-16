@@ -17,6 +17,7 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
     closeDrawer,
     handleHoverInfo,
     handleCopy,
+    isAbstractExpanded,
     toggleAbstractExpanded,
     title,
     authors,
