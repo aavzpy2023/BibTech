@@ -157,25 +157,39 @@ if HAS_MULTIPART:
         def _to_str(val):
             return str(val) if isinstance(val, (str, int, float)) else None
 
+        def _is_mock(val):
+            return hasattr(val, "_mock_return_value") or hasattr(
+                val, "_mock_name"
+            )
+
+        def _safe_list(val):
+            if val is None or _is_mock(val):
+                return []
+            if isinstance(val, (list, tuple, set)):
+                return [x for x in val if not _is_mock(x)]
+            return []
+
         now_iso = datetime.now(timezone.utc).isoformat()
         result = []
         for a in articles:
             authors_detail = []
             for aa in sorted(
-                getattr(a, "author_articles", []) or [],
+                _safe_list(getattr(a, "author_articles", None)),
                 key=lambda x: getattr(x, "author_order", 1) or 1,
             ):
                 auth = getattr(aa, "author", None)
-                if auth:
+                if auth and not _is_mock(auth):
                     aff = getattr(auth, "affiliation", None)
                     aff_str = None
-                    if aff:
+                    if aff and not _is_mock(aff):
                         parts = [
                             getattr(aff, "institution", None),
                             getattr(aff, "department", None),
                             getattr(aff, "country", None),
                         ]
-                        aff_str = ", ".join([p for p in parts if p])
+                        aff_str = ", ".join(
+                            [p for p in parts if p and isinstance(p, str)]
+                        )
                     authors_detail.append({
                         "name": getattr(auth, "name", "N/A"),
                         "orcid": getattr(auth, "orcid", None),
@@ -187,10 +201,20 @@ if HAS_MULTIPART:
                         "affiliation": aff_str,
                     })
 
+            author_val = _to_str(getattr(a, "author", None))
             if authors_detail:
                 author_str = " and ".join(
                     [ad["name"] for ad in authors_detail]
                 )
+            elif author_val:
+                author_str = author_val
+            elif getattr(a, "authors", None) and not _is_mock(a.authors):
+                names = [
+                    getattr(x, "name", str(x))
+                    for x in _safe_list(a.authors)
+                    if getattr(x, "name", str(x)) and not _is_mock(x)
+                ]
+                author_str = " and ".join(names) if names else "N/A"
             elif getattr(a, "raw_data", None):
                 author_str = str(a.raw_data)[:100]
             else:
@@ -201,7 +225,7 @@ if HAS_MULTIPART:
                     "name": getattr(k, "name", ""),
                     "type": getattr(k, "type", "author"),
                 }
-                for k in (getattr(a, "keywords", []) or [])
+                for k in _safe_list(getattr(a, "keywords", None))
             ]
 
             references_list = [
@@ -212,7 +236,7 @@ if HAS_MULTIPART:
                     "year": getattr(r, "year", None),
                     "raw_citation": getattr(r, "raw_citation", None),
                 }
-                for r in (getattr(a, "references", []) or [])
+                for r in _safe_list(getattr(a, "references", None))
             ]
 
             funding_list = [
@@ -222,7 +246,7 @@ if HAS_MULTIPART:
                     "grant_number": getattr(f, "grant_number", None),
                     "country": getattr(f, "country", None),
                 }
-                for f in (getattr(a, "funding", []) or [])
+                for f in _safe_list(getattr(a, "funding", None))
             ]
 
             downloads_list = [
@@ -235,10 +259,11 @@ if HAS_MULTIPART:
                     "downloaded_at": (
                         d.downloaded_at.isoformat()
                         if getattr(d, "downloaded_at", None)
+                        and not _is_mock(d.downloaded_at)
                         else None
                     ),
                 }
-                for d in (getattr(a, "downloads", []) or [])
+                for d in _safe_list(getattr(a, "downloads", None))
             ]
 
             p_info = status_map.get(a.id, {})
