@@ -334,7 +334,9 @@ def test_get_project_references_endpoint():
         mock_art = MagicMock()
         mock_art.id = 10
         mock_art.title = "Test Paper"
-        mock_art.author = "Test Author"
+        mock_art.author = "Smith, John and Doe, Jane"
+        mock_art.authors = []
+        mock_art.raw_data = None
         mock_art.year = 2024
         mock_art.journal = "Test Journal"
         mock_art.doi = "10.1000/1"
@@ -358,5 +360,6 @@ def test_get_project_references_endpoint():
         data = response.json()
         assert len(data) == 1
         assert data[0]["title"] == "Test Paper"
+        assert data[0]["author"] == "Smith ..."
     finally:
         app.dependency_overrides.pop(get_db, None)

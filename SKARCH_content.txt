@@ -1,58 +1,92 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-15 21:12:20
+Date: 2026-09-15 21:22:07
 AST Mode: True
 Line Numbers: False
-Modules: main.py, nginx.conf
+Modules: core.py, identity.py
 Processed Files: 2
 ===========================
 
 
 
-// --- backend/main.py ---
+// --- backend/src/database/models/core.py ---
 
-from fastapi import FastAPI
-import sys
-from backend.src.bibliography.router import router as bibliography_router
+"""Core relational database models for projects and articles."""
+from datetime import datetime, timezone
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy.orm import relationship
+from ..session import Base
 
-app = FastAPI()
+class Project(Base):
+    """..."""
 
-app.include_router(bibliography_router, prefix="/api/bibliography", tags=["bibliography"])
+class Article(Base):
+    """Represents an academic publication with bibliographic data."""
+    __tablename__ = 'articles'
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key integer identifier')
+    doi = Column(String(255), unique=True, index=True, nullable=True, comment='Normalized DOI unique key')
+    title = Column(Text, nullable=False, comment='Full title of the article or publication')
+    journal = Column(String(255), nullable=True, comment='Journal or venue publishing the article')
+    year = Column(Integer, nullable=True, comment='Publication calendar year')
+    volume = Column(String(50), nullable=True, comment='Journal publication volume')
+    issue = Column(String(50), nullable=True, comment='Journal publication issue')
+    pages = Column(String(50), nullable=True, comment='Article page range or article number')
+    abstract = Column(Text, nullable=True, comment='Full text abstract of the article')
+    raw_data = Column(Text, nullable=True, comment='Raw bibliographic payload (e.g. BibTeX or RIS)')
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, comment='UTC timestamp when article was ingested')
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False, comment='UTC timestamp when article record was updated')
+    project_articles = relationship('ProjectArticle', back_populates='article', cascade='all, delete-orphan')
+    projects = relationship('Project', secondary='project_articles', back_populates='articles', viewonly=True)
+    author_articles = relationship('AuthorArticle', back_populates='article', cascade='all, delete-orphan')
+    authors = relationship('Author', secondary='author_articles', back_populates='articles', viewonly=True)
+    keyword_articles = relationship('KeywordArticle', back_populates='article', cascade='all, delete-orphan')
+    keywords = relationship('Keyword', secondary='keyword_articles', back_populates='articles', viewonly=True)
+    references = relationship('Reference', back_populates='article', cascade='all, delete-orphan')
+    funding = relationship('Funding', back_populates='article', cascade='all, delete-orphan')
+    downloads = relationship('Download', back_populates='article', cascade='all, delete-orphan')
 
-@app.get("/api/requirements")
-def get_requirements():
-    return {
-        "python_version": sys.version.split()[0],
-        "framework": "FastAPI 0.110.0",
-        "database": "POSTGRES (Versión: 16)",
-        "proxy": "Nginx (Puerto 80)" if True else "Directo (Puerto 5173/8000)",
-        "status": "¡Entorno moderno con pyproject.toml listo! 🚀"
-    }
+class ProjectArticle(Base):
+    """..."""
 
 
+// --- backend/src/database/models/identity.py ---
 
-// --- nginx/nginx.conf ---
+"""Identity domain models for affiliations, authors, and article authorship."""
+from datetime import datetime, timezone
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy.orm import relationship
+from ..session import Base
 
-server {
-    listen 80;
-    server_name localhost;
-    location /api {
-        proxy_pass http://backend:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_http_version 1.1;
-        proxy_set_header Connection "";
-        proxy_buffering off;
-        proxy_cache off;
-        proxy_read_timeout 86400s;
-    }
-    location / {
-        proxy_pass http://frontend:5173;
-        proxy_set_header Host $host;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
+class Affiliation(Base):
+    """..."""
 
+class Author(Base):
+    """Represents a researcher or publication contributor."""
+    __tablename__ = 'authors'
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key identifier for author')
+    name = Column(String(255), nullable=False, comment='Full name of the author or researcher')
+    orcid = Column(String(50), nullable=True, index=True, comment="Author's ORCID identifier")
+    email = Column(String(255), nullable=True, comment='Contact email address for the author')
+    affiliation_id = Column(Integer, ForeignKey('affiliations.id', ondelete='SET NULL'), nullable=True, comment='Foreign key linking to affiliations.id')
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, comment='UTC timestamp when author record was created')
+    affiliation = relationship('Affiliation', back_populates='authors')
+    author_articles = relationship('AuthorArticle', back_populates='author', cascade='all, delete-orphan')
+    articles = relationship('Article', secondary='author_articles', back_populates='authors', viewonly=True)
+
+class AuthorArticle(Base):
+    """Junction model connecting authors to articles with authorship metadata."""
+    __tablename__ = 'author_articles'
+    __table_args__ = (UniqueConstraint('author_id', 'article_id', name='uq_author_article'),)
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key junction identifier')
+    author_id = Column(Integer, ForeignKey('authors.id', ondelete='CASCADE'), nullable=False, comment='Foreign key linking to authors.id')
+    article_id = Column(Integer, ForeignKey('articles.id', ondelete='CASCADE'), nullable=False, comment='Foreign key linking to articles.id')
+    author_order = Column(Integer, default=1, nullable=False, comment='Order of authorship in the publication (1-based)')
+    is_corresponding = Column(Boolean, default=False, nullable=False, comment='Flag indicating if this author is the corresponding author')
+    author = relationship('Author', back_populates='author_articles')
+    article = relationship('Article', back_populates='author_articles')
+
+class Keyword(Base):
+    """..."""
+
+class KeywordArticle(Base):
+    """..."""

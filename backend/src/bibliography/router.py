@@ -145,10 +145,31 @@ if HAS_MULTIPART:
         def _to_str(val):
             return str(val) if isinstance(val, (str, int, float)) else None
 
+        def _format_surname(raw_author):
+            if not raw_author or not isinstance(raw_author, str):
+                return "N/A"
+            clean = raw_author.strip()
+            if not clean:
+                return "N/A"
+            first = re.split(r"\s+and\s+|;\s*", clean, flags=re.I)[0].strip()
+            if not first:
+                return "N/A"
+            surname = first.split(",")[0].strip() if "," in first else (
+                first.split()[-1] if first.split() else first
+            )
+            return f"{surname} ..."
+
         now = datetime.now(timezone.utc)
         return [
             ParsedReference(
-                author=_to_str(getattr(a, "author", None)),
+                author=_format_surname(
+                    a.authors[0].name
+                    if hasattr(a, "authors") and a.authors
+                    else (
+                        getattr(a, "raw_data", None)
+                        or _to_str(getattr(a, "author", None))
+                    )
+                ),
                 year=_to_str(getattr(a, "year", None)),
                 title=_to_str(getattr(a, "title", None)) or "Untitled",
                 journal=_to_str(getattr(a, "journal", None)),

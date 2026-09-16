@@ -1,4 +1,5 @@
 """Service for persisting bibliographic references into the database."""
+import re
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError
@@ -6,7 +7,18 @@ from sqlalchemy.exc import OperationalError
 try:
     from .schemas import ParsedReference
     from ..database.models.core import Article, Project, ProjectArticle
+    from ..database.models.identity import Author, AuthorArticle
 except (ImportError, ValueError):
+    from backend.src.bibliography.schemas import ParsedReference
+    from backend.src.database.models.core import (
+        Article,
+        Project,
+        ProjectArticle,
+    )
+    from backend.src.database.models.identity import (
+        Author,
+        AuthorArticle,
+    )
     from backend.src.bibliography.schemas import ParsedReference
     from backend.src.database.models.core import (
         Article,
@@ -68,6 +80,40 @@ def _inject_references_inner(
         
         if not link:
             db.add(ProjectArticle(project_id=project.id, article_id=article.id))
+
+        if ref.author:
+            if not getattr(article, "raw_data", None):
+                article.raw_data = str(ref.author)
+            auth_list = [
+                a.strip()
+                for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
+                if a.strip()
+            ]
+            for idx, a_name in enumerate(auth_list):
+                c_name = a_name[:255]
+                auth_obj = (
+                    db.query(Author).filter(Author.name == c_name).first()
+                )
+                if not auth_obj:
+                    auth_obj = Author(name=c_name)
+                    db.add(auth_obj)
+                    db.flush()
+                a_link = (
+                    db.query(AuthorArticle)
+                    .filter(
+                        AuthorArticle.author_id == auth_obj.id,
+                        AuthorArticle.article_id == article.id,
+                    )
+                    .first()
+                )
+                if not a_link:
+                    db.add(
+                        AuthorArticle(
+                            author_id=auth_obj.id,
+                            article_id=article.id,
+                            author_order=idx + 1,
+                        )
+                    )
 
     db.commit()
     return len(refs)
