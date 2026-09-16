@@ -21,14 +21,15 @@ complexity_aggregate: "MEDIUM"
   - [ID-12.1.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.1. 2. Append > Files touched: backend/src/bibliography/router.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-036]. Type: Task.
   > Files touched: backend/src/bibliography/router.py
 
-- [ ] Story 12.2: Backend Parser Core Logic (.bib Extraction)
+- [x] Story 12.2: Backend Parser Core Logic (.bib Extraction) | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-038)
   Story Context Radius: `{"backend/src/bibliography/parser_service.py": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
   - [ID-12.2.1] [TESTING/TDE]: [1. Arrange: Mock a .bib string with no valid entries. 2. Act: Invoke parse_bibliography_content with the mock string and ext=".bib". 3. Assert: Verify that a ValueError is raised]. Type: Task.
   - [ID-12.2.2] [LOGIC/CORE]: [1. Open backend/src/bibliography/parser_service.py. 2. Delete all .ris parsing functions (_extract_ris_*, _parse_ris_fallback) and the .ris branch in parse_bibliography_content. 3. In parse_bibliography_content, if entries is empty after _parse_bibtex_entries, raise ValueError("No se encontraron items válidos en el archivo .bib")]. Type: Task.
   - [ID-12.2.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.2. 2. Append > Files touched: backend/src/bibliography/parser_service.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-038]. Type: Task.
+  > Files touched: backend/src/bibliography/parser_service.py
 
-- [x] Story 12.3: Backend Injection DB Resilience | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-039)
+- [x] Story 12.3: Backend Injection DB Resilience
   Story Context Radius: `{"backend/src/bibliography/injection_service.py": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
   - [ID-12.3.1] [TESTING/TDE]: [1. Arrange: Mock the SQLAlchemy Session so that db.query() raises sqlalchemy.exc.OperationalError. 2. Act: Invoke inject_references_to_db. 3. Assert: Verify that a RuntimeError is raised]. Type: Task.

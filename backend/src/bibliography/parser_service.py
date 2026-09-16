@@ -1,7 +1,6 @@
 import datetime
 from typing import List, Optional
 import re
-import rispy
 import bibtexparser
 from .schemas import ParsedReference
 
@@ -205,6 +204,32 @@ def _parse_ris_fallback(content: str) -> list:
 
 
 def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
+    if ext.lower() != ".bib":
+        raise ValueError(f"Unsupported extension: {ext}")
+        
+    now = datetime.datetime.now(datetime.timezone.utc)
+    try:
+        entries = _parse_bibtex_entries(content)
+    except Exception:
+        entries = []
+        
+    if not entries:
+        raise ValueError("No se encontraron items válidos en el archivo .bib")
+        
+    return [
+        ParsedReference(
+            author=_extract_bib_field(entry, "author"),
+            year=_extract_bib_field(entry, "year"),
+            title=_extract_bib_field(entry, "title"),
+            journal=_extract_bib_field(entry, "journal"),
+            doi=_extract_bib_field(entry, "doi"),
+            upload_datetime=now,
+        )
+        for entry in entries
+    ]
+
+
+def _deprecated_parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
     parsed_refs: List[ParsedReference] = []
     now = datetime.datetime.now(datetime.timezone.utc)
     

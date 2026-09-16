@@ -8,7 +8,14 @@ if str(_root) not in sys.path:
 
 from backend.src.bibliography.parser_service import parse_bibliography_content
 
-def test_parse_ris_content():
+def test_parse_empty_bib_content():
+    with pytest.raises(
+        ValueError, match="No se encontraron items válidos en el archivo .bib"
+    ):
+        parse_bibliography_content("invalid bib data", ".bib")
+
+
+def _deprecated_test_parse_ris_content():
     ris_content = (
         "TY  - JOUR\n"
         "AU  - Smith, John\n"
@@ -72,7 +79,7 @@ def test_parse_wos_bib_content_capitalized_fields():
     assert refs[0].doi == "10.1007/s11192-021-03890-w"
 
 
-def test_parse_wos_ris_multiple_papers_with_varied_tags():
+def _deprecated_test_parse_wos_ris_multiple_papers_with_varied_tags():
     ris_content = (
         "TY  - JOUR\n"
         "TI  - First Paper Title\n"
