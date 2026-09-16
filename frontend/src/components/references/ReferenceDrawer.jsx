@@ -214,18 +214,30 @@ export default function ReferenceDrawer({
                 )}
 
                 {type === 'funding' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ fontWeight: '600', color: '#e2e8f0' }}>
-                      {item.agency || 'Funding Agency'}
+                  typeof item === 'string' ? (
+                    <div style={{ color: '#e2e8f0', lineHeight: '1.6', fontSize: '13px', whiteSpace: 'pre-wrap' }}>
+                      {item}
                     </div>
-                    {item.grant_number && (
-                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>
-                        Grant: <span style={{ fontFamily: 'monospace', color: '#cbd5e1' }}>{item.grant_number}</span>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ fontWeight: '600', color: '#e2e8f0' }}>
+                        {item.agency || 'Funding Agency'}
                       </div>
-                    )}
-                    {item.country && (
-                      <div style={{ fontSize: '12px', color: '#64748b' }}>{item.country}</div>
-                    )}
+                      {item.grant_number && (
+                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                          Grant: <span style={{ fontFamily: 'monospace', color: '#cbd5e1' }}>{item.grant_number}</span>
+                        </div>
+                      )}
+                      {item.country && (
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>{item.country}</div>
+                      )}
+                    </div>
+                  )
+                )}
+
+                {type === 'abstract' && (
+                  <div style={{ color: '#e2e8f0', lineHeight: '1.7', fontSize: '13px', whiteSpace: 'pre-wrap' }}>
+                    {typeof item === 'string' ? item : JSON.stringify(item)}
                   </div>
                 )}
 
@@ -251,6 +263,6 @@ ReferenceDrawer.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   title: PropTypes.string,
-  type: PropTypes.oneOf(['references', 'authors', 'funding', 'generic']),
+  type: PropTypes.oneOf(['references', 'authors', 'funding', 'abstract', 'generic']),
   data: PropTypes.array,
 };

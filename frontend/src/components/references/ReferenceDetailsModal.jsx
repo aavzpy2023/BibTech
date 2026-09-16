@@ -180,7 +180,11 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
                 plusKeywords={plusKeywords}
                 researchAreas={researchAreas}
                 wosCategories={wosCategories}
+                isExpanded={isAbstractExpanded}
                 onExpandAbstract={toggleAbstractExpanded}
+                onOpenAbstractModal={() =>
+                  handleExpandDrawer('abstract', [abstract], 'Full Abstract')
+                }
                 onHoverInfo={handleHoverInfo}
               />
               <OverviewRightColumn
@@ -192,12 +196,25 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
                 fundingText={fundingText}
                 onHoverInfo={handleHoverInfo}
                 onCopy={handleCopy}
-                onExpandDrawer={(drawerType) =>
-                  handleExpandDrawer(
-                    drawerType,
-                    drawerType === 'authors' ? authorsDetail : null
-                  )
-                }
+                onExpandDrawer={(drawerType) => {
+                  if (drawerType === 'authors') {
+                    handleExpandDrawer('authors', authorsDetail, 'Authors Details');
+                  } else if (drawerType === 'funding') {
+                    const fundingData =
+                      fundingList && fundingList.length > 0
+                        ? fundingList
+                        : fundingText
+                        ? [fundingText]
+                        : [];
+                    handleExpandDrawer(
+                      'funding',
+                      fundingData,
+                      'Funding Acknowledgments'
+                    );
+                  } else {
+                    handleExpandDrawer(drawerType);
+                  }
+                }}
               />
             </div>
 

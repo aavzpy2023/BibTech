@@ -100,7 +100,9 @@ export default function OverviewLeftColumn({
   plusKeywords,
   researchAreas,
   wosCategories,
+  isExpanded = false,
   onExpandAbstract,
+  onOpenAbstractModal,
   onHoverInfo,
 }) {
   const renderChips = (items) => {
@@ -179,7 +181,16 @@ export default function OverviewLeftColumn({
   );
 
   const abstractRight = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div
+      onClick={onOpenAbstractModal || onExpandAbstract}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        cursor: 'pointer',
+      }}
+      title="Open full abstract dialog"
+    >
       <svg
         width="15"
         height="15"
@@ -218,12 +229,16 @@ export default function OverviewLeftColumn({
             style={{
               margin: 0,
               color: '#cbd5e1',
-              lineHeight: '1.5',
+              lineHeight: '1.6',
               wordBreak: 'break-word',
-              display: '-webkit-box',
-              WebkitLineClamp: 4,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
+              ...(isExpanded
+                ? { display: 'block', maxHeight: 'none' }
+                : {
+                    display: '-webkit-box',
+                    WebkitLineClamp: 4,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }),
             }}
           >
             {abstract || 'No abstract available.'}
@@ -245,9 +260,9 @@ export default function OverviewLeftColumn({
                 padding: 0,
               }}
             >
-              View full abstract
+              {isExpanded ? 'Show less' : 'View full abstract'}
               <svg width="14" height="14" style={{ width: '14px', height: '14px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isExpanded ? "M19 9l-7 7-7-7" : "M17 8l4 4m0 0l-4 4m4-4H3"} />
               </svg>
             </button>
           )}
@@ -299,6 +314,8 @@ OverviewLeftColumn.propTypes = {
   plusKeywords: PropTypes.arrayOf(PropTypes.string),
   researchAreas: PropTypes.string,
   wosCategories: PropTypes.string,
+  isExpanded: PropTypes.bool,
   onExpandAbstract: PropTypes.func,
+  onOpenAbstractModal: PropTypes.func,
   onHoverInfo: PropTypes.func,
 };

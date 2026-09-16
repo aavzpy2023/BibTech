@@ -29,8 +29,17 @@ export default function useReferenceDetails(article = null) {
           resolvedData = article.references_list || [];
           resolvedTitle = resolvedTitle || 'Cited References';
         } else if (type === 'funding') {
-          resolvedData = article.funding_list || [];
+          const hasList =
+            article.funding_list && article.funding_list.length > 0;
+          resolvedData = hasList
+            ? article.funding_list
+            : article.funding_text
+            ? [article.funding_text]
+            : [];
           resolvedTitle = resolvedTitle || 'Funding Acknowledgments';
+        } else if (type === 'abstract') {
+          resolvedData = article.abstract ? [article.abstract] : [];
+          resolvedTitle = resolvedTitle || 'Full Abstract';
         }
       }
 

@@ -1,151 +1,12 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 16:40:28
+Date: 2026-09-16 16:49:31
 AST Mode: False
 Line Numbers: True
-Modules: MetricsFooterCards.jsx, OverviewLeftColumn.jsx, OverviewRightColumn.jsx, ReferenceDetailsModal.jsx, ReferenceHeroBlock.jsx
-Processed Files: 5
+Modules: OverviewLeftColumn.jsx, ReferenceDetailsModal.jsx, ReferenceDrawer.jsx, useReferenceDetails.js
+Processed Files: 4
 ===========================
 
-
-
-// --- frontend/src/components/references/MetricsFooterCards.jsx ---
-
-[L001, S0] import React from 'react';
-[L002, S0] import PropTypes from 'prop-types';
-[L003, S0] 
-[L004, S0] export default function MetricsFooterCards({
-[L005, S2]   type,
-[L006, S2]   language,
-[L007, S2]   issn,
-[L008, S2]   month,
-[L009, S2]   articleNumber,
-[L010, S2]   pages,
-[L011, S2]   publisher,
-[L012, S2]   address,
-[L013, S2]   timesCited,
-[L014, S2]   oaStatus,
-[L015, S2]   onHoverInfo,
-[L016, S0] }) {
-[L017, S2]   const getOABadgeClass = (status) => {
-[L018, S4]     if (!status) return 'bg-gray-800 text-gray-400';
-[L019, S4]     const s = status.toLowerCase();
-[L020, S4]     if (s.includes('gold')) return 'bg-green-900/30 text-green-400 border-green-800/50';
-[L021, S4]     if (s.includes('green')) return 'bg-emerald-900/30 text-emerald-400 border-emerald-800/50';
-[L022, S4]     if (s.includes('bronze')) return 'bg-amber-900/30 text-amber-400 border-amber-800/50';
-[L023, S4]     return 'bg-gray-800 text-gray-300 border-gray-700';
-[L024, S2]   };
-[L025, S0] 
-[L026, S2]   const PropRow = ({ label, value }) => (
-[L027, S4]     <div style={{ display: 'flex', fontSize: '13px', alignItems: 'center' }}>
-[L028, S6]       <span style={{ width: '130px', color: '#64748b', flexShrink: 0 }}>{label}</span>
-[L029, S6]       <span style={{ color: '#cbd5e1', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value || '—'}</span>
-[L030, S4]     </div>
-[L031, S2]   );
-[L032, S0] 
-[L033, S2]   PropRow.propTypes = {
-[L034, S4]     label: PropTypes.string.isRequired,
-[L035, S4]     value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-[L036, S2]   };
-[L037, S0] 
-[L038, S2]   const iconInfo = (
-[L039, S4]     <svg width="14" height="14" style={{ width: '14px', height: '14px', flexShrink: 0, color: '#64748b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L040, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-[L041, S4]     </svg>
-[L042, S2]   );
-[L043, S0] 
-[L044, S2]   return (
-[L045, S4]     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px', marginTop: '20px' }}>
-[L046, S6]       {/* Bibliographic Card */}
-[L047, S6]       <div style={{ backgroundColor: '#131d31', border: '1px solid #1e293b', borderRadius: '8px', padding: '18px', boxSizing: 'border-box' }}>
-[L048, S8]         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-[L049, S10]           <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L050, S12]             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-[L051, S10]           </svg>
-[L052, S10]           <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-[L053, S12]             Bibliographic Information
-[L054, S12]             {onHoverInfo && (
-[L055, S14]               <button 
-[L056, S16]                 onMouseEnter={(e) => onHoverInfo('biblio-info', e)}
-[L057, S16]                 onMouseLeave={() => onHoverInfo(null, null)}
-[L058, S16]                 style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-[L059, S16]                 aria-label="info-biblio"
-[L060, S14]               >
-[L061, S16]                 {iconInfo}
-[L062, S14]               </button>
-[L063, S12]             )}
-[L064, S10]           </h3>
-[L065, S8]         </div>
-[L066, S8]         
-[L067, S8]         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px' }}>
-[L068, S10]           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-[L069, S12]             <PropRow label="Type" value={type} />
-[L070, S12]             <PropRow label="Language" value={language} />
-[L071, S12]             <PropRow label="ISSN / EISSN" value={issn} />
-[L072, S12]             <PropRow label="Month" value={month} />
-[L073, S10]           </div>
-[L074, S10]           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-[L075, S12]             <PropRow label="Article Number" value={articleNumber} />
-[L076, S12]             <PropRow label="Pages" value={pages} />
-[L077, S12]             <PropRow label="Publisher" value={publisher} />
-[L078, S12]             <PropRow label="Address" value={address} />
-[L079, S10]           </div>
-[L080, S8]         </div>
-[L081, S6]       </div>
-[L082, S0] 
-[L083, S6]       {/* Metrics Card */}
-[L084, S6]       <div style={{ backgroundColor: '#131d31', border: '1px solid #1e293b', borderRadius: '8px', padding: '18px', boxSizing: 'border-box' }}>
-[L085, S8]         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-[L086, S10]           <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L087, S12]             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-[L088, S10]           </svg>
-[L089, S10]           <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-[L090, S12]             Database & Metrics
-[L091, S12]             {onHoverInfo && (
-[L092, S14]               <button 
-[L093, S16]                 onMouseEnter={(e) => onHoverInfo('metrics-info', e)}
-[L094, S16]                 onMouseLeave={() => onHoverInfo(null, null)}
-[L095, S16]                 style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-[L096, S16]                 aria-label="info-metrics"
-[L097, S14]               >
-[L098, S16]                 {iconInfo}
-[L099, S14]               </button>
-[L100, S12]             )}
-[L101, S10]           </h3>
-[L102, S8]         </div>
-[L103, S0] 
-[L104, S8]         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-[L105, S10]           <PropRow label="Times Cited" value={timesCited} />
-[L106, S10]           
-[L107, S10]           <div style={{ display: 'flex', fontSize: '13px', alignItems: 'center' }}>
-[L108, S12]             <span style={{ width: '130px', color: '#64748b', flexShrink: 0 }}>OA</span>
-[L109, S12]             {oaStatus ? (
-[L110, S14]               <span className={`px-2 py-0.5 rounded text-xs border font-medium ${getOABadgeClass(oaStatus)}`} style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}>
-[L111, S16]                 {oaStatus}
-[L112, S14]               </span>
-[L113, S12]             ) : (
-[L114, S14]               <span style={{ color: '#cbd5e1', fontWeight: '500' }}>—</span>
-[L115, S12]             )}
-[L116, S10]           </div>
-[L117, S8]         </div>
-[L118, S6]       </div>
-[L119, S4]     </div>
-[L120, S2]   );
-[L121, S0] }
-[L122, S0] 
-[L123, S0] MetricsFooterCards.propTypes = {
-[L124, S2]   type: PropTypes.string,
-[L125, S2]   language: PropTypes.string,
-[L126, S2]   issn: PropTypes.string,
-[L127, S2]   month: PropTypes.string,
-[L128, S2]   articleNumber: PropTypes.string,
-[L129, S2]   pages: PropTypes.string,
-[L130, S2]   publisher: PropTypes.string,
-[L131, S2]   address: PropTypes.string,
-[L132, S2]   timesCited: PropTypes.number,
-[L133, S2]   oaStatus: PropTypes.string,
-[L134, S2]   onHoverInfo: PropTypes.func,
-[L135, S0] };
 
 
 // --- frontend/src/components/references/OverviewLeftColumn.jsx ---
@@ -153,11 +14,11 @@ Processed Files: 5
 [L001, S0] import React from 'react';
 [L002, S0] import PropTypes from 'prop-types';
 [L003, S0] 
-[L004, S0] const SectionCard = ({ title, icon, onHoverInfo, infoKey, children }) => (
+[L004, S0] const SectionCard = ({ title, icon, onHoverInfo, infoKey, rightElement, children }) => (
 [L005, S2]   <div
 [L006, S4]     style={{
-[L007, S6]       backgroundColor: '#131d31',
-[L008, S6]       border: '1px solid #1e293b',
+[L007, S6]       backgroundColor: '#0C1427',
+[L008, S6]       border: '1px solid #18243c',
 [L009, S6]       borderRadius: '8px',
 [L010, S6]       padding: '16px',
 [L011, S6]       boxSizing: 'border-box',
@@ -178,7 +39,7 @@ Processed Files: 5
 [L026, S12]             margin: 0,
 [L027, S12]             fontSize: '14px',
 [L028, S12]             fontWeight: '600',
-[L029, S12]             color: '#e2e8f0',
+[L029, S12]             color: '#f1f5f9',
 [L030, S12]             display: 'flex',
 [L031, S12]             alignItems: 'center',
 [L032, S12]             gap: '8px',
@@ -219,387 +80,241 @@ Processed Files: 5
 [L067, S10]           )}
 [L068, S8]         </h3>
 [L069, S6]       </div>
-[L070, S4]     </div>
-[L071, S4]     <div style={{ fontSize: '13px', color: '#cbd5e1' }}>
-[L072, S6]       {children}
-[L073, S4]     </div>
-[L074, S2]   </div>
-[L075, S0] );
-[L076, S0] 
-[L077, S0] SectionCard.propTypes = {
-[L078, S2]   title: PropTypes.string.isRequired,
-[L079, S2]   icon: PropTypes.node,
-[L080, S2]   onHoverInfo: PropTypes.func,
-[L081, S2]   infoKey: PropTypes.string,
-[L082, S2]   children: PropTypes.node.isRequired,
-[L083, S0] };
-[L084, S0] 
-[L085, S0] export default function OverviewLeftColumn({
-[L086, S2]   abstract,
-[L087, S2]   authorKeywords,
-[L088, S2]   plusKeywords,
-[L089, S2]   researchAreas,
-[L090, S2]   wosCategories,
-[L091, S2]   onExpandAbstract,
-[L092, S2]   onHoverInfo,
-[L093, S0] }) {
-[L094, S2]   const renderChips = (items) => {
-[L095, S4]     if (!items || items.length === 0) {
-[L096, S6]       return <span style={{ color: '#64748b', fontStyle: 'italic' }}>None provided</span>;
-[L097, S4]     }
-[L098, S4]     return (
-[L099, S6]       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-[L100, S8]         {items.map((item, idx) => (
-[L101, S10]           <span 
-[L102, S12]             key={idx}
-[L103, S12]             style={{
-[L104, S14]               backgroundColor: '#1e293b',
-[L105, S14]               border: '1px solid #334155',
-[L106, S14]               color: '#cbd5e1',
-[L107, S14]               padding: '3px 10px',
-[L108, S14]               borderRadius: '12px',
-[L109, S14]               fontSize: '12px',
-[L110, S14]               fontWeight: '500',
-[L111, S12]             }}
-[L112, S10]           >
-[L113, S12]             {item}
-[L114, S10]           </span>
-[L115, S8]         ))}
-[L116, S6]       </div>
-[L117, S4]     );
-[L118, S2]   };
-[L119, S0] 
-[L120, S2]   const renderBox = (text) => {
-[L121, S4]     if (!text) return <span style={{ color: '#64748b', fontStyle: 'italic' }}>None provided</span>;
-[L122, S4]     return (
-[L123, S6]       <div
-[L124, S8]         style={{
-[L125, S10]           backgroundColor: 'rgba(30, 41, 59, 0.4)',
-[L126, S10]           border: '1px solid #1e293b',
-[L127, S10]           borderRadius: '6px',
-[L128, S10]           padding: '10px',
-[L129, S10]           fontSize: '13px',
-[L130, S10]           color: '#cbd5e1',
-[L131, S10]           wordBreak: 'break-word',
-[L132, S8]         }}
-[L133, S6]       >
-[L134, S8]         {text}
-[L135, S6]       </div>
-[L136, S4]     );
-[L137, S2]   };
-[L138, S0] 
-[L139, S2]   const docIcon = (
-[L140, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L141, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-[L142, S4]     </svg>
-[L143, S2]   );
-[L144, S2]   
-[L145, S2]   const tagIcon = (
-[L146, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L147, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-[L148, S4]     </svg>
-[L149, S2]   );
+[L070, S6]       {rightElement || (
+[L071, S8]         <svg
+[L072, S10]           width="14"
+[L073, S10]           height="14"
+[L074, S10]           style={{ width: '14px', height: '14px', color: '#475569', flexShrink: 0 }}
+[L075, S10]           fill="none"
+[L076, S10]           viewBox="0 0 24 24"
+[L077, S10]           stroke="currentColor"
+[L078, S8]         >
+[L079, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+[L080, S8]         </svg>
+[L081, S6]       )}
+[L082, S4]     </div>
+[L083, S4]     <div style={{ fontSize: '13px', color: '#cbd5e1' }}>
+[L084, S6]       {children}
+[L085, S4]     </div>
+[L086, S2]   </div>
+[L087, S0] );
+[L088, S0] 
+[L089, S0] SectionCard.propTypes = {
+[L090, S2]   title: PropTypes.string.isRequired,
+[L091, S2]   icon: PropTypes.node,
+[L092, S2]   onHoverInfo: PropTypes.func,
+[L093, S2]   infoKey: PropTypes.string,
+[L094, S2]   children: PropTypes.node.isRequired,
+[L095, S0] };
+[L096, S0] 
+[L097, S0] export default function OverviewLeftColumn({
+[L098, S2]   abstract,
+[L099, S2]   authorKeywords,
+[L100, S2]   plusKeywords,
+[L101, S2]   researchAreas,
+[L102, S2]   wosCategories,
+[L103, S2]   onExpandAbstract,
+[L104, S2]   onHoverInfo,
+[L105, S0] }) {
+[L106, S2]   const renderChips = (items) => {
+[L107, S4]     if (!items || items.length === 0) {
+[L108, S6]       return <span style={{ color: '#64748b', fontStyle: 'italic' }}>None provided</span>;
+[L109, S4]     }
+[L110, S4]     return (
+[L111, S6]       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+[L112, S8]         {items.map((item, idx) => (
+[L113, S10]           <span 
+[L114, S12]             key={idx}
+[L115, S12]             style={{
+[L116, S14]               backgroundColor: '#1e293b',
+[L117, S14]               border: '1px solid #334155',
+[L118, S14]               color: '#cbd5e1',
+[L119, S14]               padding: '3px 10px',
+[L120, S14]               borderRadius: '12px',
+[L121, S14]               fontSize: '12px',
+[L122, S14]               fontWeight: '500',
+[L123, S12]             }}
+[L124, S10]           >
+[L125, S12]             {item}
+[L126, S10]           </span>
+[L127, S8]         ))}
+[L128, S6]       </div>
+[L129, S4]     );
+[L130, S2]   };
+[L131, S0] 
+[L132, S2]   const renderBox = (text) => {
+[L133, S4]     if (!text) return <span style={{ color: '#64748b', fontStyle: 'italic' }}>None provided</span>;
+[L134, S4]     return (
+[L135, S6]       <div
+[L136, S8]         style={{
+[L137, S10]           backgroundColor: 'rgba(30, 41, 59, 0.4)',
+[L138, S10]           border: '1px solid #1e293b',
+[L139, S10]           borderRadius: '6px',
+[L140, S10]           padding: '10px',
+[L141, S10]           fontSize: '13px',
+[L142, S10]           color: '#cbd5e1',
+[L143, S10]           wordBreak: 'break-word',
+[L144, S8]         }}
+[L145, S6]       >
+[L146, S8]         {text}
+[L147, S6]       </div>
+[L148, S4]     );
+[L149, S2]   };
 [L150, S0] 
-[L151, S2]   const linkIcon = (
+[L151, S2]   const docIcon = (
 [L152, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L153, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+[L153, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 [L154, S4]     </svg>
 [L155, S2]   );
-[L156, S0] 
-[L157, S2]   const globeIcon = (
+[L156, S2]   
+[L157, S2]   const tagIcon = (
 [L158, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L159, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+[L159, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
 [L160, S4]     </svg>
 [L161, S2]   );
 [L162, S0] 
-[L163, S2]   const filterIcon = (
+[L163, S2]   const linkIcon = (
 [L164, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L165, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+[L165, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
 [L166, S4]     </svg>
 [L167, S2]   );
 [L168, S0] 
-[L169, S2]   return (
-[L170, S4]     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-[L171, S6]       <SectionCard 
-[L172, S8]         title="Abstract" 
-[L173, S8]         icon={docIcon} 
-[L174, S8]         onHoverInfo={onHoverInfo} 
-[L175, S8]         infoKey="abstract"
-[L176, S6]       >
-[L177, S8]         <div style={{ position: 'relative' }}>
-[L178, S10]           <p
-[L179, S12]             style={{
-[L180, S14]               margin: 0,
-[L181, S14]               color: '#cbd5e1',
-[L182, S14]               lineHeight: '1.5',
-[L183, S14]               wordBreak: 'break-word',
-[L184, S14]               display: '-webkit-box',
-[L185, S14]               WebkitLineClamp: 4,
-[L186, S14]               WebkitBoxOrient: 'vertical',
-[L187, S14]               overflow: 'hidden',
-[L188, S12]             }}
-[L189, S10]           >
-[L190, S12]             {abstract || 'No abstract available.'}
-[L191, S10]           </p>
-[L192, S10]           {abstract && abstract.length > 200 && (
-[L193, S12]             <button 
-[L194, S14]               onClick={onExpandAbstract}
-[L195, S14]               style={{
-[L196, S16]                 background: 'none',
-[L197, S16]                 border: 'none',
-[L198, S16]                 color: '#60a5fa',
-[L199, S16]                 cursor: 'pointer',
-[L200, S16]                 fontSize: '13px',
-[L201, S16]                 fontWeight: '500',
-[L202, S16]                 display: 'flex',
-[L203, S16]                 alignItems: 'center',
-[L204, S16]                 gap: '4px',
-[L205, S16]                 marginTop: '8px',
-[L206, S16]                 padding: 0,
-[L207, S14]               }}
-[L208, S12]             >
-[L209, S14]               View full abstract
-[L210, S14]               <svg width="14" height="14" style={{ width: '14px', height: '14px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L211, S16]                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-[L212, S14]               </svg>
-[L213, S12]             </button>
-[L214, S10]           )}
-[L215, S8]         </div>
-[L216, S6]       </SectionCard>
-[L217, S0] 
-[L218, S6]       <SectionCard 
-[L219, S8]         title="Keywords" 
-[L220, S8]         icon={tagIcon} 
-[L221, S8]         onHoverInfo={onHoverInfo} 
-[L222, S8]         infoKey="keywords"
-[L223, S6]       >
-[L224, S8]         {renderChips(authorKeywords)}
-[L225, S6]       </SectionCard>
-[L226, S0] 
-[L227, S6]       <SectionCard 
-[L228, S8]         title="Keywords-Plus" 
-[L229, S8]         icon={linkIcon} 
-[L230, S8]         onHoverInfo={onHoverInfo} 
-[L231, S8]         infoKey="keywords-plus"
-[L232, S6]       >
-[L233, S8]         {renderChips(plusKeywords)}
-[L234, S6]       </SectionCard>
-[L235, S0] 
-[L236, S6]       <SectionCard 
-[L237, S8]         title="Research Areas" 
-[L238, S8]         icon={globeIcon} 
-[L239, S8]         onHoverInfo={onHoverInfo} 
-[L240, S8]         infoKey="research-areas"
-[L241, S6]       >
-[L242, S8]         {renderBox(researchAreas)}
-[L243, S6]       </SectionCard>
-[L244, S0] 
-[L245, S6]       <SectionCard 
-[L246, S8]         title="Web of Science Categories" 
-[L247, S8]         icon={filterIcon} 
-[L248, S8]         onHoverInfo={onHoverInfo} 
-[L249, S8]         infoKey="wos-categories"
-[L250, S6]       >
-[L251, S8]         {renderBox(wosCategories)}
-[L252, S6]       </SectionCard>
-[L253, S4]     </div>
-[L254, S2]   );
-[L255, S0] }
+[L169, S2]   const globeIcon = (
+[L170, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L171, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+[L172, S4]     </svg>
+[L173, S2]   );
+[L174, S0] 
+[L175, S2]   const filterIcon = (
+[L176, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L177, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+[L178, S4]     </svg>
+[L179, S2]   );
+[L180, S0] 
+[L181, S2]   const abstractRight = (
+[L182, S4]     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+[L183, S6]       <svg
+[L184, S8]         width="15"
+[L185, S8]         height="15"
+[L186, S8]         style={{ width: '15px', height: '15px', color: '#38bdf8', flexShrink: 0 }}
+[L187, S8]         fill="none"
+[L188, S8]         viewBox="0 0 24 24"
+[L189, S8]         stroke="currentColor"
+[L190, S6]       >
+[L191, S8]         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+[L192, S8]         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+[L193, S6]       </svg>
+[L194, S6]       <svg
+[L195, S8]         width="14"
+[L196, S8]         height="14"
+[L197, S8]         style={{ width: '14px', height: '14px', color: '#475569', flexShrink: 0 }}
+[L198, S8]         fill="none"
+[L199, S8]         viewBox="0 0 24 24"
+[L200, S8]         stroke="currentColor"
+[L201, S6]       >
+[L202, S8]         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+[L203, S6]       </svg>
+[L204, S4]     </div>
+[L205, S2]   );
+[L206, S0] 
+[L207, S2]   return (
+[L208, S4]     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+[L209, S6]       <SectionCard 
+[L210, S8]         title="Abstract" 
+[L211, S8]         icon={docIcon} 
+[L212, S8]         onHoverInfo={onHoverInfo} 
+[L213, S8]         infoKey="abstract"
+[L214, S8]         rightElement={abstractRight}
+[L215, S6]       >
+[L216, S8]         <div style={{ position: 'relative' }}>
+[L217, S10]           <p
+[L218, S12]             style={{
+[L219, S14]               margin: 0,
+[L220, S14]               color: '#cbd5e1',
+[L221, S14]               lineHeight: '1.5',
+[L222, S14]               wordBreak: 'break-word',
+[L223, S14]               display: '-webkit-box',
+[L224, S14]               WebkitLineClamp: 4,
+[L225, S14]               WebkitBoxOrient: 'vertical',
+[L226, S14]               overflow: 'hidden',
+[L227, S12]             }}
+[L228, S10]           >
+[L229, S12]             {abstract || 'No abstract available.'}
+[L230, S10]           </p>
+[L231, S10]           {abstract && abstract.length > 200 && (
+[L232, S12]             <button 
+[L233, S14]               onClick={onExpandAbstract}
+[L234, S14]               style={{
+[L235, S16]                 background: 'none',
+[L236, S16]                 border: 'none',
+[L237, S16]                 color: '#60a5fa',
+[L238, S16]                 cursor: 'pointer',
+[L239, S16]                 fontSize: '13px',
+[L240, S16]                 fontWeight: '500',
+[L241, S16]                 display: 'flex',
+[L242, S16]                 alignItems: 'center',
+[L243, S16]                 gap: '4px',
+[L244, S16]                 marginTop: '8px',
+[L245, S16]                 padding: 0,
+[L246, S14]               }}
+[L247, S12]             >
+[L248, S14]               View full abstract
+[L249, S14]               <svg width="14" height="14" style={{ width: '14px', height: '14px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L250, S16]                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+[L251, S14]               </svg>
+[L252, S12]             </button>
+[L253, S10]           )}
+[L254, S8]         </div>
+[L255, S6]       </SectionCard>
 [L256, S0] 
-[L257, S0] OverviewLeftColumn.propTypes = {
-[L258, S2]   abstract: PropTypes.string,
-[L259, S2]   authorKeywords: PropTypes.arrayOf(PropTypes.string),
-[L260, S2]   plusKeywords: PropTypes.arrayOf(PropTypes.string),
-[L261, S2]   researchAreas: PropTypes.string,
-[L262, S2]   wosCategories: PropTypes.string,
-[L263, S2]   onExpandAbstract: PropTypes.func,
-[L264, S2]   onHoverInfo: PropTypes.func,
-[L265, S0] };
-
-
-// --- frontend/src/components/references/OverviewRightColumn.jsx ---
-
-[L001, S0] import React from 'react';
-[L002, S0] import PropTypes from 'prop-types';
-[L003, S0] 
-[L004, S0] const RightPanelBox = ({ title, icon, onHoverInfo, infoKey, onClick, children, copyAction }) => (
-[L005, S2]   <div 
-[L006, S4]     style={{
-[L007, S6]       backgroundColor: '#131d31',
-[L008, S6]       border: '1px solid #1e293b',
-[L009, S6]       borderRadius: '8px',
-[L010, S6]       padding: '14px 16px',
-[L011, S6]       display: 'flex',
-[L012, S6]       alignItems: 'center',
-[L013, S6]       justifyContent: 'space-between',
-[L014, S6]       cursor: onClick ? 'pointer' : 'default',
-[L015, S6]       boxSizing: 'border-box',
-[L016, S4]     }}
-[L017, S4]     onClick={onClick}
-[L018, S4]     role={onClick ? 'button' : 'region'}
-[L019, S4]     aria-label={onClick ? `Open ${title.toLowerCase()} list` : undefined}
-[L020, S2]   >
-[L021, S4]     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, overflow: 'hidden' }}>
-[L022, S6]       <div style={{ marginTop: '2px', flexShrink: 0 }}>{icon}</div>
-[L023, S6]       <div style={{ flex: 1, overflow: 'hidden' }}>
-[L024, S8]         <h3 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: '600', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-[L025, S10]           {title}
-[L026, S10]           {onHoverInfo && (
-[L027, S12]             <button 
-[L028, S14]               onMouseEnter={(e) => {
-[L029, S16]                 if(e.stopPropagation) e.stopPropagation();
-[L030, S16]                 onHoverInfo(infoKey, e);
-[L031, S14]               }}
-[L032, S14]               onMouseLeave={(e) => {
-[L033, S16]                 if(e.stopPropagation) e.stopPropagation();
-[L034, S16]                 onHoverInfo(null, null);
-[L035, S14]               }}
-[L036, S14]               onClick={(e) => e.stopPropagation()}
-[L037, S14]               style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-[L038, S14]               aria-label={`info-${infoKey}`}
-[L039, S12]             >
-[L040, S14]               <svg width="14" height="14" style={{ width: '14px', height: '14px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L041, S16]                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-[L042, S14]               </svg>
-[L043, S12]             </button>
-[L044, S10]           )}
-[L045, S8]         </h3>
-[L046, S8]         <div style={{ fontSize: '13px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-[L047, S10]           {children || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>None provided</span>}
-[L048, S8]         </div>
-[L049, S6]       </div>
-[L050, S4]     </div>
-[L051, S4]     
-[L052, S4]     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '12px' }}>
-[L053, S6]       {copyAction && children && (
-[L054, S8]         <button
-[L055, S10]           onClick={(e) => {
-[L056, S12]             e.stopPropagation();
-[L057, S12]             copyAction(children);
-[L058, S10]           }}
-[L059, S10]           style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
-[L060, S10]           aria-label="copy email"
-[L061, S8]         >
-[L062, S10]           <svg width="16" height="16" style={{ width: '16px', height: '16px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L063, S12]             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-[L064, S10]           </svg>
-[L065, S8]         </button>
-[L066, S6]       )}
-[L067, S6]       {onClick && (
-[L068, S8]         <svg width="16" height="16" style={{ width: '16px', height: '16px', flexShrink: 0, color: '#64748b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L069, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-[L070, S8]         </svg>
-[L071, S6]       )}
-[L072, S4]     </div>
-[L073, S2]   </div>
-[L074, S0] );
-[L075, S0] 
-[L076, S0] RightPanelBox.propTypes = {
-[L077, S2]   title: PropTypes.string.isRequired,
-[L078, S2]   icon: PropTypes.node.isRequired,
-[L079, S2]   onHoverInfo: PropTypes.func,
-[L080, S2]   infoKey: PropTypes.string,
-[L081, S2]   onClick: PropTypes.func,
-[L082, S2]   children: PropTypes.node,
-[L083, S2]   copyAction: PropTypes.func,
-[L084, S0] };
-[L085, S0] 
-[L086, S0] export default function OverviewRightColumn({
-[L087, S2]   affiliations,
-[L088, S2]   authorsDetailsCount,
-[L089, S2]   authorEmail,
-[L090, S2]   orcidCount,
-[L091, S2]   researcherIdCount,
-[L092, S2]   fundingText,
-[L093, S2]   onHoverInfo,
-[L094, S2]   onCopy,
-[L095, S2]   onExpandDrawer,
-[L096, S0] }) {
-[L097, S2]   const icons = {
-[L098, S4]     building: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
-[L099, S4]     users: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
-[L100, S4]     mail: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
-[L101, S4]     badge: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z" /></svg>,
-[L102, S4]     globe: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-[L103, S4]     cash: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-[L104, S2]   };
-[L105, S0] 
-[L106, S2]   return (
-[L107, S4]     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-[L108, S6]       <RightPanelBox 
-[L109, S8]         title="Affiliations" 
-[L110, S8]         icon={icons.building} 
-[L111, S8]         onHoverInfo={onHoverInfo} 
-[L112, S8]         infoKey="affiliations"
-[L113, S8]         onClick={authorsDetailsCount > 0 ? () => onExpandDrawer('authors') : null}
-[L114, S6]       >
-[L115, S8]         {affiliations}
-[L116, S6]       </RightPanelBox>
-[L117, S0] 
-[L118, S6]       <RightPanelBox 
-[L119, S8]         title="Authors Details" 
-[L120, S8]         icon={icons.users} 
-[L121, S8]         onHoverInfo={onHoverInfo} 
-[L122, S8]         infoKey="authors"
-[L123, S8]         onClick={authorsDetailsCount > 0 ? () => onExpandDrawer('authors') : null}
-[L124, S6]       >
-[L125, S8]         {authorsDetailsCount ? `${authorsDetailsCount} authors (see full list)` : null}
-[L126, S6]       </RightPanelBox>
-[L127, S0] 
-[L128, S6]       <RightPanelBox 
-[L129, S8]         title="Author Email" 
-[L130, S8]         icon={icons.mail} 
-[L131, S8]         onHoverInfo={onHoverInfo} 
-[L132, S8]         infoKey="email"
-[L133, S8]         copyAction={onCopy}
-[L134, S6]       >
-[L135, S8]         {authorEmail}
-[L136, S6]       </RightPanelBox>
-[L137, S0] 
-[L138, S6]       <RightPanelBox 
-[L139, S8]         title="ORCID Numbers" 
-[L140, S8]         icon={icons.badge} 
-[L141, S8]         onHoverInfo={onHoverInfo} 
-[L142, S8]         infoKey="orcid"
-[L143, S8]         onClick={orcidCount > 0 ? () => onExpandDrawer('authors') : null}
-[L144, S6]       >
-[L145, S8]         {orcidCount ? `${orcidCount} ORCID IDs` : null}
-[L146, S6]       </RightPanelBox>
-[L147, S0] 
-[L148, S6]       <RightPanelBox 
-[L149, S8]         title="ResearcherID Numbers" 
-[L150, S8]         icon={icons.globe} 
-[L151, S8]         onHoverInfo={onHoverInfo} 
-[L152, S8]         infoKey="researcher-id"
-[L153, S8]         onClick={researcherIdCount > 0 ? () => onExpandDrawer('authors') : null}
-[L154, S6]       >
-[L155, S8]         {researcherIdCount ? `${researcherIdCount} Researcher IDs` : null}
-[L156, S6]       </RightPanelBox>
-[L157, S0] 
-[L158, S6]       <RightPanelBox 
-[L159, S8]         title="Funding" 
-[L160, S8]         icon={icons.cash} 
-[L161, S8]         onHoverInfo={onHoverInfo} 
-[L162, S8]         infoKey="funding"
-[L163, S8]         onClick={fundingText ? () => onExpandDrawer('funding') : null}
-[L164, S6]       >
-[L165, S8]         {fundingText}
-[L166, S6]       </RightPanelBox>
-[L167, S4]     </div>
-[L168, S2]   );
-[L169, S0] }
-[L170, S0] 
-[L171, S0] OverviewRightColumn.propTypes = {
-[L172, S2]   affiliations: PropTypes.string,
-[L173, S2]   authorsDetailsCount: PropTypes.number,
-[L174, S2]   authorEmail: PropTypes.string,
-[L175, S2]   orcidCount: PropTypes.number,
-[L176, S2]   researcherIdCount: PropTypes.number,
-[L177, S2]   fundingText: PropTypes.string,
-[L178, S2]   onHoverInfo: PropTypes.func,
-[L179, S2]   onCopy: PropTypes.func,
-[L180, S2]   onExpandDrawer: PropTypes.func,
-[L181, S0] };
+[L257, S6]       <SectionCard 
+[L258, S8]         title="Keywords" 
+[L259, S8]         icon={tagIcon} 
+[L260, S8]         onHoverInfo={onHoverInfo} 
+[L261, S8]         infoKey="keywords"
+[L262, S6]       >
+[L263, S8]         {renderChips(authorKeywords)}
+[L264, S6]       </SectionCard>
+[L265, S0] 
+[L266, S6]       <SectionCard 
+[L267, S8]         title="Keywords-Plus" 
+[L268, S8]         icon={linkIcon} 
+[L269, S8]         onHoverInfo={onHoverInfo} 
+[L270, S8]         infoKey="keywords-plus"
+[L271, S6]       >
+[L272, S8]         {renderChips(plusKeywords)}
+[L273, S6]       </SectionCard>
+[L274, S0] 
+[L275, S6]       <SectionCard 
+[L276, S8]         title="Research Areas" 
+[L277, S8]         icon={globeIcon} 
+[L278, S8]         onHoverInfo={onHoverInfo} 
+[L279, S8]         infoKey="research-areas"
+[L280, S6]       >
+[L281, S8]         {renderBox(researchAreas)}
+[L282, S6]       </SectionCard>
+[L283, S0] 
+[L284, S6]       <SectionCard 
+[L285, S8]         title="Web of Science Categories" 
+[L286, S8]         icon={filterIcon} 
+[L287, S8]         onHoverInfo={onHoverInfo} 
+[L288, S8]         infoKey="wos-categories"
+[L289, S6]       >
+[L290, S8]         {renderBox(wosCategories)}
+[L291, S6]       </SectionCard>
+[L292, S4]     </div>
+[L293, S2]   );
+[L294, S0] }
+[L295, S0] 
+[L296, S0] OverviewLeftColumn.propTypes = {
+[L297, S2]   abstract: PropTypes.string,
+[L298, S2]   authorKeywords: PropTypes.arrayOf(PropTypes.string),
+[L299, S2]   plusKeywords: PropTypes.arrayOf(PropTypes.string),
+[L300, S2]   researchAreas: PropTypes.string,
+[L301, S2]   wosCategories: PropTypes.string,
+[L302, S2]   onExpandAbstract: PropTypes.func,
+[L303, S2]   onHoverInfo: PropTypes.func,
+[L304, S0] };
 
 
 // --- frontend/src/components/references/ReferenceDetailsModal.jsx ---
@@ -659,387 +374,747 @@ Processed Files: 5
 [L053, S2]   if (!article) return null;
 [L054, S0] 
 [L055, S2]   const tabs = [
-[L056, S4]     { id: 'Overview', label: 'Overview' },
-[L057, S4]     { id: 'Metadata', label: 'Metadata' },
-[L058, S4]     { id: 'Authors & Institutions', label: 'Authors & Institutions' },
-[L059, S4]     { id: 'References', label: 'References' },
-[L060, S2]   ];
-[L061, S0] 
-[L062, S2]   return (
-[L063, S4]     <ModalTemplate
-[L064, S6]       isOpen={isOpen}
-[L065, S6]       onClose={onClose}
-[L066, S6]       header={
-[L067, S8]         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-[L068, S10]           <svg
-[L069, S12]             style={{ width: '20px', height: '20px', color: '#60a5fa' }}
-[L070, S12]             fill="none"
-[L071, S12]             viewBox="0 0 24 24"
-[L072, S12]             stroke="currentColor"
-[L073, S10]           >
-[L074, S12]             <path
-[L075, S14]               strokeLinecap="round"
-[L076, S14]               strokeLinejoin="round"
-[L077, S14]               strokeWidth={2}
-[L078, S14]               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-[L079, S12]             />
-[L080, S10]           </svg>
-[L081, S10]           <span>Reference Details</span>
-[L082, S8]         </div>
-[L083, S6]       }
-[L084, S6]       maxWidth="1180px"
-[L085, S4]     >
-[L086, S6]       <div style={{ position: 'relative' }}>
-[L087, S8]         <ReferenceHeroBlock
-[L088, S10]           title={title}
-[L089, S10]           authors={authors}
-[L090, S10]           year={year}
-[L091, S10]           journal={journal}
-[L092, S10]           volume={volume}
-[L093, S10]           issue={issue}
-[L094, S10]           pages={pages}
-[L095, S10]           doi={doi}
-[L096, S10]           onCopyDoi={handleCopy}
-[L097, S8]         />
-[L098, S0] 
-[L099, S8]         {/* Tabs Header */}
-[L100, S8]         <div
-[L101, S10]           style={{
-[L102, S12]             display: 'flex',
-[L103, S12]             borderBottom: '1px solid #1e293b',
-[L104, S12]             marginBottom: '24px',
-[L105, S12]             gap: '24px',
-[L106, S10]           }}
-[L107, S8]         >
-[L108, S10]           {tabs.map((tab) => {
-[L109, S12]             const isActive = activeTab === tab.id;
-[L110, S12]             return (
-[L111, S14]               <button
-[L112, S16]                 key={tab.id}
-[L113, S16]                 onClick={() => handleTabChange(tab.id)}
-[L114, S16]                 style={{
-[L115, S18]                   background: 'none',
-[L116, S18]                   border: 'none',
-[L117, S18]                   borderBottom: isActive ? '2px solid #3b82f6' : '2px solid transparent',
-[L118, S18]                   color: isActive ? '#60a5fa' : '#94a3b8',
-[L119, S18]                   fontWeight: isActive ? '600' : '500',
-[L120, S18]                   fontSize: '14px',
-[L121, S18]                   padding: '0 0 12px 0',
-[L122, S18]                   cursor: 'pointer',
-[L123, S16]                 }}
-[L124, S14]               >
-[L125, S16]                 {tab.label}
-[L126, S14]               </button>
-[L127, S12]             );
-[L128, S10]           })}
-[L129, S8]         </div>
+[L056, S4]     {
+[L057, S6]       id: 'Overview',
+[L058, S6]       label: 'Overview',
+[L059, S6]       icon: (
+[L060, S8]         <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L061, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+[L062, S8]         </svg>
+[L063, S6]       ),
+[L064, S4]     },
+[L065, S4]     {
+[L066, S6]       id: 'Metadata',
+[L067, S6]       label: 'Metadata',
+[L068, S6]       icon: (
+[L069, S8]         <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L070, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+[L071, S8]         </svg>
+[L072, S6]       ),
+[L073, S4]     },
+[L074, S4]     {
+[L075, S6]       id: 'Authors & Institutions',
+[L076, S6]       label: 'Authors & Institutions',
+[L077, S6]       icon: (
+[L078, S8]         <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L079, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+[L080, S8]         </svg>
+[L081, S6]       ),
+[L082, S4]     },
+[L083, S4]     {
+[L084, S6]       id: 'References',
+[L085, S6]       label: 'References',
+[L086, S6]       icon: (
+[L087, S8]         <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L088, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+[L089, S8]         </svg>
+[L090, S6]       ),
+[L091, S4]     },
+[L092, S2]   ];
+[L093, S0] 
+[L094, S2]   return (
+[L095, S4]     <ModalTemplate
+[L096, S6]       isOpen={isOpen}
+[L097, S6]       onClose={onClose}
+[L098, S6]       header={
+[L099, S8]         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+[L100, S10]           <svg
+[L101, S12]             style={{ width: '20px', height: '20px', color: '#60a5fa' }}
+[L102, S12]             fill="none"
+[L103, S12]             viewBox="0 0 24 24"
+[L104, S12]             stroke="currentColor"
+[L105, S10]           >
+[L106, S12]             <path
+[L107, S14]               strokeLinecap="round"
+[L108, S14]               strokeLinejoin="round"
+[L109, S14]               strokeWidth={2}
+[L110, S14]               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+[L111, S12]             />
+[L112, S10]           </svg>
+[L113, S10]           <span>Reference Details</span>
+[L114, S8]         </div>
+[L115, S6]       }
+[L116, S6]       maxWidth="1180px"
+[L117, S4]     >
+[L118, S6]       <div style={{ position: 'relative' }}>
+[L119, S8]         <ReferenceHeroBlock
+[L120, S10]           title={title}
+[L121, S10]           authors={authors}
+[L122, S10]           year={year}
+[L123, S10]           journal={journal}
+[L124, S10]           volume={volume}
+[L125, S10]           issue={issue}
+[L126, S10]           pages={pages}
+[L127, S10]           doi={doi}
+[L128, S10]           onCopyDoi={handleCopy}
+[L129, S8]         />
 [L130, S0] 
-[L131, S8]         {/* Tab Content Panels */}
-[L132, S8]         {activeTab === 'Overview' && (
-[L133, S10]           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-[L134, S12]             <div
-[L135, S14]               style={{
-[L136, S16]                 display: 'grid',
-[L137, S16]                 gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-[L138, S16]                 gap: '20px',
-[L139, S14]               }}
-[L140, S12]             >
-[L141, S14]               <OverviewLeftColumn
-[L142, S16]                 abstract={abstract}
-[L143, S16]                 authorKeywords={authorKeywords}
-[L144, S16]                 plusKeywords={plusKeywords}
-[L145, S16]                 researchAreas={researchAreas}
-[L146, S16]                 wosCategories={wosCategories}
-[L147, S16]                 onExpandAbstract={toggleAbstractExpanded}
-[L148, S16]                 onHoverInfo={handleHoverInfo}
-[L149, S14]               />
-[L150, S14]               <OverviewRightColumn
-[L151, S16]                 affiliations={affiliations}
-[L152, S16]                 authorsDetailsCount={authorsDetailsCount}
-[L153, S16]                 authorEmail={authorEmail}
-[L154, S16]                 orcidCount={orcidCount}
-[L155, S16]                 researcherIdCount={researcherIdCount}
-[L156, S16]                 fundingText={fundingText}
-[L157, S16]                 onHoverInfo={handleHoverInfo}
-[L158, S16]                 onCopy={handleCopy}
-[L159, S16]                 onExpandDrawer={(drawerType) =>
-[L160, S18]                   handleExpandDrawer(
-[L161, S20]                     drawerType,
-[L162, S20]                     drawerType === 'authors' ? authorsDetail : null
-[L163, S18]                   )
-[L164, S16]                 }
-[L165, S14]               />
-[L166, S12]             </div>
-[L167, S0] 
-[L168, S12]             <MetricsFooterCards
-[L169, S14]               type={type}
-[L170, S14]               language={language}
-[L171, S14]               issn={issn}
-[L172, S14]               month={month}
-[L173, S14]               articleNumber={articleNumber}
-[L174, S14]               pages={pages}
-[L175, S14]               publisher={publisher}
-[L176, S14]               address={address}
-[L177, S14]               timesCited={timesCited}
-[L178, S14]               oaStatus={oaStatus}
-[L179, S14]               onHoverInfo={handleHoverInfo}
-[L180, S12]             />
-[L181, S0] 
-[L182, S12]             {referencesList && referencesList.length > 0 && (
-[L183, S14]               <div
-[L184, S16]                 style={{
-[L185, S18]                   border: '1px solid #1e293b',
-[L186, S18]                   borderRadius: '8px',
-[L187, S18]                   padding: '16px',
-[L188, S18]                   backgroundColor: '#131d31',
-[L189, S18]                   display: 'flex',
-[L190, S18]                   alignItems: 'center',
-[L191, S18]                   justifyContent: 'space-between',
-[L192, S18]                   marginTop: '8px',
-[L193, S16]                 }}
-[L194, S14]               >
-[L195, S16]                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-[L196, S18]                   <svg
-[L197, S20]                     style={{ width: '20px', height: '20px', color: '#94a3b8' }}
-[L198, S20]                     fill="none"
-[L199, S20]                     viewBox="0 0 24 24"
-[L200, S20]                     stroke="currentColor"
-[L201, S18]                   >
-[L202, S20]                     <path
-[L203, S22]                       strokeLinecap="round"
-[L204, S22]                       strokeLinejoin="round"
-[L205, S22]                       strokeWidth={2}
-[L206, S22]                       d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-[L207, S20]                     />
-[L208, S18]                   </svg>
-[L209, S18]                   <div>
-[L210, S20]                     <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#f1f5f9' }}>
-[L211, S22]                       Cited References
-[L212, S20]                     </h4>
-[L213, S20]                     <span style={{ fontSize: '12px', color: '#64748b' }}>
-[L214, S22]                       {referencesList.length} references
-[L215, S20]                     </span>
-[L216, S18]                   </div>
-[L217, S16]                 </div>
-[L218, S16]                 <button
-[L219, S18]                   onClick={() =>
-[L220, S20]                     handleExpandDrawer(
-[L221, S22]                       'references',
-[L222, S22]                       referencesList,
-[L223, S22]                       'Cited References'
-[L224, S20]                     )
-[L225, S18]                   }
-[L226, S18]                   style={{
-[L227, S20]                     background: 'none',
-[L228, S20]                     border: 'none',
-[L229, S20]                     color: '#60a5fa',
-[L230, S20]                     cursor: 'pointer',
-[L231, S20]                     fontSize: '13px',
-[L232, S20]                     fontWeight: '500',
-[L233, S18]                   }}
-[L234, S16]                 >
-[L235, S18]                   View all references &rarr;
-[L236, S16]                 </button>
-[L237, S14]               </div>
-[L238, S12]             )}
-[L239, S10]           </div>
-[L240, S8]         )}
-[L241, S0] 
-[L242, S8]         {activeTab === 'Metadata' && (
-[L243, S10]           <div className="p-6 text-gray-400 text-sm italic border border-gray-800 rounded-lg bg-gray-900/30">
-[L244, S12]             Raw metadata attributes and database verification panel.
-[L245, S10]           </div>
-[L246, S8]         )}
-[L247, S0] 
-[L248, S8]         {activeTab === 'Authors & Institutions' && (
-[L249, S10]           <div className="p-6 text-gray-400 text-sm italic border border-gray-800 rounded-lg bg-gray-900/30">
-[L250, S12]             {authorsDetailsCount > 0
-[L251, S14]               ? `${authorsDetailsCount} mapped author records with verified institutional affiliations.`
-[L252, S14]               : 'No detailed author records available.'}
-[L253, S10]           </div>
-[L254, S8]         )}
-[L255, S0] 
-[L256, S8]         {activeTab === 'References' && (
-[L257, S10]           <div className="p-6 text-gray-400 text-sm italic border border-gray-800 rounded-lg bg-gray-900/30">
-[L258, S12]             {referencesList && referencesList.length > 0
-[L259, S14]               ? `${referencesList.length} cited references catalogued.`
-[L260, S14]               : 'No cited references available.'}
-[L261, S10]           </div>
-[L262, S8]         )}
-[L263, S0] 
-[L264, S8]         {/* Slide-out Drawer */}
-[L265, S8]         <ReferenceDrawer
-[L266, S10]           isOpen={drawerState.isOpen}
-[L267, S10]           onClose={closeDrawer}
-[L268, S10]           title={drawerState.title}
-[L269, S10]           type={drawerState.type}
-[L270, S10]           data={drawerState.data}
-[L271, S8]         />
-[L272, S6]       </div>
-[L273, S4]     </ModalTemplate>
-[L274, S2]   );
-[L275, S0] }
-[L276, S0] 
-[L277, S0] ReferenceDetailsModal.propTypes = {
-[L278, S2]   isOpen: PropTypes.bool.isRequired,
-[L279, S2]   onClose: PropTypes.func.isRequired,
-[L280, S2]   article: PropTypes.object,
-[L281, S0] };
+[L131, S8]         {/* Tabs Header */}
+[L132, S8]         <div
+[L133, S10]           style={{
+[L134, S12]             display: 'flex',
+[L135, S12]             borderBottom: '1px solid #1e293b',
+[L136, S12]             marginBottom: '24px',
+[L137, S12]             gap: '24px',
+[L138, S10]           }}
+[L139, S8]         >
+[L140, S10]           {tabs.map((tab) => {
+[L141, S12]             const isActive = activeTab === tab.id;
+[L142, S12]             return (
+[L143, S14]               <button
+[L144, S16]                 key={tab.id}
+[L145, S16]                 onClick={() => handleTabChange(tab.id)}
+[L146, S16]                 style={{
+[L147, S18]                   background: 'none',
+[L148, S18]                   border: 'none',
+[L149, S18]                   borderBottom: isActive ? '2px solid #38bdf8' : '2px solid transparent',
+[L150, S18]                   color: isActive ? '#38bdf8' : '#94a3b8',
+[L151, S18]                   fontWeight: isActive ? '600' : '500',
+[L152, S18]                   fontSize: '14px',
+[L153, S18]                   padding: '0 0 12px 0',
+[L154, S18]                   cursor: 'pointer',
+[L155, S18]                   display: 'flex',
+[L156, S18]                   alignItems: 'center',
+[L157, S18]                   gap: '8px',
+[L158, S16]                 }}
+[L159, S14]               >
+[L160, S16]                 {tab.icon}
+[L161, S16]                 <span>{tab.label}</span>
+[L162, S14]               </button>
+[L163, S12]             );
+[L164, S10]           })}
+[L165, S8]         </div>
+[L166, S0] 
+[L167, S8]         {/* Tab Content Panels */}
+[L168, S8]         {activeTab === 'Overview' && (
+[L169, S10]           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+[L170, S12]             <div
+[L171, S14]               style={{
+[L172, S16]                 display: 'grid',
+[L173, S16]                 gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+[L174, S16]                 gap: '20px',
+[L175, S14]               }}
+[L176, S12]             >
+[L177, S14]               <OverviewLeftColumn
+[L178, S16]                 abstract={abstract}
+[L179, S16]                 authorKeywords={authorKeywords}
+[L180, S16]                 plusKeywords={plusKeywords}
+[L181, S16]                 researchAreas={researchAreas}
+[L182, S16]                 wosCategories={wosCategories}
+[L183, S16]                 onExpandAbstract={toggleAbstractExpanded}
+[L184, S16]                 onHoverInfo={handleHoverInfo}
+[L185, S14]               />
+[L186, S14]               <OverviewRightColumn
+[L187, S16]                 affiliations={affiliations}
+[L188, S16]                 authorsDetailsCount={authorsDetailsCount}
+[L189, S16]                 authorEmail={authorEmail}
+[L190, S16]                 orcidCount={orcidCount}
+[L191, S16]                 researcherIdCount={researcherIdCount}
+[L192, S16]                 fundingText={fundingText}
+[L193, S16]                 onHoverInfo={handleHoverInfo}
+[L194, S16]                 onCopy={handleCopy}
+[L195, S16]                 onExpandDrawer={(drawerType) =>
+[L196, S18]                   handleExpandDrawer(
+[L197, S20]                     drawerType,
+[L198, S20]                     drawerType === 'authors' ? authorsDetail : null
+[L199, S18]                   )
+[L200, S16]                 }
+[L201, S14]               />
+[L202, S12]             </div>
+[L203, S0] 
+[L204, S12]             <MetricsFooterCards
+[L205, S14]               type={type}
+[L206, S14]               language={language}
+[L207, S14]               issn={issn}
+[L208, S14]               month={month}
+[L209, S14]               articleNumber={articleNumber}
+[L210, S14]               pages={pages}
+[L211, S14]               publisher={publisher}
+[L212, S14]               address={address}
+[L213, S14]               timesCited={timesCited}
+[L214, S14]               oaStatus={oaStatus}
+[L215, S14]               onHoverInfo={handleHoverInfo}
+[L216, S12]             />
+[L217, S0] 
+[L218, S12]             {referencesList && referencesList.length > 0 && (
+[L219, S14]               <div
+[L220, S16]                 style={{
+[L221, S18]                   border: '1px solid #1e293b',
+[L222, S18]                   borderRadius: '8px',
+[L223, S18]                   padding: '16px',
+[L224, S18]                   backgroundColor: '#131d31',
+[L225, S18]                   display: 'flex',
+[L226, S18]                   alignItems: 'center',
+[L227, S18]                   justifyContent: 'space-between',
+[L228, S18]                   marginTop: '8px',
+[L229, S16]                 }}
+[L230, S14]               >
+[L231, S16]                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+[L232, S18]                   <svg
+[L233, S20]                     style={{ width: '20px', height: '20px', color: '#94a3b8' }}
+[L234, S20]                     fill="none"
+[L235, S20]                     viewBox="0 0 24 24"
+[L236, S20]                     stroke="currentColor"
+[L237, S18]                   >
+[L238, S20]                     <path
+[L239, S22]                       strokeLinecap="round"
+[L240, S22]                       strokeLinejoin="round"
+[L241, S22]                       strokeWidth={2}
+[L242, S22]                       d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+[L243, S20]                     />
+[L244, S18]                   </svg>
+[L245, S18]                   <div>
+[L246, S20]                     <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#f1f5f9' }}>
+[L247, S22]                       Cited References
+[L248, S20]                     </h4>
+[L249, S20]                     <span style={{ fontSize: '12px', color: '#64748b' }}>
+[L250, S22]                       {referencesList.length} references
+[L251, S20]                     </span>
+[L252, S18]                   </div>
+[L253, S16]                 </div>
+[L254, S16]                 <button
+[L255, S18]                   onClick={() =>
+[L256, S20]                     handleExpandDrawer(
+[L257, S22]                       'references',
+[L258, S22]                       referencesList,
+[L259, S22]                       'Cited References'
+[L260, S20]                     )
+[L261, S18]                   }
+[L262, S18]                   style={{
+[L263, S20]                     background: 'none',
+[L264, S20]                     border: 'none',
+[L265, S20]                     color: '#60a5fa',
+[L266, S20]                     cursor: 'pointer',
+[L267, S20]                     fontSize: '13px',
+[L268, S20]                     fontWeight: '500',
+[L269, S18]                   }}
+[L270, S16]                 >
+[L271, S18]                   View all references &rarr;
+[L272, S16]                 </button>
+[L273, S14]               </div>
+[L274, S12]             )}
+[L275, S10]           </div>
+[L276, S8]         )}
+[L277, S0] 
+[L278, S8]         {activeTab === 'Metadata' && (
+[L279, S10]           <div className="p-6 text-gray-400 text-sm italic border border-gray-800 rounded-lg bg-gray-900/30">
+[L280, S12]             Raw metadata attributes and database verification panel.
+[L281, S10]           </div>
+[L282, S8]         )}
+[L283, S0] 
+[L284, S8]         {activeTab === 'Authors & Institutions' && (
+[L285, S10]           <div className="p-6 text-gray-400 text-sm italic border border-gray-800 rounded-lg bg-gray-900/30">
+[L286, S12]             {authorsDetailsCount > 0
+[L287, S14]               ? `${authorsDetailsCount} mapped author records with verified institutional affiliations.`
+[L288, S14]               : 'No detailed author records available.'}
+[L289, S10]           </div>
+[L290, S8]         )}
+[L291, S0] 
+[L292, S8]         {activeTab === 'References' && (
+[L293, S10]           <div className="p-6 text-gray-400 text-sm italic border border-gray-800 rounded-lg bg-gray-900/30">
+[L294, S12]             {referencesList && referencesList.length > 0
+[L295, S14]               ? `${referencesList.length} cited references catalogued.`
+[L296, S14]               : 'No cited references available.'}
+[L297, S10]           </div>
+[L298, S8]         )}
+[L299, S0] 
+[L300, S8]         {/* Slide-out Drawer */}
+[L301, S8]         <ReferenceDrawer
+[L302, S10]           isOpen={drawerState.isOpen}
+[L303, S10]           onClose={closeDrawer}
+[L304, S10]           title={drawerState.title}
+[L305, S10]           type={drawerState.type}
+[L306, S10]           data={drawerState.data}
+[L307, S8]         />
+[L308, S6]       </div>
+[L309, S4]     </ModalTemplate>
+[L310, S2]   );
+[L311, S0] }
+[L312, S0] 
+[L313, S0] ReferenceDetailsModal.propTypes = {
+[L314, S2]   isOpen: PropTypes.bool.isRequired,
+[L315, S2]   onClose: PropTypes.func.isRequired,
+[L316, S2]   article: PropTypes.object,
+[L317, S0] };
 
 
-// --- frontend/src/components/references/ReferenceHeroBlock.jsx ---
+// --- frontend/src/components/references/ReferenceDrawer.jsx ---
 
 [L001, S0] import React from 'react';
 [L002, S0] import PropTypes from 'prop-types';
-[L003, S0] 
-[L004, S0] export default function ReferenceHeroBlock({
-[L005, S2]   title,
-[L006, S2]   authors,
-[L007, S2]   year,
-[L008, S2]   journal,
-[L009, S2]   volume,
-[L010, S2]   issue,
-[L011, S2]   pages,
-[L012, S2]   doi,
-[L013, S2]   onCopyDoi,
-[L014, S0] }) {
-[L015, S2]   return (
-[L016, S4]     <div
-[L017, S6]       style={{
-[L018, S8]         display: 'flex',
-[L019, S8]         flexDirection: 'column',
-[L020, S8]         gap: '12px',
-[L021, S8]         borderBottom: '1px solid #1e293b',
-[L022, S8]         paddingBottom: '20px',
-[L023, S8]         marginBottom: '20px',
-[L024, S6]       }}
-[L025, S4]     >
-[L026, S6]       <h2
-[L027, S8]         style={{
-[L028, S10]           fontSize: '22px',
-[L029, S10]           fontWeight: '700',
-[L030, S10]           color: '#f8fafc',
-[L031, S10]           margin: 0,
-[L032, S10]           lineHeight: '1.3',
-[L033, S8]         }}
-[L034, S6]       >
-[L035, S8]         {title || 'Untitled'}
-[L036, S6]       </h2>
-[L037, S0] 
-[L038, S6]       <div style={{ fontSize: '14px', color: '#94a3b8' }}>
-[L039, S8]         {authors || 'N/A'}
-[L040, S6]       </div>
-[L041, S0] 
-[L042, S6]       <div
-[L043, S8]         style={{
-[L044, S10]           display: 'flex',
-[L045, S10]           flexWrap: 'wrap',
-[L046, S10]           alignItems: 'center',
-[L047, S10]           gap: '20px',
-[L048, S10]           fontSize: '13px',
-[L049, S10]           color: '#cbd5e1',
-[L050, S10]           marginTop: '6px',
-[L051, S8]         }}
-[L052, S6]       >
-[L053, S8]         {/* Year */}
-[L054, S8]         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '70px' }}>
-[L055, S10]           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-[L056, S12]             <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0, color: '#64748b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L057, S14]               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-[L058, S12]             </svg>
-[L059, S12]             <span style={{ fontWeight: '600', color: '#f1f5f9' }}>{year || '—'}</span>
-[L060, S10]           </div>
-[L061, S10]           <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase' }}>Year</span>
-[L062, S8]         </div>
-[L063, S0] 
-[L064, S8]         <div style={{ width: '1px', height: '28px', backgroundColor: '#1e293b' }}></div>
-[L065, S0] 
-[L066, S8]         {/* Journal */}
-[L067, S8]         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '120px' }}>
-[L068, S10]           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-[L069, S12]             <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0, color: '#64748b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L070, S14]               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-[L071, S12]             </svg>
-[L072, S12]             <span style={{ fontWeight: '600', color: '#f1f5f9', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={journal}>
-[L073, S14]               {journal || '—'}
-[L074, S12]             </span>
-[L075, S10]           </div>
-[L076, S10]           <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase' }}>Journal</span>
-[L077, S8]         </div>
-[L078, S0] 
-[L079, S8]         <div style={{ width: '1px', height: '28px', backgroundColor: '#1e293b' }}></div>
-[L080, S0] 
-[L081, S8]         {/* Volume & Issue */}
-[L082, S8]         <div style={{ display: 'flex', gap: '16px' }}>
-[L083, S10]           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '60px' }}>
-[L084, S12]             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-[L085, S14]               <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0, color: '#64748b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L086, S16]                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-[L087, S14]               </svg>
-[L088, S14]               <span style={{ fontWeight: '600', color: '#f1f5f9' }}>{volume ? `Vol. ${volume}` : '—'}</span>
-[L089, S12]             </div>
-[L090, S12]             <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase' }}>Volume</span>
-[L091, S10]           </div>
-[L092, S10]           
-[L093, S10]           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '60px' }}>
-[L094, S12]             <div style={{ display: 'flex', alignItems: 'center', height: '20px' }}>
-[L095, S14]               <span style={{ fontWeight: '600', color: '#f1f5f9' }}>{issue ? `Issue ${issue}` : '—'}</span>
-[L096, S12]             </div>
-[L097, S12]             <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase' }}>Issue</span>
-[L098, S10]           </div>
-[L099, S8]         </div>
+[L003, S0] import { createPortal } from 'react-dom';
+[L004, S0] 
+[L005, S0] const styles = {
+[L006, S2]   overlay: {
+[L007, S4]     position: 'fixed',
+[L008, S4]     top: 0,
+[L009, S4]     left: 0,
+[L010, S4]     right: 0,
+[L011, S4]     bottom: 0,
+[L012, S4]     backgroundColor: 'rgba(5, 10, 20, 0.75)',
+[L013, S4]     backdropFilter: 'blur(4px)',
+[L014, S4]     WebkitBackdropFilter: 'blur(4px)',
+[L015, S4]     display: 'flex',
+[L016, S4]     alignItems: 'center',
+[L017, S4]     justifyContent: 'center',
+[L018, S4]     zIndex: 1200,
+[L019, S4]     padding: '16px',
+[L020, S4]     boxSizing: 'border-box',
+[L021, S2]   },
+[L022, S2]   modal: {
+[L023, S4]     backgroundColor: '#0F172A',
+[L024, S4]     border: '1px solid #334155',
+[L025, S4]     borderRadius: '12px',
+[L026, S4]     boxShadow: '0 20px 40px rgba(0, 0, 0, 0.8)',
+[L027, S4]     width: '100%',
+[L028, S4]     maxWidth: '560px',
+[L029, S4]     maxHeight: '80vh',
+[L030, S4]     display: 'flex',
+[L031, S4]     flexDirection: 'column',
+[L032, S4]     overflow: 'hidden',
+[L033, S4]     color: '#f8fafc',
+[L034, S4]     fontFamily: 'system-ui, -apple-system, sans-serif',
+[L035, S4]     boxSizing: 'border-box',
+[L036, S2]   },
+[L037, S2]   header: {
+[L038, S4]     display: 'flex',
+[L039, S4]     alignItems: 'center',
+[L040, S4]     justifyContent: 'space-between',
+[L041, S4]     padding: '16px 20px',
+[L042, S4]     borderBottom: '1px solid #1e293b',
+[L043, S4]     backgroundColor: '#0F172A',
+[L044, S2]   },
+[L045, S2]   titleWrapper: {
+[L046, S4]     display: 'flex',
+[L047, S4]     alignItems: 'center',
+[L048, S4]     gap: '10px',
+[L049, S2]   },
+[L050, S2]   title: {
+[L051, S4]     margin: 0,
+[L052, S4]     fontSize: '16px',
+[L053, S4]     fontWeight: '600',
+[L054, S4]     color: '#f1f5f9',
+[L055, S2]   },
+[L056, S2]   badge: {
+[L057, S4]     padding: '2px 8px',
+[L058, S4]     fontSize: '12px',
+[L059, S4]     fontWeight: '500',
+[L060, S4]     backgroundColor: '#1e293b',
+[L061, S4]     color: '#94a3b8',
+[L062, S4]     borderRadius: '12px',
+[L063, S2]   },
+[L064, S2]   closeBtn: {
+[L065, S4]     background: 'none',
+[L066, S4]     border: 'none',
+[L067, S4]     color: '#94a3b8',
+[L068, S4]     cursor: 'pointer',
+[L069, S4]     padding: '4px',
+[L070, S4]     borderRadius: '6px',
+[L071, S4]     display: 'flex',
+[L072, S4]     alignItems: 'center',
+[L073, S4]     justifyContent: 'center',
+[L074, S2]   },
+[L075, S2]   body: {
+[L076, S4]     flex: 1,
+[L077, S4]     overflowY: 'auto',
+[L078, S4]     padding: '20px',
+[L079, S4]     display: 'flex',
+[L080, S4]     flexDirection: 'column',
+[L081, S4]     gap: '12px',
+[L082, S4]     boxSizing: 'border-box',
+[L083, S2]   },
+[L084, S2]   item: {
+[L085, S4]     padding: '14px',
+[L086, S4]     borderRadius: '8px',
+[L087, S4]     backgroundColor: '#131d31',
+[L088, S4]     border: '1px solid #1e293b',
+[L089, S4]     fontSize: '13px',
+[L090, S4]     boxSizing: 'border-box',
+[L091, S2]   },
+[L092, S2]   empty: {
+[L093, S4]     textAlign: 'center',
+[L094, S4]     padding: '36px 0',
+[L095, S4]     color: '#64748b',
+[L096, S4]     fontSize: '13px',
+[L097, S4]     fontStyle: 'italic',
+[L098, S2]   },
+[L099, S0] };
 [L100, S0] 
-[L101, S8]         <div style={{ width: '1px', height: '28px', backgroundColor: '#1e293b' }}></div>
-[L102, S0] 
-[L103, S8]         {/* Pages */}
-[L104, S8]         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '70px' }}>
-[L105, S10]           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-[L106, S12]             <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0, color: '#64748b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L107, S14]               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-[L108, S12]             </svg>
-[L109, S12]             <span style={{ fontWeight: '600', color: '#f1f5f9' }}>{pages ? `pp. ${pages}` : '—'}</span>
-[L110, S10]           </div>
-[L111, S10]           <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase' }}>Pages</span>
-[L112, S8]         </div>
-[L113, S0] 
-[L114, S8]         <div style={{ width: '1px', height: '28px', backgroundColor: '#1e293b' }}></div>
-[L115, S0] 
-[L116, S8]         {/* DOI */}
-[L117, S8]         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-[L118, S10]           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '20px' }}>
-[L119, S12]             <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0, color: '#64748b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L120, S14]               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-[L121, S12]             </svg>
-[L122, S12]             {doi ? (
-[L123, S14]               <button 
-[L124, S16]                 onClick={() => onCopyDoi(doi)}
-[L125, S16]                 style={{ background: 'none', border: 'none', color: '#60a5fa', cursor: 'pointer', padding: 0, fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}
-[L126, S16]                 aria-label={`Copy DOI: ${doi}`}
-[L127, S14]               >
-[L128, S16]                 {doi}
-[L129, S16]                 <svg width="12" height="12" style={{ width: '12px', height: '12px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L130, S18]                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-[L131, S16]                 </svg>
-[L132, S14]               </button>
-[L133, S12]             ) : (
-[L134, S14]               <span style={{ fontWeight: '600', color: '#f1f5f9' }}>—</span>
-[L135, S12]             )}
-[L136, S10]           </div>
-[L137, S10]           <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase' }}>DOI</span>
-[L138, S8]         </div>
-[L139, S6]       </div>
-[L140, S4]     </div>
-[L141, S2]   );
-[L142, S0] }
-[L143, S0] 
-[L144, S0] ReferenceHeroBlock.propTypes = {
-[L145, S2]   title: PropTypes.string,
-[L146, S2]   authors: PropTypes.string,
-[L147, S2]   year: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-[L148, S2]   journal: PropTypes.string,
-[L149, S2]   volume: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-[L150, S2]   issue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-[L151, S2]   pages: PropTypes.string,
-[L152, S2]   doi: PropTypes.string,
-[L153, S2]   onCopyDoi: PropTypes.func.isRequired,
-[L154, S0] };
+[L101, S0] export default function ReferenceDrawer({
+[L102, S2]   isOpen,
+[L103, S2]   onClose,
+[L104, S2]   title,
+[L105, S2]   type = 'references',
+[L106, S2]   data = [],
+[L107, S0] }) {
+[L108, S2]   if (!isOpen) return null;
+[L109, S0] 
+[L110, S2]   const content = (
+[L111, S4]     <div
+[L112, S6]       style={styles.overlay}
+[L113, S6]       onClick={onClose}
+[L114, S6]       role="presentation"
+[L115, S4]     >
+[L116, S6]       <div
+[L117, S8]         style={styles.modal}
+[L118, S8]         onClick={(e) => e.stopPropagation()}
+[L119, S8]         role="dialog"
+[L120, S8]         aria-modal="true"
+[L121, S8]         aria-label={title || 'Field Details'}
+[L122, S6]       >
+[L123, S8]         {/* Header */}
+[L124, S8]         <div style={styles.header}>
+[L125, S10]           <div style={styles.titleWrapper}>
+[L126, S12]             <h3 style={styles.title}>{title || 'Details'}</h3>
+[L127, S12]             {data && data.length > 0 && (
+[L128, S14]               <span style={styles.badge}>{data.length}</span>
+[L129, S12]             )}
+[L130, S10]           </div>
+[L131, S10]           <button
+[L132, S12]             onClick={onClose}
+[L133, S12]             style={styles.closeBtn}
+[L134, S12]             aria-label="Close modal"
+[L135, S10]           >
+[L136, S12]             <svg
+[L137, S14]               width="20"
+[L138, S14]               height="20"
+[L139, S14]               style={{ width: '20px', height: '20px', flexShrink: 0 }}
+[L140, S14]               fill="none"
+[L141, S14]               viewBox="0 0 24 24"
+[L142, S14]               stroke="currentColor"
+[L143, S12]             >
+[L144, S14]               <path
+[L145, S16]                 strokeLinecap="round"
+[L146, S16]                 strokeLinejoin="round"
+[L147, S16]                 strokeWidth={2}
+[L148, S16]                 d="M6 18L18 6M6 6l12 12"
+[L149, S14]               />
+[L150, S12]             </svg>
+[L151, S10]           </button>
+[L152, S8]         </div>
+[L153, S0] 
+[L154, S8]         {/* Content Body */}
+[L155, S8]         <div style={styles.body}>
+[L156, S10]           {!data || data.length === 0 ? (
+[L157, S12]             <div style={styles.empty}>No items available</div>
+[L158, S10]           ) : (
+[L159, S12]             data.map((item, index) => (
+[L160, S14]               <div
+[L161, S16]                 key={item.id || index}
+[L162, S16]                 data-testid="drawer-item"
+[L163, S16]                 style={styles.item}
+[L164, S14]               >
+[L165, S16]                 {type === 'references' && (
+[L166, S18]                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+[L167, S20]                     <div style={{ fontWeight: '500', color: '#e2e8f0', lineHeight: '1.4' }}>
+[L168, S22]                       {item.title || item.raw_citation || 'Untitled Reference'}
+[L169, S20]                     </div>
+[L170, S20]                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', color: '#94a3b8' }}>
+[L171, S22]                       {item.year && <span>Year: {item.year}</span>}
+[L172, S22]                       {item.doi && (
+[L173, S24]                         <span style={{ color: '#60a5fa', fontFamily: 'monospace' }}>
+[L174, S26]                           DOI: {item.doi}
+[L175, S24]                         </span>
+[L176, S22]                       )}
+[L177, S20]                     </div>
+[L178, S18]                   </div>
+[L179, S16]                 )}
+[L180, S0] 
+[L181, S16]                 {type === 'authors' && (
+[L182, S18]                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+[L183, S20]                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+[L184, S22]                       <span style={{ fontWeight: '600', color: '#e2e8f0' }}>
+[L185, S24]                         {item.name || 'Unknown Author'}
+[L186, S22]                       </span>
+[L187, S22]                       {item.is_corresponding && (
+[L188, S24]                         <span
+[L189, S26]                           style={{
+[L190, S28]                             padding: '2px 6px',
+[L191, S28]                             fontSize: '10px',
+[L192, S28]                             textTransform: 'uppercase',
+[L193, S28]                             fontWeight: '600',
+[L194, S28]                             backgroundColor: 'rgba(30, 58, 138, 0.4)',
+[L195, S28]                             color: '#60a5fa',
+[L196, S28]                             border: '1px solid rgba(59, 130, 246, 0.4)',
+[L197, S28]                             borderRadius: '4px',
+[L198, S26]                           }}
+[L199, S24]                         >
+[L200, S26]                           Corresponding
+[L201, S24]                         </span>
+[L202, S22]                       )}
+[L203, S20]                     </div>
+[L204, S20]                     {item.affiliation && (
+[L205, S22]                       <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+[L206, S24]                         {item.affiliation}
+[L207, S22]                       </div>
+[L208, S20]                     )}
+[L209, S20]                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '2px', fontSize: '12px', color: '#64748b' }}>
+[L210, S22]                       {item.email && <span>Email: {item.email}</span>}
+[L211, S22]                       {item.orcid && <span>ORCID: {item.orcid}</span>}
+[L212, S20]                     </div>
+[L213, S18]                   </div>
+[L214, S16]                 )}
+[L215, S0] 
+[L216, S16]                 {type === 'funding' && (
+[L217, S18]                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+[L218, S20]                     <div style={{ fontWeight: '600', color: '#e2e8f0' }}>
+[L219, S22]                       {item.agency || 'Funding Agency'}
+[L220, S20]                     </div>
+[L221, S20]                     {item.grant_number && (
+[L222, S22]                       <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+[L223, S24]                         Grant: <span style={{ fontFamily: 'monospace', color: '#cbd5e1' }}>{item.grant_number}</span>
+[L224, S22]                       </div>
+[L225, S20]                     )}
+[L226, S20]                     {item.country && (
+[L227, S22]                       <div style={{ fontSize: '12px', color: '#64748b' }}>{item.country}</div>
+[L228, S20]                     )}
+[L229, S18]                   </div>
+[L230, S16]                 )}
+[L231, S0] 
+[L232, S16]                 {type !== 'references' &&
+[L233, S18]                   type !== 'authors' &&
+[L234, S18]                   type !== 'funding' && (
+[L235, S20]                     <div style={{ color: '#cbd5e1' }}>
+[L236, S22]                       {typeof item === 'string' ? item : JSON.stringify(item)}
+[L237, S20]                     </div>
+[L238, S18]                   )}
+[L239, S14]               </div>
+[L240, S12]             ))
+[L241, S10]           )}
+[L242, S8]         </div>
+[L243, S6]       </div>
+[L244, S4]     </div>
+[L245, S2]   );
+[L246, S0] 
+[L247, S2]   return createPortal(content, document.body);
+[L248, S0] }
+[L249, S0] 
+[L250, S0] ReferenceDrawer.propTypes = {
+[L251, S2]   isOpen: PropTypes.bool.isRequired,
+[L252, S2]   onClose: PropTypes.func.isRequired,
+[L253, S2]   title: PropTypes.string,
+[L254, S2]   type: PropTypes.oneOf(['references', 'authors', 'funding', 'generic']),
+[L255, S2]   data: PropTypes.array,
+[L256, S0] };
+
+
+// --- frontend/src/hooks/useReferenceDetails.js ---
+
+[L001, S0] import { useState, useMemo, useCallback } from 'react';
+[L002, S0] 
+[L003, S0] export default function useReferenceDetails(article = null) {
+[L004, S2]   const [activeTab, setActiveTab] = useState('Overview');
+[L005, S2]   const [drawerState, setDrawerState] = useState({
+[L006, S4]     isOpen: false,
+[L007, S4]     type: 'references',
+[L008, S4]     title: '',
+[L009, S4]     data: [],
+[L010, S2]   });
+[L011, S2]   const [hoverInfo, setHoverInfo] = useState(null);
+[L012, S2]   const [copiedText, setCopiedText] = useState(null);
+[L013, S2]   const [isAbstractExpanded, setIsAbstractExpanded] = useState(false);
+[L014, S0] 
+[L015, S2]   const handleTabChange = useCallback((tab) => {
+[L016, S4]     setActiveTab(tab);
+[L017, S2]   }, []);
+[L018, S0] 
+[L019, S2]   const openDrawer = useCallback(
+[L020, S4]     (type, data = null, title = '') => {
+[L021, S6]       let resolvedData = data;
+[L022, S6]       let resolvedTitle = title;
+[L023, S0] 
+[L024, S6]       if (!resolvedData && article) {
+[L025, S8]         if (type === 'authors') {
+[L026, S10]           resolvedData = article.authors_detail || [];
+[L027, S10]           resolvedTitle = resolvedTitle || 'Authors Details';
+[L028, S8]         } else if (type === 'references') {
+[L029, S10]           resolvedData = article.references_list || [];
+[L030, S10]           resolvedTitle = resolvedTitle || 'Cited References';
+[L031, S8]         } else if (type === 'funding') {
+[L032, S10]           resolvedData = article.funding_list || [];
+[L033, S10]           resolvedTitle = resolvedTitle || 'Funding Acknowledgments';
+[L034, S8]         }
+[L035, S6]       }
+[L036, S0] 
+[L037, S6]       setDrawerState({
+[L038, S8]         isOpen: true,
+[L039, S8]         type: type || 'references',
+[L040, S8]         title: resolvedTitle || 'Details',
+[L041, S8]         data: resolvedData || [],
+[L042, S6]       });
+[L043, S4]     },
+[L044, S4]     [article]
+[L045, S2]   );
+[L046, S0] 
+[L047, S2]   const handleExpandDrawer = useCallback(
+[L048, S4]     (type, customData, customTitle) => {
+[L049, S6]       openDrawer(type, customData, customTitle);
+[L050, S4]     },
+[L051, S4]     [openDrawer]
+[L052, S2]   );
+[L053, S0] 
+[L054, S2]   const closeDrawer = useCallback(() => {
+[L055, S4]     setDrawerState((prev) => ({
+[L056, S6]       ...prev,
+[L057, S6]       isOpen: false,
+[L058, S4]     }));
+[L059, S2]   }, []);
+[L060, S0] 
+[L061, S2]   const handleHoverInfo = useCallback((key, event) => {
+[L062, S4]     if (!key) {
+[L063, S6]       setHoverInfo(null);
+[L064, S6]       return;
+[L065, S4]     }
+[L066, S4]     setHoverInfo({
+[L067, S6]       key,
+[L068, S6]       rect: event?.currentTarget?.getBoundingClientRect?.() || null,
+[L069, S4]     });
+[L070, S2]   }, []);
+[L071, S0] 
+[L072, S2]   const handleCopy = useCallback(async (text) => {
+[L073, S4]     if (!text) return;
+[L074, S4]     try {
+[L075, S6]       if (
+[L076, S8]         typeof navigator !== 'undefined' &&
+[L077, S8]         navigator.clipboard &&
+[L078, S8]         navigator.clipboard.writeText
+[L079, S6]       ) {
+[L080, S8]         await navigator.clipboard.writeText(text);
+[L081, S6]       }
+[L082, S6]       setCopiedText(text);
+[L083, S6]       setTimeout(() => setCopiedText(null), 2500);
+[L084, S4]     } catch {
+[L085, S6]       // Fallback or silent error handling
+[L086, S4]     }
+[L087, S2]   }, []);
+[L088, S0] 
+[L089, S2]   const toggleAbstractExpanded = useCallback(() => {
+[L090, S4]     setIsAbstractExpanded((prev) => !prev);
+[L091, S2]   }, []);
+[L092, S0] 
+[L093, S2]   const formattedData = useMemo(() => {
+[L094, S4]     if (!article) {
+[L095, S6]       return {
+[L096, S8]         title: '',
+[L097, S8]         authors: '',
+[L098, S8]         year: '',
+[L099, S8]         journal: '',
+[L100, S8]         volume: '',
+[L101, S8]         issue: '',
+[L102, S8]         pages: '',
+[L103, S8]         doi: '',
+[L104, S8]         abstract: '',
+[L105, S8]         authorKeywords: [],
+[L106, S8]         plusKeywords: [],
+[L107, S8]         researchAreas: '',
+[L108, S8]         wosCategories: '',
+[L109, S8]         affiliations: '',
+[L110, S8]         authorsDetailsCount: 0,
+[L111, S8]         authorEmail: '',
+[L112, S8]         orcidCount: 0,
+[L113, S8]         researcherIdCount: 0,
+[L114, S8]         fundingText: '',
+[L115, S8]         type: 'Article',
+[L116, S8]         language: 'English',
+[L117, S8]         issn: '',
+[L118, S8]         month: '',
+[L119, S8]         articleNumber: '',
+[L120, S8]         publisher: '',
+[L121, S8]         address: '',
+[L122, S8]         timesCited: null,
+[L123, S8]         oaStatus: '',
+[L124, S8]         referencesList: [],
+[L125, S8]         authorsDetail: [],
+[L126, S8]         fundingList: [],
+[L127, S6]       };
+[L128, S4]     }
+[L129, S0] 
+[L130, S4]     const keywords = Array.isArray(article.keywords) ? article.keywords : [];
+[L131, S4]     const authorKeywords = keywords
+[L132, S6]       .filter((k) => k && k.type === 'author')
+[L133, S6]       .map((k) => k.name || k)
+[L134, S6]       .filter(Boolean);
+[L135, S0] 
+[L136, S4]     const plusKeywords = keywords
+[L137, S6]       .filter((k) => k && k.type === 'plus')
+[L138, S6]       .map((k) => k.name || k)
+[L139, S6]       .filter(Boolean);
+[L140, S0] 
+[L141, S4]     const authorsDetail = Array.isArray(article.authors_detail)
+[L142, S6]       ? article.authors_detail
+[L143, S6]       : [];
+[L144, S0] 
+[L145, S4]     const corrAuthor = authorsDetail.find(
+[L146, S6]       (a) => a && a.is_corresponding && a.email
+[L147, S4]     );
+[L148, S4]     const firstAuthorWithEmail = authorsDetail.find((a) => a && a.email);
+[L149, S4]     const authorEmail =
+[L150, S6]       corrAuthor?.email || firstAuthorWithEmail?.email || '';
+[L151, S0] 
+[L152, S4]     const orcidCount = authorsDetail.filter((a) => a && a.orcid).length;
+[L153, S4]     const researcherIdCount = authorsDetail.filter(
+[L154, S6]       (a) => a && a.researcher_id
+[L155, S4]     ).length;
+[L156, S0] 
+[L157, S4]     const affiliationsSet = new Set(
+[L158, S6]       authorsDetail.map((a) => a && a.affiliation).filter(Boolean)
+[L159, S4]     );
+[L160, S4]     const affiliations = Array.from(affiliationsSet).join('; ');
+[L161, S0] 
+[L162, S4]     return {
+[L163, S6]       title: article.title || '',
+[L164, S6]       authors: article.author || '',
+[L165, S6]       year: article.year ? String(article.year) : '',
+[L166, S6]       journal: article.journal || '',
+[L167, S6]       volume: article.volume ? String(article.volume) : '',
+[L168, S6]       issue: article.issue ? String(article.issue) : '',
+[L169, S6]       pages: article.pages || '',
+[L170, S6]       doi: article.doi || '',
+[L171, S6]       abstract: article.abstract || '',
+[L172, S6]       authorKeywords,
+[L173, S6]       plusKeywords,
+[L174, S6]       researchAreas: article.research_areas || '',
+[L175, S6]       wosCategories: article.web_of_science_categories || '',
+[L176, S6]       affiliations,
+[L177, S6]       authorsDetailsCount: authorsDetail.length,
+[L178, S6]       authorEmail,
+[L179, S6]       orcidCount,
+[L180, S6]       researcherIdCount,
+[L181, S6]       fundingText: article.funding_text || '',
+[L182, S6]       type: 'Article',
+[L183, S6]       language: article.language || 'English',
+[L184, S6]       issn: article.issn || '',
+[L185, S6]       month: article.month || '',
+[L186, S6]       articleNumber: article.pages || '',
+[L187, S6]       publisher: article.publisher || '',
+[L188, S6]       address: article.address || '',
+[L189, S6]       timesCited:
+[L190, S8]         typeof article.times_cited === 'number' ? article.times_cited : null,
+[L191, S6]       oaStatus: article.oa_status || '',
+[L192, S6]       referencesList: Array.isArray(article.references_list)
+[L193, S8]         ? article.references_list
+[L194, S8]         : [],
+[L195, S6]       authorsDetail,
+[L196, S6]       fundingList: Array.isArray(article.funding_list)
+[L197, S8]         ? article.funding_list
+[L198, S8]         : [],
+[L199, S4]     };
+[L200, S2]   }, [article]);
+[L201, S0] 
+[L202, S2]   return {
+[L203, S4]     activeTab,
+[L204, S4]     setActiveTab,
+[L205, S4]     handleTabChange,
+[L206, S4]     drawerState,
+[L207, S4]     openDrawer,
+[L208, S4]     handleExpandDrawer,
+[L209, S4]     closeDrawer,
+[L210, S4]     hoverInfo,
+[L211, S4]     handleHoverInfo,
+[L212, S4]     copiedText,
+[L213, S4]     handleCopy,
+[L214, S4]     isAbstractExpanded,
+[L215, S4]     toggleAbstractExpanded,
+[L216, S4]     ...formattedData,
+[L217, S2]   };
+[L218, S0] }
