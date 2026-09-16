@@ -64,9 +64,9 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
       isOpen={isOpen}
       onClose={onClose}
       header={
-        <div className="flex items-center gap-2 text-gray-200">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <svg
-            className="w-5 h-5 text-blue-400"
+            style={{ width: '20px', height: '20px', color: '#60a5fa' }}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -81,9 +81,9 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
           <span>Reference Details</span>
         </div>
       }
-      maxWidth="max-w-6xl"
+      maxWidth="1180px"
     >
-      <div className="relative">
+      <div style={{ position: 'relative' }}>
         <ReferenceHeroBlock
           title={title}
           authors={authors}
@@ -97,18 +97,30 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
         />
 
         {/* Tabs Header */}
-        <div className="flex border-b border-gray-800 mb-6 gap-6">
+        <div
+          style={{
+            display: 'flex',
+            borderBottom: '1px solid #1e293b',
+            marginBottom: '24px',
+            gap: '24px',
+          }}
+        >
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`pb-3 text-sm font-medium transition-colors flex items-center gap-2 border-b-2 -mb-px ${
-                  isActive
-                    ? 'border-blue-500 text-blue-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-200'
-                }`}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: isActive ? '2px solid #3b82f6' : '2px solid transparent',
+                  color: isActive ? '#60a5fa' : '#94a3b8',
+                  fontWeight: isActive ? '600' : '500',
+                  fontSize: '14px',
+                  padding: '0 0 12px 0',
+                  cursor: 'pointer',
+                }}
               >
                 {tab.label}
               </button>
@@ -118,8 +130,14 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
 
         {/* Tab Content Panels */}
         {activeTab === 'Overview' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+                gap: '20px',
+              }}
+            >
               <OverviewLeftColumn
                 abstract={abstract}
                 authorKeywords={authorKeywords}
@@ -162,10 +180,21 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
             />
 
             {referencesList && referencesList.length > 0 && (
-              <div className="border border-gray-800 rounded-lg p-4 bg-gray-900/40 flex items-center justify-between mt-4">
-                <div className="flex items-center gap-3">
+              <div
+                style={{
+                  border: '1px solid #1e293b',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  backgroundColor: '#131d31',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginTop: '8px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <svg
-                    className="w-5 h-5 text-gray-400"
+                    style={{ width: '20px', height: '20px', color: '#94a3b8' }}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -178,10 +207,10 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
                     />
                   </svg>
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-200">
+                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#f1f5f9' }}>
                       Cited References
                     </h4>
-                    <span className="text-xs text-gray-500">
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>
                       {referencesList.length} references
                     </span>
                   </div>
@@ -194,7 +223,14 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
                       'Cited References'
                     )
                   }
-                  className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#60a5fa',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                  }}
                 >
                   View all references &rarr;
                 </button>

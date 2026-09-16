@@ -10,9 +10,24 @@ export default function ReferenceDrawer({
 }) {
   return (
     <div
-      className={`absolute inset-y-0 right-0 w-full sm:w-[500px] bg-[#0B1120] border-l border-gray-800 shadow-2xl z-30 flex flex-col transform transition-transform duration-300 ease-in-out ${
-        isOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
-      }`}
+      style={{
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        right: 0,
+        width: '480px',
+        maxWidth: '100%',
+        backgroundColor: '#0b1120',
+        borderLeft: '1px solid #1e293b',
+        boxShadow: '-10px 0 25px -5px rgba(0, 0, 0, 0.6)',
+        zIndex: 50,
+        display: 'flex',
+        flexDirection: 'column',
+        transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+        transition: 'transform 0.3s ease-in-out',
+        pointerEvents: isOpen ? 'auto' : 'none',
+      }}
+      className={isOpen ? 'translate-x-0' : 'translate-x-full'}
       role="complementary"
       aria-label={title || 'Detail Drawer'}
     >

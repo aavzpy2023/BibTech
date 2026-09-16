@@ -13,16 +13,43 @@ export default function ReferenceHeroBlock({
   onCopyDoi,
 }) {
   return (
-    <div className="flex flex-col gap-4 border-b border-gray-800 pb-6 mb-6">
-      <h2 className="text-2xl font-bold text-gray-100 leading-snug">
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        borderBottom: '1px solid #1e293b',
+        paddingBottom: '20px',
+        marginBottom: '20px',
+      }}
+    >
+      <h2
+        style={{
+          fontSize: '22px',
+          fontWeight: '700',
+          color: '#f8fafc',
+          margin: 0,
+          lineHeight: '1.3',
+        }}
+      >
         {title || 'Untitled'}
       </h2>
 
-      <div className="text-sm text-gray-400">
+      <div style={{ fontSize: '14px', color: '#94a3b8' }}>
         {authors || 'N/A'}
       </div>
 
-      <div className="flex flex-wrap items-center gap-6 text-sm text-gray-300 mt-2">
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: '20px',
+          fontSize: '13px',
+          color: '#cbd5e1',
+          marginTop: '6px',
+        }}
+      >
         {/* Year */}
         <div className="flex flex-col gap-1 min-w-[80px]">
           <div className="flex items-center gap-2">
