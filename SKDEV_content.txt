@@ -1,6 +1,6 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 15:49:31
+Date: 2026-09-16 15:52:18
 AST Mode: False
 Line Numbers: True
 Modules: roadmap_17_reference_details_modal.md, global_backlog.md
@@ -47,7 +47,7 @@ Processed Files: 2
 [L034, S2]   [ID-17.2.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-048]]. Type: Task.
 [L035, S2]   > Files touched: ModalTemplate.jsx, ModalTemplate.test.jsx
 [L036, S0] 
-[L037, S0] - [ ] Story 17.3: Reference Details - Hero Ribbon Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM]
+[L037, S0] - [x] Story 17.3: Reference Details - Hero Ribbon Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM]
 [L038, S2]   Business Requirement: Render the reference's multiline title, formatted author summary, and metrics ribbon as a pure presentational component.
 [L039, S2]   Story Context Radius: {"frontend/src/components/references/ReferenceHeroBlock.jsx": [""], "frontend/src/components/references/ReferenceHeroBlock.test.jsx": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
 [L040, S2]   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
@@ -55,52 +55,53 @@ Processed Files: 2
 [L042, S2]   [ID-17.3.1] [TESTING/TDE]: [1. Arrange: Render ReferenceHeroBlock.test.jsx passing mock props (Title, Authors, Volume, DOI) and mock callbacks (onCopyDoi, onViewAuthors). 2. Act: Click the DOI copy button and the authors 'View all' link. 3. Assert: Verify both callbacks trigger with expected parameters]. Type: Task.
 [L043, S2]   [ID-17.3.2] [FRONTEND/DUMB_VIEW]: [1. Create frontend/src/components/references/ReferenceHeroBlock.jsx. 2. Render title and author tags based strictly on passed props. 3. Render horizontal metrics ribbon (Year, Journal, Volume, Issue, Pages, DOI), forcing '—' if Issue is null. Bind standard onClick props to buttons]. Type: Task.
 [L044, S2]   [ID-17.3.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-049]]. Type: Task.
-[L045, S0] 
-[L046, S0] - [ ] Story 17.4: Overview Tab - Left Column Dumb Views | [MoSCoW: MUST] | [Complexity: MEDIUM]
-[L047, S2]   Business Requirement: Implement the left column visual components (Abstract, Keywords, Research Areas) completely devoid of internal state manipulation.
-[L048, S2]   Story Context Radius: {"frontend/src/components/references/OverviewLeftColumn.jsx": [""], "frontend/src/components/references/OverviewLeftColumn.test.jsx": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
-[L049, S2]   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
-[L050, S0] 
-[L051, S2]   [ID-17.4.1] [TESTING/TDE]: [1. Arrange: Render OverviewLeftColumn.test.jsx with static mock abstract and keyword props. 2. Act: Click the 'View full abstract' span. 3. Assert: Verify the injected onExpand prop is executed]. Type: Task.
-[L052, S2]   [ID-17.4.2] [FRONTEND/DUMB_VIEW]: [1. Create frontend/src/components/references/OverviewLeftColumn.jsx. 2. Implement the Abstract preview container using CSS -webkit-line-clamp: 4. 3. Map passed arrays to Keywords and Web of Science chips, invoking passed onHoverInfo props on mouse enter]. Type: Task.
-[L053, S2]   [ID-17.4.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-050]]. Type: Task.
-[L054, S0] 
-[L055, S0] - [ ] Story 17.5: Overview Tab - Right Column & Metrics Dumb Views | [MoSCoW: MUST] | [Complexity: MEDIUM]
-[L056, S2]   Business Requirement: Implement the right column (Affiliations, IDs, Funding) and footer metrics grids as pure visual functions.
-[L057, S2]   Story Context Radius: {"frontend/src/components/references/OverviewRightColumn.jsx": [""], "frontend/src/components/references/MetricsFooterCards.jsx": [""], "frontend/src/components/references/OverviewRightColumn.test.jsx": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
-[L058, S2]   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
-[L059, S0] 
-[L060, S2]   [ID-17.5.1] [TESTING/TDE]: [1. Arrange: Render both components in test with mock OA status and email string. 2. Act: Click copy email. 3. Assert: Verify the external onCopy prop is fired]. Type: Task.
-[L061, S2]   [ID-17.5.2] [FRONTEND/DUMB_VIEW]: [1. Create frontend/src/components/references/OverviewRightColumn.jsx. Render Affiliation/Funding boxes with external trigger links. 2. Create frontend/src/components/references/MetricsFooterCards.jsx. Render fixed-width grid properties and apply CSS conditionals for OA badge colors based strictly on passed strings]. Type: Task.
-[L062, S2]   [ID-17.5.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-050]]. Type: Task.
-[L063, S0] 
-[L064, S0] - [ ] Story 17.6: Secondary Deep-Dive Drawer Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM]
-[L065, S2]   Business Requirement: Build the slide-out panel for Lists and Authors as a dumb display component dependent entirely on parent props.
-[L066, S2]   Story Context Radius: {"frontend/src/components/references/ReferenceDrawer.jsx": [""], "frontend/src/components/references/ReferenceDrawer.test.jsx": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
-[L067, S2]   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
-[L068, S0] 
-[L069, S2]   [ID-17.6.1] [TESTING/TDE]: [1. Arrange: Render ReferenceDrawer.test.jsx passing isOpen=true, title="References", and an array of 5 mock items. 2. Act: Click close. 3. Assert: Verify onClose fires, and 5 mapped DOM elements exist]. Type: Task.
-[L070, S2]   [ID-17.6.2] [FRONTEND/DUMB_VIEW]: [1. Create frontend/src/components/references/ReferenceDrawer.jsx. 2. Define absolute positioning (right: 0, width: 500px) using conditional CSS transforms based on the isOpen prop. 3. Render dynamic content blocks matching the type prop (either citation list or author matrix) passing data blindly]. Type: Task.
-[L071, S2]   [ID-17.6.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-051]]. Type: Task.
-[L072, S0] 
-[L073, S0] - [ ] Story 17.7: State Fractality Enforcement (useReferenceDetails Hook) | [MoSCoW: MUST] | [Complexity: HARD]
-[L074, S2]   Business Requirement: Centralize and isolate ALL UI logic, formatting, tab switching, and Drawer/Tooltip visibility into a custom hook. Zero markup allowed here.
-[L075, S2]   Story Context Radius: {"frontend/src/hooks/useReferenceDetails.js": [""], "frontend/src/hooks/useReferenceDetails.test.js": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
-[L076, S2]   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
-[L077, S0] 
-[L078, S2]   [ID-17.7.1] [TESTING/TDE]: [1. Arrange: Render useReferenceDetails.test.js via @testing-library/react-hooks with a mock DB article object. 2. Act: Call setActiveTab('Metadata') and openDrawer('authors', data). 3. Assert: Expect result.current.activeTab to equal 'Metadata' and result.current.drawerState.isOpen to be true with corresponding payload]. Type: Task.
-[L079, S2]   [ID-17.7.2] [FRONTEND/HOOK]: [1. Create frontend/src/hooks/useReferenceDetails.js. 2. Define standard useState hooks for activeTab (default 'Overview'), drawerState (default hidden), and hoverInfo. 3. Export these states alongside curried dispatcher functions (handleCopy, handleExpandDrawer, handleTabChange)]. Type: Task.
-[L080, S2]   [ID-17.7.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-051]]. Type: Task.
-[L081, S0] 
-[L082, S0] - [ ] Story 17.8: Assembler, DI Wiring & DataTable Integration | [MoSCoW: MUST] | [Complexity: MEDIUM]
-[L083, S2]   Business Requirement: Wire the Dumb Views (17.2-17.6) and the State Hook (17.7) into ReferenceDetailsModal.jsx, and inject it securely into ReferencesDataTable.jsx.
-[L084, S2]   Story Context Radius: {"frontend/src/components/references/ReferenceDetailsModal.jsx": [""], "frontend/src/components/references/ReferencesDataTable.jsx": [""], "frontend/src/components/references/ReferencesDataTable.test.jsx": [""], "context.md": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
-[L085, S2]   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
-[L086, S0] 
-[L087, S2]   [ID-17.8.1] [TESTING/TDE]: [1. Arrange: Render ReferencesDataTable.test.jsx. 2. Act: Select a row, simulating open intent. 3. Assert: Verify the unified ReferenceDetailsModal mounts with the injected row entity context without crashing]. Type: Task.
-[L088, S2]   [ID-17.8.2] [FRONTEND/WIRING]: [1. Create ReferenceDetailsModal.jsx. Invoke useReferenceDetails(). Pass the exact destructured states and callbacks to the child dumb components (ModalTemplate, ReferenceHeroBlock, OverviewLeftColumn, OverviewRightColumn, MetricsFooterCards, ReferenceDrawer). 2. Add Tab navigation markup bound strictly to the hook's active state. 3. Open ReferencesDataTable.jsx, delete the legacy inline modal code, and explicitly mount <ReferenceDetailsModal /> passing necessary open/close triggers]. Type: Task.
-[L089, S2]   [ID-17.8.3] [DOCUMENTATION/SYNC]: [1. Open context.md at root. 2. Document the strict Dumb View vs State Hook architecture applied to the Reference Details module]. Type: Task.
-[L090, S2]   [ID-17.8.4] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Open leai_docs/planning/global_backlog.md and verify all [REQ-047] to [REQ-051] are marked - [x]]. Type: Task.
+[L045, S2]   > Files touched: ReferenceHeroBlock.jsx, ReferenceHeroBlock.test.jsx
+[L046, S0] 
+[L047, S0] - [ ] Story 17.4: Overview Tab - Left Column Dumb Views | [MoSCoW: MUST] | [Complexity: MEDIUM]
+[L048, S2]   Business Requirement: Implement the left column visual components (Abstract, Keywords, Research Areas) completely devoid of internal state manipulation.
+[L049, S2]   Story Context Radius: {"frontend/src/components/references/OverviewLeftColumn.jsx": [""], "frontend/src/components/references/OverviewLeftColumn.test.jsx": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
+[L050, S2]   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
+[L051, S0] 
+[L052, S2]   [ID-17.4.1] [TESTING/TDE]: [1. Arrange: Render OverviewLeftColumn.test.jsx with static mock abstract and keyword props. 2. Act: Click the 'View full abstract' span. 3. Assert: Verify the injected onExpand prop is executed]. Type: Task.
+[L053, S2]   [ID-17.4.2] [FRONTEND/DUMB_VIEW]: [1. Create frontend/src/components/references/OverviewLeftColumn.jsx. 2. Implement the Abstract preview container using CSS -webkit-line-clamp: 4. 3. Map passed arrays to Keywords and Web of Science chips, invoking passed onHoverInfo props on mouse enter]. Type: Task.
+[L054, S2]   [ID-17.4.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-050]]. Type: Task.
+[L055, S0] 
+[L056, S0] - [ ] Story 17.5: Overview Tab - Right Column & Metrics Dumb Views | [MoSCoW: MUST] | [Complexity: MEDIUM]
+[L057, S2]   Business Requirement: Implement the right column (Affiliations, IDs, Funding) and footer metrics grids as pure visual functions.
+[L058, S2]   Story Context Radius: {"frontend/src/components/references/OverviewRightColumn.jsx": [""], "frontend/src/components/references/MetricsFooterCards.jsx": [""], "frontend/src/components/references/OverviewRightColumn.test.jsx": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
+[L059, S2]   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
+[L060, S0] 
+[L061, S2]   [ID-17.5.1] [TESTING/TDE]: [1. Arrange: Render both components in test with mock OA status and email string. 2. Act: Click copy email. 3. Assert: Verify the external onCopy prop is fired]. Type: Task.
+[L062, S2]   [ID-17.5.2] [FRONTEND/DUMB_VIEW]: [1. Create frontend/src/components/references/OverviewRightColumn.jsx. Render Affiliation/Funding boxes with external trigger links. 2. Create frontend/src/components/references/MetricsFooterCards.jsx. Render fixed-width grid properties and apply CSS conditionals for OA badge colors based strictly on passed strings]. Type: Task.
+[L063, S2]   [ID-17.5.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-050]]. Type: Task.
+[L064, S0] 
+[L065, S0] - [ ] Story 17.6: Secondary Deep-Dive Drawer Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM]
+[L066, S2]   Business Requirement: Build the slide-out panel for Lists and Authors as a dumb display component dependent entirely on parent props.
+[L067, S2]   Story Context Radius: {"frontend/src/components/references/ReferenceDrawer.jsx": [""], "frontend/src/components/references/ReferenceDrawer.test.jsx": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
+[L068, S2]   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
+[L069, S0] 
+[L070, S2]   [ID-17.6.1] [TESTING/TDE]: [1. Arrange: Render ReferenceDrawer.test.jsx passing isOpen=true, title="References", and an array of 5 mock items. 2. Act: Click close. 3. Assert: Verify onClose fires, and 5 mapped DOM elements exist]. Type: Task.
+[L071, S2]   [ID-17.6.2] [FRONTEND/DUMB_VIEW]: [1. Create frontend/src/components/references/ReferenceDrawer.jsx. 2. Define absolute positioning (right: 0, width: 500px) using conditional CSS transforms based on the isOpen prop. 3. Render dynamic content blocks matching the type prop (either citation list or author matrix) passing data blindly]. Type: Task.
+[L072, S2]   [ID-17.6.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-051]]. Type: Task.
+[L073, S0] 
+[L074, S0] - [ ] Story 17.7: State Fractality Enforcement (useReferenceDetails Hook) | [MoSCoW: MUST] | [Complexity: HARD]
+[L075, S2]   Business Requirement: Centralize and isolate ALL UI logic, formatting, tab switching, and Drawer/Tooltip visibility into a custom hook. Zero markup allowed here.
+[L076, S2]   Story Context Radius: {"frontend/src/hooks/useReferenceDetails.js": [""], "frontend/src/hooks/useReferenceDetails.test.js": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
+[L077, S2]   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
+[L078, S0] 
+[L079, S2]   [ID-17.7.1] [TESTING/TDE]: [1. Arrange: Render useReferenceDetails.test.js via @testing-library/react-hooks with a mock DB article object. 2. Act: Call setActiveTab('Metadata') and openDrawer('authors', data). 3. Assert: Expect result.current.activeTab to equal 'Metadata' and result.current.drawerState.isOpen to be true with corresponding payload]. Type: Task.
+[L080, S2]   [ID-17.7.2] [FRONTEND/HOOK]: [1. Create frontend/src/hooks/useReferenceDetails.js. 2. Define standard useState hooks for activeTab (default 'Overview'), drawerState (default hidden), and hoverInfo. 3. Export these states alongside curried dispatcher functions (handleCopy, handleExpandDrawer, handleTabChange)]. Type: Task.
+[L081, S2]   [ID-17.7.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-051]]. Type: Task.
+[L082, S0] 
+[L083, S0] - [ ] Story 17.8: Assembler, DI Wiring & DataTable Integration | [MoSCoW: MUST] | [Complexity: MEDIUM]
+[L084, S2]   Business Requirement: Wire the Dumb Views (17.2-17.6) and the State Hook (17.7) into ReferenceDetailsModal.jsx, and inject it securely into ReferencesDataTable.jsx.
+[L085, S2]   Story Context Radius: {"frontend/src/components/references/ReferenceDetailsModal.jsx": [""], "frontend/src/components/references/ReferencesDataTable.jsx": [""], "frontend/src/components/references/ReferencesDataTable.test.jsx": [""], "context.md": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
+[L086, S2]   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
+[L087, S0] 
+[L088, S2]   [ID-17.8.1] [TESTING/TDE]: [1. Arrange: Render ReferencesDataTable.test.jsx. 2. Act: Select a row, simulating open intent. 3. Assert: Verify the unified ReferenceDetailsModal mounts with the injected row entity context without crashing]. Type: Task.
+[L089, S2]   [ID-17.8.2] [FRONTEND/WIRING]: [1. Create ReferenceDetailsModal.jsx. Invoke useReferenceDetails(). Pass the exact destructured states and callbacks to the child dumb components (ModalTemplate, ReferenceHeroBlock, OverviewLeftColumn, OverviewRightColumn, MetricsFooterCards, ReferenceDrawer). 2. Add Tab navigation markup bound strictly to the hook's active state. 3. Open ReferencesDataTable.jsx, delete the legacy inline modal code, and explicitly mount <ReferenceDetailsModal /> passing necessary open/close triggers]. Type: Task.
+[L090, S2]   [ID-17.8.3] [DOCUMENTATION/SYNC]: [1. Open context.md at root. 2. Document the strict Dumb View vs State Hook architecture applied to the Reference Details module]. Type: Task.
+[L091, S2]   [ID-17.8.4] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Open leai_docs/planning/global_backlog.md and verify all [REQ-047] to [REQ-051] are marked - [x]]. Type: Task.
 
 
 // --- leai_docs/planning/global_backlog.md ---
@@ -195,7 +196,7 @@ Processed Files: 2
 [L088, S0] - [x] Story 17.0: Roadmap & Planning Initialization
 [L089, S0] - [x] [REQ-047] Backend Reference Serialization Audit & Boundary Marshal
 [L090, S0] - [x] [REQ-048] Reusable Base Modal Architecture (ModalTemplate) Dumb View
-[L091, S0] - [ ] [REQ-049] Reference Details - Hero Ribbon Dumb View
+[L091, S0] - [x] [REQ-049] Reference Details - Hero Ribbon Dumb View
 [L092, S0] - [ ] [REQ-050] Overview Tab - Left & Right Columns & Metrics Dumb Views
 [L093, S0] - [ ] [REQ-051] Secondary Deep-Dive Drawer Dumb View & Hook State Fractality
 [L094, S0] 

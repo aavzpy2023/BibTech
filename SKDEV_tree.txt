@@ -59,6 +59,8 @@
 │   │   │   │   ├── references/
 │   │   │   │   │   ├── HoverPopover.jsx
 │   │   │   │   │   ├── MetadataGrid.jsx
+│   │   │   │   │   ├── ReferenceHeroBlock.jsx
+│   │   │   │   │   ├── ReferenceHeroBlock.test.jsx
 │   │   │   │   │   ├── ReferencesDataTable.jsx
 │   │   │   │   │   ├── UploadReferencesModal.jsx
 │   ├── backend/

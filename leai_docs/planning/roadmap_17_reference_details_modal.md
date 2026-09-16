@@ -44,7 +44,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.3.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-049]]. Type: Task.
   > Files touched: ReferenceHeroBlock.jsx, ReferenceHeroBlock.test.jsx
 
-- [ ] Story 17.4: Overview Tab - Left Column Dumb Views | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 17.4: Overview Tab - Left Column Dumb Views | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Implement the left column visual components (Abstract, Keywords, Research Areas) completely devoid of internal state manipulation.
   Story Context Radius: {"frontend/src/components/references/OverviewLeftColumn.jsx": [""], "frontend/src/components/references/OverviewLeftColumn.test.jsx": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
@@ -52,6 +52,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.4.1] [TESTING/TDE]: [1. Arrange: Render OverviewLeftColumn.test.jsx with static mock abstract and keyword props. 2. Act: Click the 'View full abstract' span. 3. Assert: Verify the injected onExpand prop is executed]. Type: Task.
   [ID-17.4.2] [FRONTEND/DUMB_VIEW]: [1. Create frontend/src/components/references/OverviewLeftColumn.jsx. 2. Implement the Abstract preview container using CSS -webkit-line-clamp: 4. 3. Map passed arrays to Keywords and Web of Science chips, invoking passed onHoverInfo props on mouse enter]. Type: Task.
   [ID-17.4.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-050]]. Type: Task.
+  > Files touched: OverviewLeftColumn.jsx, OverviewLeftColumn.test.jsx
 
 - [ ] Story 17.5: Overview Tab - Right Column & Metrics Dumb Views | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Implement the right column (Affiliations, IDs, Funding) and footer metrics grids as pure visual functions.
