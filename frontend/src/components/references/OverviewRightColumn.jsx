@@ -4,8 +4,8 @@ import PropTypes from 'prop-types';
 const RightPanelBox = ({ title, icon, onHoverInfo, infoKey, onClick, children, copyAction }) => (
   <div 
     style={{
-      backgroundColor: '#131d31',
-      border: '1px solid #1e293b',
+      backgroundColor: '#0C1427',
+      border: '1px solid #18243c',
       borderRadius: '8px',
       padding: '14px 16px',
       display: 'flex',
@@ -64,11 +64,16 @@ const RightPanelBox = ({ title, icon, onHoverInfo, infoKey, onClick, children, c
           </svg>
         </button>
       )}
-      {onClick && (
-        <svg width="16" height="16" style={{ width: '16px', height: '16px', flexShrink: 0, color: '#64748b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      )}
+      <svg
+        width="14"
+        height="14"
+        style={{ width: '14px', height: '14px', flexShrink: 0, color: '#475569' }}
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
     </div>
   </div>
 );

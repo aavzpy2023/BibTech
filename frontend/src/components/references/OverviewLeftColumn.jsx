@@ -1,11 +1,11 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-const SectionCard = ({ title, icon, onHoverInfo, infoKey, children }) => (
+const SectionCard = ({ title, icon, onHoverInfo, infoKey, rightElement, children }) => (
   <div
     style={{
-      backgroundColor: '#131d31',
-      border: '1px solid #1e293b',
+      backgroundColor: '#0C1427',
+      border: '1px solid #18243c',
       borderRadius: '8px',
       padding: '16px',
       boxSizing: 'border-box',
@@ -26,7 +26,7 @@ const SectionCard = ({ title, icon, onHoverInfo, infoKey, children }) => (
             margin: 0,
             fontSize: '14px',
             fontWeight: '600',
-            color: '#e2e8f0',
+            color: '#f1f5f9',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
@@ -67,6 +67,18 @@ const SectionCard = ({ title, icon, onHoverInfo, infoKey, children }) => (
           )}
         </h3>
       </div>
+      {rightElement || (
+        <svg
+          width="14"
+          height="14"
+          style={{ width: '14px', height: '14px', color: '#475569', flexShrink: 0 }}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      )}
     </div>
     <div style={{ fontSize: '13px', color: '#cbd5e1' }}>
       {children}
@@ -166,6 +178,32 @@ export default function OverviewLeftColumn({
     </svg>
   );
 
+  const abstractRight = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <svg
+        width="15"
+        height="15"
+        style={{ width: '15px', height: '15px', color: '#38bdf8', flexShrink: 0 }}
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+      </svg>
+      <svg
+        width="14"
+        height="14"
+        style={{ width: '14px', height: '14px', color: '#475569', flexShrink: 0 }}
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
+    </div>
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <SectionCard 
@@ -173,6 +211,7 @@ export default function OverviewLeftColumn({
         icon={docIcon} 
         onHoverInfo={onHoverInfo} 
         infoKey="abstract"
+        rightElement={abstractRight}
       >
         <div style={{ position: 'relative' }}>
           <p

@@ -35,8 +35,8 @@ export default function ReferenceHeroBlock({
         {title || 'Untitled'}
       </h2>
 
-      <div style={{ fontSize: '14px', color: '#94a3b8' }}>
-        {authors || 'N/A'}
+      <div style={{ fontSize: '14px', color: '#94a3b8', lineHeight: '1.6' }}>
+        {authors ? authors.split(/\s+and\s+/i).join(' · ') : 'N/A'}
       </div>
 
       <div
