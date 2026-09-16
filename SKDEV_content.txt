@@ -1,156 +1,372 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 10:33:32
+Date: 2026-09-16 10:37:58
 AST Mode: False
 Line Numbers: True
-Modules: schemas.py, test_schemas.py
+Modules: core.py, test_core_models.py
 Processed Files: 2
 ===========================
 
 
 
-// --- backend/src/bibliography/schemas.py ---
+// --- backend/src/database/models/core.py ---
 
-[L001, S0] from datetime import datetime
-[L002, S0] from typing import Optional, List, Dict, Any, AsyncGenerator
-[L003, S0] from pydantic import BaseModel, ConfigDict, Field
-[L004, S0] 
-[L005, S0] 
-[L006, S0] class ZipDownloadRequest(BaseModel):
-[L007, S4]     model_config = ConfigDict(strict=True, extra="forbid")
-[L008, S0] 
-[L009, S4]     batch_name: str = Field(
-[L010, S8]         ...,
-[L011, S8]         description="The name of the batch folder containing the PDFs.",
-[L012, S4]     )
-[L013, S4]     dois: List[str] = Field(
-[L014, S8]         ...,
-[L015, S8]         description="List of DOIs to include in the ZIP archive.",
-[L016, S4]     )
-[L017, S0] 
-[L018, S0] 
-[L019, S0] class BatchDownloadRequest(BaseModel):
-[L020, S4]     cookies: Optional[str] = Field(
-[L021, S8]         None, description="Optional raw session cookies to bypass 403 blocks."
-[L022, S4]     )
-[L023, S4]     model_config = ConfigDict(strict=True, extra="forbid")
-[L024, S0] 
-[L025, S4]     dois: List[str] = Field(
-[L026, S8]         ...,
-[L027, S8]         description="List of Digital Object Identifiers to fetch."
-[L028, S4]     )
-[L029, S4]     delay: int = Field(
-[L030, S8]         ...,
-[L031, S8]         ge=0,
-[L032, S8]         description="Delay in seconds between sequential downloads."
-[L033, S4]     )
-[L034, S4]     destination: str = Field(
-[L035, S8]         ...,
-[L036, S8]         min_length=1,
-[L037, S8]         description="Target directory path for storing downloaded PDF files."
-[L038, S4]     )
-[L039, S4]     email: str = Field(
-[L040, S8]         ...,
-[L041, S8]         min_length=1,
-[L042, S8]         description="Contact email address for academic API polite pools."
-[L043, S4]     )
-[L044, S0] 
-[L045, S0] 
-[L046, S0] class LocalBatchDownloadRequest(BaseModel):
-[L047, S4]     cookies: Optional[str] = Field(
-[L048, S8]         None, description="Optional raw session cookies to bypass 403 blocks."
-[L049, S4]     )
-[L050, S4]     model_config = ConfigDict(strict=True, extra="forbid")
-[L051, S0] 
-[L052, S4]     file_path: str = Field(
-[L053, S8]         ...,
-[L054, S8]         min_length=1,
-[L055, S8]         description="Absolute or relative path to the local bibliography file."
-[L056, S4]     )
-[L057, S4]     destination: str = Field(
-[L058, S8]         ...,
-[L059, S8]         min_length=1,
-[L060, S8]         description="Target directory path for storing downloaded PDF files."
-[L061, S4]     )
-[L062, S4]     email: str = Field(
-[L063, S8]         ...,
-[L064, S8]         min_length=1,
-[L065, S8]         description="Contact email address for academic API polite pools."
-[L066, S4]     )
-[L067, S4]     delay: int = Field(
-[L068, S8]         5,
-[L069, S8]         ge=0,
-[L070, S8]         description="Delay in seconds between sequential downloads."
-[L071, S4]     )
-[L072, S0] 
-[L073, S0] 
-[L074, S0] class ParsedReference(BaseModel):
-[L075, S4]     model_config = ConfigDict(strict=True, extra="forbid")
-[L076, S4]     
-[L077, S4]     author: Optional[str] = None
-[L078, S4]     year: Optional[str] = None
-[L079, S4]     title: Optional[str] = None
-[L080, S4]     journal: Optional[str] = None
-[L081, S4]     doi: Optional[str] = None
-[L082, S4]     upload_datetime: datetime
-
-
-// --- backend/tests/bibliography/test_schemas.py ---
-
-[L001, S0] import sys
-[L002, S0] from pathlib import Path
-[L003, S0] import pytest
-[L004, S0] from pydantic import ValidationError
-[L005, S0] 
-[L006, S0] _root = Path(__file__).resolve().parents[3]
-[L007, S0] if str(_root) not in sys.path:
-[L008, S4]     sys.path.insert(0, str(_root))
-[L009, S0] 
-[L010, S0] from backend.src.bibliography.schemas import (
-[L011, S4]     LocalBatchDownloadRequest,
-[L012, S4]     BatchDownloadRequest,
-[L013, S0] )
+[L001, S0] """Core relational database models for projects and articles."""
+[L002, S0] from datetime import datetime, timezone
+[L003, S0] 
+[L004, S0] from sqlalchemy import (
+[L005, S4]     Column,
+[L006, S4]     DateTime,
+[L007, S4]     ForeignKey,
+[L008, S4]     Integer,
+[L009, S4]     String,
+[L010, S4]     Text,
+[L011, S4]     UniqueConstraint,
+[L012, S0] )
+[L013, S0] from sqlalchemy.orm import relationship
 [L014, S0] 
-[L015, S0] 
-[L016, S0] def test_local_batch_download_request_valid():
-[L017, S4]     payload = {
-[L018, S8]         "file_path": "/path/to/local/file.bib",
-[L019, S8]         "destination": "/tmp/downloads",
-[L020, S8]         "email": "test@example.com",
-[L021, S4]     }
-[L022, S4]     req = LocalBatchDownloadRequest(**payload)
-[L023, S4]     assert req.file_path == "/path/to/local/file.bib"
-[L024, S4]     assert req.destination == "/tmp/downloads"
-[L025, S4]     assert req.email == "test@example.com"
-[L026, S4]     assert req.delay == 5
-[L027, S0] 
-[L028, S0] 
-[L029, S0] def test_local_batch_download_request_with_cookies():
-[L030, S4]     payload = {
-[L031, S8]         "file_path": "/path",
-[L032, S8]         "destination": "/tmp",
-[L033, S8]         "email": "test@example.com",
-[L034, S8]         "cookies": "auth=123",
-[L035, S4]     }
-[L036, S4]     req = LocalBatchDownloadRequest(**payload)
-[L037, S4]     assert req.cookies == "auth=123"
-[L038, S0] 
-[L039, S0] 
-[L040, S0] def test_batch_download_request_with_cookies():
-[L041, S4]     payload = {
-[L042, S8]         "dois": ["10.1000/182"],
-[L043, S8]         "delay": 0,
-[L044, S8]         "destination": "/tmp",
-[L045, S8]         "email": "test@example.com",
-[L046, S8]         "cookies": "session=abc",
-[L047, S4]     }
-[L048, S4]     req = BatchDownloadRequest(**payload)
-[L049, S4]     assert req.cookies == "session=abc"
-[L050, S0] 
-[L051, S0] 
-[L052, S0] def test_local_batch_download_request_invalid_missing_fields():
-[L053, S4]     payload = {
-[L054, S8]         "file_path": "/path/to/local/file.bib",
-[L055, S4]     }
-[L056, S4]     with pytest.raises(ValidationError):
-[L057, S8]         LocalBatchDownloadRequest(**payload)
+[L015, S0] from ..session import Base
+[L016, S0] 
+[L017, S0] 
+[L018, S0] class Project(Base):
+[L019, S4]     """Represents a research project containing bibliographies."""
+[L020, S0] 
+[L021, S4]     __tablename__ = "projects"
+[L022, S0] 
+[L023, S4]     id = Column(
+[L024, S8]         Integer,
+[L025, S8]         primary_key=True,
+[L026, S8]         autoincrement=True,
+[L027, S8]         comment="Primary key integer identifier",
+[L028, S4]     )
+[L029, S4]     name = Column(
+[L030, S8]         String(255),
+[L031, S8]         nullable=False,
+[L032, S8]         comment="Project display and reference name",
+[L033, S4]     )
+[L034, S4]     description = Column(
+[L035, S8]         Text,
+[L036, S8]         nullable=True,
+[L037, S8]         comment="Detailed description of the project",
+[L038, S4]     )
+[L039, S4]     hashed_password = Column(
+[L040, S8]         String(255),
+[L041, S8]         nullable=True,
+[L042, S8]         comment="Bcrypt hashed project password",
+[L043, S4]     )
+[L044, S4]     created_at = Column(
+[L045, S8]         DateTime,
+[L046, S8]         default=lambda: datetime.now(timezone.utc),
+[L047, S8]         nullable=False,
+[L048, S8]         comment="UTC timestamp when the project was created",
+[L049, S4]     )
+[L050, S4]     updated_at = Column(
+[L051, S8]         DateTime,
+[L052, S8]         default=lambda: datetime.now(timezone.utc),
+[L053, S8]         onupdate=lambda: datetime.now(timezone.utc),
+[L054, S8]         nullable=False,
+[L055, S8]         comment="UTC timestamp when the project was last updated",
+[L056, S4]     )
+[L057, S0] 
+[L058, S4]     project_articles = relationship(
+[L059, S8]         "ProjectArticle",
+[L060, S8]         back_populates="project",
+[L061, S8]         cascade="all, delete-orphan",
+[L062, S4]     )
+[L063, S4]     articles = relationship(
+[L064, S8]         "Article",
+[L065, S8]         secondary="project_articles",
+[L066, S8]         back_populates="projects",
+[L067, S8]         viewonly=True,
+[L068, S4]     )
+[L069, S4]     downloads = relationship(
+[L070, S8]         "Download",
+[L071, S8]         back_populates="project",
+[L072, S8]         cascade="all, delete-orphan",
+[L073, S4]     )
+[L074, S0] 
+[L075, S0] 
+[L076, S0] class Article(Base):
+[L077, S4]     """Represents an academic publication with bibliographic data."""
+[L078, S0] 
+[L079, S4]     __tablename__ = "articles"
+[L080, S0] 
+[L081, S4]     id = Column(
+[L082, S8]         Integer,
+[L083, S8]         primary_key=True,
+[L084, S8]         autoincrement=True,
+[L085, S8]         comment="Primary key integer identifier",
+[L086, S4]     )
+[L087, S4]     doi = Column(
+[L088, S8]         String(255),
+[L089, S8]         unique=True,
+[L090, S8]         index=True,
+[L091, S8]         nullable=True,
+[L092, S8]         comment="Normalized DOI unique key",
+[L093, S4]     )
+[L094, S4]     title = Column(
+[L095, S8]         Text,
+[L096, S8]         nullable=False,
+[L097, S8]         comment="Full title of the article or publication",
+[L098, S4]     )
+[L099, S4]     journal = Column(
+[L100, S8]         String(255),
+[L101, S8]         nullable=True,
+[L102, S8]         comment="Journal or venue publishing the article",
+[L103, S4]     )
+[L104, S4]     year = Column(
+[L105, S8]         Integer,
+[L106, S8]         nullable=True,
+[L107, S8]         comment="Publication calendar year",
+[L108, S4]     )
+[L109, S4]     volume = Column(
+[L110, S8]         String(50),
+[L111, S8]         nullable=True,
+[L112, S8]         comment="Journal publication volume",
+[L113, S4]     )
+[L114, S4]     issue = Column(
+[L115, S8]         String(50),
+[L116, S8]         nullable=True,
+[L117, S8]         comment="Journal publication issue",
+[L118, S4]     )
+[L119, S4]     pages = Column(
+[L120, S8]         String(50),
+[L121, S8]         nullable=True,
+[L122, S8]         comment="Article page range or article number",
+[L123, S4]     )
+[L124, S4]     abstract = Column(
+[L125, S8]         Text,
+[L126, S8]         nullable=True,
+[L127, S8]         comment="Full text abstract of the article",
+[L128, S4]     )
+[L129, S4]     raw_data = Column(
+[L130, S8]         Text,
+[L131, S8]         nullable=True,
+[L132, S8]         comment="Raw bibliographic payload (e.g. BibTeX or RIS)",
+[L133, S4]     )
+[L134, S4]     created_at = Column(
+[L135, S8]         DateTime,
+[L136, S8]         default=lambda: datetime.now(timezone.utc),
+[L137, S8]         nullable=False,
+[L138, S8]         comment="UTC timestamp when article was ingested",
+[L139, S4]     )
+[L140, S4]     updated_at = Column(
+[L141, S8]         DateTime,
+[L142, S8]         default=lambda: datetime.now(timezone.utc),
+[L143, S8]         onupdate=lambda: datetime.now(timezone.utc),
+[L144, S8]         nullable=False,
+[L145, S8]         comment="UTC timestamp when article record was updated",
+[L146, S4]     )
+[L147, S0] 
+[L148, S4]     project_articles = relationship(
+[L149, S8]         "ProjectArticle",
+[L150, S8]         back_populates="article",
+[L151, S8]         cascade="all, delete-orphan",
+[L152, S4]     )
+[L153, S4]     projects = relationship(
+[L154, S8]         "Project",
+[L155, S8]         secondary="project_articles",
+[L156, S8]         back_populates="articles",
+[L157, S8]         viewonly=True,
+[L158, S4]     )
+[L159, S4]     author_articles = relationship(
+[L160, S8]         "AuthorArticle",
+[L161, S8]         back_populates="article",
+[L162, S8]         cascade="all, delete-orphan",
+[L163, S4]     )
+[L164, S4]     authors = relationship(
+[L165, S8]         "Author",
+[L166, S8]         secondary="author_articles",
+[L167, S8]         back_populates="articles",
+[L168, S8]         viewonly=True,
+[L169, S4]     )
+[L170, S4]     keyword_articles = relationship(
+[L171, S8]         "KeywordArticle",
+[L172, S8]         back_populates="article",
+[L173, S8]         cascade="all, delete-orphan",
+[L174, S4]     )
+[L175, S4]     keywords = relationship(
+[L176, S8]         "Keyword",
+[L177, S8]         secondary="keyword_articles",
+[L178, S8]         back_populates="articles",
+[L179, S8]         viewonly=True,
+[L180, S4]     )
+[L181, S4]     references = relationship(
+[L182, S8]         "Reference",
+[L183, S8]         back_populates="article",
+[L184, S8]         cascade="all, delete-orphan",
+[L185, S4]     )
+[L186, S4]     funding = relationship(
+[L187, S8]         "Funding",
+[L188, S8]         back_populates="article",
+[L189, S8]         cascade="all, delete-orphan",
+[L190, S4]     )
+[L191, S4]     downloads = relationship(
+[L192, S8]         "Download",
+[L193, S8]         back_populates="article",
+[L194, S8]         cascade="all, delete-orphan",
+[L195, S4]     )
+[L196, S0] 
+[L197, S0] 
+[L198, S0] class ProjectArticle(Base):
+[L199, S4]     """Junction model connecting projects to articles."""
+[L200, S0] 
+[L201, S4]     __tablename__ = "project_articles"
+[L202, S4]     __table_args__ = (
+[L203, S8]         UniqueConstraint(
+[L204, S12]             "project_id",
+[L205, S12]             "article_id",
+[L206, S12]             name="uq_project_article",
+[L207, S8]         ),
+[L208, S4]     )
+[L209, S0] 
+[L210, S4]     id = Column(
+[L211, S8]         Integer,
+[L212, S8]         primary_key=True,
+[L213, S8]         autoincrement=True,
+[L214, S8]         comment="Primary key junction identifier",
+[L215, S4]     )
+[L216, S4]     project_id = Column(
+[L217, S8]         Integer,
+[L218, S8]         ForeignKey("projects.id", ondelete="CASCADE"),
+[L219, S8]         nullable=False,
+[L220, S8]         comment="Foreign key linking to projects.id",
+[L221, S4]     )
+[L222, S4]     article_id = Column(
+[L223, S8]         Integer,
+[L224, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L225, S8]         nullable=False,
+[L226, S8]         comment="Foreign key linking to articles.id",
+[L227, S4]     )
+[L228, S4]     status = Column(
+[L229, S8]         String(50),
+[L230, S8]         default="pending",
+[L231, S8]         nullable=False,
+[L232, S8]         comment="Processing or download status of the article in the project",
+[L233, S4]     )
+[L234, S4]     added_at = Column(
+[L235, S8]         DateTime,
+[L236, S8]         default=lambda: datetime.now(timezone.utc),
+[L237, S8]         nullable=False,
+[L238, S8]         comment="UTC timestamp when article was associated with project",
+[L239, S4]     )
+[L240, S0] 
+[L241, S4]     project = relationship("Project", back_populates="project_articles")
+[L242, S4]     article = relationship("Article", back_populates="project_articles")
+
+
+// --- backend/tests/database/test_core_models.py ---
+
+[L001, S0] """Hexagonal zero-I/O tests for Core Domain Models (Projects & Articles)."""
+[L002, S0] import unittest
+[L003, S0] 
+[L004, S0] from sqlalchemy import create_engine
+[L005, S0] from sqlalchemy.orm import Session, sessionmaker
+[L006, S0] 
+[L007, S0] from src.database.models.core import Article, Project, ProjectArticle
+[L008, S0] from src.database.session import Base
+[L009, S0] 
+[L010, S0] 
+[L011, S0] class TestCoreModels(unittest.TestCase):
+[L012, S4]     """Validates Project, Article, and ProjectArticle schema and relationships."""
+[L013, S0] 
+[L014, S4]     def setUp(self) -> None:
+[L015, S8]         """Initialize in-memory SQLite engine and tables for zero-I/O testing."""
+[L016, S8]         self.engine = create_engine("sqlite:///:memory:")
+[L017, S8]         Base.metadata.create_all(self.engine)
+[L018, S8]         self.SessionLocal = sessionmaker(bind=self.engine)
+[L019, S8]         self.session: Session = self.SessionLocal()
+[L020, S0] 
+[L021, S4]     def tearDown(self) -> None:
+[L022, S8]         """Clean up in-memory session and tables."""
+[L023, S8]         self.session.close()
+[L024, S8]         Base.metadata.drop_all(self.engine)
+[L025, S8]         self.engine.dispose()
+[L026, S0] 
+[L027, S4]     def test_create_project_and_article_m2m(self) -> None:
+[L028, S8]         """Verify bidirectional relationship between Project and Article."""
+[L029, S8]         project = Project(
+[L030, S12]             name="Deep Learning Survey",
+[L031, S12]             description="Investigation on Transformers",
+[L032, S12]             hashed_password="mocked_bcrypt_hash_12345",
+[L033, S8]         )
+[L034, S8]         article = Article(
+[L035, S12]             doi="10.1000/182",
+[L036, S12]             title="Attention Is All You Need",
+[L037, S12]             journal="NeurIPS",
+[L038, S12]             year=2017,
+[L039, S12]             volume="30",
+[L040, S12]             pages="5998-6008",
+[L041, S12]             abstract="The dominant sequence transduction models...",
+[L042, S8]         )
+[L043, S8]         self.session.add_all([project, article])
+[L044, S8]         self.session.commit()
+[L045, S0] 
+[L046, S8]         link = ProjectArticle(
+[L047, S12]             project_id=project.id,
+[L048, S12]             article_id=article.id,
+[L049, S12]             status="pending",
+[L050, S8]         )
+[L051, S8]         self.session.add(link)
+[L052, S8]         self.session.commit()
+[L053, S0] 
+[L054, S8]         self.session.refresh(project)
+[L055, S8]         self.session.refresh(article)
+[L056, S0] 
+[L057, S8]         self.assertEqual(len(project.project_articles), 1)
+[L058, S8]         self.assertEqual(
+[L059, S12]             project.project_articles[0].article.doi, "10.1000/182"
+[L060, S8]         )
+[L061, S8]         self.assertEqual(len(project.articles), 1)
+[L062, S8]         self.assertEqual(
+[L063, S12]             project.articles[0].title, "Attention Is All You Need"
+[L064, S8]         )
+[L065, S0] 
+[L066, S8]         self.assertEqual(len(article.project_articles), 1)
+[L067, S8]         self.assertEqual(
+[L068, S12]             article.project_articles[0].project.hashed_password,
+[L069, S12]             "mocked_bcrypt_hash_12345",
+[L070, S8]         )
+[L071, S8]         self.assertEqual(len(article.projects), 1)
+[L072, S8]         self.assertEqual(article.projects[0].name, "Deep Learning Survey")
+[L073, S0] 
+[L074, S4]     def test_article_extended_metadata_persistence(self) -> None:
+[L075, S8]         """Verify that newly added extended .bib metadata fields persist correctly."""
+[L076, S8]         article = Article(
+[L077, S12]             title="Extended Metadata Paper",
+[L078, S12]             abstract="A novel approach to metadata.",
+[L079, S12]             publisher="Tech Press",
+[L080, S12]             language="English",
+[L081, S12]             keywords="metadata; bibliography; parsing",
+[L082, S12]             research_areas="Computer Science",
+[L083, S12]             web_of_science_categories="Computer Science, Information Systems",
+[L084, S12]             funding_text="Supported by AI Grant 2026",
+[L085, S12]             journal_iso="J. Tech. Press",
+[L086, S12]             oa_status="Gold",
+[L087, S12]             doi="10.1000/extended",
+[L088, S12]             issn="1234-5678",
+[L089, S12]             times_cited=42,
+[L090, S12]             cited_references_count=10,
+[L091, S8]         )
+[L092, S8]         self.session.add(article)
+[L093, S8]         self.session.commit()
+[L094, S8]         self.session.refresh(article)
+[L095, S0] 
+[L096, S8]         self.assertEqual(article.publisher, "Tech Press")
+[L097, S8]         self.assertEqual(article.times_cited, 42)
+[L098, S8]         self.assertEqual(article.language, "English")
+[L099, S8]         self.assertEqual(article.oa_status, "Gold")
+[L100, S0] 
+[L101, S4]     def test_semantic_comments_present_on_all_columns(self) -> None:
+[L102, S8]         """Enforce Semantic Primacy: every column must contain a comment."""
+[L103, S8]         models = [Project, Article, ProjectArticle]
+[L104, S8]         for model in models:
+[L105, S12]             for col in model.__table__.columns:
+[L106, S16]                 self.assertIsNotNone(
+[L107, S20]                     col.comment,
+[L108, S20]                     f"Column '{col.name}' in '{model.__tablename__}' lacks comment",
+[L109, S16]                 )
+[L110, S16]                 self.assertTrue(
+[L111, S20]                     len(col.comment.strip()) > 0,
+[L112, S20]                     f"Comment on '{col.name}' in '{model.__tablename__}' is empty",
+[L113, S16]                 )

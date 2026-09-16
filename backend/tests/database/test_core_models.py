@@ -1,11 +1,28 @@
 """Hexagonal zero-I/O tests for Core Domain Models (Projects & Articles)."""
 import unittest
 
+import sys
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.database.models.core import Article, Project, ProjectArticle
-from src.database.session import Base
+_backend_dir = Path(__file__).resolve().parents[2]
+if str(_backend_dir) not in sys.path:
+    sys.path.insert(0, str(_backend_dir))
+_repo_dir = Path(__file__).resolve().parents[3]
+if str(_repo_dir) not in sys.path:
+    sys.path.insert(0, str(_repo_dir))
+
+try:
+    from src.database.models.core import Article, Project, ProjectArticle
+    from src.database.session import Base
+except ImportError:
+    from backend.src.database.models.core import (
+        Article,
+        Project,
+        ProjectArticle,
+    )
+    from backend.src.database.session import Base
 
 
 class TestCoreModels(unittest.TestCase):

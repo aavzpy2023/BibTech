@@ -126,6 +126,61 @@ class Article(Base):
         nullable=True,
         comment="Full text abstract of the article",
     )
+    publisher = Column(
+        String(255),
+        nullable=True,
+        comment="Publisher or imprint name of the article",
+    )
+    language = Column(
+        String(50),
+        nullable=True,
+        comment="Primary language of the publication",
+    )
+    keywords = Column(
+        Text,
+        nullable=True,
+        comment="Raw keywords string extracted from bib data",
+    )
+    research_areas = Column(
+        Text,
+        nullable=True,
+        comment="Research areas or Web of Science categories",
+    )
+    web_of_science_categories = Column(
+        Text,
+        nullable=True,
+        comment="Specific Web of Science categorical metadata",
+    )
+    funding_text = Column(
+        Text,
+        nullable=True,
+        comment="Funding acknowledgment text or grant information",
+    )
+    journal_iso = Column(
+        String(255),
+        nullable=True,
+        comment="ISO abbreviation of the journal name",
+    )
+    oa_status = Column(
+        String(50),
+        nullable=True,
+        comment="Open Access status indicator",
+    )
+    issn = Column(
+        String(50),
+        nullable=True,
+        comment="International Standard Serial Number",
+    )
+    times_cited = Column(
+        Integer,
+        nullable=True,
+        comment="Number of times the article has been cited globally",
+    )
+    cited_references_count = Column(
+        Integer,
+        nullable=True,
+        comment="Number of references cited by this article",
+    )
     raw_data = Column(
         Text,
         nullable=True,
@@ -172,10 +227,9 @@ class Article(Base):
         back_populates="article",
         cascade="all, delete-orphan",
     )
-    keywords = relationship(
+    keyword_entities = relationship(
         "Keyword",
         secondary="keyword_articles",
-        back_populates="articles",
         viewonly=True,
     )
     references = relationship(
