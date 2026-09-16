@@ -74,6 +74,7 @@
 │   │   │   │   ├── 002_add_identity_models.py
 │   │   │   │   ├── 003_add_keywords.py
 │   │   │   │   ├── 004_add_tracking_models.py
+│   │   │   │   ├── 005_add_article_metadata.py
 │   │   ├── src/
 │   │   │   ├── __init__.py
 │   │   │   ├── bibliography/

@@ -20,7 +20,7 @@ complexity_aggregate: "MEDIUM"
   [ID-16.1.1] [TESTING/TDE]: [1. Arrange: In useHoverReveal.test.js, use @testing-library/react-hooks to renderHook(() => useHoverReveal()). 2. Act: Call result.current.onMouseEnter('author', 'John Doe', { clientX: 100, clientY: 200 }). 3. Assert: Verify result.current.hoverInfo strictly matches { key: 'author', value: 'John Doe', x: 100, y: 200, isVisible: true }]. Type: Task.
   [ID-16.1.2] [UI/STATE]: [1. Create frontend/src/hooks/useHoverReveal.js. 2. Implement useState for hoverInfo initialized to null. 3. Export onMouseEnter(key, val, e), onMouseMove(e) (updates x,y), and onMouseLeave() (sets isVisible to false or null). 4. Ensure logic is under 25 lines]. Type: Task.
 
-- [ ] Story 16.2: Dumb View Componentization - Grid & Popover | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-16.1)
+- [x] Story 16.2: Dumb View Componentization - Grid & Popover | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-16.1)
   Business Requirement: Create strictly dumb, stateless UI components for rendering the metadata grid and the floating popover.
   Story Context Radius: {"frontend/src/components/references/MetadataGrid.jsx": [""], "frontend/src/components/references/HoverPopover.jsx": [""], "frontend/src/components/references/ReferencesDataTable.jsx": ["styles"]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):

@@ -1,0 +1,59 @@
+import React from 'react';
+
+const styles = {
+  modalGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gap: '14px',
+  },
+  auditItemBox: {
+    backgroundColor: '#0d1117',
+    border: '1px solid #30363d',
+    borderRadius: '6px',
+    padding: '8px 10px',
+    fontSize: '12px',
+    cursor: 'crosshair',
+  },
+  modalLabel: {
+    fontSize: '12px',
+    color: '#8b949e',
+    fontWeight: '500',
+    marginBottom: '4px',
+  },
+  modalValue: {
+    fontSize: '13px',
+    color: '#c9d1d9',
+    lineHeight: '1.4',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+};
+
+export function MetadataGrid({ data, onHover, onMove, onLeave }) {
+  if (!data) return null;
+
+  return (
+    <div style={styles.modalGrid}>
+      {Object.entries(data).map(([key, value]) => {
+        if (value === null || value === undefined || value === '') return null;
+        
+        const displayValue =
+          typeof value === 'object' ? JSON.stringify(value) : String(value);
+
+        return (
+          <div
+            key={key}
+            style={styles.auditItemBox}
+            onMouseEnter={(e) => onHover?.(key, displayValue, e)}
+            onMouseMove={onMove}
+            onMouseLeave={onLeave}
+          >
+            <div style={styles.modalLabel}>{key}</div>
+            <div style={styles.modalValue}>{displayValue}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

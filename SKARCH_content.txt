@@ -1,139 +1,859 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-16 10:30:56
+Date: 2026-09-16 12:07:25
 AST Mode: True
 Line Numbers: False
-Modules: core.py, test_core_models.py
-Processed Files: 2
+Modules: context.md, global_backlog.md, ReferencesDataTable.jsx
+Processed Files: 3
 ===========================
 
 
 
-// --- backend/src/database/models/core.py ---
+// --- context.md ---
 
-"""Core relational database models for projects and articles."""
-from datetime import datetime, timezone
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
-from sqlalchemy.orm import relationship
-from ..session import Base
+# System Context: bibtech
 
-class Project(Base):
-    """..."""
+## 1. Architectural Foundation
+- **Backend**: FastAPI 0.110.0 running on Python &gt;= 3.11 with Uvicorn.
+- **Frontend**: React 18 (Vite SPA) enforcing clean dumb-component separation.
+- **Proxy/Ingress**: Nginx reverse proxy routing `/api` traffic to backend.
+- **Database**: PostgreSQL 16 (handled via psycopg2-binary / migrations).
 
-class Article(Base):
-    """Represents an academic publication with bibliographic data."""
-    __tablename__ = 'articles'
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key integer identifier')
-    doi = Column(String(255), unique=True, index=True, nullable=True, comment='Normalized DOI unique key')
-    title = Column(Text, nullable=False, comment='Full title of the article or publication')
-    journal = Column(String(255), nullable=True, comment='Journal or venue publishing the article')
-    year = Column(Integer, nullable=True, comment='Publication calendar year')
-    volume = Column(String(50), nullable=True, comment='Journal publication volume')
-    issue = Column(String(50), nullable=True, comment='Journal publication issue')
-    pages = Column(String(50), nullable=True, comment='Article page range or article number')
-    abstract = Column(Text, nullable=True, comment='Full text abstract of the article')
-    raw_data = Column(Text, nullable=True, comment='Raw bibliographic payload (e.g. BibTeX or RIS)')
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, comment='UTC timestamp when article was ingested')
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False, comment='UTC timestamp when article record was updated')
-    project_articles = relationship('ProjectArticle', back_populates='article', cascade='all, delete-orphan')
-    projects = relationship('Project', secondary='project_articles', back_populates='articles', viewonly=True)
-    author_articles = relationship('AuthorArticle', back_populates='article', cascade='all, delete-orphan')
-    authors = relationship('Author', secondary='author_articles', back_populates='articles', viewonly=True)
-    keyword_articles = relationship('KeywordArticle', back_populates='article', cascade='all, delete-orphan')
-    keywords = relationship('Keyword', secondary='keyword_articles', back_populates='articles', viewonly=True)
-    references = relationship('Reference', back_populates='article', cascade='all, delete-orphan')
-    funding = relationship('Funding', back_populates='article', cascade='all, delete-orphan')
-    downloads = relationship('Download', back_populates='article', cascade='all, delete-orphan')
-
-class ProjectArticle(Base):
-    """..."""
+## 2. Domain: Bibliography Ingestion &amp; Visualization
+- **Core Responsibility**: Parsing bibliographic citation files (`.ris` and
+  `.bib`) into normalized domain entities, served via API and displayed in an
+  interactive tabular format.
+- **Core Entities**:
+  - `ParsedReference`: Author, Year, Title, Journal, and Upload Datetime.
+- **Key Modules**:
+  - `backend/src/bibliography/parser_service.py`: Pure parsing core using
+    `rispy` and `bibtexparser`. Zero I/O coupling.
+  - `backend/src/bibliography/router.py`: FastAPI boundary exposing
+    `POST /api/bibliography/upload`.
+  - `frontend/src/hooks/useBibliography.js`: Isolated React state and async
+    mutations.
+  - `frontend/src/components/BibliographyUploader.jsx`: Pure view handling file
+    drop via `react-dropzone`.
+  - `frontend/src/components/ReferenceTable.jsx`: Pure tabular view formatting
+    timestamps via `date-fns`.
 
 
-// --- backend/tests/database/test_core_models.py ---
+// --- leai_docs/planning/global_backlog.md ---
 
-"""Hexagonal zero-I/O tests for Core Domain Models (Projects & Articles)."""
-import unittest
+# Global Backlog
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
+- [x] Story 1.0: Roadmap &amp; Planning Initialization
+- [x] Story 1.1: Project Dependencies &amp; Context Genesis
 
-from src.database.models.core import Article, Project, ProjectArticle
-from src.database.session import Base
+## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
+- [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
+- [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
+- [x] [REQ-003] Bibliography Data Display &amp; Table View
+
+## EPIC 3: BATCH LOAD INTERFACE
+- [x] [REQ-004] Frontend Routing &amp; Main Layout
+- [x] [REQ-005] Load View - State Fractality (Custom Hook)
+- [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
+- [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
+
+## EPIC 4: BATCH DOWNLOAD EXECUTION
+- [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
+- [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
+- [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
+- [x] [REQ-011] Frontend SSE Hook State Integration
+
+## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
+- [x] [REQ-012] Load View Validation &amp; Label Updates
+- [x] [REQ-013] Queue View State &amp; UI Assembly
+- [x] [REQ-014] Backend ZIP Service &amp; Download Action
+
+## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
+- [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
+- [x] [REQ-016] Identity Domain Models &amp; Keywords
+- [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
+
+## EPIC 7: REFERENCES DATABASE INGESTION
+- [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
+- [x] [REQ-019] References Data Table View
+- [x] [REQ-020] Frontend Injection State Hook
+- [x] [REQ-021] References View Routing &amp; Assembly
+
+## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
+- [x] [REQ-022] Multiple File Upload Logic (FIFO Queue)
+- [x] [REQ-023] References Tab Translation to English
+- [x] [REQ-024] UI Standardization (Width & Headers)
+
+## EPIC 9: LOCAL FILE BATCH DOWNLOAD
+- [x] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
+- [x] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
+
+## EPIC 10: INSTITUTIONAL IP DIRECT RESOLVER
+- [x] [REQ-027] Institutional Direct PDF URL Extractor (Landing Page Metadata)
+- [x] [REQ-028] Cascading Resolver Fallback Chain Integration
+
+## EPIC 11: COOKIE AUTHENTICATION PASSTHROUGH
+- [x] [REQ-029] Frontend UI State Fractality & Dumb View Wiring (Cookies)
+- [x] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
+- [x] [REQ-031] CLI Argument Cookie Support (Script OCP)
+
+## EPIC 12: REFERENCES UI REFINEMENT & BACKEND BUGFIX
+- [x] [REQ-032] Backend Typing Bugfix (Micro-Surgery)
+- [x] [REQ-033] UploadReferencesModal Dark Mode Compliance
+- [x] [REQ-034] References Table Pagination & Search State (State Fractality)
+- [x] [REQ-035] References Table Dumb View Wiring
+
+## EPIC 13: BIB ONLY INGESTION & INJECTION RESILIENCE
+- [x] Story 12.0: Roadmap & Planning Initialization
+- [x] [REQ-036] Backend Router Boundary Marshal (.bib Restriction)
+- [x] [REQ-038] Backend Parser Core Logic (.bib Extraction)
+- [x] [REQ-039] Backend Injection DB Resilience
+- [x] [REQ-037] Frontend Hook State Fractality (.bib Validation)
+
+## EPIC 14: REFERENCES TABLE RESIZING & COUNT FIX
+- [x] Story 13.0: Roadmap & Planning Initialization
+- [x] [REQ-040] Synchronize and Clarify Imported vs. Displayed References Count
+- [x] [REQ-041] Resizable Table Columns (State Fractality & View Wiring)
+
+## EPIC 15: BIBLIOGRAPHIC METADATA EXPANSION & BULK INJECTION
+- [x] Story 15.0: Roadmap & Planning Initialization
+- [x] [REQ-042] Frontend UI Dumb View Wiring (Text Standardization)
+- [x] [REQ-043] Database Schema Expansion & State Preservation
+- [x] [REQ-044] Boundary Marshal Schema & Parser Core Logic
+- [x] [REQ-045] Bulk Injection Refactoring (Performance & Concurrency)
+
+## Active Roadmaps
+- [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
+- [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
+- [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
+- [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
+- [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
+- [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
+- [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
+- [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
+- [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
+- [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
+- [Roadmap 11: References UI Refinement & Backend Bugfix](roadmap_11_references_ui_and_bugfixes.md)
+- [Roadmap 12: Bib Only Ingestion & Injection Resilience](roadmap_12_bib_only_and_injection_fix.md)
+- [Roadmap 13: References Table Resizing & Count Fix](roadmap_13_references_table_resizing_and_count_fix.md)
+- [Roadmap 15: Bibliographic Metadata & Bulk Injection](roadmap_15_bibliographic_metadata_and_bulk_injection.md)
 
 
-class TestCoreModels(unittest.TestCase):
-    """Validates Project, Article, and ProjectArticle schema and relationships."""
+// --- frontend/src/components/references/ReferencesDataTable.jsx ---
 
-    def setUp(self) -> None:
-        """Initialize in-memory SQLite engine and tables for zero-I/O testing."""
-        self.engine = create_engine("sqlite:///:memory:")
-        Base.metadata.create_all(self.engine)
-        self.SessionLocal = sessionmaker(bind=self.engine)
-        self.session: Session = self.SessionLocal()
+import React, { useState } from 'react';
+import { useReferencesTable } from '../../hooks/useReferencesTable';
+import { useTableResize } from '../../hooks/useTableResize';
+import Modal from '../Modal';
 
-    def tearDown(self) -> None:
-        """Clean up in-memory session and tables."""
-        self.session.close()
-        Base.metadata.drop_all(self.engine)
-        self.engine.dispose()
+function getDoiUrl(doi) {
+  if (!doi) return '';
+  const clean = String(doi).trim();
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    return clean;
+  }
+  return `https://doi.org/${clean.replace(/^doi:\s*/i, '')}`;
+}
 
-    def test_create_project_and_article_m2m(self) -> None:
-        """Verify bidirectional relationship between Project and Article."""
-        project = Project(
-            name="Deep Learning Survey",
-            description="Investigation on Transformers",
-            hashed_password="mocked_bcrypt_hash_12345",
-        )
-        article = Article(
-            doi="10.1000/182",
-            title="Attention Is All You Need",
-            journal="NeurIPS",
-            year=2017,
-            volume="30",
-            pages="5998-6008",
-            abstract="The dominant sequence transduction models...",
-        )
-        self.session.add_all([project, article])
-        self.session.commit()
+const styles = {
+  controls: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  },
+  searchInput: {
+    padding: '8px 12px',
+    borderRadius: '6px',
+    border: '1px solid #30363d',
+    backgroundColor: '#0d1117',
+    color: '#f0f6fc',
+    width: '300px',
+    outline: 'none',
+  },
+  pagination: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: '16px',
+    padding: '8px 0',
+  },
+  pageBtn: {
+    padding: '6px 12px',
+    backgroundColor: '#21262d',
+    border: '1px solid #30363d',
+    color: '#f0f6fc',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px',
+  },
+  pageBtnDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
+  container: {
+    width: '100%',
+    overflowX: 'auto',
+    marginTop: '20px',
+    position: 'relative',
+  },
+  table: {
+    width: '100%',
+    tableLayout: 'fixed',
+    borderCollapse: 'collapse',
+    textAlign: 'left',
+    fontSize: '14px',
+    fontFamily: 'system-ui, sans-serif',
+  },
+  th: {
+    backgroundColor: '#161b22',
+    borderBottom: '1px solid #30363d',
+    borderRight: '1px solid #30363d',
+    padding: '10px 14px',
+    fontWeight: '600',
+    color: '#f0f6fc',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  tr: {
+    borderBottom: '1px solid #30363d',
+    cursor: 'pointer',
+    transition: 'background-color 0.15s ease',
+  },
+  selectedTr: {
+    backgroundColor: '#1c2128',
+    outline: '1px solid #388bfd',
+  },
+  detailsBtn: {
+    padding: '8px 14px',
+    backgroundColor: '#21262d',
+    color: '#f0f6fc',
+    border: '1px solid #30363d',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s ease',
+  },
+  detailsBtnDisabled: {
+    opacity: 0.45,
+    cursor: 'not-allowed',
+  },
+  badgeId: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '2px 8px',
+    backgroundColor: '#238636',
+    color: '#ffffff',
+    borderRadius: '12px',
+    fontSize: '11px',
+    fontWeight: '600',
+  },
+  badgeStatus: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '2px 8px',
+    backgroundColor: '#1f6feb',
+    color: '#ffffff',
+    borderRadius: '12px',
+    fontSize: '11px',
+    fontWeight: '600',
+  },
+  auditSectionTitle: {
+    fontSize: '12px',
+    color: '#58a6ff',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    borderBottom: '1px solid #30363d',
+    paddingBottom: '4px',
+    marginTop: '6px',
+    marginBottom: '8px',
+  },
+  auditItemBox: {
+    backgroundColor: '#0d1117',
+    border: '1px solid #30363d',
+    borderRadius: '6px',
+    padding: '8px 10px',
+    fontSize: '12px',
+  },
+  modalGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gap: '14px',
+  },
+  modalFieldGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  modalLabel: {
+    fontSize: '12px',
+    color: '#8b949e',
+    fontWeight: '500',
+  },
+  modalValue: {
+    fontSize: '13px',
+    color: '#c9d1d9',
+    lineHeight: '1.4',
+  },
+  doiLink: {
+    color: '#58a6ff',
+    textDecoration: 'none',
+    wordBreak: 'break-all',
+  },
+  abstractBox: {
+    backgroundColor: '#0d1117',
+    border: '1px solid #30363d',
+    borderRadius: '6px',
+    padding: '10px 12px',
+    fontSize: '13px',
+    color: '#c9d1d9',
+    lineHeight: '1.5',
+    maxHeight: '160px',
+    overflowY: 'auto',
+    whiteSpace: 'pre-wrap',
+  },
+  td: {
+    padding: '10px 14px',
+    color: '#f0f6fc',
+    borderRight: '1px solid #30363d',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  empty: {
+    padding: '24px',
+    textAlign: 'center',
+    color: '#8b949e',
+    fontSize: '14px',
+    fontStyle: 'italic',
+  },
+  popover: {
+    position: 'fixed',
+    backgroundColor: '#1f2428',
+    color: '#f6f8fa',
+    padding: '12px 16px',
+    borderRadius: '6px',
+    fontSize: '12px',
+    maxWidth: '400px',
+    maxHeight: '260px',
+    overflow: 'auto',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+    zIndex: 1000,
+    pointerEvents: 'none',
+  },
+  pre: {
+    margin: 0,
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    fontFamily: 'monospace',
+  },
+};
 
-        link = ProjectArticle(
-            project_id=project.id,
-            article_id=article.id,
-            status="pending",
-        )
-        self.session.add(link)
-        self.session.commit()
+export function ReferencesDataTable({ data = [] }) {
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-        self.session.refresh(project)
-        self.session.refresh(article)
+  const {
+    searchQuery,
+    setSearchQuery,
+    currentPage,
+    setCurrentPage,
+    paginatedData,
+    totalPages,
+  } = useReferencesTable(data, 13);
 
-        self.assertEqual(len(project.project_articles), 1)
-        self.assertEqual(
-            project.project_articles[0].article.doi, "10.1000/182"
-        )
-        self.assertEqual(len(project.articles), 1)
-        self.assertEqual(
-            project.articles[0].title, "Attention Is All You Need"
-        )
+  const { colWidths, handleMouseDown } = useTableResize();
 
-        self.assertEqual(len(article.project_articles), 1)
-        self.assertEqual(
-            article.project_articles[0].project.hashed_password,
-            "mocked_bcrypt_hash_12345",
-        )
-        self.assertEqual(len(article.projects), 1)
-        self.assertEqual(article.projects[0].name, "Deep Learning Survey")
+  if (!data || data.length === 0) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.empty}>
+          No references available to display.
+        </div>
+      </div>
+    );
+  }
 
-    def test_semantic_comments_present_on_all_columns(self) -> None:
-        """Enforce Semantic Primacy: every column must contain a comment."""
-        models = [Project, Article, ProjectArticle]
-        for model in models:
-            for col in model.__table__.columns:
-                self.assertIsNotNone(
-                    col.comment,
-                    f"Column '{col.name}' in '{model.__tablename__}' lacks comment",
-                )
-                self.assertTrue(
-                    len(col.comment.strip()) > 0,
-                    f"Comment on '{col.name}' in '{model.__tablename__}' is empty",
-                )
+  return (
+    <div style={styles.container}>
+      <div style={styles.controls}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="Search by title or author..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={styles.searchInput}
+          />
+          <button
+            type="button"
+            style={{
+              ...styles.detailsBtn,
+              ...(!selectedRow ? styles.detailsBtnDisabled : {}),
+            }}
+            disabled={!selectedRow}
+            onClick={() => setIsDetailsOpen(true)}
+          >
+            View Details
+          </button>
+        </div>
+        <span style={{ fontSize: '13px', color: '#8b949e' }}>
+          Total References: {data.length}
+        </span>
+      </div>
+      <table style={styles.table}>
+        <thead>
+          <tr>
+            <th style={{ ...styles.th, width: `${colWidths.title}%`, position: 'relative' }}>
+              Title
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'title')}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.author}%`, position: 'relative' }}>
+              Author
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'author')}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.year}%`, position: 'relative' }}>
+              Year
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'year')}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.journal}%`, position: 'relative' }}>
+              Journal
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'journal')}
+              />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedData.map((row, index) => {
+            const isSelected = selectedRow?.id != null
+              ? selectedRow.id === row.id
+              : selectedRow === row;
+            return (
+              <tr
+                key={row.id || index}
+                style={{
+                  ...styles.tr,
+                  ...(isSelected ? styles.selectedTr : {}),
+                }}
+                onClick={() => setSelectedRow(row)}
+                onDoubleClick={() => {
+                  setSelectedRow(row);
+                  setIsDetailsOpen(true);
+                }}
+              >
+              <td style={styles.td} title={row.title || 'N/A'}>
+                {row.title || 'N/A'}
+              </td>
+              <td style={styles.td} title={row.author || 'N/A'}>
+                {row.author || 'N/A'}
+              </td>
+              <td style={styles.td} title={String(row.year || 'N/A')}>
+                {row.year || 'N/A'}
+              </td>
+              <td style={styles.td} title={row.journal || 'N/A'}>
+                {row.journal || 'N/A'}
+              </td>
+            </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {totalPages > 1 && (
+        <div style={styles.pagination}>
+          <button
+            style={{ ...styles.pageBtn, ...(currentPage === 1 ? styles.pageBtnDisabled : {}) }}
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+          <span style={{ fontSize: '14px', color: '#8b949e' }}>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            style={{ ...styles.pageBtn, ...(currentPage === totalPages ? styles.pageBtnDisabled : {}) }}
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+      <Modal
+        isOpen={isDetailsOpen && !!selectedRow}
+        onClose={() => setIsDetailsOpen(false)}
+        title="Reference Details & DB Audit"
+        maxWidth="680px"
+      >
+        {selectedRow && (() => {
+          const knownKeys = new Set([
+            'id', 'title', 'author', 'year', 'journal', 'booktitle',
+            'volume', 'issue', 'number', 'pages', 'publisher', 'doi',
+            'url', 'abstract', 'keywords', 'project_id', 'created_at',
+            'updated_at', 'raw_bibtex', 'raw_data', 'project_status',
+            'project_added_at', 'upload_datetime', 'authors_detail',
+            'references_list', 'funding_list', 'downloads_list'
+          ]);
+
+          const extraEntries = Object.entries(selectedRow).filter(
+            ([key, val]) => (
+              !knownKeys.has(key) &&
+              val !== null &&
+              val !== undefined &&
+              val !== ''
+            )
+          );
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <span style={styles.badgeId}>
+                  DB ID #{selectedRow.id || 'N/A'}
+                </span>
+                {selectedRow.project_status && (
+                  <span style={styles.badgeStatus}>
+                    Status: {selectedRow.project_status}
+                  </span>
+                )}
+                {selectedRow.created_at && (
+                  <span style={{ fontSize: '12px', color: '#8b949e' }}>
+                    Ingested: {new Date(selectedRow.created_at).toLocaleString()}
+                  </span>
+                )}
+              </div>
+
+              <div style={styles.modalFieldGroup}>
+                <div style={styles.modalLabel}>Title</div>
+                <div
+                  style={{
+                    ...styles.modalValue,
+                    color: '#f0f6fc',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                  }}
+                >
+                  {selectedRow.title || 'N/A'}
+                </div>
+              </div>
+
+              <div style={styles.modalGrid}>
+                <div style={styles.modalFieldGroup}>
+                  <div style={styles.modalLabel}>Year</div>
+                  <div style={styles.modalValue}>
+                    {selectedRow.year || 'N/A'}
+                  </div>
+                </div>
+
+                <div style={styles.modalFieldGroup}>
+                  <div style={styles.modalLabel}>Journal / Venue</div>
+                  <div style={styles.modalValue}>
+                    {selectedRow.journal || selectedRow.booktitle || 'N/A'}
+                  </div>
+                </div>
+
+                {selectedRow.volume && (
+                  <div style={styles.modalFieldGroup}>
+                    <div style={styles.modalLabel}>Volume</div>
+                    <div style={styles.modalValue}>{selectedRow.volume}</div>
+                  </div>
+                )}
+
+                {(selectedRow.issue || selectedRow.number) && (
+                  <div style={styles.modalFieldGroup}>
+                    <div style={styles.modalLabel}>Issue / Number</div>
+                    <div style={styles.modalValue}>
+                      {selectedRow.issue || selectedRow.number}
+                    </div>
+                  </div>
+                )}
+
+                {selectedRow.pages && (
+                  <div style={styles.modalFieldGroup}>
+                    <div style={styles.modalLabel}>Pages</div>
+                    <div style={styles.modalValue}>{selectedRow.pages}</div>
+                  </div>
+                )}
+
+                {selectedRow.doi && (
+                  <div style={styles.modalFieldGroup}>
+                    <div style={styles.modalLabel}>DOI</div>
+                    <div>
+                      <a
+                        href={getDoiUrl(selectedRow.doi)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={styles.doiLink}
+                      >
+                        {selectedRow.doi} ↗
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {selectedRow.authors_detail && selectedRow.authors_detail.length > 0 ? (
+                <div>
+                  <div style={styles.auditSectionTitle}>
+                    Authors & Affiliations (DB Relation)
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {selectedRow.authors_detail.map((auth, idx) => (
+                      <div key={idx} style={styles.auditItemBox}>
+                        <div style={{ fontWeight: '600', color: '#f0f6fc' }}>
+                          {auth.name}
+                          {auth.is_corresponding && (
+                            <span
+                              style={{
+                                marginLeft: '6px',
+                                color: '#f0883e',
+                                fontSize: '11px',
+                              }}
+                            >
+                              [Corresponding]
+                            </span>
+                          )}
+                        </div>
+                        {auth.affiliation && (
+                          <div style={{ color: '#8b949e', marginTop: '2px' }}>
+                            🏢 {auth.affiliation}
+                          </div>
+                        )}
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '12px',
+                            marginTop: '2px',
+                            color: '#8b949e',
+                          }}
+                        >
+                          {auth.orcid && (
+                            <div>
+                              ORCID:{' '}
+                              <a
+                                href={`https://orcid.org/${auth.orcid}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={styles.doiLink}
+                              >
+                                {auth.orcid}
+                              </a>
+                            </div>
+                          )}
+                          {auth.email && <div>✉️ {auth.email}</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div style={styles.modalFieldGroup}>
+                  <div style={styles.modalLabel}>Authors</div>
+                  <div style={styles.modalValue}>
+                    {selectedRow.author || 'N/A'}
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.keywords && selectedRow.keywords.length > 0 && (
+                <div>
+                  <div style={styles.auditSectionTitle}>Keywords (DB Relation)</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {selectedRow.keywords.map((kw, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          backgroundColor: '#21262d',
+                          color: '#c9d1d9',
+                          padding: '3px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          border: '1px solid #30363d',
+                        }}
+                      >
+                        {typeof kw === 'object' ? kw.name : kw}
+                        {kw.type && kw.type !== 'author' && ` (${kw.type})`}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.abstract && (
+                <div>
+                  <div style={styles.auditSectionTitle}>Abstract (DB Text)</div>
+                  <div style={styles.abstractBox}>
+                    {selectedRow.abstract}
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.funding_list && selectedRow.funding_list.length > 0 && (
+                <div>
+                  <div style={styles.auditSectionTitle}>
+                    Funding & Grants (DB Relation)
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {selectedRow.funding_list.map((fund, idx) => (
+                      <div key={idx} style={styles.auditItemBox}>
+                        <span style={{ color: '#f0f6fc', fontWeight: '500' }}>
+                          {fund.agency}
+                        </span>
+                        {fund.grant_number && (
+                          <span style={{ color: '#8b949e', marginLeft: '6px' }}>
+                            (Grant: {fund.grant_number})
+                          </span>
+                        )}
+                        {fund.country && (
+                          <span style={{ color: '#8b949e', marginLeft: '6px' }}>
+                            - {fund.country}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.references_list && selectedRow.references_list.length > 0 && (
+                <div>
+                  <div style={styles.auditSectionTitle}>
+                    Cited References (DB Relation: {selectedRow.references_list.length})
+                  </div>
+                  <div
+                    style={{
+                      maxHeight: '130px',
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    {selectedRow.references_list.map((refItem, idx) => (
+                      <div key={idx} style={{ ...styles.auditItemBox, fontSize: '11px' }}>
+                        <span style={{ color: '#f0f6fc' }}>
+                          {refItem.title || refItem.raw_citation}
+                        </span>
+                        {refItem.year && (
+                          <span style={{ color: '#8b949e', marginLeft: '6px' }}>
+                            ({refItem.year})
+                          </span>
+                        )}
+                        {refItem.doi && (
+                          <a
+                            href={getDoiUrl(refItem.doi)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ ...styles.doiLink, marginLeft: '6px' }}
+                          >
+                            DOI: {refItem.doi}
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.downloads_list && selectedRow.downloads_list.length > 0 && (
+                <div>
+                  <div style={styles.auditSectionTitle}>
+                    Download Events (DB Relation)
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {selectedRow.downloads_list.map((d, idx) => (
+                      <div key={idx} style={styles.auditItemBox}>
+                        <span style={{ color: '#f0f6fc' }}>Source: {d.source}</span>
+                        <span style={{ color: '#8b949e', marginLeft: '8px' }}>
+                          Status: {d.status}
+                        </span>
+                        {d.file_path && (
+                          <div
+                            style={{
+                              color: '#8b949e',
+                              fontSize: '11px',
+                              marginTop: '2px',
+                            }}
+                          >
+                            Path: {d.file_path} ({d.file_size_bytes} bytes)
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.raw_data && (
+                <div>
+                  <div style={styles.auditSectionTitle}>
+                    Raw Bibliographic Payload (DB raw_data)
+                  </div>
+                  <pre style={styles.pre}>{selectedRow.raw_data}</pre>
+                </div>
+              )}
+
+              {extraEntries.length > 0 && (
+                <div style={{ marginTop: '6px' }}>
+                  <div style={styles.auditSectionTitle}>
+                    Additional Unmapped Columns
+                  </div>
+                  <div style={styles.modalGrid}>
+                    {extraEntries.map(([key, val]) => (
+                      <div key={key} style={styles.modalFieldGroup}>
+                        <div style={styles.modalLabel}>{key}</div>
+                        <div style={styles.modalValue}>
+                          {typeof val === 'object'
+                            ? JSON.stringify(val)
+                            : String(val)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+      </Modal>
+    </div>
+  );
+}
+
+export default ReferencesDataTable;
+
