@@ -78,7 +78,7 @@
 - [x] [REQ-042] Frontend UI Dumb View Wiring (Text Standardization)
 - [x] [REQ-043] Database Schema Expansion & State Preservation
 - [x] [REQ-044] Boundary Marshal Schema & Parser Core Logic
-- [ ] [REQ-045] Bulk Injection Refactoring (Performance & Concurrency)
+- [x] [REQ-045] Bulk Injection Refactoring (Performance & Concurrency)
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)

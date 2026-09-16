@@ -50,10 +50,11 @@ complexity_aggregate: "HARD"
   - [ID-15.4.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md and check - [x] for Story 15.4. 2. Append > Files touched: [list of modified/read files] under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-044]]. Type: Task.
   > Files touched: backend/src/bibliography/parser_service.py, backend/tests/bibliography/test_parser.py, leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md, leai_docs/planning/global_backlog.md
 
-- [ ] Story 15.5: Bulk Injection Refactoring (Performance & Concurrency) | [MoSCoW: MUST] | [Complexity: HARD]
+- [x] Story 15.5: Bulk Injection Refactoring (Performance & Concurrency) | [MoSCoW: MUST] | [Complexity: HARD]
   Business Requirement: Refactor the injection service to use bulk inserts instead of 1-by-1 insertion to drastically improve performance and prevent DB locking. (<-- REQ-045)
   Story Context Radius: {"backend/src/bibliography/injection_service.py": ["*"], "backend/src/database/models/core.py": ["Article", "ProjectArticle"]}
   Layered Technical Breakdown:
   - [ID-15.5.1] [TESTING/TDE]: [1. Arrange: Mock a DB session and generate a list of 100 ParsedReference objects. 2. Act: Call inject_references_to_db. 3. Assert: Verify that a bulk insert method (e.g., session.execute(insert)) was called, and that the session was not flushed 100 separate times]. Type: Task.
   - [ID-15.5.2] [CORE/LOGIC]: [1. Open backend/src/bibliography/injection_service.py. 2. Refactor _inject_references_inner to accumulate new Article dictionaries. 3. Replace the iterative db.add() loop with SQLAlchemy 2.0 bulk insert(Article).values(articles_data).on_conflict_do_nothing() (or equivalent SQLite compatible bulk upsert). 4. Do the same for Author and ProjectArticle relationships. 5. Commit the transaction once at the end]. Type: Task.
   - [ID-15.5.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md and check - [x] for Story 15.5. 2. Append > Files touched: [list of modified/read files] under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-045]]. Type: Task.
+  > Files touched: backend/src/bibliography/injection_service.py, backend/tests/bibliography/test_injection.py, leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md, leai_docs/planning/global_backlog.md

@@ -6,6 +6,9 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+_backend_dir = Path(__file__).resolve().parents[2]
+if str(_backend_dir) not in sys.path:
+    sys.path.insert(0, str(_backend_dir))
 _root = Path(__file__).resolve().parents[3]
 if str(_root) not in sys.path:
     sys.path.insert(0, str(_root))
@@ -217,3 +220,42 @@ def test_inject_references_deduplicates_within_batch(in_memory_db):
         .all()
     )
     assert len(articles) == 1
+
+
+def test_bulk_injection_performance_and_no_per_item_flush(in_memory_db):
+    now = datetime.now(timezone.utc)
+    refs = [
+        ParsedReference(
+            title=f"Scalable Deep Learning Paper {i}",
+            doi=f"10.1000/bulk.{i}",
+            author=f"Author {i}",
+            year="2026",
+            journal="JMLR",
+            upload_datetime=now,
+        )
+        for i in range(100)
+    ]
+
+    flush_count = 0
+    orig_flush = in_memory_db.flush
+
+    def counted_flush(*args, **kwargs):
+        nonlocal flush_count
+        flush_count += 1
+        return orig_flush(*args, **kwargs)
+
+    in_memory_db.flush = counted_flush
+
+    inserted = inject_references_to_db(
+        in_memory_db, refs, "BULK-PERF-PROJ"
+    )
+
+    assert inserted == 100
+    assert flush_count < 10
+
+    count_articles = (
+        in_memory_db.query(Article)
+        .filter(Article.doi.like("10.1000/bulk.%"))
+        .count()
+    )
+    assert count_articles == 100
