@@ -80,6 +80,10 @@
 - [x] [REQ-044] Boundary Marshal Schema & Parser Core Logic
 - [x] [REQ-045] Bulk Injection Refactoring (Performance & Concurrency)
 
+## EPIC 16: METADATA HOVER-REVEAL UI
+- [x] Story 16.0: Roadmap & Planning Initialization
+- [ ] [REQ-046] Metadata Hover-Reveal UI (Grid & Popover)
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
@@ -95,3 +99,4 @@
 - [Roadmap 12: Bib Only Ingestion & Injection Resilience](roadmap_12_bib_only_and_injection_fix.md)
 - [Roadmap 13: References Table Resizing & Count Fix](roadmap_13_references_table_resizing_and_count_fix.md)
 - [Roadmap 15: Bibliographic Metadata & Bulk Injection](roadmap_15_bibliographic_metadata_and_bulk_injection.md)
+- [Roadmap 16: Metadata Hover-Reveal UI](roadmap_16_metadata_hover_reveal.md)
