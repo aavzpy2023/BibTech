@@ -14,11 +14,25 @@ if str(_repo_dir) not in sys.path:
     sys.path.insert(0, str(_repo_dir))
 
 try:
-    from src.database.models.core import Article, Project, ProjectArticle
+    from src.database.models.core import (
+        Article,
+        ArticleCitation,
+        ArticleCountry,
+        CitedReference,
+        Country,
+        Journal,
+        Project,
+        ProjectArticle,
+    )
     from src.database.session import Base
 except ImportError:
     from backend.src.database.models.core import (
         Article,
+        ArticleCitation,
+        ArticleCountry,
+        CitedReference,
+        Country,
+        Journal,
         Project,
         ProjectArticle,
     )
@@ -114,9 +128,52 @@ class TestCoreModels(unittest.TestCase):
         self.assertEqual(article.language, "English")
         self.assertEqual(article.oa_status, "Gold")
 
+    def test_bibliometric_dimensions(self) -> None:
+        """Verify the creation and linking of bibliometric dimensions."""
+        journal = Journal(name="Scientometrics", iso_abbreviation="Scientometrics")
+        country = Country(name="Chile")
+        cr = CitedReference(
+            raw_string="Garfield E, 1972, SCIENCE, V178, P471",
+            author="Garfield E",
+            year=1972,
+            source="SCIENCE",
+        )
+        article = Article(title="Graph Analysis in Bibliometrics")
+
+        self.session.add_all([journal, country, cr, article])
+        self.session.commit()
+
+        article.journal_id = journal.id
+        link_country = ArticleCountry(article_id=article.id, country_id=country.id)
+        link_cr = ArticleCitation(
+            article_id=article.id, cited_reference_id=cr.id
+        )
+        self.session.add_all([link_country, link_cr])
+        self.session.commit()
+
+        self.session.refresh(article)
+        self.session.refresh(journal)
+
+        self.assertEqual(article.journal_entity.name, "Scientometrics")
+        self.assertEqual(len(article.countries), 1)
+        self.assertEqual(article.countries[0].name, "Chile")
+        self.assertEqual(len(article.cited_references), 1)
+        self.assertEqual(article.cited_references[0].year, 1972)
+        self.assertEqual(len(journal.articles), 1)
+        self.assertEqual(journal.articles[0].title, "Graph Analysis in Bibliometrics")
+
     def test_semantic_comments_present_on_all_columns(self) -> None:
         """Enforce Semantic Primacy: every column must contain a comment."""
-        models = [Project, Article, ProjectArticle]
+        models = [
+            Project,
+            Article,
+            ProjectArticle,
+            Journal,
+            Country,
+            ArticleCountry,
+            CitedReference,
+            ArticleCitation,
+        ]
         for model in models:
             for col in model.__table__.columns:
                 self.assertIsNotNone(

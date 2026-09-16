@@ -1,316 +1,124 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 18:06:38
+Date: 2026-09-16 18:20:22
 AST Mode: False
 Line Numbers: True
-Modules: useReferenceDetails.js
+Modules: global_backlog.md
 Processed Files: 1
 ===========================
 
 
 
-// --- frontend/src/hooks/useReferenceDetails.js ---
+// --- leai_docs/planning/global_backlog.md ---
 
-[L001, S0] import { useState, useMemo, useCallback } from 'react';
+[L001, S0] # Global Backlog
 [L002, S0] 
-[L003, S0] function parseBibtexFields(raw) {
-[L004, S4]     if (!raw || typeof raw !== 'string') return {};
-[L005, S4]     const fields = {};
-[L006, S4]     const bodyStart = raw.indexOf(',');
-[L007, S4]     if (bodyStart === -1) return {};
-[L008, S4]     const body = raw.slice(bodyStart + 1);
-[L009, S0] 
-[L010, S4]     let i = 0;
-[L011, S4]     const n = body.length;
-[L012, S4]     while (i < n) {
-[L013, S8]         while (i < n && /[\s,]/.test(body[i])) i++;
-[L014, S8]         if (i >= n || body[i] === '}') break;
-[L015, S0] 
-[L016, S8]         const keyStart = i;
-[L017, S8]         while (i < n && body[i] !== '=' && body[i] !== '}' && !/\s/.test(body[i])) {
-[L018, S12]             i++;
-[L019, S8]         }
-[L020, S8]         const key = body.slice(keyStart, i).trim().toLowerCase();
-[L021, S8]         while (i < n && /[\s=]/.test(body[i])) i++;
-[L022, S8]         if (i >= n || body[i] === '}') break;
+[L003, S0] ## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
+[L004, S0] - [x] Story 1.0: Roadmap &amp; Planning Initialization
+[L005, S0] - [x] Story 1.1: Project Dependencies &amp; Context Genesis
+[L006, S0] 
+[L007, S0] ## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
+[L008, S0] - [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
+[L009, S0] - [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
+[L010, S0] - [x] [REQ-003] Bibliography Data Display &amp; Table View
+[L011, S0] 
+[L012, S0] ## EPIC 3: BATCH LOAD INTERFACE
+[L013, S0] - [x] [REQ-004] Frontend Routing &amp; Main Layout
+[L014, S0] - [x] [REQ-005] Load View - State Fractality (Custom Hook)
+[L015, S0] - [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
+[L016, S0] - [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
+[L017, S0] 
+[L018, S0] ## EPIC 4: BATCH DOWNLOAD EXECUTION
+[L019, S0] - [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
+[L020, S0] - [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
+[L021, S0] - [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
+[L022, S0] - [x] [REQ-011] Frontend SSE Hook State Integration
 [L023, S0] 
-[L024, S8]         let val = '';
-[L025, S8]         if (body[i] === '{') {
-[L026, S12]             i++;
-[L027, S12]             let depth = 1;
-[L028, S12]             const valStart = i;
-[L029, S12]             while (i < n && depth > 0) {
-[L030, S16]                 if (body[i] === '{') depth++;
-[L031, S16]                 else if (body[i] === '}') depth--;
-[L032, S16]                 if (depth > 0) i++;
-[L033, S12]             }
-[L034, S12]             val = body.slice(valStart, i).trim();
-[L035, S12]             i++;
-[L036, S8]         } else if (body[i] === '"') {
-[L037, S12]             i++;
-[L038, S12]             const valStart = i;
-[L039, S12]             while (i < n && body[i] !== '"') {
-[L040, S16]                 if (body[i] === '\\' && i + 1 < n) i++;
-[L041, S16]                 i++;
-[L042, S12]             }
-[L043, S12]             val = body.slice(valStart, i).trim();
-[L044, S12]             i++;
-[L045, S8]         } else {
-[L046, S12]             const valStart = i;
-[L047, S12]             while (i < n && body[i] !== ',' && body[i] !== '}' && body[i] !== '\n') {
-[L048, S16]                 i++;
-[L049, S12]             }
-[L050, S12]             val = body.slice(valStart, i).trim();
-[L051, S8]         }
+[L024, S0] ## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
+[L025, S0] - [x] [REQ-012] Load View Validation &amp; Label Updates
+[L026, S0] - [x] [REQ-013] Queue View State &amp; UI Assembly
+[L027, S0] - [x] [REQ-014] Backend ZIP Service &amp; Download Action
+[L028, S0] 
+[L029, S0] ## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
+[L030, S0] - [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
+[L031, S0] - [x] [REQ-016] Identity Domain Models &amp; Keywords
+[L032, S0] - [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
+[L033, S0] 
+[L034, S0] ## EPIC 7: REFERENCES DATABASE INGESTION
+[L035, S0] - [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
+[L036, S0] - [x] [REQ-019] References Data Table View
+[L037, S0] - [x] [REQ-020] Frontend Injection State Hook
+[L038, S0] - [x] [REQ-021] References View Routing &amp; Assembly
+[L039, S0] 
+[L040, S0] ## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
+[L041, S0] - [x] [REQ-022] Multiple File Upload Logic (FIFO Queue)
+[L042, S0] - [x] [REQ-023] References Tab Translation to English
+[L043, S0] - [x] [REQ-024] UI Standardization (Width & Headers)
+[L044, S0] 
+[L045, S0] ## EPIC 9: LOCAL FILE BATCH DOWNLOAD
+[L046, S0] - [x] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
+[L047, S0] - [x] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
+[L048, S0] 
+[L049, S0] ## EPIC 10: INSTITUTIONAL IP DIRECT RESOLVER
+[L050, S0] - [x] [REQ-027] Institutional Direct PDF URL Extractor (Landing Page Metadata)
+[L051, S0] - [x] [REQ-028] Cascading Resolver Fallback Chain Integration
 [L052, S0] 
-[L053, S8]         if (key && val) {
-[L054, S12]             fields[key] = val.replace(/\\_/g, '_').replace(/\s+/g, ' ');
-[L055, S8]         }
-[L056, S4]     }
-[L057, S4]     return fields;
-[L058, S0] }
-[L059, S0] 
-[L060, S0] export default function useReferenceDetails(article = null) {
-[L061, S2]   const [activeTab, setActiveTab] = useState('Overview');
-[L062, S2]   const [drawerState, setDrawerState] = useState({
-[L063, S4]     isOpen: false,
-[L064, S4]     type: 'references',
-[L065, S4]     title: '',
-[L066, S4]     data: [],
-[L067, S2]   });
-[L068, S2]   const [hoverInfo, setHoverInfo] = useState(null);
-[L069, S2]   const [copiedText, setCopiedText] = useState(null);
-[L070, S2]   const [isAbstractExpanded, setIsAbstractExpanded] = useState(false);
-[L071, S0] 
-[L072, S2]   const handleTabChange = useCallback((tab) => {
-[L073, S4]     setActiveTab(tab);
-[L074, S2]   }, []);
+[L053, S0] ## EPIC 11: COOKIE AUTHENTICATION PASSTHROUGH
+[L054, S0] - [x] [REQ-029] Frontend UI State Fractality & Dumb View Wiring (Cookies)
+[L055, S0] - [x] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
+[L056, S0] - [x] [REQ-031] CLI Argument Cookie Support (Script OCP)
+[L057, S0] 
+[L058, S0] ## EPIC 12: REFERENCES UI REFINEMENT & BACKEND BUGFIX
+[L059, S0] - [x] [REQ-032] Backend Typing Bugfix (Micro-Surgery)
+[L060, S0] - [x] [REQ-033] UploadReferencesModal Dark Mode Compliance
+[L061, S0] - [x] [REQ-034] References Table Pagination & Search State (State Fractality)
+[L062, S0] - [x] [REQ-035] References Table Dumb View Wiring
+[L063, S0] 
+[L064, S0] ## EPIC 13: BIB ONLY INGESTION & INJECTION RESILIENCE
+[L065, S0] - [x] Story 12.0: Roadmap & Planning Initialization
+[L066, S0] - [x] [REQ-036] Backend Router Boundary Marshal (.bib Restriction)
+[L067, S0] - [x] [REQ-038] Backend Parser Core Logic (.bib Extraction)
+[L068, S0] - [x] [REQ-039] Backend Injection DB Resilience
+[L069, S0] - [x] [REQ-037] Frontend Hook State Fractality (.bib Validation)
+[L070, S0] 
+[L071, S0] ## EPIC 14: REFERENCES TABLE RESIZING & COUNT FIX
+[L072, S0] - [x] Story 13.0: Roadmap & Planning Initialization
+[L073, S0] - [x] [REQ-040] Synchronize and Clarify Imported vs. Displayed References Count
+[L074, S0] - [x] [REQ-041] Resizable Table Columns (State Fractality & View Wiring)
 [L075, S0] 
-[L076, S2]   const openDrawer = useCallback(
-[L077, S4]     (type, data = null, title = '') => {
-[L078, S6]       let resolvedData = data;
-[L079, S6]       let resolvedTitle = title;
-[L080, S0] 
-[L081, S6]       if (!resolvedData && article) {
-[L082, S8]         if (type === 'authors') {
-[L083, S10]           resolvedData = article.authors_detail || [];
-[L084, S10]           resolvedTitle = resolvedTitle || 'Authors Details';
-[L085, S8]         } else if (type === 'references') {
-[L086, S10]           resolvedData = article.references_list || [];
-[L087, S10]           resolvedTitle = resolvedTitle || 'Cited References';
-[L088, S8]         } else if (type === 'funding') {
-[L089, S10]           const hasList =
-[L090, S12]             article.funding_list && article.funding_list.length > 0;
-[L091, S10]           resolvedData = hasList
-[L092, S12]             ? article.funding_list
-[L093, S12]             : article.funding_text
-[L094, S12]             ? [article.funding_text]
-[L095, S12]             : [];
-[L096, S10]           resolvedTitle = resolvedTitle || 'Funding Acknowledgments';
-[L097, S8]         } else if (type === 'abstract') {
-[L098, S10]           resolvedData = article.abstract ? [article.abstract] : [];
-[L099, S10]           resolvedTitle = resolvedTitle || 'Full Abstract';
-[L100, S8]         }
-[L101, S6]       }
-[L102, S0] 
-[L103, S6]       setDrawerState({
-[L104, S8]         isOpen: true,
-[L105, S8]         type: type || 'references',
-[L106, S8]         title: resolvedTitle || 'Details',
-[L107, S8]         data: resolvedData || [],
-[L108, S6]       });
-[L109, S4]     },
-[L110, S4]     [article]
-[L111, S2]   );
-[L112, S0] 
-[L113, S2]   const handleExpandDrawer = useCallback(
-[L114, S4]     (type, customData, customTitle) => {
-[L115, S6]       openDrawer(type, customData, customTitle);
-[L116, S4]     },
-[L117, S4]     [openDrawer]
-[L118, S2]   );
-[L119, S0] 
-[L120, S2]   const closeDrawer = useCallback(() => {
-[L121, S4]     setDrawerState((prev) => ({
-[L122, S6]       ...prev,
-[L123, S6]       isOpen: false,
-[L124, S4]     }));
-[L125, S2]   }, []);
-[L126, S0] 
-[L127, S2]   const handleHoverInfo = useCallback((key, event) => {
-[L128, S4]     if (!key) {
-[L129, S6]       setHoverInfo(null);
-[L130, S6]       return;
-[L131, S4]     }
-[L132, S4]     setHoverInfo({
-[L133, S6]       key,
-[L134, S6]       rect: event?.currentTarget?.getBoundingClientRect?.() || null,
-[L135, S4]     });
-[L136, S2]   }, []);
-[L137, S0] 
-[L138, S2]   const handleCopy = useCallback(async (text) => {
-[L139, S4]     if (!text) return;
-[L140, S4]     try {
-[L141, S6]       if (
-[L142, S8]         typeof navigator !== 'undefined' &&
-[L143, S8]         navigator.clipboard &&
-[L144, S8]         navigator.clipboard.writeText
-[L145, S6]       ) {
-[L146, S8]         await navigator.clipboard.writeText(text);
-[L147, S6]       }
-[L148, S6]       setCopiedText(text);
-[L149, S6]       setTimeout(() => setCopiedText(null), 2500);
-[L150, S4]     } catch {
-[L151, S6]       // Fallback or silent error handling
-[L152, S4]     }
-[L153, S2]   }, []);
-[L154, S0] 
-[L155, S2]   const toggleAbstractExpanded = useCallback(() => {
-[L156, S4]     setIsAbstractExpanded((prev) => !prev);
-[L157, S2]   }, []);
-[L158, S0] 
-[L159, S2]   const formattedData = useMemo(() => {
-[L160, S4]     if (!article) {
-[L161, S6]       return {
-[L162, S8]         title: '',
-[L163, S8]         authors: '',
-[L164, S8]         year: '',
-[L165, S8]         journal: '',
-[L166, S8]         volume: '',
-[L167, S8]         issue: '',
-[L168, S8]         pages: '',
-[L169, S8]         doi: '',
-[L170, S8]         abstract: '',
-[L171, S8]         authorKeywords: [],
-[L172, S8]         plusKeywords: [],
-[L173, S8]         researchAreas: '',
-[L174, S8]         wosCategories: '',
-[L175, S8]         affiliations: '',
-[L176, S8]         authorsDetailsCount: 0,
-[L177, S8]         authorEmail: '',
-[L178, S8]         orcidCount: 0,
-[L179, S8]         researcherIdCount: 0,
-[L180, S8]         fundingText: '',
-[L181, S8]         type: 'Article',
-[L182, S8]         language: 'English',
-[L183, S8]         issn: '',
-[L184, S8]         month: '',
-[L185, S8]         articleNumber: '',
-[L186, S8]         publisher: '',
-[L187, S8]         address: '',
-[L188, S8]         timesCited: null,
-[L189, S8]         oaStatus: '',
-[L190, S8]         referencesList: [],
-[L191, S8]         authorsDetail: [],
-[L192, S8]         fundingList: [],
-[L193, S6]       };
-[L194, S4]     }
-[L195, S0] 
-[L196, S4]     const parsedBib = parseBibtexFields(article.raw_data || article.raw_bibtex || '');
-[L197, S0] 
-[L198, S4]     const keywords = Array.isArray(article.keywords) ? article.keywords : [];
-[L199, S4]     let authorKeywords = keywords
-[L200, S6]       .filter((k) => k && k.type === 'author')
-[L201, S6]       .map((k) => k.name || k)
-[L202, S6]       .filter(Boolean);
-[L203, S0] 
-[L204, S4]     let plusKeywords = keywords
-[L205, S6]       .filter((k) => k && k.type === 'plus')
-[L206, S6]       .map((k) => k.name || k)
-[L207, S6]       .filter(Boolean);
-[L208, S0] 
-[L209, S4]     if (authorKeywords.length === 0 && parsedBib['keywords']) {
-[L210, S8]         authorKeywords = parsedBib['keywords'].split(';').map((k) => k.trim()).filter(Boolean);
-[L211, S4]     }
-[L212, S4]     if (plusKeywords.length === 0 && parsedBib['keywords-plus']) {
-[L213, S8]         plusKeywords = parsedBib['keywords-plus'].split(';').map((k) => k.trim()).filter(Boolean);
-[L214, S4]     }
-[L215, S0] 
-[L216, S4]     const authorsDetail = Array.isArray(article.authors_detail)
-[L217, S6]       ? article.authors_detail
-[L218, S6]       : [];
-[L219, S0] 
-[L220, S4]     const corrAuthor = authorsDetail.find(
-[L221, S6]       (a) => a && a.is_corresponding && a.email
-[L222, S4]     );
-[L223, S4]     const firstAuthorWithEmail = authorsDetail.find((a) => a && a.email);
-[L224, S4]     let authorEmail =
-[L225, S6]       corrAuthor?.email || firstAuthorWithEmail?.email || parsedBib['author-email'] || '';
-[L226, S0] 
-[L227, S4]     let orcidCount = authorsDetail.filter((a) => a && a.orcid).length;
-[L228, S4]     if (orcidCount === 0 && parsedBib['orcid-numbers']) {
-[L229, S8]         orcidCount = parsedBib['orcid-numbers'].split('/').length - 1;
-[L230, S4]     }
-[L231, S0] 
-[L232, S4]     let researcherIdCount = authorsDetail.filter(
-[L233, S6]       (a) => a && a.researcher_id
-[L234, S4]     ).length;
-[L235, S4]     if (researcherIdCount === 0 && parsedBib['researcherid-numbers']) {
-[L236, S8]         researcherIdCount = parsedBib['researcherid-numbers'].split('/').length - 1;
-[L237, S4]     }
-[L238, S0] 
-[L239, S4]     const affiliationsSet = new Set(
-[L240, S6]       authorsDetail.map((a) => a && a.affiliation).filter(Boolean)
-[L241, S4]     );
-[L242, S4]     let affiliations = Array.from(affiliationsSet).join('; ');
-[L243, S4]     if (!affiliations) {
-[L244, S8]         affiliations = parsedBib['affiliation'] || parsedBib['affiliations'] || '';
-[L245, S4]     }
-[L246, S0] 
-[L247, S4]     return {
-[L248, S6]       title: article.title || '',
-[L249, S6]       authors: article.author || '',
-[L250, S6]       year: article.year ? String(article.year) : '',
-[L251, S6]       journal: article.journal || '',
-[L252, S6]       volume: article.volume ? String(article.volume) : '',
-[L253, S6]       issue: article.issue ? String(article.issue) : '',
-[L254, S6]       pages: article.pages || '',
-[L255, S6]       doi: article.doi || '',
-[L256, S6]       abstract: article.abstract || '',
-[L257, S6]       authorKeywords,
-[L258, S6]       plusKeywords,
-[L259, S6]       researchAreas: article.research_areas || '',
-[L260, S6]       wosCategories: article.web_of_science_categories || '',
-[L261, S6]       affiliations,
-[L262, S6]       authorsDetailsCount: authorsDetail.length,
-[L263, S6]       authorEmail,
-[L264, S6]       orcidCount,
-[L265, S6]       researcherIdCount,
-[L266, S6]       fundingText: article.funding_text || '',
-[L267, S6]       type: 'Article',
-[L268, S6]       language: article.language || 'English',
-[L269, S6]       issn: article.issn || '',
-[L270, S6]       month: article.month || '',
-[L271, S6]       articleNumber: article.pages || '',
-[L272, S6]       publisher: article.publisher || '',
-[L273, S6]       address: article.address || '',
-[L274, S6]       timesCited:
-[L275, S8]         typeof article.times_cited === 'number' ? article.times_cited : null,
-[L276, S6]       oaStatus: article.oa_status || '',
-[L277, S6]       referencesList: Array.isArray(article.references_list)
-[L278, S8]         ? article.references_list
-[L279, S8]         : [],
-[L280, S6]       authorsDetail,
-[L281, S6]       fundingList: Array.isArray(article.funding_list)
-[L282, S8]         ? article.funding_list
-[L283, S8]         : [],
-[L284, S4]     };
-[L285, S2]   }, [article]);
-[L286, S0] 
-[L287, S2]   return {
-[L288, S4]     activeTab,
-[L289, S4]     setActiveTab,
-[L290, S4]     handleTabChange,
-[L291, S4]     drawerState,
-[L292, S4]     openDrawer,
-[L293, S4]     handleExpandDrawer,
-[L294, S4]     closeDrawer,
-[L295, S4]     hoverInfo,
-[L296, S4]     handleHoverInfo,
-[L297, S4]     copiedText,
-[L298, S4]     handleCopy,
-[L299, S4]     isAbstractExpanded,
-[L300, S4]     toggleAbstractExpanded,
-[L301, S4]     ...formattedData,
-[L302, S2]   };
-[L303, S0] }
+[L076, S0] ## EPIC 15: BIBLIOGRAPHIC METADATA EXPANSION & BULK INJECTION
+[L077, S0] - [x] Story 15.0: Roadmap & Planning Initialization
+[L078, S0] - [x] [REQ-042] Frontend UI Dumb View Wiring (Text Standardization)
+[L079, S0] - [x] [REQ-043] Database Schema Expansion & State Preservation
+[L080, S0] - [x] [REQ-044] Boundary Marshal Schema & Parser Core Logic
+[L081, S0] - [x] [REQ-045] Bulk Injection Refactoring (Performance & Concurrency)
+[L082, S0] 
+[L083, S0] ## EPIC 16: METADATA HOVER-REVEAL UI
+[L084, S0] - [x] Story 16.0: Roadmap & Planning Initialization
+[L085, S0] - [x] [REQ-046] Metadata Hover-Reveal UI (Grid & Popover)
+[L086, S0] 
+[L087, S0] ## EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE
+[L088, S0] - [x] Story 17.0: Roadmap & Planning Initialization
+[L089, S0] - [x] [REQ-047] Backend Reference Serialization Audit & Boundary Marshal
+[L090, S0] - [x] [REQ-048] Reusable Base Modal Architecture (ModalTemplate) Dumb View
+[L091, S0] - [x] [REQ-049] Reference Details - Hero Ribbon Dumb View
+[L092, S0] - [x] [REQ-050] Overview Tab - Left & Right Columns & Metrics Dumb Views
+[L093, S0] - [x] [REQ-051] Secondary Deep-Dive Drawer Dumb View & Hook State Fractality
+[L094, S0] 
+[L095, S0] ## Active Roadmaps
+[L096, S0] - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
+[L097, S0] - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
+[L098, S0] - [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
+[L099, S0] - [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
+[L100, S0] - [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
+[L101, S0] - [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
+[L102, S0] - [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
+[L103, S0] - [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
+[L104, S0] - [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
+[L105, S0] - [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
+[L106, S0] - [Roadmap 11: References UI Refinement & Backend Bugfix](roadmap_11_references_ui_and_bugfixes.md)
+[L107, S0] - [Roadmap 12: Bib Only Ingestion & Injection Resilience](roadmap_12_bib_only_and_injection_fix.md)
+[L108, S0] - [Roadmap 13: References Table Resizing & Count Fix](roadmap_13_references_table_resizing_and_count_fix.md)
+[L109, S0] - [Roadmap 15: Bibliographic Metadata & Bulk Injection](roadmap_15_bibliographic_metadata_and_bulk_injection.md)
+[L110, S0] - [Roadmap 16: Metadata Hover-Reveal UI](roadmap_16_metadata_hover_reveal.md)
+[L111, S0] - [Roadmap 17: Reference Details Modal](roadmap_17_reference_details_modal.md)

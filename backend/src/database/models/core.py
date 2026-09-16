@@ -101,6 +101,12 @@ class Article(Base):
         nullable=True,
         comment="Journal or venue publishing the article",
     )
+    journal_id = Column(
+        Integer,
+        ForeignKey("journals.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="Foreign key linking to journals table for dimensional modeling",
+    )
     year = Column(
         Integer,
         nullable=True,
@@ -243,6 +249,32 @@ class Article(Base):
         back_populates="article",
         cascade="all, delete-orphan",
     )
+    journal_entity = relationship(
+        "Journal",
+        back_populates="articles",
+    )
+    article_countries = relationship(
+        "ArticleCountry",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+    countries = relationship(
+        "Country",
+        secondary="article_countries",
+        back_populates="articles",
+        viewonly=True,
+    )
+    article_citations = relationship(
+        "ArticleCitation",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+    cited_references = relationship(
+        "CitedReference",
+        secondary="article_citations",
+        back_populates="articles",
+        viewonly=True,
+    )
 
 
 class ProjectArticle(Base):
@@ -290,3 +322,203 @@ class ProjectArticle(Base):
 
     project = relationship("Project", back_populates="project_articles")
     article = relationship("Article", back_populates="project_articles")
+
+
+class ArticleCountry(Base):
+    """Junction model mapping articles to countries."""
+
+    __tablename__ = "article_countries"
+    __table_args__ = (
+        UniqueConstraint(
+            "article_id",
+            "country_id",
+            name="uq_article_country",
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key junction identifier",
+    )
+    article_id = Column(
+        Integer,
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="Foreign key linking to articles.id",
+    )
+    country_id = Column(
+        Integer,
+        ForeignKey("countries.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="Foreign key linking to countries.id",
+    )
+
+    article = relationship("Article", back_populates="article_countries")
+    country = relationship("Country", back_populates="article_countries")
+
+
+class ArticleCitation(Base):
+    """Junction model connecting an article to cited references."""
+
+    __tablename__ = "article_citations"
+    __table_args__ = (
+        UniqueConstraint(
+            "article_id",
+            "cited_reference_id",
+            name="uq_article_citation",
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key junction identifier",
+    )
+    article_id = Column(
+        Integer,
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="Foreign key linking to citing article",
+    )
+    cited_reference_id = Column(
+        Integer,
+        ForeignKey("cited_references.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="Foreign key linking to cited reference",
+    )
+
+    article = relationship("Article", back_populates="article_citations")
+    cited_reference = relationship("CitedReference", back_populates="article_citations")
+
+
+class Country(Base):
+    """Represents a geographical country involved in the publication."""
+
+    __tablename__ = "countries"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key integer identifier",
+    )
+    name = Column(
+        String(100),
+        nullable=False,
+        unique=True,
+        index=True,
+        comment="Standardized name of the country",
+    )
+
+    article_countries = relationship(
+        "ArticleCountry",
+        back_populates="country",
+        cascade="all, delete-orphan",
+    )
+    articles = relationship(
+        "Article",
+        secondary="article_countries",
+        back_populates="countries",
+        viewonly=True,
+    )
+
+
+class CitedReference(Base):
+    """Represents a unique cited reference extracted from an article."""
+
+    __tablename__ = "cited_references"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key integer identifier",
+    )
+    raw_string = Column(
+        Text,
+        nullable=False,
+        unique=True,
+        index=True,
+        comment="Raw unique string representing this reference",
+    )
+    author = Column(
+        String(255),
+        nullable=True,
+        comment="Extracted first author of the reference",
+    )
+    year = Column(
+        Integer,
+        nullable=True,
+        comment="Extracted publication year of the reference",
+    )
+    source = Column(
+        String(255),
+        nullable=True,
+        comment="Extracted journal or source of the reference",
+    )
+    doi = Column(
+        String(255),
+        nullable=True,
+        index=True,
+        comment="DOI of the cited reference if available",
+    )
+
+    article_citations = relationship(
+        "ArticleCitation",
+        back_populates="cited_reference",
+        cascade="all, delete-orphan",
+    )
+    articles = relationship(
+        "Article",
+        secondary="article_citations",
+        back_populates="cited_references",
+        viewonly=True,
+    )
+
+
+class Journal(Base):
+    """Represents an academic journal or publication venue."""
+
+    __tablename__ = "journals"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key integer identifier",
+    )
+    name = Column(
+        String(255),
+        nullable=False,
+        unique=True,
+        index=True,
+        comment="Full name of the journal",
+    )
+    iso_abbreviation = Column(
+        String(255),
+        nullable=True,
+        comment="ISO abbreviation of the journal",
+    )
+    issn = Column(
+        String(50),
+        nullable=True,
+        comment="International Standard Serial Number",
+    )
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp of creation",
+    )
+
+    articles = relationship(
+        "Article",
+        back_populates="journal_entity",
+    )

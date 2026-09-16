@@ -92,6 +92,13 @@
 - [x] [REQ-050] Overview Tab - Left & Right Columns & Metrics Dumb Views
 - [x] [REQ-051] Secondary Deep-Dive Drawer Dumb View & Hook State Fractality
 
+## EPIC 18: BIBLIOMETRIC DATA WAREHOUSE & ADVANCED SCIENTOMETRICS
+- [x] Story 18.0: Roadmap & Planning Initialization
+- [ ] [REQ-052] Database Schema Expansion (Countries, Journals, Cited References)
+- [ ] [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
+- [ ] [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
+- [ ] [REQ-055] Alembic Migration Generation & Schema Upgrade
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
@@ -109,3 +116,4 @@
 - [Roadmap 15: Bibliographic Metadata & Bulk Injection](roadmap_15_bibliographic_metadata_and_bulk_injection.md)
 - [Roadmap 16: Metadata Hover-Reveal UI](roadmap_16_metadata_hover_reveal.md)
 - [Roadmap 17: Reference Details Modal](roadmap_17_reference_details_modal.md)
+- [Roadmap 18: Bibliometric Data Warehouse](roadmap_18_bibliometric_data_warehouse.md)
