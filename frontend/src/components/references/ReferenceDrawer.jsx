@@ -45,11 +45,13 @@ export default function ReferenceDrawer({
         </div>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-white p-1 rounded transition-colors"
+          style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
           aria-label="Close drawer"
         >
           <svg
-            className="w-5 h-5"
+            width="20"
+            height="20"
+            style={{ width: '20px', height: '20px', flexShrink: 0 }}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
