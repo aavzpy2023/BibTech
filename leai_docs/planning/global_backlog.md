@@ -97,7 +97,7 @@
 - [x] [REQ-052] Database Schema Expansion (Countries, Journals, Cited References)
 - [x] [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
 - [x] [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
-- [ ] [REQ-055] Alembic Migration Generation & Schema Upgrade
+- [x] [REQ-055] Alembic Migration Generation & Schema Upgrade
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)

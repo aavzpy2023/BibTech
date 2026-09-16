@@ -33,6 +33,6 @@ To support advanced bibliometric network analysis (Co-citation, Bibliographic Co
 ## [REQ-055] Alembic Migration Generation & Schema Upgrade
 - **Goal**: Apply the model changes to the physical PostgreSQL database safely.
 - **Tasks**:
-  - [ ] Generate Alembic revision `add_bibliometric_snowflake_schema`.
-  - [ ] Execute DB upgrade.
+  - [x] Generate Alembic revision `add_bibliometric_snowflake_schema`.
+  - [x] Execute DB upgrade.
 - **Validations**: Verify physical tables exist and constraints are sound via test queries.
