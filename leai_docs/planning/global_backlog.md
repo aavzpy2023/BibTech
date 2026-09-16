@@ -73,6 +73,13 @@
 - [x] [REQ-040] Synchronize and Clarify Imported vs. Displayed References Count
 - [x] [REQ-041] Resizable Table Columns (State Fractality & View Wiring)
 
+## EPIC 15: BIBLIOGRAPHIC METADATA EXPANSION & BULK INJECTION
+- [x] Story 15.0: Roadmap & Planning Initialization
+- [ ] [REQ-042] Frontend UI Dumb View Wiring (Text Standardization)
+- [ ] [REQ-043] Database Schema Expansion & State Preservation
+- [ ] [REQ-044] Boundary Marshal Schema & Parser Core Logic
+- [ ] [REQ-045] Bulk Injection Refactoring (Performance & Concurrency)
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
@@ -87,3 +94,4 @@
 - [Roadmap 11: References UI Refinement & Backend Bugfix](roadmap_11_references_ui_and_bugfixes.md)
 - [Roadmap 12: Bib Only Ingestion & Injection Resilience](roadmap_12_bib_only_and_injection_fix.md)
 - [Roadmap 13: References Table Resizing & Count Fix](roadmap_13_references_table_resizing_and_count_fix.md)
+- [Roadmap 15: Bibliographic Metadata & Bulk Injection](roadmap_15_bibliographic_metadata_and_bulk_injection.md)

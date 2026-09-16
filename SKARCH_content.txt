@@ -1,973 +1,164 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-16 10:04:12
+Date: 2026-09-16 10:24:47
 AST Mode: True
 Line Numbers: False
-Modules: router.py, core.py, identity.py, tracking.py, ReferencesView.jsx
-Processed Files: 5
+Modules: global_backlog.md, UploadReferencesModal.jsx, core.py, env.py, schemas.py, parser_service.py, injection_service.py
+Processed Files: 7
 ===========================
 
 
 
-// --- backend/src/bibliography/router.py ---
-
-import os
-import re
-from datetime import datetime, timezone
-from typing import List
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-from .schemas import (
-    ParsedReference,
-    BatchDownloadRequest,
-    ZipDownloadRequest,
-    LocalBatchDownloadRequest,
-)
-from .parser_service import parse_bibliography_content
-from .download_service import execute_batch_download
-from .zip_service import create_zip_from_pdfs
-from .injection_service import inject_references_to_db
-
-try:
-    from ..database.session import get_db
-    from ..database.models.core import Article, Project, ProjectArticle
-except (ImportError, ValueError):
-    try:
-        from src.database.session import get_db
-        from src.database.models.core import (
-            Article,
-            Project,
-            ProjectArticle,
-        )
-    except ImportError:
-        from backend.src.database.session import get_db
-        from backend.src.database.models.core import (
-            Article,
-            Project,
-            ProjectArticle,
-        )
-    try:
-        from src.database.session import get_db
-    except ImportError:
-        from backend.src.database.session import get_db
-
-router = APIRouter()
-
-try:
-    import multipart
-    HAS_MULTIPART = True
-except ImportError:
-    HAS_MULTIPART = False
-
-async def _process_upload(file: UploadFile) -> List[ParsedReference]:
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-    
-    _, ext = os.path.splitext(file.filename)
-    if ext.lower() not in [".bib"]:
-        raise HTTPException(status_code=400, detail="Unsupported file extension")
-    
-    try:
-        content_bytes = await file.read()
-        try:
-            content_str = content_bytes.decode("utf-8")
-        except UnicodeDecodeError:
-            content_str = content_bytes.decode("latin-1")
-        refs = parse_bibliography_content(content_str, ext)
-        return refs
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error during parsing"
-        )
-
-
-async def _process_inject(
-    file: UploadFile, project_code: str, db: Session
-) -> dict:
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-
-    _, ext = os.path.splitext(file.filename)
-    if ext.lower() not in [".bib"]:
-        raise HTTPException(
-            status_code=400, detail="Unsupported file extension"
-        )
-
-    try:
-        content_bytes = await file.read()
-        content_str = content_bytes.decode("utf-8")
-        refs = parse_bibliography_content(content_str, ext)
-        try:
-            inserted = inject_references_to_db(db, refs, project_code)
-        except RuntimeError:
-            raise HTTPException(
-                status_code=503,
-                detail="Error de conexión a la base de datos. Intente nuevamente."
-            )
-        return {"message": "Success", "inserted": inserted}
-    except HTTPException:
-        raise
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as exc:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal server error during injection: {str(exc)}",
-        )
-
-if HAS_MULTIPART:
-    @router.post("/upload", response_model=List[ParsedReference])
-    async def upload_bibliography(file: UploadFile = File(...)):
-        return await _process_upload(file)
-
-    @router.post("/inject")
-    async def inject_bibliography(
-        file: UploadFile = File(...),
-        project_code: str = Form(...),
-        db: Session = Depends(get_db),
-    ):
-        return await _process_inject(file, project_code, db)
-
-    @router.get("/references", response_model=List[ParsedReference])
-    def get_project_references(
-        project_code: str,
-        db: Session = Depends(get_db),
-    ):
-        project = (
-            db.query(Project).filter(Project.name == project_code).first()
-        )
-        if not project:
-            return []
-        links = (
-            db.query(ProjectArticle)
-            .filter(ProjectArticle.project_id == project.id)
-            .all()
-        )
-        article_ids = [link.article_id for link in links]
-        if not article_ids:
-            return []
-        articles = (
-            db.query(Article).filter(Article.id.in_(article_ids)).all()
-        )
-        def _to_str(val):
-            return str(val) if isinstance(val, (str, int, float)) else None
-
-        def _resolve_authors(art):
-            if getattr(art, "raw_data", None):
-                return str(art.raw_data)
-            if hasattr(art, "authors") and art.authors:
-                names = [
-                    getattr(x, "name", str(x))
-                    for x in art.authors
-                    if getattr(x, "name", str(x))
-                ]
-                if names:
-                    return " and ".join(names)
-            return _to_str(getattr(art, "author", None))
-
-        def _format_surname(raw_author):
-            if not raw_author or not isinstance(raw_author, str):
-                return "N/A"
-            clean = raw_author.strip()
-            if not clean:
-                return "N/A"
-            first = re.split(r"\s+and\s+|;\s*", clean, flags=re.I)[0].strip()
-            if not first:
-                return "N/A"
-            surname = first.split(",")[0].strip() if "," in first else (
-                first.split()[-1] if first.split() else first
-            )
-            return f"{surname} ..."
-
-        now = datetime.now(timezone.utc)
-        return [
-            ParsedReference(
-                author=_resolve_authors(a),
-                year=_to_str(getattr(a, "year", None)),
-                title=_to_str(getattr(a, "title", None)) or "Untitled",
-                journal=_to_str(getattr(a, "journal", None)),
-                doi=_to_str(getattr(a, "doi", None)),
-                upload_datetime=now,
-            )
-            for a in articles
-        ]
-else:
-    async def upload_bibliography(file: UploadFile):
-        return await _process_upload(file)
-
-    async def inject_bibliography(
-        file: UploadFile,
-        project_code: str,
-        db: Session,
-    ):
-        return await _process_inject(file, project_code, db)
-
-
-@router.post("/batch-download")
-async def batch_download(request: BatchDownloadRequest):
-    async def sse_generator():
-        async for event in execute_batch_download(
-            request.dois,
-            request.destination,
-            request.email,
-            request.delay,
-            request.cookies,
-        ):
-            yield f"data: {event}\n\n"
-
-    return StreamingResponse(
-        sse_generator(),
-        media_type="text/event-stream"
-    )
-
-
-@router.post("/batch-download-local")
-async def batch_download_local(request: LocalBatchDownloadRequest):
-    try:
-        with open(request.file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
-    
-    _, ext = os.path.splitext(request.file_path)
-    try:
-        refs = parse_bibliography_content(content, ext)
-        dois = list(set(ref.doi for ref in refs if ref.doi))
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Parse error: {str(e)}")
-
-    async def sse_generator():
-        async for event in execute_batch_download(
-            dois,
-            request.destination,
-            request.email,
-            request.delay,
-            request.cookies,
-        ):
-            yield f"data: {event}\n\n"
-
-    return StreamingResponse(sse_generator(), media_type="text/event-stream")
-
-
-@router.post("/download-zip")
-async def download_zip(request: ZipDownloadRequest):
-    zip_io = create_zip_from_pdfs(request.batch_name, request.dois)
-    return StreamingResponse(
-        zip_io,
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": (
-                f"attachment; filename={request.batch_name}.zip"
-            )
-        },
-    )
-
-
-
-// --- backend/src/database/models/core.py ---
-
-"""Core relational database models for projects and articles."""
-from datetime import datetime, timezone
-
-from sqlalchemy import (
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    UniqueConstraint,
-)
-from sqlalchemy.orm import relationship
-
-from ..session import Base
-
-
-class Project(Base):
-    """Represents a research project containing bibliographies."""
-
-    __tablename__ = "projects"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-        comment="Primary key integer identifier",
-    )
-    name = Column(
-        String(255),
-        nullable=False,
-        comment="Project display and reference name",
-    )
-    description = Column(
-        Text,
-        nullable=True,
-        comment="Detailed description of the project",
-    )
-    hashed_password = Column(
-        String(255),
-        nullable=True,
-        comment="Bcrypt hashed project password",
-    )
-    created_at = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="UTC timestamp when the project was created",
-    )
-    updated_at = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="UTC timestamp when the project was last updated",
-    )
-
-    project_articles = relationship(
-        "ProjectArticle",
-        back_populates="project",
-        cascade="all, delete-orphan",
-    )
-    articles = relationship(
-        "Article",
-        secondary="project_articles",
-        back_populates="projects",
-        viewonly=True,
-    )
-    downloads = relationship(
-        "Download",
-        back_populates="project",
-        cascade="all, delete-orphan",
-    )
-
-
-class Article(Base):
-    """Represents an academic publication with bibliographic data."""
-
-    __tablename__ = "articles"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-        comment="Primary key integer identifier",
-    )
-    doi = Column(
-        String(255),
-        unique=True,
-        index=True,
-        nullable=True,
-        comment="Normalized DOI unique key",
-    )
-    title = Column(
-        Text,
-        nullable=False,
-        comment="Full title of the article or publication",
-    )
-    journal = Column(
-        String(255),
-        nullable=True,
-        comment="Journal or venue publishing the article",
-    )
-    year = Column(
-        Integer,
-        nullable=True,
-        comment="Publication calendar year",
-    )
-    volume = Column(
-        String(50),
-        nullable=True,
-        comment="Journal publication volume",
-    )
-    issue = Column(
-        String(50),
-        nullable=True,
-        comment="Journal publication issue",
-    )
-    pages = Column(
-        String(50),
-        nullable=True,
-        comment="Article page range or article number",
-    )
-    abstract = Column(
-        Text,
-        nullable=True,
-        comment="Full text abstract of the article",
-    )
-    raw_data = Column(
-        Text,
-        nullable=True,
-        comment="Raw bibliographic payload (e.g. BibTeX or RIS)",
-    )
-    created_at = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="UTC timestamp when article was ingested",
-    )
-    updated_at = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="UTC timestamp when article record was updated",
-    )
-
-    project_articles = relationship(
-        "ProjectArticle",
-        back_populates="article",
-        cascade="all, delete-orphan",
-    )
-    projects = relationship(
-        "Project",
-        secondary="project_articles",
-        back_populates="articles",
-        viewonly=True,
-    )
-    author_articles = relationship(
-        "AuthorArticle",
-        back_populates="article",
-        cascade="all, delete-orphan",
-    )
-    authors = relationship(
-        "Author",
-        secondary="author_articles",
-        back_populates="articles",
-        viewonly=True,
-    )
-    keyword_articles = relationship(
-        "KeywordArticle",
-        back_populates="article",
-        cascade="all, delete-orphan",
-    )
-    keywords = relationship(
-        "Keyword",
-        secondary="keyword_articles",
-        back_populates="articles",
-        viewonly=True,
-    )
-    references = relationship(
-        "Reference",
-        back_populates="article",
-        cascade="all, delete-orphan",
-    )
-    funding = relationship(
-        "Funding",
-        back_populates="article",
-        cascade="all, delete-orphan",
-    )
-    downloads = relationship(
-        "Download",
-        back_populates="article",
-        cascade="all, delete-orphan",
-    )
-
-
-class ProjectArticle(Base):
-    """Junction model connecting projects to articles."""
-
-    __tablename__ = "project_articles"
-    __table_args__ = (
-        UniqueConstraint(
-            "project_id",
-            "article_id",
-            name="uq_project_article",
-        ),
-    )
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-        comment="Primary key junction identifier",
-    )
-    project_id = Column(
-        Integer,
-        ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="Foreign key linking to projects.id",
-    )
-    article_id = Column(
-        Integer,
-        ForeignKey("articles.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="Foreign key linking to articles.id",
-    )
-    status = Column(
-        String(50),
-        default="pending",
-        nullable=False,
-        comment="Processing or download status of the article in the project",
-    )
-    added_at = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="UTC timestamp when article was associated with project",
-    )
-
-    project = relationship("Project", back_populates="project_articles")
-    article = relationship("Article", back_populates="project_articles")
-
-
-// --- backend/src/database/models/identity.py ---
-
-"""Identity domain models for affiliations, authors, and article authorship."""
-from datetime import datetime, timezone
-
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    UniqueConstraint,
-)
-from sqlalchemy.orm import relationship
-
-from ..session import Base
-
-
-class Affiliation(Base):
-    """Represents an academic institution or research organization."""
-
-    __tablename__ = "affiliations"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-        comment="Primary key identifier for affiliation",
-    )
-    institution = Column(
-        String(255),
-        nullable=False,
-        comment="Institution or organization name",
-    )
-    department = Column(
-        String(255),
-        nullable=True,
-        comment="Academic department or laboratory division",
-    )
-    country = Column(
-        String(100),
-        nullable=True,
-        comment="Country location of the institution",
-    )
-    created_at = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="UTC timestamp when affiliation was created",
-    )
-
-    authors = relationship("Author", back_populates="affiliation")
-
-
-class Author(Base):
-    """Represents a researcher or publication contributor."""
-
-    __tablename__ = "authors"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-        comment="Primary key identifier for author",
-    )
-    name = Column(
-        String(255),
-        nullable=False,
-        comment="Full name of the author or researcher",
-    )
-    orcid = Column(
-        String(50),
-        nullable=True,
-        index=True,
-        comment="Author's ORCID identifier",
-    )
-    email = Column(
-        String(255),
-        nullable=True,
-        comment="Contact email address for the author",
-    )
-    affiliation_id = Column(
-        Integer,
-        ForeignKey("affiliations.id", ondelete="SET NULL"),
-        nullable=True,
-        comment="Foreign key linking to affiliations.id",
-    )
-    created_at = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="UTC timestamp when author record was created",
-    )
-
-    affiliation = relationship("Affiliation", back_populates="authors")
-    author_articles = relationship(
-        "AuthorArticle",
-        back_populates="author",
-        cascade="all, delete-orphan",
-    )
-    articles = relationship(
-        "Article",
-        secondary="author_articles",
-        back_populates="authors",
-        viewonly=True,
-    )
-
-
-class AuthorArticle(Base):
-    """Junction model connecting authors to articles with authorship metadata."""
-
-    __tablename__ = "author_articles"
-    __table_args__ = (
-        UniqueConstraint(
-            "author_id",
-            "article_id",
-            name="uq_author_article",
-        ),
-    )
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-        comment="Primary key junction identifier",
-    )
-    author_id = Column(
-        Integer,
-        ForeignKey("authors.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="Foreign key linking to authors.id",
-    )
-    article_id = Column(
-        Integer,
-        ForeignKey("articles.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="Foreign key linking to articles.id",
-    )
-    author_order = Column(
-        Integer,
-        default=1,
-        nullable=False,
-        comment="Order of authorship in the publication (1-based)",
-    )
-    is_corresponding = Column(
-        Boolean,
-        default=False,
-        nullable=False,
-        comment="Flag indicating if this author is the corresponding author",
-    )
-
-    author = relationship("Author", back_populates="author_articles")
-    article = relationship("Article", back_populates="author_articles")
-
-
-class Keyword(Base):
-    """Represents a descriptive keyword, MeSH term, or topical tag."""
-
-    __tablename__ = "keywords"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-        comment="Primary key identifier for keyword",
-    )
-    name = Column(
-        String(255),
-        nullable=False,
-        index=True,
-        comment="Normalized keyword or term string",
-    )
-    type = Column(
-        String(50),
-        default="author",
-        nullable=False,
-        comment="Classification type of keyword (e.g. author, mesh, index)",
-    )
-    created_at = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="UTC timestamp when keyword was registered",
-    )
-
-    keyword_articles = relationship(
-        "KeywordArticle",
-        back_populates="keyword",
-        cascade="all, delete-orphan",
-    )
-    articles = relationship(
-        "Article",
-        secondary="keyword_articles",
-        back_populates="keywords",
-        viewonly=True,
-    )
-
-
-class KeywordArticle(Base):
-    """Junction model connecting keywords to articles."""
-
-    __tablename__ = "keyword_articles"
-    __table_args__ = (
-        UniqueConstraint(
-            "keyword_id",
-            "article_id",
-            name="uq_keyword_article",
-        ),
-    )
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-        comment="Primary key junction identifier",
-    )
-    keyword_id = Column(
-        Integer,
-        ForeignKey("keywords.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="Foreign key linking to keywords.id",
-    )
-    article_id = Column(
-        Integer,
-        ForeignKey("articles.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="Foreign key linking to articles.id",
-    )
-    created_at = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="UTC timestamp when keyword was linked to article",
-    )
-
-    keyword = relationship("Keyword", back_populates="keyword_articles")
-    article = relationship("Article", back_populates="keyword_articles")
-
-
-// --- backend/src/database/models/tracking.py ---
-
-"""Extended tracking models for citations, funding, and paper downloads."""
-from datetime import datetime, timezone
-
-from sqlalchemy import (
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-)
-from sqlalchemy.orm import relationship
-
-from ..session import Base
-
-
-class Reference(Base):
-    """Represents a citation or reference cited by an article."""
-
-    __tablename__ = "references"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-        comment="Primary key identifier for reference",
-    )
-    article_id = Column(
-        Integer,
-        ForeignKey("articles.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="Foreign key linking to the referencing article",
-    )
-    raw_citation = Column(
-        Text,
-        nullable=False,
-        comment="Full text or formatted citation string of the reference",
-    )
-    doi = Column(
-        String(255),
-        nullable=True,
-        index=True,
-        comment="Extracted or resolved DOI for cited reference",
-    )
-    title = Column(
-        Text,
-        nullable=True,
-        comment="Title of the cited reference",
-    )
-    year = Column(
-        Integer,
-        nullable=True,
-        comment="Publication year of the cited reference",
-    )
-    created_at = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="UTC timestamp when reference was extracted",
-    )
-
-    article = relationship("Article", back_populates="references")
-
-
-class Funding(Base):
-    """Represents financial support or grants supporting an article."""
-
-    __tablename__ = "funding"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-        comment="Primary key identifier for funding record",
-    )
-    article_id = Column(
-        Integer,
-        ForeignKey("articles.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="Foreign key linking to funded article",
-    )
-    agency = Column(
-        String(255),
-        nullable=False,
-        comment="Name of funding agency or institution",
-    )
-    grant_number = Column(
-        String(100),
-        nullable=True,
-        comment="Specific grant or award identification number",
-    )
-    country = Column(
-        String(100),
-        nullable=True,
-        comment="Country of funding organization",
-    )
-    created_at = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="UTC timestamp when funding record was created",
-    )
-
-    article = relationship("Article", back_populates="funding")
-
-
-class Download(Base):
-    """Represents a document acquisition event for an article in a project."""
-
-    __tablename__ = "downloads"
-
-    id = Column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
-        comment="Primary key identifier for download record",
-    )
-    article_id = Column(
-        Integer,
-        ForeignKey("articles.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="Foreign key linking to downloaded article",
-    )
-    project_id = Column(
-        Integer,
-        ForeignKey("projects.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="Foreign key linking to parent project",
-    )
-    source = Column(
-        String(100),
-        nullable=False,
-        comment="Download source or resolver (e.g. unpaywall, openalex)",
-    )
-    file_path = Column(
-        String(500),
-        nullable=True,
-        comment="Local or cloud storage path of downloaded PDF",
-    )
-    file_size_bytes = Column(
-        Integer,
-        nullable=True,
-        comment="Size of downloaded file in bytes",
-    )
-    status = Column(
-        String(50),
-        default="completed",
-        nullable=False,
-        comment="Download status (e.g. completed, failed, in_progress)",
-    )
-    downloaded_at = Column(
-        DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-        comment="UTC timestamp when download occurred",
-    )
-
-    article = relationship("Article", back_populates="downloads")
-    project = relationship("Project", back_populates="downloads")
-
-
-// --- frontend/src/views/ReferencesView.jsx ---
-
-import React, { useState } from 'react';
-import { useReferencesUpload } from '../hooks/useReferencesUpload';
-import ReferencesDataTable from '../components/references/ReferencesDataTable';
-import UploadReferencesModal from '../components/references/UploadReferencesModal';
+// --- leai_docs/planning/global_backlog.md ---
+
+# Global Backlog
+
+## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
+- [x] Story 1.0: Roadmap &amp; Planning Initialization
+- [x] Story 1.1: Project Dependencies &amp; Context Genesis
+
+## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
+- [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
+- [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
+- [x] [REQ-003] Bibliography Data Display &amp; Table View
+
+## EPIC 3: BATCH LOAD INTERFACE
+- [x] [REQ-004] Frontend Routing &amp; Main Layout
+- [x] [REQ-005] Load View - State Fractality (Custom Hook)
+- [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
+- [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
+
+## EPIC 4: BATCH DOWNLOAD EXECUTION
+- [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
+- [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
+- [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
+- [x] [REQ-011] Frontend SSE Hook State Integration
+
+## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
+- [x] [REQ-012] Load View Validation &amp; Label Updates
+- [x] [REQ-013] Queue View State &amp; UI Assembly
+- [x] [REQ-014] Backend ZIP Service &amp; Download Action
+
+## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
+- [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
+- [x] [REQ-016] Identity Domain Models &amp; Keywords
+- [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
+
+## EPIC 7: REFERENCES DATABASE INGESTION
+- [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
+- [x] [REQ-019] References Data Table View
+- [x] [REQ-020] Frontend Injection State Hook
+- [x] [REQ-021] References View Routing &amp; Assembly
+
+## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
+- [x] [REQ-022] Multiple File Upload Logic (FIFO Queue)
+- [x] [REQ-023] References Tab Translation to English
+- [x] [REQ-024] UI Standardization (Width & Headers)
+
+## EPIC 9: LOCAL FILE BATCH DOWNLOAD
+- [x] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
+- [x] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
+
+## EPIC 10: INSTITUTIONAL IP DIRECT RESOLVER
+- [x] [REQ-027] Institutional Direct PDF URL Extractor (Landing Page Metadata)
+- [x] [REQ-028] Cascading Resolver Fallback Chain Integration
+
+## EPIC 11: COOKIE AUTHENTICATION PASSTHROUGH
+- [x] [REQ-029] Frontend UI State Fractality & Dumb View Wiring (Cookies)
+- [x] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
+- [x] [REQ-031] CLI Argument Cookie Support (Script OCP)
+
+## EPIC 12: REFERENCES UI REFINEMENT & BACKEND BUGFIX
+- [x] [REQ-032] Backend Typing Bugfix (Micro-Surgery)
+- [x] [REQ-033] UploadReferencesModal Dark Mode Compliance
+- [x] [REQ-034] References Table Pagination & Search State (State Fractality)
+- [x] [REQ-035] References Table Dumb View Wiring
+
+## EPIC 13: BIB ONLY INGESTION & INJECTION RESILIENCE
+- [x] Story 12.0: Roadmap & Planning Initialization
+- [x] [REQ-036] Backend Router Boundary Marshal (.bib Restriction)
+- [x] [REQ-038] Backend Parser Core Logic (.bib Extraction)
+- [x] [REQ-039] Backend Injection DB Resilience
+- [x] [REQ-037] Frontend Hook State Fractality (.bib Validation)
+
+## EPIC 14: REFERENCES TABLE RESIZING & COUNT FIX
+- [x] Story 13.0: Roadmap & Planning Initialization
+- [x] [REQ-040] Synchronize and Clarify Imported vs. Displayed References Count
+- [x] [REQ-041] Resizable Table Columns (State Fractality & View Wiring)
+
+## Active Roadmaps
+- [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
+- [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
+- [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
+- [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
+- [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
+- [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
+- [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
+- [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
+- [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
+- [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
+- [Roadmap 11: References UI Refinement & Backend Bugfix](roadmap_11_references_ui_and_bugfixes.md)
+- [Roadmap 12: Bib Only Ingestion & Injection Resilience](roadmap_12_bib_only_and_injection_fix.md)
+- [Roadmap 13: References Table Resizing & Count Fix](roadmap_13_references_table_resizing_and_count_fix.md)
+
+
+// --- frontend/src/components/references/UploadReferencesModal.jsx ---
+
+import React from 'react';
+import BibliographyUploader from '../BibliographyUploader';
+import Modal from '../Modal';
 
 const styles = {
-  container: {
-    fontFamily: 'system-ui, sans-serif',
-    padding: '0',
-    color: '#24292e',
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    backdropFilter: 'blur(2px)',
+  },
+  modal: {
+    backgroundColor: '#161b22',
+    border: '1px solid #30363d',
+    borderRadius: '8px',
+    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.18)',
+    width: '100%',
+    maxWidth: '450px',
+    padding: '24px',
+    boxSizing: 'border-box',
+    position: 'relative',
+    maxHeight: '90vh',
+    overflowY: 'auto',
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '20px',
-    flexWrap: 'wrap',
-    gap: '12px',
-  },
-  modalBtn: {
-    backgroundColor: '#0366d6',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '6px',
-    padding: '10px 18px',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-  },
-  card: {
-    border: 'none',
-    borderRadius: '10px',
-    padding: '24px',
-    backgroundColor: '#161b22',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-    marginBottom: '24px',
+    marginBottom: '16px',
   },
   title: {
-    fontSize: '24px',
-    fontWeight: 'bold',
+    margin: 0,
+    fontSize: '18px',
+    fontWeight: '600',
     color: '#f0f6fc',
-    margin: '0 0 8px 0'
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    fontSize: '18px',
+    cursor: 'pointer',
+    color: '#8b949e',
+    padding: 0,
   },
   description: {
     fontSize: '14px',
-    color: '#586069',
+    color: '#8b949e',
+    marginTop: 0,
     marginBottom: '20px',
   },
   formGroup: {
@@ -975,24 +166,27 @@ const styles = {
   },
   label: {
     display: 'block',
+    fontSize: '14px',
     fontWeight: '500',
     marginBottom: '8px',
-    fontSize: '14px',
+    color: '#f0f6fc',
   },
   input: {
     width: '100%',
-    maxWidth: '380px',
     padding: '10px 12px',
     fontSize: '14px',
-    border: '1px solid #d1d5da',
+    backgroundColor: '#0d1117',
+    color: '#f0f6fc',
+    border: '1px solid #30363d',
     borderRadius: '6px',
     boxSizing: 'border-box',
     outline: 'none',
   },
   hint: {
     fontSize: '12px',
-    color: '#6a737d',
+    color: '#8b949e',
     marginTop: '6px',
+    marginBottom: 0,
   },
   uploaderWrapper: {
     transition: 'opacity 0.2s ease',
@@ -1001,174 +195,103 @@ const styles = {
     backgroundColor: '#ffeef0',
     color: '#cb2431',
     border: '1px solid #f97583',
-    padding: '12px 16px',
+    padding: '10px 14px',
     borderRadius: '6px',
     marginBottom: '16px',
-    fontSize: '14px',
+    fontSize: '13px',
   },
   successBox: {
     backgroundColor: '#dcffe4',
     color: '#165c26',
     border: '1px solid #85e89d',
-    padding: '16px',
+    padding: '14px 16px',
     borderRadius: '6px',
-    marginTop: '24px',
+    marginTop: '16px',
+    marginBottom: '16px',
   },
   successTitle: {
+    margin: '0 0 6px 0',
     fontWeight: '600',
-    margin: '0 0 8px 0',
-    fontSize: '16px',
+    fontSize: '15px',
   },
-  badge: {
-    display: 'inline-block',
-    backgroundColor: '#2ea44f',
-    color: '#ffffff',
-    padding: '4px 10px',
-    borderRadius: '12px',
-    fontSize: '12px',
-    fontWeight: '600',
-    marginTop: '4px',
+  footer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '12px',
+    marginTop: '20px',
+  },
+  cancelBtn: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    color: '#f0f6fc',
+    backgroundColor: '#21262d',
+    border: '1px solid #30363d',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '500',
   },
 };
 
-export function ReferencesView() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tableData, setTableData] = useState([]);
-  const [_dummyState, _setDummy] = useState([
-    {
-      id: 1,
-      title: 'Attention Is All You Need',
-      author: 'Vaswani, A. et al.',
-      year: 2017,
-      journal: 'NeurIPS',
-    },
-    {
-      id: 2,
-      title: 'Deep Residual Learning for Image Recognition',
-      author: 'He, K. et al.',
-      year: 2016,
-      journal: 'CVPR',
-    },
-  ]);
+export function UploadReferencesModal({
+  isOpen,
+  onClose,
+  projectCode,
+  setProjectCode,
+  uploadAndInject,
+  isLoading,
+  isSuccess,
+  error,
+  insertedCount,
+  parsedCount,
+}) {
+  if (!isOpen) return null;
 
-  const {
-    projectCode,
-    setProjectCode,
-    isLoading,
-    isSuccess,
-    error,
-    insertedCount,
-    uploadAndInject,
-    resetStatus,
-  } = useReferencesUpload();
-
-  const fetchProjectReferences = React.useCallback(async (code) => {
-    if (!code || !code.trim()) {
-      setTableData([]);
-      return;
-    }
-    try {
-      const res = await fetch(
-        `/api/bibliography/references?project_code=${encodeURIComponent(code.trim())}`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setTableData(data);
-      }
-    } catch {
-      // Ignorado si falla la red
-    }
-  }, []);
-
-  React.useEffect(() => {
-    if (projectCode) {
-      fetchProjectReferences(projectCode);
-    }
-  }, [projectCode, fetchProjectReferences]);
+  const isProjectReady = Boolean(projectCode && projectCode.trim());
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <div>
-      <h2 style={{ ...styles.title, margin: 0 }}>
-        Bibliographic References
-      </h2>
-      <p style={{ ...styles.description, margin: '4px 0 0 0' }}>
-        View and manage persisted publications.
-        {projectCode && (
-          <span> Active project: <strong>{projectCode}</strong></span>
-        )}
-          </p>
-        </div>
-        <button
-          style={styles.modalBtn}
-      onClick={() => {
-        if (resetStatus) resetStatus();
-        setIsModalOpen(true);
-      }}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="New References Ingestion"
+      description="Enter the project code and select .bib files to persist in the database."
     >
-      + Add
-    </button>
-      </div>
-
-      <div style={styles.card}>
-        <ReferencesDataTable data={tableData} />
-      </div>
-
-      <UploadReferencesModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        projectCode={projectCode}
-        setProjectCode={setProjectCode}
-        uploadAndInject={async (files) => {
-          const parsed = await uploadAndInject(files);
-          if (parsed) {
-            fetchProjectReferences(projectCode);
-          }
-        }}
-        isLoading={isLoading}
-        isSuccess={isSuccess}
-        error={error}
-        insertedCount={insertedCount}
-      />
-    </div>
-  );
-}
-
-function _legacyUnused() {
-  return (
-    <div>
-      <div>
-        <h2>Ingesta</h2>
-        <p style={styles.description}>
-          Asocie archivos bibliográficos (.ris o .bib) a un proyecto de
-          investigación para persistir sus artículos.
-        </p>
-
-        <div style={styles.formGroup}>
-          <label htmlFor="project-code-input" style={styles.label}>
-            Código del Proyecto *
-          </label>
-          <input
-            id="project-code-input"
-            type="text"
-            placeholder="Ej: PROJ-AI-2026"
+    <div style={styles.formGroup}>
+      <label htmlFor="modal-project-code" style={styles.label}>
+        Project Code or Name *
+      </label>
+      <input
+        id="modal-project-code"
+        type="text"
+        placeholder="Ex: PROJ-AI-2026"
             value={projectCode}
             onChange={(e) => setProjectCode(e.target.value)}
             style={styles.input}
+            autoFocus
           />
-          {!isProjectReady && (
-            <p style={styles.hint}>
-              Debe ingresar un código de proyecto para habilitar el cargador.
-            </p>
-          )}
+      {!isProjectReady && (
+        <p style={styles.hint}>
+          Provide a project name to enable the uploader.
+        </p>
+      )}
         </div>
 
         {error && <div style={styles.errorBox}>❌ {error}</div>}
-        {isLoading && (
-          <p style={{ color: '#0366d6', fontWeight: '500' }}>
-            Inyectando referencias en base de datos...
-          </p>
+    {isLoading && (
+      <p style={{ color: '#0366d6', fontWeight: '500', fontSize: '14px' }}>
+        Injecting references into database...
+      </p>
+    )}
+
+    {isSuccess && (
+      <div style={styles.successBox}>
+        <p style={styles.successTitle}>Ingestion completed!</p>
+        <p style={{ margin: '0 0 6px 0', fontSize: '13px' }}>
+          Parsed <strong>{parsedCount}</strong> references from file.
+        </p>
+        <p style={{ margin: 0, fontSize: '13px' }}>
+          Inserted <strong>{insertedCount}</strong> new references into project <strong>{projectCode}</strong>.
+        </p>
+          </div>
         )}
 
         <div
@@ -1187,37 +310,157 @@ function _legacyUnused() {
           />
         </div>
 
-        {isSuccess && (
-          <div style={styles.successBox}>
-            <p style={styles.successTitle}>
-              ¡Ingesta completada con éxito!
-            </p>
-            <p style={{ margin: '4px 0' }}>
-              Proyecto:{' '}
-              <strong>{projectCode}</strong>
-            </p>
-            <p style={{ margin: '4px 0' }}>
-              Total de artículos registrados:{' '}
-              <strong>{insertedCount}</strong>
-            </p>
-            <span style={styles.badge}>Persistido en DB</span>
-            <ReferencesDataTable
-              data={[
-                {
-                  id: 1,
-                  title: `Artículos asociados a ${projectCode}`,
-                  author: 'Verificado',
-                  year: new Date().getFullYear(),
-                  journal: 'Repositorio Local',
-                },
-              ]}
-            />
-          </div>
-        )}
-      </div>
+    <div style={styles.footer}>
+      <button style={styles.cancelBtn} onClick={onClose}>
+        {isSuccess ? 'Close' : 'Cancel'}
+      </button>
     </div>
+    </Modal>
   );
 }
 
-export default ReferencesView;
+export default UploadReferencesModal;
 
+
+// --- backend/src/database/models/core.py ---
+
+"""Core relational database models for projects and articles."""
+from datetime import datetime, timezone
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy.orm import relationship
+from ..session import Base
+
+class Project(Base):
+    """..."""
+
+class Article(Base):
+    """..."""
+
+class ProjectArticle(Base):
+    """..."""
+
+
+// --- backend/alembic/env.py ---
+
+import os
+import sys
+from logging.config import fileConfig
+from alembic import context
+from sqlalchemy import engine_from_config, pool
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+try:
+    from src.database.session import Base
+    import src.database.models.core
+    import src.database.models.identity
+    import src.database.models.tracking
+except ImportError:
+    from backend.src.database.session import Base
+    import backend.src.database.models.core
+    import backend.src.database.models.identity
+    import backend.src.database.models.tracking
+    import backend.src.database.models.core
+config = context.config
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+db_url = os.getenv('DATABASE_URL')
+if db_url:
+    config.set_main_option('sqlalchemy.url', db_url)
+target_metadata = Base.metadata
+
+def run_migrations_offline() -> None:
+    """..."""
+
+def run_migrations_online() -> None:
+    """..."""
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
+
+
+// --- backend/src/bibliography/schemas.py ---
+
+from datetime import datetime
+from typing import Optional, List, Dict, Any, AsyncGenerator
+from pydantic import BaseModel, ConfigDict, Field
+
+class ZipDownloadRequest(BaseModel):
+    """..."""
+
+class BatchDownloadRequest(BaseModel):
+    """..."""
+
+class LocalBatchDownloadRequest(BaseModel):
+    """..."""
+
+class ParsedReference(BaseModel):
+    """..."""
+
+
+// --- backend/src/bibliography/parser_service.py ---
+
+import datetime
+from typing import List, Optional
+import re
+import bibtexparser
+from .schemas import ParsedReference
+
+def _extract_bib_field(entry, key: str) -> Optional[str]:
+    """..."""
+
+def _parse_bibtex_entries(content: str) -> list:
+    """..."""
+
+def _clean_year(val: Optional[str]) -> Optional[str]:
+    """..."""
+
+def _extract_ris_title(entry: dict) -> Optional[str]:
+    """..."""
+
+def _extract_ris_journal(entry: dict) -> Optional[str]:
+    """..."""
+
+def _extract_ris_authors(entry: dict) -> Optional[str]:
+    """..."""
+
+def _extract_ris_year(entry: dict) -> Optional[str]:
+    """..."""
+
+def _extract_ris_doi(entry: dict) -> Optional[str]:
+    """..."""
+
+def _parse_ris_fallback(content: str) -> list:
+    """..."""
+
+def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
+    """..."""
+
+def _deprecated_parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
+    """..."""
+
+
+// --- backend/src/bibliography/injection_service.py ---
+
+"""Service for persisting bibliographic references into the database."""
+import re
+from typing import List, Optional
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError
+try:
+    from .schemas import ParsedReference
+    from ..database.models.core import Article, Project, ProjectArticle
+    from ..database.models.identity import Author, AuthorArticle
+except (ImportError, ValueError):
+    from backend.src.bibliography.schemas import ParsedReference
+    from backend.src.database.models.core import Article, Project, ProjectArticle
+    from backend.src.database.models.identity import Author, AuthorArticle
+    from backend.src.bibliography.schemas import ParsedReference
+    from backend.src.database.models.core import Article, Project, ProjectArticle
+
+def inject_references_to_db(db: Session, refs: List[ParsedReference], project_code: str) -> int:
+    """..."""
+
+def _inject_references_inner(db: Session, refs: List[ParsedReference], project_code: str) -> int:
+    """..."""
