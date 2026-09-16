@@ -1,526 +1,1223 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-16 10:00:15
+Date: 2026-09-16 10:04:12
 AST Mode: True
 Line Numbers: False
-Modules: schemas.py, core.py, ReferencesDataTable.jsx, ReferencesDataTable.test.jsx
-Processed Files: 4
+Modules: router.py, core.py, identity.py, tracking.py, ReferencesView.jsx
+Processed Files: 5
 ===========================
 
 
 
-// --- backend/src/bibliography/schemas.py ---
+// --- backend/src/bibliography/router.py ---
 
-from datetime import datetime
-from typing import Optional, List, Dict, Any, AsyncGenerator
-from pydantic import BaseModel, ConfigDict, Field
+import os
+import re
+from datetime import datetime, timezone
+from typing import List
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+from .schemas import (
+    ParsedReference,
+    BatchDownloadRequest,
+    ZipDownloadRequest,
+    LocalBatchDownloadRequest,
+)
+from .parser_service import parse_bibliography_content
+from .download_service import execute_batch_download
+from .zip_service import create_zip_from_pdfs
+from .injection_service import inject_references_to_db
 
-class ZipDownloadRequest(BaseModel):
-    """..."""
+try:
+    from ..database.session import get_db
+    from ..database.models.core import Article, Project, ProjectArticle
+except (ImportError, ValueError):
+    try:
+        from src.database.session import get_db
+        from src.database.models.core import (
+            Article,
+            Project,
+            ProjectArticle,
+        )
+    except ImportError:
+        from backend.src.database.session import get_db
+        from backend.src.database.models.core import (
+            Article,
+            Project,
+            ProjectArticle,
+        )
+    try:
+        from src.database.session import get_db
+    except ImportError:
+        from backend.src.database.session import get_db
 
-class BatchDownloadRequest(BaseModel):
-    """..."""
+router = APIRouter()
 
-class LocalBatchDownloadRequest(BaseModel):
-    """..."""
+try:
+    import multipart
+    HAS_MULTIPART = True
+except ImportError:
+    HAS_MULTIPART = False
 
-class ParsedReference(BaseModel):
-    """..."""
+async def _process_upload(file: UploadFile) -> List[ParsedReference]:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
+    _, ext = os.path.splitext(file.filename)
+    if ext.lower() not in [".bib"]:
+        raise HTTPException(status_code=400, detail="Unsupported file extension")
+    
+    try:
+        content_bytes = await file.read()
+        try:
+            content_str = content_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            content_str = content_bytes.decode("latin-1")
+        refs = parse_bibliography_content(content_str, ext)
+        return refs
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error during parsing"
+        )
+
+
+async def _process_inject(
+    file: UploadFile, project_code: str, db: Session
+) -> dict:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    _, ext = os.path.splitext(file.filename)
+    if ext.lower() not in [".bib"]:
+        raise HTTPException(
+            status_code=400, detail="Unsupported file extension"
+        )
+
+    try:
+        content_bytes = await file.read()
+        content_str = content_bytes.decode("utf-8")
+        refs = parse_bibliography_content(content_str, ext)
+        try:
+            inserted = inject_references_to_db(db, refs, project_code)
+        except RuntimeError:
+            raise HTTPException(
+                status_code=503,
+                detail="Error de conexión a la base de datos. Intente nuevamente."
+            )
+        return {"message": "Success", "inserted": inserted}
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error during injection: {str(exc)}",
+        )
+
+if HAS_MULTIPART:
+    @router.post("/upload", response_model=List[ParsedReference])
+    async def upload_bibliography(file: UploadFile = File(...)):
+        return await _process_upload(file)
+
+    @router.post("/inject")
+    async def inject_bibliography(
+        file: UploadFile = File(...),
+        project_code: str = Form(...),
+        db: Session = Depends(get_db),
+    ):
+        return await _process_inject(file, project_code, db)
+
+    @router.get("/references", response_model=List[ParsedReference])
+    def get_project_references(
+        project_code: str,
+        db: Session = Depends(get_db),
+    ):
+        project = (
+            db.query(Project).filter(Project.name == project_code).first()
+        )
+        if not project:
+            return []
+        links = (
+            db.query(ProjectArticle)
+            .filter(ProjectArticle.project_id == project.id)
+            .all()
+        )
+        article_ids = [link.article_id for link in links]
+        if not article_ids:
+            return []
+        articles = (
+            db.query(Article).filter(Article.id.in_(article_ids)).all()
+        )
+        def _to_str(val):
+            return str(val) if isinstance(val, (str, int, float)) else None
+
+        def _resolve_authors(art):
+            if getattr(art, "raw_data", None):
+                return str(art.raw_data)
+            if hasattr(art, "authors") and art.authors:
+                names = [
+                    getattr(x, "name", str(x))
+                    for x in art.authors
+                    if getattr(x, "name", str(x))
+                ]
+                if names:
+                    return " and ".join(names)
+            return _to_str(getattr(art, "author", None))
+
+        def _format_surname(raw_author):
+            if not raw_author or not isinstance(raw_author, str):
+                return "N/A"
+            clean = raw_author.strip()
+            if not clean:
+                return "N/A"
+            first = re.split(r"\s+and\s+|;\s*", clean, flags=re.I)[0].strip()
+            if not first:
+                return "N/A"
+            surname = first.split(",")[0].strip() if "," in first else (
+                first.split()[-1] if first.split() else first
+            )
+            return f"{surname} ..."
+
+        now = datetime.now(timezone.utc)
+        return [
+            ParsedReference(
+                author=_resolve_authors(a),
+                year=_to_str(getattr(a, "year", None)),
+                title=_to_str(getattr(a, "title", None)) or "Untitled",
+                journal=_to_str(getattr(a, "journal", None)),
+                doi=_to_str(getattr(a, "doi", None)),
+                upload_datetime=now,
+            )
+            for a in articles
+        ]
+else:
+    async def upload_bibliography(file: UploadFile):
+        return await _process_upload(file)
+
+    async def inject_bibliography(
+        file: UploadFile,
+        project_code: str,
+        db: Session,
+    ):
+        return await _process_inject(file, project_code, db)
+
+
+@router.post("/batch-download")
+async def batch_download(request: BatchDownloadRequest):
+    async def sse_generator():
+        async for event in execute_batch_download(
+            request.dois,
+            request.destination,
+            request.email,
+            request.delay,
+            request.cookies,
+        ):
+            yield f"data: {event}\n\n"
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream"
+    )
+
+
+@router.post("/batch-download-local")
+async def batch_download_local(request: LocalBatchDownloadRequest):
+    try:
+        with open(request.file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
+    
+    _, ext = os.path.splitext(request.file_path)
+    try:
+        refs = parse_bibliography_content(content, ext)
+        dois = list(set(ref.doi for ref in refs if ref.doi))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Parse error: {str(e)}")
+
+    async def sse_generator():
+        async for event in execute_batch_download(
+            dois,
+            request.destination,
+            request.email,
+            request.delay,
+            request.cookies,
+        ):
+            yield f"data: {event}\n\n"
+
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")
+
+
+@router.post("/download-zip")
+async def download_zip(request: ZipDownloadRequest):
+    zip_io = create_zip_from_pdfs(request.batch_name, request.dois)
+    return StreamingResponse(
+        zip_io,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": (
+                f"attachment; filename={request.batch_name}.zip"
+            )
+        },
+    )
+
 
 
 // --- backend/src/database/models/core.py ---
 
 """Core relational database models for projects and articles."""
 from datetime import datetime, timezone
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
+
 from ..session import Base
 
+
 class Project(Base):
-    """..."""
+    """Represents a research project containing bibliographies."""
+
+    __tablename__ = "projects"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key integer identifier",
+    )
+    name = Column(
+        String(255),
+        nullable=False,
+        comment="Project display and reference name",
+    )
+    description = Column(
+        Text,
+        nullable=True,
+        comment="Detailed description of the project",
+    )
+    hashed_password = Column(
+        String(255),
+        nullable=True,
+        comment="Bcrypt hashed project password",
+    )
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when the project was created",
+    )
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when the project was last updated",
+    )
+
+    project_articles = relationship(
+        "ProjectArticle",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    articles = relationship(
+        "Article",
+        secondary="project_articles",
+        back_populates="projects",
+        viewonly=True,
+    )
+    downloads = relationship(
+        "Download",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+
 
 class Article(Base):
-    """..."""
+    """Represents an academic publication with bibliographic data."""
+
+    __tablename__ = "articles"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key integer identifier",
+    )
+    doi = Column(
+        String(255),
+        unique=True,
+        index=True,
+        nullable=True,
+        comment="Normalized DOI unique key",
+    )
+    title = Column(
+        Text,
+        nullable=False,
+        comment="Full title of the article or publication",
+    )
+    journal = Column(
+        String(255),
+        nullable=True,
+        comment="Journal or venue publishing the article",
+    )
+    year = Column(
+        Integer,
+        nullable=True,
+        comment="Publication calendar year",
+    )
+    volume = Column(
+        String(50),
+        nullable=True,
+        comment="Journal publication volume",
+    )
+    issue = Column(
+        String(50),
+        nullable=True,
+        comment="Journal publication issue",
+    )
+    pages = Column(
+        String(50),
+        nullable=True,
+        comment="Article page range or article number",
+    )
+    abstract = Column(
+        Text,
+        nullable=True,
+        comment="Full text abstract of the article",
+    )
+    raw_data = Column(
+        Text,
+        nullable=True,
+        comment="Raw bibliographic payload (e.g. BibTeX or RIS)",
+    )
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when article was ingested",
+    )
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when article record was updated",
+    )
+
+    project_articles = relationship(
+        "ProjectArticle",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+    projects = relationship(
+        "Project",
+        secondary="project_articles",
+        back_populates="articles",
+        viewonly=True,
+    )
+    author_articles = relationship(
+        "AuthorArticle",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+    authors = relationship(
+        "Author",
+        secondary="author_articles",
+        back_populates="articles",
+        viewonly=True,
+    )
+    keyword_articles = relationship(
+        "KeywordArticle",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+    keywords = relationship(
+        "Keyword",
+        secondary="keyword_articles",
+        back_populates="articles",
+        viewonly=True,
+    )
+    references = relationship(
+        "Reference",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+    funding = relationship(
+        "Funding",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+    downloads = relationship(
+        "Download",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+
 
 class ProjectArticle(Base):
-    """..."""
+    """Junction model connecting projects to articles."""
+
+    __tablename__ = "project_articles"
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id",
+            "article_id",
+            name="uq_project_article",
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key junction identifier",
+    )
+    project_id = Column(
+        Integer,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Foreign key linking to projects.id",
+    )
+    article_id = Column(
+        Integer,
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Foreign key linking to articles.id",
+    )
+    status = Column(
+        String(50),
+        default="pending",
+        nullable=False,
+        comment="Processing or download status of the article in the project",
+    )
+    added_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when article was associated with project",
+    )
+
+    project = relationship("Project", back_populates="project_articles")
+    article = relationship("Article", back_populates="project_articles")
 
 
-// --- frontend/src/components/references/ReferencesDataTable.jsx ---
+// --- backend/src/database/models/identity.py ---
+
+"""Identity domain models for affiliations, authors, and article authorship."""
+from datetime import datetime, timezone
+
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+)
+from sqlalchemy.orm import relationship
+
+from ..session import Base
+
+
+class Affiliation(Base):
+    """Represents an academic institution or research organization."""
+
+    __tablename__ = "affiliations"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key identifier for affiliation",
+    )
+    institution = Column(
+        String(255),
+        nullable=False,
+        comment="Institution or organization name",
+    )
+    department = Column(
+        String(255),
+        nullable=True,
+        comment="Academic department or laboratory division",
+    )
+    country = Column(
+        String(100),
+        nullable=True,
+        comment="Country location of the institution",
+    )
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when affiliation was created",
+    )
+
+    authors = relationship("Author", back_populates="affiliation")
+
+
+class Author(Base):
+    """Represents a researcher or publication contributor."""
+
+    __tablename__ = "authors"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key identifier for author",
+    )
+    name = Column(
+        String(255),
+        nullable=False,
+        comment="Full name of the author or researcher",
+    )
+    orcid = Column(
+        String(50),
+        nullable=True,
+        index=True,
+        comment="Author's ORCID identifier",
+    )
+    email = Column(
+        String(255),
+        nullable=True,
+        comment="Contact email address for the author",
+    )
+    affiliation_id = Column(
+        Integer,
+        ForeignKey("affiliations.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="Foreign key linking to affiliations.id",
+    )
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when author record was created",
+    )
+
+    affiliation = relationship("Affiliation", back_populates="authors")
+    author_articles = relationship(
+        "AuthorArticle",
+        back_populates="author",
+        cascade="all, delete-orphan",
+    )
+    articles = relationship(
+        "Article",
+        secondary="author_articles",
+        back_populates="authors",
+        viewonly=True,
+    )
+
+
+class AuthorArticle(Base):
+    """Junction model connecting authors to articles with authorship metadata."""
+
+    __tablename__ = "author_articles"
+    __table_args__ = (
+        UniqueConstraint(
+            "author_id",
+            "article_id",
+            name="uq_author_article",
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key junction identifier",
+    )
+    author_id = Column(
+        Integer,
+        ForeignKey("authors.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Foreign key linking to authors.id",
+    )
+    article_id = Column(
+        Integer,
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Foreign key linking to articles.id",
+    )
+    author_order = Column(
+        Integer,
+        default=1,
+        nullable=False,
+        comment="Order of authorship in the publication (1-based)",
+    )
+    is_corresponding = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="Flag indicating if this author is the corresponding author",
+    )
+
+    author = relationship("Author", back_populates="author_articles")
+    article = relationship("Article", back_populates="author_articles")
+
+
+class Keyword(Base):
+    """Represents a descriptive keyword, MeSH term, or topical tag."""
+
+    __tablename__ = "keywords"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key identifier for keyword",
+    )
+    name = Column(
+        String(255),
+        nullable=False,
+        index=True,
+        comment="Normalized keyword or term string",
+    )
+    type = Column(
+        String(50),
+        default="author",
+        nullable=False,
+        comment="Classification type of keyword (e.g. author, mesh, index)",
+    )
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when keyword was registered",
+    )
+
+    keyword_articles = relationship(
+        "KeywordArticle",
+        back_populates="keyword",
+        cascade="all, delete-orphan",
+    )
+    articles = relationship(
+        "Article",
+        secondary="keyword_articles",
+        back_populates="keywords",
+        viewonly=True,
+    )
+
+
+class KeywordArticle(Base):
+    """Junction model connecting keywords to articles."""
+
+    __tablename__ = "keyword_articles"
+    __table_args__ = (
+        UniqueConstraint(
+            "keyword_id",
+            "article_id",
+            name="uq_keyword_article",
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key junction identifier",
+    )
+    keyword_id = Column(
+        Integer,
+        ForeignKey("keywords.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Foreign key linking to keywords.id",
+    )
+    article_id = Column(
+        Integer,
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Foreign key linking to articles.id",
+    )
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when keyword was linked to article",
+    )
+
+    keyword = relationship("Keyword", back_populates="keyword_articles")
+    article = relationship("Article", back_populates="keyword_articles")
+
+
+// --- backend/src/database/models/tracking.py ---
+
+"""Extended tracking models for citations, funding, and paper downloads."""
+from datetime import datetime, timezone
+
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.orm import relationship
+
+from ..session import Base
+
+
+class Reference(Base):
+    """Represents a citation or reference cited by an article."""
+
+    __tablename__ = "references"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key identifier for reference",
+    )
+    article_id = Column(
+        Integer,
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Foreign key linking to the referencing article",
+    )
+    raw_citation = Column(
+        Text,
+        nullable=False,
+        comment="Full text or formatted citation string of the reference",
+    )
+    doi = Column(
+        String(255),
+        nullable=True,
+        index=True,
+        comment="Extracted or resolved DOI for cited reference",
+    )
+    title = Column(
+        Text,
+        nullable=True,
+        comment="Title of the cited reference",
+    )
+    year = Column(
+        Integer,
+        nullable=True,
+        comment="Publication year of the cited reference",
+    )
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when reference was extracted",
+    )
+
+    article = relationship("Article", back_populates="references")
+
+
+class Funding(Base):
+    """Represents financial support or grants supporting an article."""
+
+    __tablename__ = "funding"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key identifier for funding record",
+    )
+    article_id = Column(
+        Integer,
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Foreign key linking to funded article",
+    )
+    agency = Column(
+        String(255),
+        nullable=False,
+        comment="Name of funding agency or institution",
+    )
+    grant_number = Column(
+        String(100),
+        nullable=True,
+        comment="Specific grant or award identification number",
+    )
+    country = Column(
+        String(100),
+        nullable=True,
+        comment="Country of funding organization",
+    )
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when funding record was created",
+    )
+
+    article = relationship("Article", back_populates="funding")
+
+
+class Download(Base):
+    """Represents a document acquisition event for an article in a project."""
+
+    __tablename__ = "downloads"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key identifier for download record",
+    )
+    article_id = Column(
+        Integer,
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Foreign key linking to downloaded article",
+    )
+    project_id = Column(
+        Integer,
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Foreign key linking to parent project",
+    )
+    source = Column(
+        String(100),
+        nullable=False,
+        comment="Download source or resolver (e.g. unpaywall, openalex)",
+    )
+    file_path = Column(
+        String(500),
+        nullable=True,
+        comment="Local or cloud storage path of downloaded PDF",
+    )
+    file_size_bytes = Column(
+        Integer,
+        nullable=True,
+        comment="Size of downloaded file in bytes",
+    )
+    status = Column(
+        String(50),
+        default="completed",
+        nullable=False,
+        comment="Download status (e.g. completed, failed, in_progress)",
+    )
+    downloaded_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+        comment="UTC timestamp when download occurred",
+    )
+
+    article = relationship("Article", back_populates="downloads")
+    project = relationship("Project", back_populates="downloads")
+
+
+// --- frontend/src/views/ReferencesView.jsx ---
 
 import React, { useState } from 'react';
-import { useReferencesTable } from '../../hooks/useReferencesTable';
-import { useTableResize } from '../../hooks/useTableResize';
-import Modal from '../Modal';
+import { useReferencesUpload } from '../hooks/useReferencesUpload';
+import ReferencesDataTable from '../components/references/ReferencesDataTable';
+import UploadReferencesModal from '../components/references/UploadReferencesModal';
 
 const styles = {
-  controls: {
+  container: {
+    fontFamily: 'system-ui, sans-serif',
+    padding: '0',
+    color: '#24292e',
+  },
+  header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '16px',
+    marginBottom: '20px',
+    flexWrap: 'wrap',
+    gap: '12px',
   },
-  searchInput: {
-    padding: '8px 12px',
+  modalBtn: {
+    backgroundColor: '#0366d6',
+    color: '#ffffff',
+    border: 'none',
     borderRadius: '6px',
-    border: '1px solid #30363d',
-    backgroundColor: '#0d1117',
+    padding: '10px 18px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+  },
+  card: {
+    border: 'none',
+    borderRadius: '10px',
+    padding: '24px',
+    backgroundColor: '#161b22',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+    marginBottom: '24px',
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: 'bold',
     color: '#f0f6fc',
-    width: '300px',
+    margin: '0 0 8px 0'
+  },
+  description: {
+    fontSize: '14px',
+    color: '#586069',
+    marginBottom: '20px',
+  },
+  formGroup: {
+    marginBottom: '20px',
+  },
+  label: {
+    display: 'block',
+    fontWeight: '500',
+    marginBottom: '8px',
+    fontSize: '14px',
+  },
+  input: {
+    width: '100%',
+    maxWidth: '380px',
+    padding: '10px 12px',
+    fontSize: '14px',
+    border: '1px solid #d1d5da',
+    borderRadius: '6px',
+    boxSizing: 'border-box',
     outline: 'none',
   },
-  pagination: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: '16px',
-    padding: '8px 0',
+  hint: {
+    fontSize: '12px',
+    color: '#6a737d',
+    marginTop: '6px',
   },
-  pageBtn: {
-    padding: '6px 12px',
-    backgroundColor: '#21262d',
-    border: '1px solid #30363d',
-    color: '#f0f6fc',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '13px',
+  uploaderWrapper: {
+    transition: 'opacity 0.2s ease',
   },
-  pageBtnDisabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed',
-  },
-  container: {
-    width: '100%',
-    overflowX: 'auto',
-    marginTop: '20px',
-    position: 'relative',
-  },
-  table: {
-    width: '100%',
-    tableLayout: 'fixed',
-    borderCollapse: 'collapse',
-    textAlign: 'left',
-    fontSize: '14px',
-    fontFamily: 'system-ui, sans-serif',
-  },
-  th: {
-    backgroundColor: '#161b22',
-    borderBottom: '1px solid #30363d',
-    borderRight: '1px solid #30363d',
-    padding: '10px 14px',
-    fontWeight: '600',
-    color: '#f0f6fc',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  },
-  tr: {
-    borderBottom: '1px solid #30363d',
-    cursor: 'pointer',
-    transition: 'background-color 0.15s ease',
-  },
-  selectedTr: {
-    backgroundColor: '#1c2128',
-    outline: '1px solid #388bfd',
-  },
-  detailsBtn: {
-    padding: '8px 14px',
-    backgroundColor: '#21262d',
-    color: '#f0f6fc',
-    border: '1px solid #30363d',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '13px',
-    fontWeight: '500',
-    whiteSpace: 'nowrap',
-    transition: 'all 0.15s ease',
-  },
-  detailsBtnDisabled: {
-    opacity: 0.45,
-    cursor: 'not-allowed',
-  },
-  td: {
-    padding: '10px 14px',
-    color: '#f0f6fc',
-    borderRight: '1px solid #30363d',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  },
-  empty: {
-    padding: '24px',
-    textAlign: 'center',
-    color: '#8b949e',
-    fontSize: '14px',
-    fontStyle: 'italic',
-  },
-  popover: {
-    position: 'fixed',
-    backgroundColor: '#1f2428',
-    color: '#f6f8fa',
+  errorBox: {
+    backgroundColor: '#ffeef0',
+    color: '#cb2431',
+    border: '1px solid #f97583',
     padding: '12px 16px',
     borderRadius: '6px',
-    fontSize: '12px',
-    maxWidth: '400px',
-    maxHeight: '260px',
-    overflow: 'auto',
-    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-    zIndex: 1000,
-    pointerEvents: 'none',
+    marginBottom: '16px',
+    fontSize: '14px',
   },
-  pre: {
-    margin: 0,
-    whiteSpace: 'pre-wrap',
-    wordBreak: 'break-word',
-    fontFamily: 'monospace',
+  successBox: {
+    backgroundColor: '#dcffe4',
+    color: '#165c26',
+    border: '1px solid #85e89d',
+    padding: '16px',
+    borderRadius: '6px',
+    marginTop: '24px',
+  },
+  successTitle: {
+    fontWeight: '600',
+    margin: '0 0 8px 0',
+    fontSize: '16px',
+  },
+  badge: {
+    display: 'inline-block',
+    backgroundColor: '#2ea44f',
+    color: '#ffffff',
+    padding: '4px 10px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '600',
+    marginTop: '4px',
   },
 };
 
-export function ReferencesDataTable({ data = [] }) {
-  const [selectedRow, setSelectedRow] = useState(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+export function ReferencesView() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [tableData, setTableData] = useState([]);
+  const [_dummyState, _setDummy] = useState([
+    {
+      id: 1,
+      title: 'Attention Is All You Need',
+      author: 'Vaswani, A. et al.',
+      year: 2017,
+      journal: 'NeurIPS',
+    },
+    {
+      id: 2,
+      title: 'Deep Residual Learning for Image Recognition',
+      author: 'He, K. et al.',
+      year: 2016,
+      journal: 'CVPR',
+    },
+  ]);
 
   const {
-    searchQuery,
-    setSearchQuery,
-    currentPage,
-    setCurrentPage,
-    paginatedData,
-    totalPages,
-  } = useReferencesTable(data, 13);
+    projectCode,
+    setProjectCode,
+    isLoading,
+    isSuccess,
+    error,
+    insertedCount,
+    uploadAndInject,
+    resetStatus,
+  } = useReferencesUpload();
 
-  const { colWidths, handleMouseDown } = useTableResize();
+  const fetchProjectReferences = React.useCallback(async (code) => {
+    if (!code || !code.trim()) {
+      setTableData([]);
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/api/bibliography/references?project_code=${encodeURIComponent(code.trim())}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setTableData(data);
+      }
+    } catch {
+      // Ignorado si falla la red
+    }
+  }, []);
 
-  if (!data || data.length === 0) {
-    return (
-      <div style={styles.container}>
-        <div style={styles.empty}>
-          No references available to display.
-        </div>
-      </div>
-    );
-  }
+  React.useEffect(() => {
+    if (projectCode) {
+      fetchProjectReferences(projectCode);
+    }
+  }, [projectCode, fetchProjectReferences]);
 
   return (
     <div style={styles.container}>
-      <div style={styles.controls}>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="Search by title or author..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={styles.searchInput}
-          />
-          <button
-            type="button"
-            style={{
-              ...styles.detailsBtn,
-              ...(!selectedRow ? styles.detailsBtnDisabled : {}),
-            }}
-            disabled={!selectedRow}
-            onClick={() => setIsDetailsOpen(true)}
-          >
-            View Details
-          </button>
-        </div>
-        <span style={{ fontSize: '13px', color: '#8b949e' }}>
-          Total References: {data.length}
-        </span>
-      </div>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={{ ...styles.th, width: `${colWidths.title}%`, position: 'relative' }}>
-              Title
-              <div
-                style={{
-                  cursor: 'col-resize', width: '5px', position: 'absolute',
-                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
-                }}
-                onMouseDown={(e) => handleMouseDown(e, 'title')}
-              />
-            </th>
-            <th style={{ ...styles.th, width: `${colWidths.author}%`, position: 'relative' }}>
-              Author
-              <div
-                style={{
-                  cursor: 'col-resize', width: '5px', position: 'absolute',
-                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
-                }}
-                onMouseDown={(e) => handleMouseDown(e, 'author')}
-              />
-            </th>
-            <th style={{ ...styles.th, width: `${colWidths.year}%`, position: 'relative' }}>
-              Year
-              <div
-                style={{
-                  cursor: 'col-resize', width: '5px', position: 'absolute',
-                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
-                }}
-                onMouseDown={(e) => handleMouseDown(e, 'year')}
-              />
-            </th>
-            <th style={{ ...styles.th, width: `${colWidths.journal}%`, position: 'relative' }}>
-              Journal
-              <div
-                style={{
-                  cursor: 'col-resize', width: '5px', position: 'absolute',
-                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
-                }}
-                onMouseDown={(e) => handleMouseDown(e, 'journal')}
-              />
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedData.map((row, index) => {
-            const isSelected = selectedRow?.id != null
-              ? selectedRow.id === row.id
-              : selectedRow === row;
-            return (
-              <tr
-                key={row.id || index}
-                style={{
-                  ...styles.tr,
-                  ...(isSelected ? styles.selectedTr : {}),
-                }}
-                onClick={() => setSelectedRow(row)}
-                onDoubleClick={() => {
-                  setSelectedRow(row);
-                  setIsDetailsOpen(true);
-                }}
-              >
-              <td style={styles.td} title={row.title || 'N/A'}>
-                {row.title || 'N/A'}
-              </td>
-              <td style={styles.td} title={row.author || 'N/A'}>
-                {row.author || 'N/A'}
-              </td>
-              <td style={styles.td} title={String(row.year || 'N/A')}>
-                {row.year || 'N/A'}
-              </td>
-              <td style={styles.td} title={row.journal || 'N/A'}>
-                {row.journal || 'N/A'}
-              </td>
-            </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      {totalPages > 1 && (
-        <div style={styles.pagination}>
-          <button
-            style={{ ...styles.pageBtn, ...(currentPage === 1 ? styles.pageBtnDisabled : {}) }}
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </button>
-          <span style={{ fontSize: '14px', color: '#8b949e' }}>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            style={{ ...styles.pageBtn, ...(currentPage === totalPages ? styles.pageBtnDisabled : {}) }}
-            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </button>
-        </div>
-      )}
-
-      <Modal
-        isOpen={isDetailsOpen && !!selectedRow}
-        onClose={() => setIsDetailsOpen(false)}
-        title="Reference Details"
-      >
-        {selectedRow && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <div
-                style={{
-                  fontSize: '12px',
-                  color: '#8b949e',
-                  marginBottom: '4px',
-                }}
-              >
-                Title
-              </div>
-              <div
-                style={{
-                  fontSize: '14px',
-                  color: '#f0f6fc',
-                  fontWeight: '500',
-                  lineHeight: '1.4',
-                }}
-              >
-                {selectedRow.title || 'N/A'}
-              </div>
-            </div>
-            <div>
-              <div
-                style={{
-                  fontSize: '12px',
-                  color: '#8b949e',
-                  marginBottom: '4px',
-                }}
-              >
-                Authors
-              </div>
-              <div
-                style={{
-                  fontSize: '13px',
-                  color: '#c9d1d9',
-                  lineHeight: '1.4',
-                }}
-              >
-                {selectedRow.author || 'N/A'}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '24px' }}>
-              <div>
-                <div
-                  style={{
-                    fontSize: '12px',
-                    color: '#8b949e',
-                    marginBottom: '4px',
-                  }}
-                >
-                  Year
-                </div>
-                <div style={{ fontSize: '13px', color: '#c9d1d9' }}>
-                  {selectedRow.year || 'N/A'}
-                </div>
-              </div>
-              <div>
-                <div
-                  style={{
-                    fontSize: '12px',
-                    color: '#8b949e',
-                    marginBottom: '4px',
-                  }}
-                >
-                  Journal
-                </div>
-                <div style={{ fontSize: '13px', color: '#c9d1d9' }}>
-                  {selectedRow.journal || 'N/A'}
-                </div>
-              </div>
-            </div>
-            {selectedRow.doi && (
-              <div>
-                <div
-                  style={{
-                    fontSize: '12px',
-                    color: '#8b949e',
-                    marginBottom: '4px',
-                  }}
-                >
-                  DOI
-                </div>
-                <div
-                  style={{
-                    fontSize: '13px',
-                    color: '#58a6ff',
-                    wordBreak: 'break-all',
-                  }}
-                >
-                  {selectedRow.doi}
-                </div>
-              </div>
-            )}
-          </div>
+      <div style={styles.header}>
+        <div>
+      <h2 style={{ ...styles.title, margin: 0 }}>
+        Bibliographic References
+      </h2>
+      <p style={{ ...styles.description, margin: '4px 0 0 0' }}>
+        View and manage persisted publications.
+        {projectCode && (
+          <span> Active project: <strong>{projectCode}</strong></span>
         )}
-      </Modal>
+          </p>
+        </div>
+        <button
+          style={styles.modalBtn}
+      onClick={() => {
+        if (resetStatus) resetStatus();
+        setIsModalOpen(true);
+      }}
+    >
+      + Add
+    </button>
+      </div>
+
+      <div style={styles.card}>
+        <ReferencesDataTable data={tableData} />
+      </div>
+
+      <UploadReferencesModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        projectCode={projectCode}
+        setProjectCode={setProjectCode}
+        uploadAndInject={async (files) => {
+          const parsed = await uploadAndInject(files);
+          if (parsed) {
+            fetchProjectReferences(projectCode);
+          }
+        }}
+        isLoading={isLoading}
+        isSuccess={isSuccess}
+        error={error}
+        insertedCount={insertedCount}
+      />
     </div>
   );
 }
 
-export default ReferencesDataTable;
+function _legacyUnused() {
+  return (
+    <div>
+      <div>
+        <h2>Ingesta</h2>
+        <p style={styles.description}>
+          Asocie archivos bibliográficos (.ris o .bib) a un proyecto de
+          investigación para persistir sus artículos.
+        </p>
 
+        <div style={styles.formGroup}>
+          <label htmlFor="project-code-input" style={styles.label}>
+            Código del Proyecto *
+          </label>
+          <input
+            id="project-code-input"
+            type="text"
+            placeholder="Ej: PROJ-AI-2026"
+            value={projectCode}
+            onChange={(e) => setProjectCode(e.target.value)}
+            style={styles.input}
+          />
+          {!isProjectReady && (
+            <p style={styles.hint}>
+              Debe ingresar un código de proyecto para habilitar el cargador.
+            </p>
+          )}
+        </div>
 
+        {error && <div style={styles.errorBox}>❌ {error}</div>}
+        {isLoading && (
+          <p style={{ color: '#0366d6', fontWeight: '500' }}>
+            Inyectando referencias en base de datos...
+          </p>
+        )}
 
-// --- frontend/src/components/references/ReferencesDataTable.test.jsx ---
+        <div
+          style={{
+            ...styles.uploaderWrapper,
+            opacity: isProjectReady ? 1 : 0.45,
+            pointerEvents: isProjectReady ? 'auto' : 'none',
+          }}
+        >
+          <BibliographyUploader
+            onUpload={(file) => {
+              if (isProjectReady) {
+                uploadAndInject(file);
+              }
+            }}
+          />
+        </div>
 
-import React from 'react';
-import { render, screen, act, fireEvent } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import { ReferencesDataTable } from './ReferencesDataTable';
+        {isSuccess && (
+          <div style={styles.successBox}>
+            <p style={styles.successTitle}>
+              ¡Ingesta completada con éxito!
+            </p>
+            <p style={{ margin: '4px 0' }}>
+              Proyecto:{' '}
+              <strong>{projectCode}</strong>
+            </p>
+            <p style={{ margin: '4px 0' }}>
+              Total de artículos registrados:{' '}
+              <strong>{insertedCount}</strong>
+            </p>
+            <span style={styles.badge}>Persistido en DB</span>
+            <ReferencesDataTable
+              data={[
+                {
+                  id: 1,
+                  title: `Artículos asociados a ${projectCode}`,
+                  author: 'Verificado',
+                  year: new Date().getFullYear(),
+                  journal: 'Repositorio Local',
+                },
+              ]}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
-describe('ReferencesDataTable Dumb View State Wiring', () => {
-  it('renders search, paginates dynamically, and updates DOM rows', () => {
-    // Arrange: Create 20 mock objects (pageSize is hardcoded to 13)
-    const mockData = Array.from({ length: 20 }, (_, i) => ({
-      id: i,
-      title: `Reference ${i + 1}`,
-      author: `Author ${i + 1}`,
-      year: '2026',
-      journal: 'Science'
-    }));
+export default ReferencesView;
 
-    render(<ReferencesDataTable data={mockData} />);
-
-    // Assert 1: Initial page state shows strictly 13 data rows (+1 header)
-    const initialRows = screen.getAllByRole('row');
-    expect(initialRows).toHaveLength(14); // 13 + 1
-    expect(screen.getByText(/Page 1 of 2/i)).toBeDefined();
-
-    // Act: Click 'Next' to trigger state mutation via useReferencesTable
-    const nextBtn = screen.getByText('Next');
-    act(() => {
-      nextBtn.click();
-    });
-
-    // Assert 2: Second page strictly shows 7 remaining rows (+1 header)
-    const nextRows = screen.getAllByRole('row');
-    expect(nextRows).toHaveLength(8); // 7 + 1
-    expect(screen.getByText(/Page 2 of 2/i)).toBeDefined();
-  });
-
-  it('renders resizable column headers via useTableResize', () => {
-    const mockData = [{ id: 1, title: 'T', author: 'A', year: '26', journal: 'J' }];
-    const { container } = render(<ReferencesDataTable data={mockData} />);
-    
-    const headers = screen.getAllByRole('columnheader');
-    expect(headers).toHaveLength(4);
-    
-    expect(headers[0].style.width).toBe('45%');
-    expect(headers[1].style.width).toBe('20%');
-    expect(headers[2].style.width).toBe('10%');
-    expect(headers[3].style.width).toBe('25%');
-
-    const resizeHandlers = container.querySelectorAll('div[style*="col-resize"]');
-    expect(resizeHandlers).toHaveLength(4);
-  });
-
-  it('selects a row on click and opens details modal with complete metadata', () => {
-    const mockData = [
-      {
-        id: 101,
-        title: 'Quantum Computing Deep Dive',
-        author: 'Alice Smith and Bob Jones',
-        year: '2025',
-        journal: 'Nature Physics',
-        doi: '10.1038/s41567-025-001',
-      },
-    ];
-
-    render(<ReferencesDataTable data={mockData} />);
-
-    const detailsBtn = screen.getByRole('button', { name: /view details/i });
-    expect(detailsBtn.disabled).toBe(true);
-
-    const rowCell = screen.getByText('Quantum Computing Deep Dive');
-    fireEvent.click(rowCell);
-
-    expect(detailsBtn.disabled).toBe(false);
-
-    fireEvent.click(detailsBtn);
-
-    expect(screen.getByText('Reference Details')).toBeDefined();
-    expect(screen.getByText('Alice Smith and Bob Jones')).toBeDefined();
-    expect(screen.getByText('10.1038/s41567-025-001')).toBeDefined();
-  });
-});

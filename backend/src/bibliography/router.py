@@ -1,7 +1,7 @@
 import os
 import re
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Dict, Any
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -121,7 +121,7 @@ if HAS_MULTIPART:
     ):
         return await _process_inject(file, project_code, db)
 
-    @router.get("/references", response_model=List[ParsedReference])
+    @router.get("/references", response_model=List[Dict[str, Any]])
     def get_project_references(
         project_code: str,
         db: Session = Depends(get_db),
@@ -136,54 +136,145 @@ if HAS_MULTIPART:
             .filter(ProjectArticle.project_id == project.id)
             .all()
         )
-        article_ids = [link.article_id for link in links]
-        if not article_ids:
+        if not links:
             return []
+
+        status_map = {
+            link.article_id: {
+                "status": link.status,
+                "added_at": (
+                    link.added_at.isoformat() if link.added_at else None
+                ),
+            }
+            for link in links
+        }
+
+        article_ids = list(status_map.keys())
         articles = (
             db.query(Article).filter(Article.id.in_(article_ids)).all()
         )
+
         def _to_str(val):
             return str(val) if isinstance(val, (str, int, float)) else None
 
-        def _resolve_authors(art):
-            if getattr(art, "raw_data", None):
-                return str(art.raw_data)
-            if hasattr(art, "authors") and art.authors:
-                names = [
-                    getattr(x, "name", str(x))
-                    for x in art.authors
-                    if getattr(x, "name", str(x))
-                ]
-                if names:
-                    return " and ".join(names)
-            return _to_str(getattr(art, "author", None))
+        now_iso = datetime.now(timezone.utc).isoformat()
+        result = []
+        for a in articles:
+            authors_detail = []
+            for aa in sorted(
+                getattr(a, "author_articles", []) or [],
+                key=lambda x: getattr(x, "author_order", 1) or 1,
+            ):
+                auth = getattr(aa, "author", None)
+                if auth:
+                    aff = getattr(auth, "affiliation", None)
+                    aff_str = None
+                    if aff:
+                        parts = [
+                            getattr(aff, "institution", None),
+                            getattr(aff, "department", None),
+                            getattr(aff, "country", None),
+                        ]
+                        aff_str = ", ".join([p for p in parts if p])
+                    authors_detail.append({
+                        "name": getattr(auth, "name", "N/A"),
+                        "orcid": getattr(auth, "orcid", None),
+                        "email": getattr(auth, "email", None),
+                        "author_order": getattr(aa, "author_order", 1),
+                        "is_corresponding": bool(
+                            getattr(aa, "is_corresponding", False)
+                        ),
+                        "affiliation": aff_str,
+                    })
 
-        def _format_surname(raw_author):
-            if not raw_author or not isinstance(raw_author, str):
-                return "N/A"
-            clean = raw_author.strip()
-            if not clean:
-                return "N/A"
-            first = re.split(r"\s+and\s+|;\s*", clean, flags=re.I)[0].strip()
-            if not first:
-                return "N/A"
-            surname = first.split(",")[0].strip() if "," in first else (
-                first.split()[-1] if first.split() else first
-            )
-            return f"{surname} ..."
+            if authors_detail:
+                author_str = " and ".join(
+                    [ad["name"] for ad in authors_detail]
+                )
+            elif getattr(a, "raw_data", None):
+                author_str = str(a.raw_data)[:100]
+            else:
+                author_str = "N/A"
 
-        now = datetime.now(timezone.utc)
-        return [
-            ParsedReference(
-                author=_resolve_authors(a),
-                year=_to_str(getattr(a, "year", None)),
-                title=_to_str(getattr(a, "title", None)) or "Untitled",
-                journal=_to_str(getattr(a, "journal", None)),
-                doi=_to_str(getattr(a, "doi", None)),
-                upload_datetime=now,
-            )
-            for a in articles
-        ]
+            keywords_list = [
+                {
+                    "name": getattr(k, "name", ""),
+                    "type": getattr(k, "type", "author"),
+                }
+                for k in (getattr(a, "keywords", []) or [])
+            ]
+
+            references_list = [
+                {
+                    "id": getattr(r, "id", None),
+                    "title": getattr(r, "title", None),
+                    "doi": getattr(r, "doi", None),
+                    "year": getattr(r, "year", None),
+                    "raw_citation": getattr(r, "raw_citation", None),
+                }
+                for r in (getattr(a, "references", []) or [])
+            ]
+
+            funding_list = [
+                {
+                    "id": getattr(f, "id", None),
+                    "agency": getattr(f, "agency", None),
+                    "grant_number": getattr(f, "grant_number", None),
+                    "country": getattr(f, "country", None),
+                }
+                for f in (getattr(a, "funding", []) or [])
+            ]
+
+            downloads_list = [
+                {
+                    "id": getattr(d, "id", None),
+                    "source": getattr(d, "source", None),
+                    "status": getattr(d, "status", None),
+                    "file_path": getattr(d, "file_path", None),
+                    "file_size_bytes": getattr(d, "file_size_bytes", None),
+                    "downloaded_at": (
+                        d.downloaded_at.isoformat()
+                        if getattr(d, "downloaded_at", None)
+                        else None
+                    ),
+                }
+                for d in (getattr(a, "downloads", []) or [])
+            ]
+
+            p_info = status_map.get(a.id, {})
+
+            result.append({
+                "id": a.id,
+                "title": _to_str(getattr(a, "title", None)) or "Untitled",
+                "author": author_str,
+                "year": _to_str(getattr(a, "year", None)),
+                "journal": _to_str(getattr(a, "journal", None)),
+                "doi": _to_str(getattr(a, "doi", None)),
+                "volume": _to_str(getattr(a, "volume", None)),
+                "issue": _to_str(getattr(a, "issue", None)),
+                "pages": _to_str(getattr(a, "pages", None)),
+                "abstract": _to_str(getattr(a, "abstract", None)),
+                "raw_data": _to_str(getattr(a, "raw_data", None)),
+                "created_at": (
+                    a.created_at.isoformat()
+                    if getattr(a, "created_at", None)
+                    else None
+                ),
+                "updated_at": (
+                    a.updated_at.isoformat()
+                    if getattr(a, "updated_at", None)
+                    else None
+                ),
+                "project_status": p_info.get("status", "pending"),
+                "project_added_at": p_info.get("added_at"),
+                "upload_datetime": now_iso,
+                "authors_detail": authors_detail,
+                "keywords": keywords_list,
+                "references_list": references_list,
+                "funding_list": funding_list,
+                "downloads_list": downloads_list,
+            })
+        return result
 else:
     async def upload_bibliography(file: UploadFile):
         return await _process_upload(file)

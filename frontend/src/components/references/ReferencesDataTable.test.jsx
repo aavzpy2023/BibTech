@@ -62,6 +62,23 @@ describe('ReferencesDataTable Dumb View State Wiring', () => {
         publisher: 'Nature Publishing',
         abstract: 'An in-depth study of quantum coherence.',
         doi: '10.1038/s41567-025-001',
+        project_status: 'persisted',
+        created_at: '2026-09-16T10:00:00Z',
+        authors_detail: [
+          {
+            name: 'Alice Smith',
+            orcid: '0000-0002-1825-0097',
+            email: 'alice@mit.edu',
+            author_order: 1,
+            is_corresponding: true,
+            affiliation: 'MIT, Physics Dept, USA',
+          },
+        ],
+        keywords: [{ name: 'Quantum Coherence', type: 'author' }],
+        funding_list: [
+          { agency: 'National Science Foundation', grant_number: 'PHY-12345' },
+        ],
+        raw_data: '@article{smith2025, title={Quantum Computing}}',
       },
     ];
 
@@ -80,7 +97,16 @@ describe('ReferencesDataTable Dumb View State Wiring', () => {
     expect(screen.getByText('Reference Details')).toBeDefined();
     expect(screen.getByText('Alice Smith and Bob Jones')).toBeDefined();
     expect(screen.getByText('Nature Physics')).toBeDefined();
-    expect(screen.getByText('An in-depth study of quantum coherence.')).toBeDefined();
+    expect(
+      screen.getByText('An in-depth study of quantum coherence.')
+    ).toBeDefined();
+
+    // Assert DB Audit Cross-Join rendering
+    expect(screen.getByText('DB ID #101')).toBeDefined();
+    expect(screen.getByText(/MIT, Physics Dept, USA/i)).toBeDefined();
+    expect(screen.getByText(/Quantum Coherence/i)).toBeDefined();
+    expect(screen.getByText(/National Science Foundation/i)).toBeDefined();
+    expect(screen.getByText(/PHY-12345/i)).toBeDefined();
 
     const doiLink = screen.getByRole('link', {
       name: /10.1038\/s41567-025-001/i,

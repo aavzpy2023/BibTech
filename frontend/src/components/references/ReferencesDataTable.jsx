@@ -98,6 +98,44 @@ const styles = {
     opacity: 0.45,
     cursor: 'not-allowed',
   },
+  badgeId: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '2px 8px',
+    backgroundColor: '#238636',
+    color: '#ffffff',
+    borderRadius: '12px',
+    fontSize: '11px',
+    fontWeight: '600',
+  },
+  badgeStatus: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '2px 8px',
+    backgroundColor: '#1f6feb',
+    color: '#ffffff',
+    borderRadius: '12px',
+    fontSize: '11px',
+    fontWeight: '600',
+  },
+  auditSectionTitle: {
+    fontSize: '12px',
+    color: '#58a6ff',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+    borderBottom: '1px solid #30363d',
+    paddingBottom: '4px',
+    marginTop: '6px',
+    marginBottom: '8px',
+  },
+  auditItemBox: {
+    backgroundColor: '#0d1117',
+    border: '1px solid #30363d',
+    borderRadius: '6px',
+    padding: '8px 10px',
+    fontSize: '12px',
+  },
   modalGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
@@ -330,15 +368,17 @@ export function ReferencesDataTable({ data = [] }) {
       <Modal
         isOpen={isDetailsOpen && !!selectedRow}
         onClose={() => setIsDetailsOpen(false)}
-        title="Reference Details"
-        maxWidth="600px"
+        title="Reference Details & DB Audit"
+        maxWidth="680px"
       >
         {selectedRow && (() => {
           const knownKeys = new Set([
             'id', 'title', 'author', 'year', 'journal', 'booktitle',
             'volume', 'issue', 'number', 'pages', 'publisher', 'doi',
             'url', 'abstract', 'keywords', 'project_id', 'created_at',
-            'updated_at', 'raw_bibtex'
+            'updated_at', 'raw_bibtex', 'raw_data', 'project_status',
+            'project_added_at', 'upload_datetime', 'authors_detail',
+            'references_list', 'funding_list', 'downloads_list'
           ]);
 
           const extraEntries = Object.entries(selectedRow).filter(
@@ -352,6 +392,29 @@ export function ReferencesDataTable({ data = [] }) {
 
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <span style={styles.badgeId}>
+                  DB ID #{selectedRow.id || 'N/A'}
+                </span>
+                {selectedRow.project_status && (
+                  <span style={styles.badgeStatus}>
+                    Status: {selectedRow.project_status}
+                  </span>
+                )}
+                {selectedRow.created_at && (
+                  <span style={{ fontSize: '12px', color: '#8b949e' }}>
+                    Ingested: {new Date(selectedRow.created_at).toLocaleString()}
+                  </span>
+                )}
+              </div>
+
               <div style={styles.modalFieldGroup}>
                 <div style={styles.modalLabel}>Title</div>
                 <div
@@ -366,13 +429,6 @@ export function ReferencesDataTable({ data = [] }) {
                 </div>
               </div>
 
-              <div style={styles.modalFieldGroup}>
-                <div style={styles.modalLabel}>Authors</div>
-                <div style={styles.modalValue}>
-                  {selectedRow.author || 'N/A'}
-                </div>
-              </div>
-
               <div style={styles.modalGrid}>
                 <div style={styles.modalFieldGroup}>
                   <div style={styles.modalLabel}>Year</div>
@@ -382,7 +438,7 @@ export function ReferencesDataTable({ data = [] }) {
                 </div>
 
                 <div style={styles.modalFieldGroup}>
-                  <div style={styles.modalLabel}>Journal / Source</div>
+                  <div style={styles.modalLabel}>Journal / Venue</div>
                   <div style={styles.modalValue}>
                     {selectedRow.journal || selectedRow.booktitle || 'N/A'}
                   </div>
@@ -411,76 +467,228 @@ export function ReferencesDataTable({ data = [] }) {
                   </div>
                 )}
 
-                {selectedRow.publisher && (
+                {selectedRow.doi && (
                   <div style={styles.modalFieldGroup}>
-                    <div style={styles.modalLabel}>Publisher</div>
-                    <div style={styles.modalValue}>{selectedRow.publisher}</div>
+                    <div style={styles.modalLabel}>DOI</div>
+                    <div>
+                      <a
+                        href={getDoiUrl(selectedRow.doi)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={styles.doiLink}
+                      >
+                        {selectedRow.doi} ↗
+                      </a>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {selectedRow.doi && (
-                <div style={styles.modalFieldGroup}>
-                  <div style={styles.modalLabel}>DOI (Digital Object Identifier)</div>
-                  <div>
-                    <a
-                      href={getDoiUrl(selectedRow.doi)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={styles.doiLink}
-                    >
-                      {selectedRow.doi} ↗
-                    </a>
+              {selectedRow.authors_detail && selectedRow.authors_detail.length > 0 ? (
+                <div>
+                  <div style={styles.auditSectionTitle}>
+                    Authors & Affiliations (DB Relation)
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {selectedRow.authors_detail.map((auth, idx) => (
+                      <div key={idx} style={styles.auditItemBox}>
+                        <div style={{ fontWeight: '600', color: '#f0f6fc' }}>
+                          {auth.name}
+                          {auth.is_corresponding && (
+                            <span
+                              style={{
+                                marginLeft: '6px',
+                                color: '#f0883e',
+                                fontSize: '11px',
+                              }}
+                            >
+                              [Corresponding]
+                            </span>
+                          )}
+                        </div>
+                        {auth.affiliation && (
+                          <div style={{ color: '#8b949e', marginTop: '2px' }}>
+                            🏢 {auth.affiliation}
+                          </div>
+                        )}
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '12px',
+                            marginTop: '2px',
+                            color: '#8b949e',
+                          }}
+                        >
+                          {auth.orcid && (
+                            <div>
+                              ORCID:{' '}
+                              <a
+                                href={`https://orcid.org/${auth.orcid}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={styles.doiLink}
+                              >
+                                {auth.orcid}
+                              </a>
+                            </div>
+                          )}
+                          {auth.email && <div>✉️ {auth.email}</div>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              )}
-
-              {selectedRow.url && selectedRow.url !== selectedRow.doi && (
+              ) : (
                 <div style={styles.modalFieldGroup}>
-                  <div style={styles.modalLabel}>External URL</div>
-                  <div>
-                    <a
-                      href={selectedRow.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={styles.doiLink}
-                    >
-                      {selectedRow.url} ↗
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {selectedRow.keywords && (
-                <div style={styles.modalFieldGroup}>
-                  <div style={styles.modalLabel}>Keywords</div>
+                  <div style={styles.modalLabel}>Authors</div>
                   <div style={styles.modalValue}>
-                    {Array.isArray(selectedRow.keywords)
-                      ? selectedRow.keywords.join(', ')
-                      : String(selectedRow.keywords)}
+                    {selectedRow.author || 'N/A'}
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.keywords && selectedRow.keywords.length > 0 && (
+                <div>
+                  <div style={styles.auditSectionTitle}>Keywords (DB Relation)</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {selectedRow.keywords.map((kw, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          backgroundColor: '#21262d',
+                          color: '#c9d1d9',
+                          padding: '3px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          border: '1px solid #30363d',
+                        }}
+                      >
+                        {typeof kw === 'object' ? kw.name : kw}
+                        {kw.type && kw.type !== 'author' && ` (${kw.type})`}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
 
               {selectedRow.abstract && (
-                <div style={styles.modalFieldGroup}>
-                  <div style={styles.modalLabel}>Abstract</div>
+                <div>
+                  <div style={styles.auditSectionTitle}>Abstract (DB Text)</div>
                   <div style={styles.abstractBox}>
                     {selectedRow.abstract}
                   </div>
                 </div>
               )}
 
-              {extraEntries.length > 0 && (
-                <div style={{ marginTop: '6px' }}>
+              {selectedRow.funding_list && selectedRow.funding_list.length > 0 && (
+                <div>
+                  <div style={styles.auditSectionTitle}>
+                    Funding & Grants (DB Relation)
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {selectedRow.funding_list.map((fund, idx) => (
+                      <div key={idx} style={styles.auditItemBox}>
+                        <span style={{ color: '#f0f6fc', fontWeight: '500' }}>
+                          {fund.agency}
+                        </span>
+                        {fund.grant_number && (
+                          <span style={{ color: '#8b949e', marginLeft: '6px' }}>
+                            (Grant: {fund.grant_number})
+                          </span>
+                        )}
+                        {fund.country && (
+                          <span style={{ color: '#8b949e', marginLeft: '6px' }}>
+                            - {fund.country}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.references_list && selectedRow.references_list.length > 0 && (
+                <div>
+                  <div style={styles.auditSectionTitle}>
+                    Cited References (DB Relation: {selectedRow.references_list.length})
+                  </div>
                   <div
                     style={{
-                      ...styles.modalLabel,
-                      fontWeight: '600',
-                      marginBottom: '8px',
+                      maxHeight: '130px',
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
                     }}
                   >
-                    Additional Metadata
+                    {selectedRow.references_list.map((refItem, idx) => (
+                      <div key={idx} style={{ ...styles.auditItemBox, fontSize: '11px' }}>
+                        <span style={{ color: '#f0f6fc' }}>
+                          {refItem.title || refItem.raw_citation}
+                        </span>
+                        {refItem.year && (
+                          <span style={{ color: '#8b949e', marginLeft: '6px' }}>
+                            ({refItem.year})
+                          </span>
+                        )}
+                        {refItem.doi && (
+                          <a
+                            href={getDoiUrl(refItem.doi)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ ...styles.doiLink, marginLeft: '6px' }}
+                          >
+                            DOI: {refItem.doi}
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.downloads_list && selectedRow.downloads_list.length > 0 && (
+                <div>
+                  <div style={styles.auditSectionTitle}>
+                    Download Events (DB Relation)
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {selectedRow.downloads_list.map((d, idx) => (
+                      <div key={idx} style={styles.auditItemBox}>
+                        <span style={{ color: '#f0f6fc' }}>Source: {d.source}</span>
+                        <span style={{ color: '#8b949e', marginLeft: '8px' }}>
+                          Status: {d.status}
+                        </span>
+                        {d.file_path && (
+                          <div
+                            style={{
+                              color: '#8b949e',
+                              fontSize: '11px',
+                              marginTop: '2px',
+                            }}
+                          >
+                            Path: {d.file_path} ({d.file_size_bytes} bytes)
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.raw_data && (
+                <div>
+                  <div style={styles.auditSectionTitle}>
+                    Raw Bibliographic Payload (DB raw_data)
+                  </div>
+                  <pre style={styles.pre}>{selectedRow.raw_data}</pre>
+                </div>
+              )}
+
+              {extraEntries.length > 0 && (
+                <div style={{ marginTop: '6px' }}>
+                  <div style={styles.auditSectionTitle}>
+                    Additional Unmapped Columns
                   </div>
                   <div style={styles.modalGrid}>
                     {extraEntries.map(([key, val]) => (
