@@ -46,6 +46,8 @@ def _inject_references_inner(
         db.add(project)
         db.flush()
 
+    linked_article_ids = set()
+
     for ref in refs:
         year_val: Optional[int] = None
         if ref.year:
@@ -80,6 +82,8 @@ def _inject_references_inner(
         
         if not link:
             db.add(ProjectArticle(project_id=project.id, article_id=article.id))
+
+        linked_article_ids.add(article.id)
 
         if ref.author:
             if not getattr(article, "raw_data", None):
@@ -116,4 +120,4 @@ def _inject_references_inner(
                     )
 
     db.commit()
-    return len(refs)
+    return len(linked_article_ids)

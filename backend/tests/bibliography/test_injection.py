@@ -193,3 +193,27 @@ def test_inject_references_db_operational_error():
     
     with pytest.raises(RuntimeError, match="Database connection failed"):
         inject_references_to_db(mock_db, mock_refs, "ERR-PROJ")
+
+
+def test_inject_references_deduplicates_within_batch(in_memory_db):
+    now = datetime.now(timezone.utc)
+    dup_refs = [
+        ParsedReference(
+            title="Duplicate Paper",
+            doi="10.1000/dup",
+            upload_datetime=now,
+        ),
+        ParsedReference(
+            title="Duplicate Paper",
+            doi="10.1000/dup",
+            upload_datetime=now,
+        ),
+    ]
+    inserted = inject_references_to_db(in_memory_db, dup_refs, "DUP-PROJ")
+    assert inserted == 1
+    articles = (
+        in_memory_db.query(Article)
+        .filter(Article.doi == "10.1000/dup")
+        .all()
+    )
+    assert len(articles) == 1
