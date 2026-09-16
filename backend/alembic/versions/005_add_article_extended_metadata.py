@@ -1,6 +1,6 @@
 """Add article extended metadata and expand string columns to text
 
-Revision ID: 005_add_article_extended_metadata
+Revision ID: 005_add_article_metadata
 Revises: 004_add_tracking_models
 Create Date: 2026-09-16 11:35:00.000000
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "005_add_article_extended_metadata"
+revision: str = "005_add_article_metadata"
 down_revision: Union[str, None] = "004_add_tracking_models"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

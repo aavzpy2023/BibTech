@@ -74,6 +74,7 @@
 │   │   │   │   ├── 002_add_identity_models.py
 │   │   │   │   ├── 003_add_keywords.py
 │   │   │   │   ├── 004_add_tracking_models.py
+│   │   │   │   ├── 005_add_article_extended_metadata.py
 │   │   │   │   ├── 3cdf1cffd388_expand_article_columns_to_text.py
 │   │   │   │   ├── ca61c3937d6a_add_article_extended_metadata.py
 │   │   ├── src/
