@@ -1,10 +1,10 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 18:20:22
+Date: 2026-09-16 18:21:10
 AST Mode: False
 Line Numbers: True
-Modules: global_backlog.md
-Processed Files: 1
+Modules: global_backlog.md, roadmap_18_bibliometric_data_warehouse.md
+Processed Files: 2
 ===========================
 
 
@@ -105,20 +105,70 @@ Processed Files: 1
 [L092, S0] - [x] [REQ-050] Overview Tab - Left & Right Columns & Metrics Dumb Views
 [L093, S0] - [x] [REQ-051] Secondary Deep-Dive Drawer Dumb View & Hook State Fractality
 [L094, S0] 
-[L095, S0] ## Active Roadmaps
-[L096, S0] - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
-[L097, S0] - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
-[L098, S0] - [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
-[L099, S0] - [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
-[L100, S0] - [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
-[L101, S0] - [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
-[L102, S0] - [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
-[L103, S0] - [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
-[L104, S0] - [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
-[L105, S0] - [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
-[L106, S0] - [Roadmap 11: References UI Refinement & Backend Bugfix](roadmap_11_references_ui_and_bugfixes.md)
-[L107, S0] - [Roadmap 12: Bib Only Ingestion & Injection Resilience](roadmap_12_bib_only_and_injection_fix.md)
-[L108, S0] - [Roadmap 13: References Table Resizing & Count Fix](roadmap_13_references_table_resizing_and_count_fix.md)
-[L109, S0] - [Roadmap 15: Bibliographic Metadata & Bulk Injection](roadmap_15_bibliographic_metadata_and_bulk_injection.md)
-[L110, S0] - [Roadmap 16: Metadata Hover-Reveal UI](roadmap_16_metadata_hover_reveal.md)
-[L111, S0] - [Roadmap 17: Reference Details Modal](roadmap_17_reference_details_modal.md)
+[L095, S0] ## EPIC 18: BIBLIOMETRIC DATA WAREHOUSE & ADVANCED SCIENTOMETRICS
+[L096, S0] - [x] Story 18.0: Roadmap & Planning Initialization
+[L097, S0] - [ ] [REQ-052] Database Schema Expansion (Countries, Journals, Cited References)
+[L098, S0] - [ ] [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
+[L099, S0] - [ ] [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
+[L100, S0] - [ ] [REQ-055] Alembic Migration Generation & Schema Upgrade
+[L101, S0] 
+[L102, S0] ## Active Roadmaps
+[L103, S0] - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
+[L104, S0] - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
+[L105, S0] - [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
+[L106, S0] - [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
+[L107, S0] - [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
+[L108, S0] - [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
+[L109, S0] - [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
+[L110, S0] - [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
+[L111, S0] - [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
+[L112, S0] - [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
+[L113, S0] - [Roadmap 11: References UI Refinement & Backend Bugfix](roadmap_11_references_ui_and_bugfixes.md)
+[L114, S0] - [Roadmap 12: Bib Only Ingestion & Injection Resilience](roadmap_12_bib_only_and_injection_fix.md)
+[L115, S0] - [Roadmap 13: References Table Resizing & Count Fix](roadmap_13_references_table_resizing_and_count_fix.md)
+[L116, S0] - [Roadmap 15: Bibliographic Metadata & Bulk Injection](roadmap_15_bibliographic_metadata_and_bulk_injection.md)
+[L117, S0] - [Roadmap 16: Metadata Hover-Reveal UI](roadmap_16_metadata_hover_reveal.md)
+[L118, S0] - [Roadmap 17: Reference Details Modal](roadmap_17_reference_details_modal.md)
+[L119, S0] - [Roadmap 18: Bibliometric Data Warehouse](roadmap_18_bibliometric_data_warehouse.md)
+
+
+// --- leai_docs/planning/roadmap_18_bibliometric_data_warehouse.md ---
+
+[L001, S0] # Roadmap 18: Bibliometric Data Warehouse & Advanced Scientometrics
+[L002, S0] 
+[L003, S0] ## Context
+[L004, S0] To support advanced bibliometric network analysis (Co-citation, Bibliographic Coupling, Co-word analysis, and Institutional/Geographical networks) akin to VOSviewer or CiteSpace, the raw text fields must be decomposed into a relational Snowflake Schema. This roadmap covers the normalization of Countries, Journals, and Cited References (CR) into discrete dimensional tables optimized for adjacency matrix generation.
+[L005, S0] 
+[L006, S0] ## Story 18.0: Roadmap & Planning Initialization
+[L007, S0] - [x] Initialize this roadmap.
+[L008, S0] - [x] Append EPIC 18 to `global_backlog.md`.
+[L009, S0] 
+[L010, S0] ## [REQ-052] Database Schema Expansion (Countries, Journals, Cited References)
+[L011, S0] - **Goal**: Add new SQL models to support the bibliometric dimensions.
+[L012, S0] - **Tasks**:
+[L013, S2]   - [ ] Add `Country` and `ArticleCountry` mapping to handle geographical collaboration networks.
+[L014, S2]   - [ ] Add `CitedReference` and `ArticleCitation` mapping to handle co-citation and bibliographic coupling networks.
+[L015, S2]   - [ ] Add `Journal` model and prepare transition for core `Article` journal string.
+[L016, S0] - **Validations**: Ensure SQLAlchemy models possess correct ForeignKeys, unique constraints, and indices for graph traversal performance.
+[L017, S0] 
+[L018, S0] ## [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
+[L019, S0] - **Goal**: Refactor `wos_parser.py` and `parser_service.py` to cleanly extract the new dimensions.
+[L020, S0] - **Tasks**:
+[L021, S2]   - [ ] Implement a country extractor algorithm from the `Affiliations` raw string (e.g., regex isolating the last segment of the comma-separated address).
+[L022, S2]   - [ ] Implement a cited references (CR) parser to split the semicolon-separated strings into individual unique reference identifiers (Author, Year, Source).
+[L023, S2]   - [ ] Ensure `schemas.py` (`ParsedReference`) supports the newly extracted data arrays.
+[L024, S0] 
+[L025, S0] ## [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
+[L026, S0] - **Goal**: Update `injection_service.py` to bulk-insert the new relational entities safely and performantly.
+[L027, S0] - **Tasks**:
+[L028, S2]   - [ ] Bulk inject `countries` idempotently and link via `article_countries`.
+[L029, S2]   - [ ] Bulk inject `cited_references` idempotently and link via `article_citations`.
+[L030, S2]   - [ ] Refactor `journal` mapping logic to dynamically build the `journals` dimension.
+[L031, S0] - **Validations**: Assert zero unique constraint violations during bulk import and benchmark execution time.
+[L032, S0] 
+[L033, S0] ## [REQ-055] Alembic Migration Generation & Schema Upgrade
+[L034, S0] - **Goal**: Apply the model changes to the physical PostgreSQL database safely.
+[L035, S0] - **Tasks**:
+[L036, S2]   - [ ] Generate Alembic revision `add_bibliometric_snowflake_schema`.
+[L037, S2]   - [ ] Execute DB upgrade.
+[L038, S0] - **Validations**: Verify physical tables exist and constraints are sound via test queries.

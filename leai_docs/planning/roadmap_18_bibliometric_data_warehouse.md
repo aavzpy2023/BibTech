@@ -10,9 +10,9 @@ To support advanced bibliometric network analysis (Co-citation, Bibliographic Co
 ## [REQ-052] Database Schema Expansion (Countries, Journals, Cited References)
 - **Goal**: Add new SQL models to support the bibliometric dimensions.
 - **Tasks**:
-  - [ ] Add `Country` and `ArticleCountry` mapping to handle geographical collaboration networks.
-  - [ ] Add `CitedReference` and `ArticleCitation` mapping to handle co-citation and bibliographic coupling networks.
-  - [ ] Add `Journal` model and prepare transition for core `Article` journal string.
+  - [x] Add `Country` and `ArticleCountry` mapping to handle geographical collaboration networks.
+  - [x] Add `CitedReference` and `ArticleCitation` mapping to handle co-citation and bibliographic coupling networks.
+  - [x] Add `Journal` model and prepare transition for core `Article` journal string.
 - **Validations**: Ensure SQLAlchemy models possess correct ForeignKeys, unique constraints, and indices for graph traversal performance.
 
 ## [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
