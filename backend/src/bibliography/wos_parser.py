@@ -30,7 +30,7 @@ def parse_wos_countries(entry: dict) -> List[str]:
     countries = set()
     lines = [
         line.strip() 
-        for line in re.split(r"\.\s+(?=[A-Z\[])|\n|;", affil_raw) 
+        for line in re.split(r"\.\s+(?=[A-Z\[])|\n", affil_raw) 
         if line.strip()
     ]
     
@@ -93,10 +93,16 @@ def parse_wos_cited_references(entry: dict) -> List[Dict[str, str]]:
             else:
                 source = ", ".join(parts[1:])
                 
+        doi = ""
+        doi_match = re.search(r"(10\.\d{4,9}/[-._;()/:a-zA-Z0-9]+)", source)
+        if doi_match:
+            doi = doi_match.group(1).rstrip(".]}")
+                
         parsed_crs.append({
             "author": author,
             "year": year,
             "source": source,
+            "doi": doi,
             "raw": cr
         })
         

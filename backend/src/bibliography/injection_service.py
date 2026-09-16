@@ -512,6 +512,7 @@ def _bulk_inject_references(
                         "author": (cr.get("author") or "")[:255] or None,
                         "year": int(cr.get("year")) if cr.get("year") and str(cr.get("year")).isdigit() else None,
                         "source": (cr.get("source") or "")[:255] or None,
+                        "doi": (cr.get("doi") or "")[:255] or None,
                     }
                     
     if all_crs:

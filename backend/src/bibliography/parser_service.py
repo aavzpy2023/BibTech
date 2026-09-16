@@ -72,7 +72,7 @@ def _extract_bib_field(entry, key: str) -> Optional[str]:
         target_keys.update({"tc", "times-cited", "times_cited"})
     elif key.lower() in ("cited_references_count", "cited-references-count"):
         target_keys.update(
-            {"cited-references", "cited_references", "nr", "cr"}
+            {"number-of-cited-references", "nr", "cr"}
         )
 
     val = None
