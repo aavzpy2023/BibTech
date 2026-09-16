@@ -13,7 +13,7 @@ complexity_aggregate: "MEDIUM"
   Layered Technical Breakdown:
   [ID-16.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Append EPIC 16, its [REQ-046] list, and the Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_16_metadata_hover_reveal.md]. Type: Task.
 
-- [ ] Story 16.1: State Fractality - Hover Logic Hook | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 16.1: State Fractality - Hover Logic Hook | [MoSCoW: MUST] | [Complexity: EASY]
   Business Requirement: Isolate the coordinate tracking and hover state management from the UI components.
   Story Context Radius: {"frontend/src/hooks/useHoverReveal.js": [""], "frontend/src/hooks/useHoverReveal.test.js": [""]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
