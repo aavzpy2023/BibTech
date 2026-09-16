@@ -47,6 +47,8 @@ def _inject_references_inner(
         db.flush()
 
     linked_article_ids = set()
+    seen_proj_links = set()
+    seen_auth_links = set()
 
     for ref in refs:
         year_val: Optional[int] = None
@@ -75,13 +77,17 @@ def _inject_references_inner(
             db.add(article)
             db.flush()
 
-        link = db.query(ProjectArticle).filter(
-            ProjectArticle.project_id == project.id,
-            ProjectArticle.article_id == article.id
-        ).first()
+        link = None
+        if (project.id, article.id) not in seen_proj_links:
+            link = db.query(ProjectArticle).filter(
+                ProjectArticle.project_id == project.id,
+                ProjectArticle.article_id == article.id
+            ).first()
         
-        if not link:
+        if not link and (project.id, article.id) not in seen_proj_links:
             db.add(ProjectArticle(project_id=project.id, article_id=article.id))
+            db.flush()
+        seen_proj_links.add((project.id, article.id))
 
         linked_article_ids.add(article.id)
 
@@ -102,15 +108,17 @@ def _inject_references_inner(
                     auth_obj = Author(name=c_name)
                     db.add(auth_obj)
                     db.flush()
-                a_link = (
-                    db.query(AuthorArticle)
-                    .filter(
-                        AuthorArticle.author_id == auth_obj.id,
-                        AuthorArticle.article_id == article.id,
+                a_link = None
+                if (auth_obj.id, article.id) not in seen_auth_links:
+                    a_link = (
+                        db.query(AuthorArticle)
+                        .filter(
+                            AuthorArticle.author_id == auth_obj.id,
+                            AuthorArticle.article_id == article.id,
+                        )
+                        .first()
                     )
-                    .first()
-                )
-                if not a_link:
+                if not a_link and (auth_obj.id, article.id) not in seen_auth_links:
                     db.add(
                         AuthorArticle(
                             author_id=auth_obj.id,
@@ -118,6 +126,8 @@ def _inject_references_inner(
                             author_order=idx + 1,
                         )
                     )
+                    db.flush()
+                seen_auth_links.add((auth_obj.id, article.id))
 
     db.commit()
     return len(linked_article_ids)
