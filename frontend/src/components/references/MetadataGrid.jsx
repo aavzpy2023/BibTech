@@ -24,11 +24,10 @@ const styles = {
     fontSize: '13px',
     color: '#c9d1d9',
     lineHeight: '1.4',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
   },
 };
+
+const MAIN_KEYS = ['title', 'author', 'year', 'journal', 'abstract', 'doi'];
 
 export function MetadataGrid({ data, onHover, onMove, onLeave }) {
   if (!data) return null;
@@ -40,17 +39,31 @@ export function MetadataGrid({ data, onHover, onMove, onLeave }) {
         
         const displayValue =
           typeof value === 'object' ? JSON.stringify(value) : String(value);
+          
+        const isMain = MAIN_KEYS.includes(key.toLowerCase());
+        const isFullWidth = ['title', 'abstract'].includes(key.toLowerCase());
 
         return (
           <div
             key={key}
-            style={styles.auditItemBox}
+            style={{
+              ...styles.auditItemBox,
+              ...(isFullWidth ? { gridColumn: '1 / -1' } : {})
+            }}
             onMouseEnter={(e) => onHover?.(key, displayValue, e)}
             onMouseMove={onMove}
             onMouseLeave={onLeave}
           >
             <div style={styles.modalLabel}>{key}</div>
-            <div style={styles.modalValue}>{displayValue}</div>
+            {isMain ? (
+              <div style={{ ...styles.modalValue, whiteSpace: 'pre-wrap' }}>
+                {displayValue}
+              </div>
+            ) : (
+              <div style={{ ...styles.modalValue, color: '#8b949e', fontStyle: 'italic', fontSize: '11px' }}>
+                Hover to view
+              </div>
+            )}
           </div>
         );
       })}

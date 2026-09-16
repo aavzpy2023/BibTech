@@ -23,3 +23,5 @@
     drop via `react-dropzone`.
   - `frontend/src/components/ReferenceTable.jsx`: Pure tabular view formatting
     timestamps via `date-fns`.
+  - `frontend/src/components/references/MetadataGrid.jsx` & `HoverPopover.jsx`:
+    Dumb components enforcing State Fractality for metadata display.

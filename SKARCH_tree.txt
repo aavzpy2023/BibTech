@@ -31,6 +31,8 @@
 │   │   │   │   ├── useBatchLoad.test.js
 │   │   │   │   ├── useBibliography.js
 │   │   │   │   ├── useBibliography.test.js
+│   │   │   │   ├── useHoverReveal.js
+│   │   │   │   ├── useHoverReveal.test.js
 │   │   │   │   ├── useQueueState.js
 │   │   │   │   ├── useQueueState.test.js
 │   │   │   │   ├── useReferencesTable.js
@@ -52,10 +54,10 @@
 │   │   │   │   │   ├── BatchMonitor.jsx
 │   │   │   │   │   ├── BatchMonitor.test.jsx
 │   │   │   │   ├── references/
+│   │   │   │   │   ├── HoverPopover.jsx
+│   │   │   │   │   ├── MetadataGrid.jsx
 │   │   │   │   │   ├── ReferencesDataTable.jsx
-│   │   │   │   │   ├── ReferencesDataTable.test.jsx
 │   │   │   │   │   ├── UploadReferencesModal.jsx
-│   │   │   │   │   ├── UploadReferencesModal.test.jsx
 │   ├── backend/
 │   │   ├── Dockerfile
 │   │   ├── __init__.py
@@ -138,6 +140,7 @@
 │   │   │   ├── roadmap_12_bib_only_and_injection_fix.md
 │   │   │   ├── roadmap_13_references_table_resizing_and_count_fix.md
 │   │   │   ├── roadmap_15_bibliographic_metadata_and_bulk_injection.md
+│   │   │   ├── roadmap_16_metadata_hover_reveal.md
 │   │   │   ├── roadmap_1_bibliography_ingestion.md
 │   │   │   ├── roadmap_2_batch_load.md
 │   │   │   ├── roadmap_3_batch_download_execution.md

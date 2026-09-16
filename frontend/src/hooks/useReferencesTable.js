@@ -15,9 +15,10 @@ export function useReferencesTable(data = [], pageSize = 13) {
         }
         const query = searchQuery.toLowerCase();
         return data.filter((item) => {
-            const title = (item.title || '').toLowerCase();
-            const author = (item.author || '').toLowerCase();
-            return title.includes(query) || author.includes(query);
+            return Object.values(item).some((val) => {
+                if (val === null || val === undefined) return false;
+                return String(val).toLowerCase().includes(query);
+            });
         });
     }, [data, searchQuery]);
 

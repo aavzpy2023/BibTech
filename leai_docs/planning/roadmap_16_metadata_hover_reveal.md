@@ -28,8 +28,9 @@ complexity_aggregate: "MEDIUM"
   [ID-16.2.2] [UI/VIEW]: [1. Create HoverPopover.jsx. 2. Implement a pure functional component that returns null if !info?.isVisible. 3. Return a div using the styles.popover definition (copy from ReferencesDataTable.jsx or inline it) dynamically positioned at left: info.x + 15, top: info.y + 15]. Type: Task.
   [ID-16.2.3] [UI/VIEW]: [1. Create MetadataGrid.jsx. 2. Accept props: data (object), onHover, onMove, onLeave. 3. Iterate Object.entries(data). 4. Render a grid of labels (keys) using styles.auditItemBox. 5. Attach the mouse event props to each label, passing (key, value, e) to onHover]. Type: Task.
 
-- [ ] Story 16.3: View Wiring - ReferencesDataTable Integration | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-16.2)
+- [x] Story 16.3: View Wiring - ReferencesDataTable Integration | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-16.2)
   Business Requirement: Surgically replace the bloated hardcoded modal body with the new fractured components.
+  > Files touched: frontend/src/components/references/ReferencesDataTable.jsx, frontend/src/components/references/ReferencesDataTable.test.jsx, context.md, leai_docs/planning/global_backlog.md
   Story Context Radius: {"frontend/src/components/references/ReferencesDataTable.jsx": [""], "frontend/src/hooks/useHoverReveal.js": ["export"], "frontend/src/components/references/MetadataGrid.jsx": ["export"], "frontend/src/components/references/HoverPopover.jsx": ["export"], "context.md": [""], "leai_docs/planning/roadmap_16_metadata_hover_reveal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
   [ID-16.3.1] [TESTING/TDE]: [1. Arrange: In ReferencesDataTable.test.jsx, mock MetadataGrid and HoverPopover. 2. Act: Trigger modal open with a selected row. 3. Assert: Verify MetadataGrid is called with the selectedRow data prop]. Type: Task.

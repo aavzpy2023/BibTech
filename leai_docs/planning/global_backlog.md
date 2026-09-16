@@ -82,7 +82,7 @@
 
 ## EPIC 16: METADATA HOVER-REVEAL UI
 - [x] Story 16.0: Roadmap & Planning Initialization
-- [ ] [REQ-046] Metadata Hover-Reveal UI (Grid & Popover)
+- [x] [REQ-046] Metadata Hover-Reveal UI (Grid & Popover)
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
