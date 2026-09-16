@@ -29,3 +29,23 @@ describe('UploadReferencesModal Dark Mode Compliance', () => {
     expect(title.style.color).toBe('rgb(240, 246, 252)');
   });
 });
+
+describe('UploadReferencesModal Loading State', () => {
+  it('displays Processing... instead of Injecting references...', () => {
+    // Arrange
+    render(
+      <UploadReferencesModal
+        isOpen={true}
+        onClose={vi.fn()}
+        projectCode="TEST-PROJ"
+        setProjectCode={vi.fn()}
+        uploadAndInject={vi.fn()}
+        isLoading={true}
+      />
+    );
+    
+    // Act & Assert
+    expect(screen.getByText('Processing...')).toBeDefined();
+    expect(screen.queryByText(/Injecting references/i)).toBeNull();
+  });
+});

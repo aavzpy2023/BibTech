@@ -13,13 +13,14 @@ complexity_aggregate: "HARD"
   Layered Technical Breakdown:
   - [ID-15.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Append EPIC 15, its [REQ-042] to [REQ-045] list, and the Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md]. Type: Task.
 
-- [ ] Story 15.1: UI Dumb View Wiring (Text Standardization) | [MoSCoW: MUST] | [Complexity: TRIVIAL]
+- [x] Story 15.1: UI Dumb View Wiring (Text Standardization) | [MoSCoW: MUST] | [Complexity: TRIVIAL]
   Business Requirement: Update the ingestion modal to display "Processing..." instead of "Injecting..." to accurately reflect the new bulk processing nature. (<-- REQ-042)
   Story Context Radius: {"frontend/src/components/references/UploadReferencesModal.jsx": ["*"]}
   Layered Technical Breakdown:
   - [ID-15.1.1] [TESTING/TDE]: [1. Arrange: Mount UploadReferencesModal with isLoading=true. 2. Act: Render the component. 3. Assert: Verify the text "Processing..." is displayed and "Injecting references..." is strictly absent]. Type: Task.
   - [ID-15.1.2] [UI/VIEW]: [1. Open UploadReferencesModal.jsx. 2. Locate the isLoading conditional block. 3. Change the text from "Injecting references into database..." to "Processing..."]. Type: Task.
   - [ID-15.1.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md and check - [x] for Story 15.1. 2. Append > Files touched: [list of modified/read files] under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-042]]. Type: Task.
+  > Files touched: frontend/src/components/references/UploadReferencesModal.jsx, frontend/src/components/references/UploadReferencesModal.test.jsx, leai_docs/planning/global_backlog.md, leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md
 
 - [ ] Story 15.2: Database Schema Expansion & State Preservation | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Expand the Article database model to store comprehensive .bib metadata while strictly preserving existing data via Alembic. (<-- REQ-043)

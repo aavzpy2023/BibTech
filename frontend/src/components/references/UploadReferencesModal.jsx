@@ -172,7 +172,7 @@ export function UploadReferencesModal({
         {error && <div style={styles.errorBox}>❌ {error}</div>}
     {isLoading && (
       <p style={{ color: '#0366d6', fontWeight: '500', fontSize: '14px' }}>
-        Injecting references into database...
+        Processing...
       </p>
     )}
 
