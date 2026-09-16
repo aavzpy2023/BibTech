@@ -334,6 +334,7 @@ def test_get_project_references_endpoint():
         mock_art = MagicMock()
         mock_art.id = 10
         mock_art.title = "Test Paper"
+        mock_art.author = "Test Author"
         mock_art.year = 2024
         mock_art.journal = "Test Journal"
         mock_art.doi = "10.1000/1"

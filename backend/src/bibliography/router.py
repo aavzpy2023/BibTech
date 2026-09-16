@@ -142,14 +142,17 @@ if HAS_MULTIPART:
         articles = (
             db.query(Article).filter(Article.id.in_(article_ids)).all()
         )
+        def _to_str(val):
+            return str(val) if isinstance(val, (str, int, float)) else None
+
         now = datetime.now(timezone.utc)
         return [
             ParsedReference(
-                author=getattr(a, "author", None),
-                year=str(a.year) if a.year is not None else None,
-                title=a.title,
-                journal=a.journal,
-                doi=a.doi,
+                author=_to_str(getattr(a, "author", None)),
+                year=_to_str(getattr(a, "year", None)),
+                title=_to_str(getattr(a, "title", None)) or "Untitled",
+                journal=_to_str(getattr(a, "journal", None)),
+                doi=_to_str(getattr(a, "doi", None)),
                 upload_datetime=now,
             )
             for a in articles
