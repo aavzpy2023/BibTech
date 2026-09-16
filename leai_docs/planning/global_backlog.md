@@ -86,7 +86,7 @@
 
 ## EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE
 - [x] Story 17.0: Roadmap & Planning Initialization
-- [ ] [REQ-047] Backend Reference Serialization Audit & Boundary Marshal
+- [x] [REQ-047] Backend Reference Serialization Audit & Boundary Marshal
 - [ ] [REQ-048] Reusable Base Modal Architecture (ModalTemplate) Dumb View
 - [ ] [REQ-049] Reference Details - Hero Ribbon Dumb View
 - [ ] [REQ-050] Overview Tab - Left & Right Columns & Metrics Dumb Views

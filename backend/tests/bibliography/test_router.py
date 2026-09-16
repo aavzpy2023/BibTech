@@ -363,3 +363,78 @@ def test_get_project_references_endpoint():
         assert data[0]["author"] == "Smith, John and Doe, Jane"
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+def test_get_project_references_metadata_expansion():
+    from backend.src.bibliography.router import get_db
+
+    mock_db = MagicMock()
+    app.dependency_overrides[get_db] = lambda: mock_db
+    try:
+        mock_proj = MagicMock()
+        mock_proj.id = 1
+
+        mock_link = MagicMock()
+        mock_link.article_id = 10
+        mock_link.status = "processed"
+        mock_link.added_at = None
+
+        mock_art = MagicMock()
+        mock_art.id = 10
+        mock_art.title = "Expanded Paper"
+        mock_art.author = "Smith, John"
+        mock_art.authors = []
+        mock_art.author_articles = []
+        mock_art.keywords = []
+        mock_art.references = []
+        mock_art.funding = []
+        mock_art.downloads = []
+        mock_art.raw_data = None
+        mock_art.year = 2024
+        mock_art.journal = "Exp Journal"
+        mock_art.doi = "10.1000/exp"
+        mock_art.publisher = "Nature"
+        mock_art.language = "English"
+        mock_art.research_areas = "Science"
+        mock_art.web_of_science_categories = "Biology"
+        mock_art.funding_text = "Funded by X"
+        mock_art.journal_iso = "Exp. J."
+        mock_art.oa_status = "Gold"
+        mock_art.issn = "1234-5678"
+        mock_art.times_cited = 42
+        mock_art.cited_references_count = 10
+        mock_art.created_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        mock_art.updated_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+        def query_side_effect(model):
+            m = MagicMock()
+            if "ProjectArticle" in str(model):
+                m.filter.return_value.all.return_value = [mock_link]
+            elif "Article" in str(model):
+                m.filter.return_value.all.return_value = [mock_art]
+            elif "Project" in str(model):
+                m.filter.return_value.first.return_value = mock_proj
+            return m
+
+        mock_db.query.side_effect = query_side_effect
+
+        response = client.get("/api/bibliography/references?project_code=TEST")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        item = data[0]
+        assert item["title"] == "Expanded Paper"
+        assert item["publisher"] == "Nature"
+        assert item["language"] == "English"
+        assert item["research_areas"] == "Science"
+        assert item["web_of_science_categories"] == "Biology"
+        assert item["funding_text"] == "Funded by X"
+        assert item["journal_iso"] == "Exp. J."
+        assert item["oa_status"] == "Gold"
+        assert item["issn"] == "1234-5678"
+        assert item["times_cited"] == 42
+        assert item["cited_references_count"] == 10
+
+    finally:
+        app.dependency_overrides.pop(get_db, None)

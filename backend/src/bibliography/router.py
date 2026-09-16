@@ -162,6 +162,14 @@ if HAS_MULTIPART:
                 val, "_mock_name"
             )
 
+        def _to_int(val):
+            if val is not None and not _is_mock(val):
+                try:
+                    return int(val)
+                except (ValueError, TypeError):
+                    pass
+            return None
+
         def _safe_list(val):
             if val is None or _is_mock(val):
                 return []
@@ -279,6 +287,16 @@ if HAS_MULTIPART:
                 "issue": _to_str(getattr(a, "issue", None)),
                 "pages": _to_str(getattr(a, "pages", None)),
                 "abstract": _to_str(getattr(a, "abstract", None)),
+                "publisher": _to_str(getattr(a, "publisher", None)),
+                "language": _to_str(getattr(a, "language", None)),
+                "research_areas": _to_str(getattr(a, "research_areas", None)),
+                "web_of_science_categories": _to_str(getattr(a, "web_of_science_categories", None)),
+                "funding_text": _to_str(getattr(a, "funding_text", None)),
+                "journal_iso": _to_str(getattr(a, "journal_iso", None)),
+                "oa_status": _to_str(getattr(a, "oa_status", None)),
+                "issn": _to_str(getattr(a, "issn", None)),
+                "times_cited": _to_int(getattr(a, "times_cited", None)),
+                "cited_references_count": _to_int(getattr(a, "cited_references_count", None)),
                 "raw_data": _to_str(getattr(a, "raw_data", None)),
                 "created_at": (
                     a.created_at.isoformat()

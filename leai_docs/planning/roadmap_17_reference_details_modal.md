@@ -14,7 +14,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
 
   [ID-17.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Append EPIC 17, its [REQ-047] through [REQ-051] list, and the Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_17_reference_details_modal.md]. Type: Task.
 
-- [ ] Story 17.1: Backend Reference Serialization Audit & Boundary Marshal | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 17.1: Backend Reference Serialization Audit & Boundary Marshal | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Guarantee that all persisted article metadata columns in PostgreSQL/SQLite are mapped to primitive DTOs via the REST endpoint.
   Story Context Radius: {"backend/src/bibliography/router.py": [""], "backend/src/database/models/core.py": ["READ_ONLY"], "backend/tests/bibliography/test_router.py": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
@@ -22,6 +22,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.1.1] [TESTING/TDE]: [1. Arrange: Create unit test in test_router.py mocking db.query(Article) to return an Article entity explicitly populated with publisher, language, research_areas, web_of_science_categories, funding_text, journal_iso, oa_status, issn, times_cited, cited_references_count. 2. Act: Invoke get_project_references(project_code="TEST", db=mock_db). 3. Assert: Verify every attribute is mapped accurately to its primitive type in the returned dictionary]. Type: Task.
   [ID-17.1.2] [BACKEND/ROUTER]: [1. Open backend/src/bibliography/router.py. 2. In get_project_references, perform micro-surgery on the result.append() dictionary to extract and cast missing attributes from a (Article model) using _to_str() or int() where appropriate. 3. Validate no ORM instances leak]. Type: Task.
   [ID-17.1.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_17_reference_details_modal.md and check - [x] for Story 17.1. 2. Append > Files touched: router.py, test_router.py. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-047]]. Type: Task.
+  > Files touched: router.py, test_router.py
 
 - [ ] Story 17.2: Reusable Base Modal Architecture (ModalTemplate) Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Provide a dumb, dark-mode modal container with backdrop blur and flexible slots, stripped of any internal business logic.
