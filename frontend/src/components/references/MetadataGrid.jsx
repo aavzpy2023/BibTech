@@ -27,7 +27,16 @@ const styles = {
   },
 };
 
-const MAIN_KEYS = ['title', 'author', 'year', 'journal', 'abstract', 'doi'];
+const MAIN_KEYS = ['title', 'author', 'year', 'journal', 'doi'];
+
+function getDoiUrl(doi) {
+  if (!doi) return '';
+  const clean = String(doi).trim();
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    return clean;
+  }
+  return `https://doi.org/${clean.replace(/^doi:\s*/i, '')}`;
+}
 
 export function MetadataGrid({ data, onHover, onMove, onLeave }) {
   if (!data) return null;
@@ -41,7 +50,7 @@ export function MetadataGrid({ data, onHover, onMove, onLeave }) {
           typeof value === 'object' ? JSON.stringify(value) : String(value);
           
         const isMain = MAIN_KEYS.includes(key.toLowerCase());
-        const isFullWidth = ['title', 'abstract'].includes(key.toLowerCase());
+        const isFullWidth = ['title', 'author'].includes(key.toLowerCase());
 
         return (
           <div
@@ -56,9 +65,22 @@ export function MetadataGrid({ data, onHover, onMove, onLeave }) {
           >
             <div style={styles.modalLabel}>{key}</div>
             {isMain ? (
-              <div style={{ ...styles.modalValue, whiteSpace: 'pre-wrap' }}>
-                {displayValue}
-              </div>
+              key.toLowerCase() === 'doi' ? (
+                <div style={{ ...styles.modalValue, whiteSpace: 'pre-wrap' }}>
+                  <a
+                    href={getDoiUrl(value)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#58a6ff', textDecoration: 'none', wordBreak: 'break-all' }}
+                  >
+                    {displayValue} ↗
+                  </a>
+                </div>
+              ) : (
+                <div style={{ ...styles.modalValue, whiteSpace: 'pre-wrap' }}>
+                  {displayValue}
+                </div>
+              )
             ) : (
               <div style={{ ...styles.modalValue, color: '#8b949e', fontStyle: 'italic', fontSize: '11px' }}>
                 Hover to view
