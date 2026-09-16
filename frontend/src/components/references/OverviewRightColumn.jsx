@@ -117,6 +117,7 @@ export default function OverviewRightColumn({
         icon={icons.building} 
         onHoverInfo={onHoverInfo} 
         infoKey="affiliations"
+        onClick={affiliations ? () => onExpandDrawer('affiliations') : null}
       >
         {affiliations}
       </RightPanelBox>

@@ -263,6 +263,13 @@ ReferenceDrawer.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
   title: PropTypes.string,
-  type: PropTypes.oneOf(['references', 'authors', 'funding', 'abstract', 'generic']),
+  type: PropTypes.oneOf([
+    'references',
+    'authors',
+    'funding',
+    'abstract',
+    'affiliations',
+    'generic',
+  ]),
   data: PropTypes.array,
 };

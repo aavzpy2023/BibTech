@@ -201,6 +201,18 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
                 onExpandDrawer={(drawerType) => {
                   if (drawerType === 'authors') {
                     handleExpandDrawer('authors', authorsDetail, 'Authors Details');
+                  } else if (drawerType === 'affiliations') {
+                    const affilList = affiliations
+                      ? affiliations
+                          .split(';')
+                          .map((a) => a.trim())
+                          .filter(Boolean)
+                      : [];
+                    handleExpandDrawer(
+                      'affiliations',
+                      affilList,
+                      'Affiliations'
+                    );
                   } else if (drawerType === 'funding') {
                     const fundingData =
                       fundingList && fundingList.length > 0

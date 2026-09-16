@@ -97,6 +97,9 @@ export default function useReferenceDetails(article = null) {
         } else if (type === 'abstract') {
           resolvedData = article.abstract ? [article.abstract] : [];
           resolvedTitle = resolvedTitle || 'Full Abstract';
+        } else if (type === 'affiliations') {
+          resolvedData = article.affiliations ? [article.affiliations] : [];
+          resolvedTitle = resolvedTitle || 'Affiliations';
         }
       }
 
