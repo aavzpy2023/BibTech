@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 
 export function useTableResize() {
   const [colWidths, setColWidths] = useState({
-    title: 45,
+    title: 40,
     author: 20,
-    year: 10,
+    year: 15,
     journal: 25,
   });
 

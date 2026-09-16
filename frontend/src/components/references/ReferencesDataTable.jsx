@@ -2,16 +2,6 @@ import React, { useState } from 'react';
 import { useReferencesTable } from '../../hooks/useReferencesTable';
 import { useTableResize } from '../../hooks/useTableResize';
 
-function formatShortAuthor(authorStr) {
-  if (!authorStr || authorStr === 'N/A') return 'N/A';
-  const first = authorStr.trim().split(/\s+and\s+|;\s*/i)[0].trim();
-  if (!first) return 'N/A';
-  const surname = first.includes(',')
-    ? first.split(',')[0].trim()
-    : (first.split(/\s+/).pop() || first);
-  return `${surname} ...`;
-}
-
 const styles = {
   controls: {
     display: 'flex',
@@ -65,6 +55,7 @@ const styles = {
   th: {
     backgroundColor: '#161b22',
     borderBottom: '1px solid #30363d',
+    borderRight: '1px solid #30363d',
     padding: '10px 14px',
     fontWeight: '600',
     color: '#f0f6fc',
@@ -80,6 +71,7 @@ const styles = {
   td: {
     padding: '10px 14px',
     color: '#f0f6fc',
+    borderRight: '1px solid #30363d',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -218,7 +210,7 @@ export function ReferencesDataTable({ data = [] }) {
                 {row.title || 'N/A'}
               </td>
               <td style={styles.td} title={row.author || 'N/A'}>
-                {formatShortAuthor(row.author)}
+                {row.author || 'N/A'}
               </td>
               <td style={styles.td} title={String(row.year || 'N/A')}>
                 {row.year || 'N/A'}

@@ -17,9 +17,9 @@ describe('useTableResize', () => {
     const { result } = renderHook(() => useTableResize());
     
     expect(result.current.colWidths).toEqual({
-      title: 45,
+      title: 40,
       author: 20,
-      year: 10,
+      year: 15,
       journal: 25,
     });
   });
@@ -34,12 +34,12 @@ describe('useTableResize', () => {
 
     act(() => {
       // Simulamos movimiento de 100px a la derecha (equivalente a 10%)
-      // title: 45 + 10 = 55%
+      // title: 40 + 10 = 50%
       const moveEvent = new MouseEvent('mousemove', { clientX: 200 });
       window.dispatchEvent(moveEvent);
     });
 
-    expect(result.current.colWidths.title).toBe(55);
+    expect(result.current.colWidths.title).toBe(50);
 
     act(() => {
       // Finalizamos el arrastre
@@ -57,7 +57,7 @@ describe('useTableResize', () => {
 
     act(() => {
       // Movimiento extremo a la izquierda de 400px = -40%
-      // year inicial es 10%. 10 - 40 = -30%, debe limitarse a 5%
+      // year inicial es 15%. 15 - 40 = -25%, debe limitarse a 5%
       const moveEvent = new MouseEvent('mousemove', { clientX: 100 });
       window.dispatchEvent(moveEvent);
     });

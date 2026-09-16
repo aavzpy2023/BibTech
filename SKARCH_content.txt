@@ -1,142 +1,451 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-16 09:42:05
+Date: 2026-09-16 09:47:18
 AST Mode: True
 Line Numbers: False
-Modules: useReferencesUpload.test.js
-Processed Files: 1
+Modules: ReferencesDataTable.jsx, useTableResize.js, useTableResize.test.js
+Processed Files: 3
 ===========================
 
 
 
-// --- frontend/src/hooks/useReferencesUpload.test.js ---
+// --- frontend/src/components/references/ReferencesDataTable.jsx ---
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React, { useState } from 'react';
+import { useReferencesTable } from '../../hooks/useReferencesTable';
+import { useTableResize } from '../../hooks/useTableResize';
+
+function formatShortAuthor(authorStr) {
+  if (!authorStr || authorStr === 'N/A') return 'N/A';
+  const first = authorStr.trim().split(/\s+and\s+|;\s*/i)[0].trim();
+  if (!first) return 'N/A';
+  const surname = first.includes(',')
+    ? first.split(',')[0].trim()
+    : (first.split(/\s+/).pop() || first);
+  return `${surname} ...`;
+}
+
+const styles = {
+  controls: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  },
+  searchInput: {
+    padding: '8px 12px',
+    borderRadius: '6px',
+    border: '1px solid #30363d',
+    backgroundColor: '#0d1117',
+    color: '#f0f6fc',
+    width: '300px',
+    outline: 'none',
+  },
+  pagination: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: '16px',
+    padding: '8px 0',
+  },
+  pageBtn: {
+    padding: '6px 12px',
+    backgroundColor: '#21262d',
+    border: '1px solid #30363d',
+    color: '#f0f6fc',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px',
+  },
+  pageBtnDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
+  container: {
+    width: '100%',
+    overflowX: 'auto',
+    marginTop: '20px',
+    position: 'relative',
+  },
+  table: {
+    width: '100%',
+    tableLayout: 'fixed',
+    borderCollapse: 'collapse',
+    textAlign: 'left',
+    fontSize: '14px',
+    fontFamily: 'system-ui, sans-serif',
+  },
+  th: {
+    backgroundColor: '#161b22',
+    borderBottom: '1px solid #30363d',
+    padding: '10px 14px',
+    fontWeight: '600',
+    color: '#f0f6fc',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  tr: {
+    borderBottom: '1px solid #30363d',
+    cursor: 'pointer',
+    transition: 'background-color 0.15s ease',
+  },
+  td: {
+    padding: '10px 14px',
+    color: '#f0f6fc',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  empty: {
+    padding: '24px',
+    textAlign: 'center',
+    color: '#8b949e',
+    fontSize: '14px',
+    fontStyle: 'italic',
+  },
+  popover: {
+    position: 'fixed',
+    backgroundColor: '#1f2428',
+    color: '#f6f8fa',
+    padding: '12px 16px',
+    borderRadius: '6px',
+    fontSize: '12px',
+    maxWidth: '400px',
+    maxHeight: '260px',
+    overflow: 'auto',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+    zIndex: 1000,
+    pointerEvents: 'none',
+  },
+  pre: {
+    margin: 0,
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    fontFamily: 'monospace',
+  },
+};
+
+export function ReferencesDataTable({ data = [] }) {
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const [coords, setCoords] = useState({ x: 0, y: 0 });
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    currentPage,
+    setCurrentPage,
+    paginatedData,
+    totalPages,
+  } = useReferencesTable(data, 13);
+
+  const { colWidths, handleMouseDown } = useTableResize();
+
+  if (!data || data.length === 0) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.empty}>
+          No references available to display.
+        </div>
+      </div>
+    );
+  }
+
+  const handleMouseMove = (e, row) => {
+    setHoveredRow(row);
+    setCoords({ x: e.clientX + 16, y: e.clientY + 16 });
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredRow(null);
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.controls}>
+        <input
+          type="text"
+          placeholder="Search by title or author..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={styles.searchInput}
+        />
+        <span style={{ fontSize: '13px', color: '#8b949e' }}>
+          Total References: {data.length}
+        </span>
+      </div>
+      <table style={styles.table}>
+        <thead>
+          <tr>
+            <th style={{ ...styles.th, width: `${colWidths.title}%`, position: 'relative' }}>
+              Title
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'title')}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.author}%`, position: 'relative' }}>
+              Author
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'author')}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.year}%`, position: 'relative' }}>
+              Year
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'year')}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.journal}%`, position: 'relative' }}>
+              Journal
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'journal')}
+              />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedData.map((row, index) => (
+            <tr
+              key={row.id || index}
+              style={styles.tr}
+              onMouseMove={(e) => handleMouseMove(e, row)}
+              onMouseLeave={handleMouseLeave}
+            >
+              <td style={styles.td} title={row.title || 'N/A'}>
+                {row.title || 'N/A'}
+              </td>
+              <td style={styles.td} title={row.author || 'N/A'}>
+                {formatShortAuthor(row.author)}
+              </td>
+              <td style={styles.td} title={String(row.year || 'N/A')}>
+                {row.year || 'N/A'}
+              </td>
+              <td style={styles.td} title={row.journal || 'N/A'}>
+                {row.journal || 'N/A'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {totalPages > 1 && (
+        <div style={styles.pagination}>
+          <button
+            style={{ ...styles.pageBtn, ...(currentPage === 1 ? styles.pageBtnDisabled : {}) }}
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+          <span style={{ fontSize: '14px', color: '#8b949e' }}>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            style={{ ...styles.pageBtn, ...(currentPage === totalPages ? styles.pageBtnDisabled : {}) }}
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+      {hoveredRow && (
+        <div
+          style={{
+            ...styles.popover,
+            top: `${coords.y}px`,
+            left: `${coords.x}px`,
+          }}
+        >
+          <div style={{ fontWeight: '600', color: '#58a6ff', marginBottom: '6px' }}>
+            {hoveredRow.title || 'Untitled'}
+          </div>
+          <div style={{ marginBottom: '6px', lineHeight: '1.4' }}>
+            <span style={{ color: '#8b949e', fontWeight: '500' }}>Authors: </span>
+            <span style={{ color: '#f0f6fc' }}>{hoveredRow.author || 'N/A'}</span>
+          </div>
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '4px' }}>
+            <div>
+              <span style={{ color: '#8b949e' }}>Year: </span>
+              <span style={{ color: '#f0f6fc' }}>{hoveredRow.year || 'N/A'}</span>
+            </div>
+            <div>
+              <span style={{ color: '#8b949e' }}>Journal: </span>
+              <span style={{ color: '#f0f6fc' }}>{hoveredRow.journal || 'N/A'}</span>
+            </div>
+          </div>
+          {hoveredRow.doi && (
+            <div>
+              <span style={{ color: '#8b949e' }}>DOI: </span>
+              <span style={{ color: '#79c0ff' }}>{hoveredRow.doi}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ReferencesDataTable;
+
+
+// --- frontend/src/hooks/useTableResize.js ---
+
+import { useState, useEffect, useCallback } from 'react';
+
+export function useTableResize() {
+  const [colWidths, setColWidths] = useState({
+    title: 45,
+    author: 20,
+    year: 10,
+    journal: 25,
+  });
+
+  const [isResizing, setIsResizing] = useState(null);
+
+  const handleMouseDown = useCallback((e, colName) => {
+    // Prevenimos la selección de texto u otros comportamientos default al arrastrar
+    if (e.preventDefault) e.preventDefault();
+    
+    setIsResizing({
+      colName,
+      startX: e.clientX,
+      startWidth: colWidths[colName],
+    });
+  }, [colWidths]);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isResizing) return;
+
+    const { colName, startX, startWidth } = isResizing;
+    const deltaX = e.clientX - startX;
+    
+    // Calculamos el desplazamiento como porcentaje del ancho de la ventana
+    const containerWidth = window.innerWidth;
+    const deltaPct = (deltaX / containerWidth) * 100;
+    
+    let newWidth = startWidth + deltaPct;
+    
+    // Constraint mínimo absoluto de 5%
+    if (newWidth < 5) newWidth = 5;
+
+    setColWidths((prev) => ({
+      ...prev,
+      [colName]: newWidth,
+    }));
+  }, [isResizing]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(null);
+  }, []);
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, handleMouseMove, handleMouseUp]);
+
+  return {
+    colWidths,
+    handleMouseDown,
+  };
+}
+
+export default useTableResize;
+
+
+// --- frontend/src/hooks/useTableResize.test.js ---
+
 import { renderHook, act } from '@testing-library/react';
-import { useReferencesUpload } from './useReferencesUpload';
+import { useTableResize } from './useTableResize';
 
-describe('useReferencesUpload', () => {
+describe('useTableResize', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
-    localStorage.clear();
+    // Definimos el innerWidth del window a 1000px para que el cálculo
+    // del porcentaje de desplazamiento (deltaPct) sea predecible: 
+    // 10px de movimiento = 1%
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: 1000,
+    });
   });
 
-  it('should initialize projectCode from localStorage if present', () => {
-    localStorage.setItem('last_project_code', 'DEFAULT-PROJ');
-    const { result } = renderHook(() => useReferencesUpload());
-    expect(result.current.projectCode).toBe('DEFAULT-PROJ');
+  it('initializes with default column widths', () => {
+    const { result } = renderHook(() => useTableResize());
+    
+    expect(result.current.colWidths).toEqual({
+      title: 45,
+      author: 20,
+      year: 10,
+      journal: 25,
+    });
   });
 
-  it('should upload and inject multiple files sequentially (FIFO)', async () => {
-    const mockFile = new File(['fake bib content'], 'test1.bib', {
-      type: 'text/plain',
-    });
-    const mockFile2 = new File(['fake bib'], 'test2.bib', { type: 'text/plain' });
-
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: 'Success', inserted: 5 }),
-    });
-
-    const { result } = renderHook(() => useReferencesUpload());
+  it('updates width on mouse move when resizing is active', () => {
+    const { result } = renderHook(() => useTableResize());
 
     act(() => {
-      result.current.setProjectCode('TEST');
+      // Simulamos mousedown en la columna 'title'
+      result.current.handleMouseDown({ clientX: 100, preventDefault: vi.fn() }, 'title');
     });
-
-    await act(async () => {
-      await result.current.uploadAndInject([mockFile, mockFile2]);
-    });
-
-    expect(global.fetch).toHaveBeenCalledTimes(4); // 2 files * 2 requests
-    const [url, options] = global.fetch.mock.calls[0];
-    expect(url).toBe('/api/bibliography/inject');
-    expect(options.method).toBe('POST');
-    expect(options.body).toBeInstanceOf(FormData);
-    expect(options.body.get('file')).toBe(mockFile);
-    expect(options.body.get('project_code')).toBe('TEST');
-    expect(result.current.isSuccess).toBe(true);
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBeNull();
-    expect(result.current.insertedCount).toBe(10); // 2 files * 5
-    expect(localStorage.getItem('last_project_code')).toBe('TEST');
-  });
-
-  it('should abort and set error if project code is missing', async () => {
-    const mockFile = new File(['content'], 'test.bib', {
-      type: 'text/plain',
-    });
-    global.fetch = vi.fn();
-
-    const { result } = renderHook(() => useReferencesUpload());
-
-    await act(async () => {
-      await result.current.uploadAndInject(mockFile);
-    });
-
-    expect(global.fetch).not.toHaveBeenCalled();
-    expect(result.current.isSuccess).toBe(false);
-    expect(result.current.error).toBe(
-      'El código de proyecto es requerido'
-    );
-  });
-
-  it('should abort and set error if file is missing', async () => {
-    global.fetch = vi.fn();
-
-    const { result } = renderHook(() => useReferencesUpload());
 
     act(() => {
-      result.current.setProjectCode('TEST');
+      // Simulamos movimiento de 100px a la derecha (equivalente a 10%)
+      // title: 45 + 10 = 55%
+      const moveEvent = new MouseEvent('mousemove', { clientX: 200 });
+      window.dispatchEvent(moveEvent);
     });
 
-    await act(async () => {
-      await result.current.uploadAndInject(null);
-    });
-
-    expect(global.fetch).not.toHaveBeenCalled();
-    expect(result.current.isSuccess).toBe(false);
-    expect(result.current.error).toBe(
-      'Debe seleccionar un archivo bibliográfico válido'
-    );
-  });
-
-  it('should handle frontend validation error for non .bib files', async () => {
-    const mockFile = new File(['content'], 'test.ris');
-    global.fetch = vi.fn();
-    
-    const { result } = renderHook(() => useReferencesUpload());
-    act(() => { result.current.setProjectCode('TEST'); });
-    
-    await act(async () => { await result.current.uploadAndInject(mockFile); });
-    
-    expect(global.fetch).not.toHaveBeenCalled();
-    expect(result.current.isSuccess).toBe(false);
-    expect(result.current.error).toBe('Solo se permiten archivos .bib');
-  });
-
-  it('should handle API error gracefully', async () => {
-    const mockFile = new File(['bad content'], 'test.bib', {
-      type: 'text/plain',
-    });
-
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      json: async () => ({ detail: 'Error de conexión a la base de datos' }),
-    });
-
-    const { result } = renderHook(() => useReferencesUpload());
+    expect(result.current.colWidths.title).toBe(55);
 
     act(() => {
-      result.current.setProjectCode('TEST');
+      // Finalizamos el arrastre
+      const upEvent = new MouseEvent('mouseup');
+      window.dispatchEvent(upEvent);
+    });
+  });
+
+  it('respects minimum width constraints of 5%', () => {
+    const { result } = renderHook(() => useTableResize());
+
+    act(() => {
+      result.current.handleMouseDown({ clientX: 500, preventDefault: vi.fn() }, 'year');
     });
 
-    await act(async () => {
-      await result.current.uploadAndInject(mockFile);
+    act(() => {
+      // Movimiento extremo a la izquierda de 400px = -40%
+      // year inicial es 10%. 10 - 40 = -30%, debe limitarse a 5%
+      const moveEvent = new MouseEvent('mousemove', { clientX: 100 });
+      window.dispatchEvent(moveEvent);
     });
 
-    expect(result.current.isSuccess).toBe(false);
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBe('Error de conexión a la base de datos');
+    expect(result.current.colWidths.year).toBe(5);
+
+    act(() => {
+      window.dispatchEvent(new MouseEvent('mouseup'));
+    });
   });
 });
