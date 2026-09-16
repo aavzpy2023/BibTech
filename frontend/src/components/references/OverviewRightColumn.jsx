@@ -49,32 +49,34 @@ const RightPanelBox = ({ title, icon, onHoverInfo, infoKey, onClick, children, c
       </div>
     </div>
     
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '12px' }}>
-      {copyAction && children && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            copyAction(children);
-          }}
-          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
-          aria-label="copy email"
-        >
-          <svg width="16" height="16" style={{ width: '16px', height: '16px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '12px' }}>
+        {copyAction && children && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              copyAction(children);
+            }}
+            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+            aria-label="copy email"
+          >
+            <svg width="16" height="16" style={{ width: '16px', height: '16px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </button>
+        )}
+        {onClick && (
+          <svg
+            width="14"
+            height="14"
+            style={{ width: '14px', height: '14px', flexShrink: 0, color: '#475569' }}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-        </button>
-      )}
-      <svg
-        width="14"
-        height="14"
-        style={{ width: '14px', height: '14px', flexShrink: 0, color: '#475569' }}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-      </svg>
-    </div>
+        )}
+      </div>
   </div>
 );
 
@@ -115,7 +117,6 @@ export default function OverviewRightColumn({
         icon={icons.building} 
         onHoverInfo={onHoverInfo} 
         infoKey="affiliations"
-        onClick={authorsDetailsCount > 0 ? () => onExpandDrawer('authors') : null}
       >
         {affiliations}
       </RightPanelBox>
@@ -145,7 +146,6 @@ export default function OverviewRightColumn({
         icon={icons.badge} 
         onHoverInfo={onHoverInfo} 
         infoKey="orcid"
-        onClick={orcidCount > 0 ? () => onExpandDrawer('authors') : null}
       >
         {orcidCount ? `${orcidCount} ORCID IDs` : null}
       </RightPanelBox>
@@ -155,7 +155,6 @@ export default function OverviewRightColumn({
         icon={icons.globe} 
         onHoverInfo={onHoverInfo} 
         infoKey="researcher-id"
-        onClick={researcherIdCount > 0 ? () => onExpandDrawer('authors') : null}
       >
         {researcherIdCount ? `${researcherIdCount} Researcher IDs` : null}
       </RightPanelBox>
