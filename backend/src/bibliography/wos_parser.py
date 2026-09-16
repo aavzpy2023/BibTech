@@ -115,6 +115,15 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
     Parses chaotic WOS identity fields (ORCID, ResearcherID, Affiliation) 
     and cross-references them to build a structured list of authors.
     """
+    kw_pattern = re.compile(
+        r"\b(Univ|University|Inst|Institute|Sch|School|Dept|Department|Ctr|Center|Centre|"
+        r"Fac|Faculty|Lab|Laboratory|Hosp|Hospital|Coll|College|Academy|Corp|Corporation|"
+        r"Inc|Ltd|GmbH|LLC|Ministry|Div|Division|Agency|Natl|National|Hlth|Health|Biol|Biology|"
+        r"Chem|Chemistry|Phys|Physics|Med|Medicine|Medical|Engn|Engineering|Tech|Technology|"
+        r"Sci|Science|Sciences|Stat|Statistics|Observ|Observatory|Polytech|Polytechnic|Foundation)\b", 
+        re.IGNORECASE
+    )
+
     def get_val(*keys):
         for k, v in entry.items():
             if str(k).lower() in keys:
@@ -192,24 +201,25 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
                     d["is_corresponding"] = True
         
         bracket_match = re.match(r"^\[(.*?)\]\s*(.*)", line_clean)
-        inst_part = bracket_match.group(2) if bracket_match else line_clean
-        
-        if not bracket_match:
-            parts = [p.strip() for p in inst_part.split(";")]
-            clean_parts = []
-            for p in parts:
-                is_author = False
-                for d in details:
-                    if p.lower().startswith(d["name"].lower()):
-                        is_author = True
-                        remainder = p[len(d["name"]):].lstrip(" ,;")
-                        if remainder:
-                            clean_parts.append(remainder)
+        if bracket_match:
+            inst_part = bracket_match.group(2).strip()
+        else:
+            inst_part = line_clean
+            
+            if ";" in inst_part:
+                segments = [s.strip() for s in inst_part.split(";")]
+                for i, seg in enumerate(segments):
+                    if kw_pattern.search(seg):
+                        inst_part = "; ".join(segments[i:]).strip()
                         break
-                if not is_author and p:
-                    clean_parts.append(p)
-            inst_part = "; ".join(clean_parts).strip()
-        
+            
+            subparts = [p.strip() for p in inst_part.split(",")]
+            if len(subparts) >= 2:
+                if not kw_pattern.search(subparts[0]) and kw_pattern.search(subparts[1]):
+                    inst_part = ", ".join(subparts[1:]).strip()
+                elif len(subparts) >= 3 and not kw_pattern.search(subparts[0]) and not kw_pattern.search(subparts[1]):
+                    inst_part = ", ".join(subparts[2:]).strip()
+                    
         for d in matched_authors:
             if not d["affiliation"]:
                 d["affiliation"] = inst_part

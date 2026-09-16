@@ -239,9 +239,6 @@ export default function useReferenceDetails(article = null) {
         researcherIdCount = parsedBib['researcherid-numbers'].split('/').length - 1;
     }
 
-    const authorNames = authorsDetail.map((a) => a && a.name).filter(Boolean);
-    authorNames.sort((a, b) => b.length - a.length);
-
     let rawAffils = authorsDetail
       .map((a) => a && a.affiliation)
       .filter((aff) => typeof aff === 'string' && aff.trim() !== '');
@@ -254,46 +251,48 @@ export default function useReferenceDetails(article = null) {
           const matched = rawAffil.match(/\[.*?\]\s*([^.]+)/g);
           rawAffils = matched ? matched : [rawAffil];
         } else {
-          rawAffils = [rawAffil];
+          rawAffils = rawAffil.split('.').filter(Boolean);
         }
       }
     }
 
+    const instKeywords = /\b(Univ|University|Inst|Institute|Sch|School|Dept|Department|Ctr|Center|Centre|Fac|Faculty|Lab|Laboratory|Hosp|Hospital|Coll|College|Academy|Corp|Corporation|Inc|Ltd|GmbH|LLC|Ministry|Div|Division|Agency|Natl|National|Hlth|Health|Biol|Biology|Chem|Chemistry|Phys|Physics|Med|Medicine|Medical|Engn|Engineering|Tech|Technology|Sci|Science|Sciences|Stat|Statistics|Observ|Observatory|Polytech|Polytechnic|Foundation)\b/i;
     const affiliationsSet = new Set();
 
     rawAffils.forEach((raw) => {
-      const parts = raw.split(';');
-      parts.forEach((p) => {
-        let clean = p.trim().replace(/^\[.*?\]\s*/, '').trim();
-
-        let modified = true;
-        while (modified && clean.length > 0) {
-          modified = false;
-          for (const authorName of authorNames) {
-            const lClean = clean.toLowerCase();
-            const lAuth = authorName.toLowerCase();
-            if (lClean.startsWith(lAuth + ',') || lClean.startsWith(lAuth + ';')) {
-              clean = clean.substring(authorName.length + 1).trim();
-              modified = true;
-              break;
-            } else if (lClean === lAuth) {
-              clean = '';
-              modified = true;
-              break;
-            }
-          }
+      let lastBlock = raw;
+      if (raw.includes(';')) {
+        const segments = raw.split(';');
+        const instIndex = segments.findIndex((seg) => instKeywords.test(seg));
+        if (instIndex !== -1) {
+          lastBlock = segments.slice(instIndex).join(';').trim();
         }
+      }
 
-        if (clean) {
-          const isPureAuthor =
-            !/\d/.test(clean) &&
-            (clean.match(/,/g) || []).length === 1 &&
-            clean.length < 25 &&
-            !/univ|inst|sch|sci|dept|lab|ctr|center|college|fac|inc|ltd|corp/i.test(clean);
+      let clean = lastBlock.replace(/^\[.*?\]\s*/, '').trim();
+      const subparts = clean.split(',').map((p) => p.trim());
 
-          if (!isPureAuthor) affiliationsSet.add(clean);
+      if (subparts.length >= 2) {
+        if (!instKeywords.test(subparts[0]) && instKeywords.test(subparts[1])) {
+          clean = subparts.slice(1).join(', ').trim();
+        } else if (
+          subparts.length >= 3 &&
+          !instKeywords.test(subparts[0]) &&
+          !instKeywords.test(subparts[1])
+        ) {
+          clean = subparts.slice(2).join(', ').trim();
         }
-      });
+      }
+
+      if (clean && clean.length > 5) {
+        const isPureAuthor =
+          !/\d/.test(clean) &&
+          (clean.match(/,/g) || []).length === 1 &&
+          clean.length < 25 &&
+          !instKeywords.test(clean);
+
+        if (!isPureAuthor) affiliationsSet.add(clean);
+      }
     });
 
     let affiliations = Array.from(affiliationsSet).join('; ');
