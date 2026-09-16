@@ -84,6 +84,14 @@
 - [x] Story 16.0: Roadmap & Planning Initialization
 - [x] [REQ-046] Metadata Hover-Reveal UI (Grid & Popover)
 
+## EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE
+- [x] Story 17.0: Roadmap & Planning Initialization
+- [ ] [REQ-047] Backend Reference Serialization Audit & Boundary Marshal
+- [ ] [REQ-048] Reusable Base Modal Architecture (ModalTemplate) Dumb View
+- [ ] [REQ-049] Reference Details - Hero Ribbon Dumb View
+- [ ] [REQ-050] Overview Tab - Left & Right Columns & Metrics Dumb Views
+- [ ] [REQ-051] Secondary Deep-Dive Drawer Dumb View & Hook State Fractality
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
@@ -100,3 +108,4 @@
 - [Roadmap 13: References Table Resizing & Count Fix](roadmap_13_references_table_resizing_and_count_fix.md)
 - [Roadmap 15: Bibliographic Metadata & Bulk Injection](roadmap_15_bibliographic_metadata_and_bulk_injection.md)
 - [Roadmap 16: Metadata Hover-Reveal UI](roadmap_16_metadata_hover_reveal.md)
+- [Roadmap 17: Reference Details Modal](roadmap_17_reference_details_modal.md)

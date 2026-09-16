@@ -17,6 +17,9 @@ export function useReferencesTable(data = [], pageSize = 13) {
         return data.filter((item) => {
             return Object.values(item).some((val) => {
                 if (val === null || val === undefined) return false;
+                if (typeof val === 'object') {
+                    return JSON.stringify(val).toLowerCase().includes(query);
+                }
                 return String(val).toLowerCase().includes(query);
             });
         });
