@@ -38,6 +38,7 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
     orcidCount,
     researcherIdCount,
     fundingText,
+    fundingList,
     type,
     language,
     issn,
