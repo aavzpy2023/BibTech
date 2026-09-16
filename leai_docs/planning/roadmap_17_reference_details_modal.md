@@ -24,7 +24,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.1.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_17_reference_details_modal.md and check - [x] for Story 17.1. 2. Append > Files touched: router.py, test_router.py. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-047]]. Type: Task.
   > Files touched: router.py, test_router.py
 
-- [ ] Story 17.2: Reusable Base Modal Architecture (ModalTemplate) Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 17.2: Reusable Base Modal Architecture (ModalTemplate) Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Provide a dumb, dark-mode modal container with backdrop blur and flexible slots, stripped of any internal business logic.
   Story Context Radius: {"frontend/src/components/common/ModalTemplate.jsx": [""], "frontend/src/components/common/ModalTemplate.test.jsx": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
@@ -32,6 +32,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.2.1] [TESTING/TDE]: [1. Arrange: Render ModalTemplate in ModalTemplate.test.jsx with isOpen={true} and a mock onClose callback. 2. Act: Query the DOM for the close button and click it. 3. Assert: Verify onClose executes exactly once and styling rules (blur, max-width) are present]. Type: Task.
   [ID-17.2.2] [FRONTEND/DUMB_VIEW]: [1. Create frontend/src/components/common/ModalTemplate.jsx. 2. Implement the backdrop overlay (backdropFilter: blur(6px)). 3. Implement the modal window (maxWidth: 1280px, maxHeight: 90vh, internal scroll) accepting purely standard React props (children, header, footer) without managing state]. Type: Task.
   [ID-17.2.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-048]]. Type: Task.
+  > Files touched: ModalTemplate.jsx, ModalTemplate.test.jsx
 
 - [ ] Story 17.3: Reference Details - Hero Ribbon Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Render the reference's multiline title, formatted author summary, and metrics ribbon as a pure presentational component.
