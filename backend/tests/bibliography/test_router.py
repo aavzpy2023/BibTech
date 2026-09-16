@@ -360,6 +360,6 @@ def test_get_project_references_endpoint():
         data = response.json()
         assert len(data) == 1
         assert data[0]["title"] == "Test Paper"
-        assert data[0]["author"] == "Smith ..."
+        assert data[0]["author"] == "Smith, John and Doe, Jane"
     finally:
         app.dependency_overrides.pop(get_db, None)

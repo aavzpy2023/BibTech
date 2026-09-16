@@ -145,6 +145,19 @@ if HAS_MULTIPART:
         def _to_str(val):
             return str(val) if isinstance(val, (str, int, float)) else None
 
+        def _resolve_authors(art):
+            if getattr(art, "raw_data", None):
+                return str(art.raw_data)
+            if hasattr(art, "authors") and art.authors:
+                names = [
+                    getattr(x, "name", str(x))
+                    for x in art.authors
+                    if getattr(x, "name", str(x))
+                ]
+                if names:
+                    return " and ".join(names)
+            return _to_str(getattr(art, "author", None))
+
         def _format_surname(raw_author):
             if not raw_author or not isinstance(raw_author, str):
                 return "N/A"
@@ -162,14 +175,7 @@ if HAS_MULTIPART:
         now = datetime.now(timezone.utc)
         return [
             ParsedReference(
-                author=_format_surname(
-                    a.authors[0].name
-                    if hasattr(a, "authors") and a.authors
-                    else (
-                        getattr(a, "raw_data", None)
-                        or _to_str(getattr(a, "author", None))
-                    )
-                ),
+                author=_resolve_authors(a),
                 year=_to_str(getattr(a, "year", None)),
                 title=_to_str(getattr(a, "title", None)) or "Untitled",
                 journal=_to_str(getattr(a, "journal", None)),

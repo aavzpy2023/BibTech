@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { useReferencesTable } from '../../hooks/useReferencesTable';
 
+function formatShortAuthor(authorStr) {
+  if (!authorStr || authorStr === 'N/A') return 'N/A';
+  const first = authorStr.trim().split(/\s+and\s+|;\s*/i)[0].trim();
+  if (!first) return 'N/A';
+  const surname = first.includes(',')
+    ? first.split(',')[0].trim()
+    : (first.split(/\s+/).pop() || first);
+  return `${surname} ...`;
+}
+
 const styles = {
   controls: {
     display: 'flex',
@@ -45,6 +55,7 @@ const styles = {
   },
   table: {
     width: '100%',
+    tableLayout: 'fixed',
     borderCollapse: 'collapse',
     textAlign: 'left',
     fontSize: '14px',
@@ -65,6 +76,9 @@ const styles = {
   td: {
     padding: '10px 14px',
     color: '#f0f6fc',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
   empty: {
     padding: '24px',
@@ -144,10 +158,10 @@ export function ReferencesDataTable({ data = [] }) {
       <table style={styles.table}>
         <thead>
           <tr>
-            <th style={styles.th}>Title</th>
-            <th style={styles.th}>Author</th>
-            <th style={styles.th}>Year</th>
-            <th style={styles.th}>Journal</th>
+            <th style={{ ...styles.th, width: '45%' }}>Title</th>
+            <th style={{ ...styles.th, width: '20%' }}>Author</th>
+            <th style={{ ...styles.th, width: '10%' }}>Year</th>
+            <th style={{ ...styles.th, width: '25%' }}>Journal</th>
           </tr>
         </thead>
         <tbody>
@@ -158,10 +172,18 @@ export function ReferencesDataTable({ data = [] }) {
               onMouseMove={(e) => handleMouseMove(e, row)}
               onMouseLeave={handleMouseLeave}
             >
-              <td style={styles.td}>{row.title || 'N/A'}</td>
-              <td style={styles.td}>{row.author || 'N/A'}</td>
-              <td style={styles.td}>{row.year || 'N/A'}</td>
-              <td style={styles.td}>{row.journal || 'N/A'}</td>
+              <td style={styles.td} title={row.title || 'N/A'}>
+                {row.title || 'N/A'}
+              </td>
+              <td style={styles.td} title={row.author || 'N/A'}>
+                {formatShortAuthor(row.author)}
+              </td>
+              <td style={styles.td} title={String(row.year || 'N/A')}>
+                {row.year || 'N/A'}
+              </td>
+              <td style={styles.td} title={row.journal || 'N/A'}>
+                {row.journal || 'N/A'}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -197,9 +219,29 @@ export function ReferencesDataTable({ data = [] }) {
             left: `${coords.x}px`,
           }}
         >
-          <pre style={styles.pre}>
-            {JSON.stringify(hoveredRow, null, 2)}
-          </pre>
+          <div style={{ fontWeight: '600', color: '#58a6ff', marginBottom: '6px' }}>
+            {hoveredRow.title || 'Untitled'}
+          </div>
+          <div style={{ marginBottom: '6px', lineHeight: '1.4' }}>
+            <span style={{ color: '#8b949e', fontWeight: '500' }}>Authors: </span>
+            <span style={{ color: '#f0f6fc' }}>{hoveredRow.author || 'N/A'}</span>
+          </div>
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '4px' }}>
+            <div>
+              <span style={{ color: '#8b949e' }}>Year: </span>
+              <span style={{ color: '#f0f6fc' }}>{hoveredRow.year || 'N/A'}</span>
+            </div>
+            <div>
+              <span style={{ color: '#8b949e' }}>Journal: </span>
+              <span style={{ color: '#f0f6fc' }}>{hoveredRow.journal || 'N/A'}</span>
+            </div>
+          </div>
+          {hoveredRow.doi && (
+            <div>
+              <span style={{ color: '#8b949e' }}>DOI: </span>
+              <span style={{ color: '#79c0ff' }}>{hoveredRow.doi}</span>
+            </div>
+          )}
         </div>
       )}
     </div>
