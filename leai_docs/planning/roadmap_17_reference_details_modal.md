@@ -34,7 +34,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.2.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-048]]. Type: Task.
   > Files touched: ModalTemplate.jsx, ModalTemplate.test.jsx
 
-- [ ] Story 17.3: Reference Details - Hero Ribbon Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 17.3: Reference Details - Hero Ribbon Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Render the reference's multiline title, formatted author summary, and metrics ribbon as a pure presentational component.
   Story Context Radius: {"frontend/src/components/references/ReferenceHeroBlock.jsx": [""], "frontend/src/components/references/ReferenceHeroBlock.test.jsx": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
@@ -42,6 +42,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.3.1] [TESTING/TDE]: [1. Arrange: Render ReferenceHeroBlock.test.jsx passing mock props (Title, Authors, Volume, DOI) and mock callbacks (onCopyDoi, onViewAuthors). 2. Act: Click the DOI copy button and the authors 'View all' link. 3. Assert: Verify both callbacks trigger with expected parameters]. Type: Task.
   [ID-17.3.2] [FRONTEND/DUMB_VIEW]: [1. Create frontend/src/components/references/ReferenceHeroBlock.jsx. 2. Render title and author tags based strictly on passed props. 3. Render horizontal metrics ribbon (Year, Journal, Volume, Issue, Pages, DOI), forcing '—' if Issue is null. Bind standard onClick props to buttons]. Type: Task.
   [ID-17.3.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-049]]. Type: Task.
+  > Files touched: ReferenceHeroBlock.jsx, ReferenceHeroBlock.test.jsx
 
 - [ ] Story 17.4: Overview Tab - Left Column Dumb Views | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Implement the left column visual components (Abstract, Keywords, Research Areas) completely devoid of internal state manipulation.

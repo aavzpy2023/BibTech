@@ -47,6 +47,9 @@
 │   │   │   │   ├── Modal.jsx
 │   │   │   │   ├── Modal.test.jsx
 │   │   │   │   ├── ReferenceTable.jsx
+│   │   │   │   ├── common/
+│   │   │   │   │   ├── ModalTemplate.jsx
+│   │   │   │   │   ├── ModalTemplate.test.jsx
 │   │   │   │   ├── load/
 │   │   │   │   │   ├── BatchComponents.test.jsx
 │   │   │   │   │   ├── BatchConfig.jsx

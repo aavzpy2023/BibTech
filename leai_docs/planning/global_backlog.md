@@ -88,7 +88,7 @@
 - [x] Story 17.0: Roadmap & Planning Initialization
 - [x] [REQ-047] Backend Reference Serialization Audit & Boundary Marshal
 - [x] [REQ-048] Reusable Base Modal Architecture (ModalTemplate) Dumb View
-- [ ] [REQ-049] Reference Details - Hero Ribbon Dumb View
+- [x] [REQ-049] Reference Details - Hero Ribbon Dumb View
 - [ ] [REQ-050] Overview Tab - Left & Right Columns & Metrics Dumb Views
 - [ ] [REQ-051] Secondary Deep-Dive Drawer Dumb View & Hook State Fractality
 
