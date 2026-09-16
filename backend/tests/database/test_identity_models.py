@@ -1,8 +1,17 @@
 """Hexagonal zero-I/O tests for Identity Domain Models (Authors & Affiliations)."""
 import unittest
 
+import sys
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
+
+_backend_dir = Path(__file__).resolve().parents[2]
+if str(_backend_dir) not in sys.path:
+    sys.path.insert(0, str(_backend_dir))
+_repo_dir = Path(__file__).resolve().parents[3]
+if str(_repo_dir) not in sys.path:
+    sys.path.insert(0, str(_repo_dir))
 
 from src.database.models.core import Article
 from src.database.models.identity import (
