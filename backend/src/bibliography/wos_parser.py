@@ -194,6 +194,22 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
         bracket_match = re.match(r"^\[(.*?)\]\s*(.*)", line_clean)
         inst_part = bracket_match.group(2) if bracket_match else line_clean
         
+        if not bracket_match:
+            parts = [p.strip() for p in inst_part.split(";")]
+            clean_parts = []
+            for p in parts:
+                is_author = False
+                for d in details:
+                    if p.lower().startswith(d["name"].lower()):
+                        is_author = True
+                        remainder = p[len(d["name"]):].lstrip(" ,;")
+                        if remainder:
+                            clean_parts.append(remainder)
+                        break
+                if not is_author and p:
+                    clean_parts.append(p)
+            inst_part = "; ".join(clean_parts).strip()
+        
         for d in matched_authors:
             if not d["affiliation"]:
                 d["affiliation"] = inst_part

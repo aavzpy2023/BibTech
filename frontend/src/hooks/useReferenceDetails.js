@@ -239,28 +239,64 @@ export default function useReferenceDetails(article = null) {
         researcherIdCount = parsedBib['researcherid-numbers'].split('/').length - 1;
     }
 
-    const affiliationsSet = new Set(
-      authorsDetail
-        .map((a) => a && a.affiliation)
-        .filter((aff) => typeof aff === 'string' && aff.trim() !== '')
-    );
-    let affiliations = Array.from(affiliationsSet).join('; ');
-    
-    if (!affiliations) {
+    const authorNames = authorsDetail.map((a) => a && a.name).filter(Boolean);
+    authorNames.sort((a, b) => b.length - a.length);
+
+    let rawAffils = authorsDetail
+      .map((a) => a && a.affiliation)
+      .filter((aff) => typeof aff === 'string' && aff.trim() !== '');
+
+    if (rawAffils.length === 0) {
+      const parsedBib = parseBibtexFields(article.raw_data || article.raw_bibtex || '');
       const rawAffil = parsedBib['affiliation'] || parsedBib['affiliations'] || '';
-      if (typeof rawAffil === 'string' && rawAffil.includes('=')) {
-        // Fallback for extremely chaotic WOS Affiliation fields that contain authors in the raw text
-        const matched = rawAffil.match(/\[.*?\]\s*([^.]+)/g);
-        if (matched) {
-          const cleaned = matched.map((m) => m.replace(/\[.*?\]\s*/, '').trim());
-          affiliations = Array.from(new Set(cleaned)).join('; ');
+      if (rawAffil) {
+        if (typeof rawAffil === 'string' && rawAffil.includes('=')) {
+          const matched = rawAffil.match(/\[.*?\]\s*([^.]+)/g);
+          rawAffils = matched ? matched : [rawAffil];
         } else {
-          affiliations = rawAffil;
+          rawAffils = [rawAffil];
         }
-      } else {
-        affiliations = rawAffil;
       }
     }
+
+    const affiliationsSet = new Set();
+
+    rawAffils.forEach((raw) => {
+      const parts = raw.split(';');
+      parts.forEach((p) => {
+        let clean = p.trim().replace(/^\[.*?\]\s*/, '').trim();
+
+        let modified = true;
+        while (modified && clean.length > 0) {
+          modified = false;
+          for (const authorName of authorNames) {
+            const lClean = clean.toLowerCase();
+            const lAuth = authorName.toLowerCase();
+            if (lClean.startsWith(lAuth + ',') || lClean.startsWith(lAuth + ';')) {
+              clean = clean.substring(authorName.length + 1).trim();
+              modified = true;
+              break;
+            } else if (lClean === lAuth) {
+              clean = '';
+              modified = true;
+              break;
+            }
+          }
+        }
+
+        if (clean) {
+          const isPureAuthor =
+            !/\d/.test(clean) &&
+            (clean.match(/,/g) || []).length === 1 &&
+            clean.length < 25 &&
+            !/univ|inst|sch|sci|dept|lab|ctr|center|college|fac|inc|ltd|corp/i.test(clean);
+
+          if (!isPureAuthor) affiliationsSet.add(clean);
+        }
+      });
+    });
+
+    let affiliations = Array.from(affiliationsSet).join('; ');
 
     return {
       title: article.title || '',

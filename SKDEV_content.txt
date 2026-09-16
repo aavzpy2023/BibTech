@@ -1,199 +1,553 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 18:56:11
+Date: 2026-09-16 19:03:41
 AST Mode: False
 Line Numbers: True
-Modules: OverviewRightColumn.jsx
-Processed Files: 1
+Modules: useReferenceDetails.js, wos_parser.py
+Processed Files: 2
 ===========================
 
 
 
-// --- frontend/src/components/references/OverviewRightColumn.jsx ---
+// --- frontend/src/hooks/useReferenceDetails.js ---
 
-[L001, S0] import React from 'react';
-[L002, S0] import PropTypes from 'prop-types';
+[L001, S0] import { useState, useMemo, useCallback } from 'react';
+[L002, S0] 
+[L003, S0] function parseBibtexFields(raw) {
+[L004, S4]     if (!raw || typeof raw !== 'string') return {};
+[L005, S4]     const fields = {};
+[L006, S4]     const bodyStart = raw.indexOf(',');
+[L007, S4]     if (bodyStart === -1) return {};
+[L008, S4]     const body = raw.slice(bodyStart + 1);
+[L009, S0] 
+[L010, S4]     let i = 0;
+[L011, S4]     const n = body.length;
+[L012, S4]     while (i < n) {
+[L013, S8]         while (i < n && /[\s,]/.test(body[i])) i++;
+[L014, S8]         if (i >= n || body[i] === '}') break;
+[L015, S0] 
+[L016, S8]         const keyStart = i;
+[L017, S8]         while (i < n && body[i] !== '=' && body[i] !== '}' && !/\s/.test(body[i])) {
+[L018, S12]             i++;
+[L019, S8]         }
+[L020, S8]         const key = body.slice(keyStart, i).trim().toLowerCase();
+[L021, S8]         while (i < n && /[\s=]/.test(body[i])) i++;
+[L022, S8]         if (i >= n || body[i] === '}') break;
+[L023, S0] 
+[L024, S8]         let val = '';
+[L025, S8]         if (body[i] === '{') {
+[L026, S12]             i++;
+[L027, S12]             let depth = 1;
+[L028, S12]             const valStart = i;
+[L029, S12]             while (i < n && depth > 0) {
+[L030, S16]                 if (body[i] === '{') depth++;
+[L031, S16]                 else if (body[i] === '}') depth--;
+[L032, S16]                 if (depth > 0) i++;
+[L033, S12]             }
+[L034, S12]             val = body.slice(valStart, i).trim();
+[L035, S12]             i++;
+[L036, S8]         } else if (body[i] === '"') {
+[L037, S12]             i++;
+[L038, S12]             const valStart = i;
+[L039, S12]             while (i < n && body[i] !== '"') {
+[L040, S16]                 if (body[i] === '\\' && i + 1 < n) i++;
+[L041, S16]                 i++;
+[L042, S12]             }
+[L043, S12]             val = body.slice(valStart, i).trim();
+[L044, S12]             i++;
+[L045, S8]         } else {
+[L046, S12]             const valStart = i;
+[L047, S12]             while (i < n && body[i] !== ',' && body[i] !== '}' && body[i] !== '\n') {
+[L048, S16]                 i++;
+[L049, S12]             }
+[L050, S12]             val = body.slice(valStart, i).trim();
+[L051, S8]         }
+[L052, S0] 
+[L053, S8]         if (key && val) {
+[L054, S12]             fields[key] = val.replace(/\\_/g, '_').replace(/\s+/g, ' ');
+[L055, S8]         }
+[L056, S4]     }
+[L057, S4]     return fields;
+[L058, S0] }
+[L059, S0] 
+[L060, S0] export default function useReferenceDetails(article = null) {
+[L061, S2]   const [activeTab, setActiveTab] = useState('Overview');
+[L062, S2]   const [drawerState, setDrawerState] = useState({
+[L063, S4]     isOpen: false,
+[L064, S4]     type: 'references',
+[L065, S4]     title: '',
+[L066, S4]     data: [],
+[L067, S2]   });
+[L068, S2]   const [hoverInfo, setHoverInfo] = useState(null);
+[L069, S2]   const [copiedText, setCopiedText] = useState(null);
+[L070, S2]   const [isAbstractExpanded, setIsAbstractExpanded] = useState(false);
+[L071, S0] 
+[L072, S2]   const handleTabChange = useCallback((tab) => {
+[L073, S4]     setActiveTab(tab);
+[L074, S2]   }, []);
+[L075, S0] 
+[L076, S2]   const openDrawer = useCallback(
+[L077, S4]     (type, data = null, title = '') => {
+[L078, S6]       let resolvedData = data;
+[L079, S6]       let resolvedTitle = title;
+[L080, S0] 
+[L081, S6]       if (!resolvedData && article) {
+[L082, S8]         if (type === 'authors') {
+[L083, S10]           resolvedData = article.authors_detail || [];
+[L084, S10]           resolvedTitle = resolvedTitle || 'Authors Details';
+[L085, S8]         } else if (type === 'references') {
+[L086, S10]           resolvedData = article.references_list || [];
+[L087, S10]           resolvedTitle = resolvedTitle || 'Cited References';
+[L088, S8]         } else if (type === 'funding') {
+[L089, S10]           const hasList =
+[L090, S12]             article.funding_list && article.funding_list.length > 0;
+[L091, S10]           resolvedData = hasList
+[L092, S12]             ? article.funding_list
+[L093, S12]             : article.funding_text
+[L094, S12]             ? [article.funding_text]
+[L095, S12]             : [];
+[L096, S10]           resolvedTitle = resolvedTitle || 'Funding Acknowledgments';
+[L097, S8]         } else if (type === 'abstract') {
+[L098, S10]           resolvedData = article.abstract ? [article.abstract] : [];
+[L099, S10]           resolvedTitle = resolvedTitle || 'Full Abstract';
+[L100, S8]         } else if (type === 'affiliations') {
+[L101, S10]           resolvedData = article.affiliations ? [article.affiliations] : [];
+[L102, S10]           resolvedTitle = resolvedTitle || 'Affiliations';
+[L103, S8]         }
+[L104, S6]       }
+[L105, S0] 
+[L106, S6]       setDrawerState({
+[L107, S8]         isOpen: true,
+[L108, S8]         type: type || 'references',
+[L109, S8]         title: resolvedTitle || 'Details',
+[L110, S8]         data: resolvedData || [],
+[L111, S6]       });
+[L112, S4]     },
+[L113, S4]     [article]
+[L114, S2]   );
+[L115, S0] 
+[L116, S2]   const handleExpandDrawer = useCallback(
+[L117, S4]     (type, customData, customTitle) => {
+[L118, S6]       openDrawer(type, customData, customTitle);
+[L119, S4]     },
+[L120, S4]     [openDrawer]
+[L121, S2]   );
+[L122, S0] 
+[L123, S2]   const closeDrawer = useCallback(() => {
+[L124, S4]     setDrawerState((prev) => ({
+[L125, S6]       ...prev,
+[L126, S6]       isOpen: false,
+[L127, S4]     }));
+[L128, S2]   }, []);
+[L129, S0] 
+[L130, S2]   const handleHoverInfo = useCallback((key, event) => {
+[L131, S4]     if (!key) {
+[L132, S6]       setHoverInfo(null);
+[L133, S6]       return;
+[L134, S4]     }
+[L135, S4]     setHoverInfo({
+[L136, S6]       key,
+[L137, S6]       rect: event?.currentTarget?.getBoundingClientRect?.() || null,
+[L138, S4]     });
+[L139, S2]   }, []);
+[L140, S0] 
+[L141, S2]   const handleCopy = useCallback(async (text) => {
+[L142, S4]     if (!text) return;
+[L143, S4]     try {
+[L144, S6]       if (
+[L145, S8]         typeof navigator !== 'undefined' &&
+[L146, S8]         navigator.clipboard &&
+[L147, S8]         navigator.clipboard.writeText
+[L148, S6]       ) {
+[L149, S8]         await navigator.clipboard.writeText(text);
+[L150, S6]       }
+[L151, S6]       setCopiedText(text);
+[L152, S6]       setTimeout(() => setCopiedText(null), 2500);
+[L153, S4]     } catch {
+[L154, S6]       // Fallback or silent error handling
+[L155, S4]     }
+[L156, S2]   }, []);
+[L157, S0] 
+[L158, S2]   const toggleAbstractExpanded = useCallback(() => {
+[L159, S4]     setIsAbstractExpanded((prev) => !prev);
+[L160, S2]   }, []);
+[L161, S0] 
+[L162, S2]   const formattedData = useMemo(() => {
+[L163, S4]     if (!article) {
+[L164, S6]       return {
+[L165, S8]         title: '',
+[L166, S8]         authors: '',
+[L167, S8]         year: '',
+[L168, S8]         journal: '',
+[L169, S8]         volume: '',
+[L170, S8]         issue: '',
+[L171, S8]         pages: '',
+[L172, S8]         doi: '',
+[L173, S8]         abstract: '',
+[L174, S8]         authorKeywords: [],
+[L175, S8]         plusKeywords: [],
+[L176, S8]         researchAreas: '',
+[L177, S8]         wosCategories: '',
+[L178, S8]         affiliations: '',
+[L179, S8]         authorsDetailsCount: 0,
+[L180, S8]         authorEmail: '',
+[L181, S8]         orcidCount: 0,
+[L182, S8]         researcherIdCount: 0,
+[L183, S8]         fundingText: '',
+[L184, S8]         type: 'Article',
+[L185, S8]         language: 'English',
+[L186, S8]         issn: '',
+[L187, S8]         month: '',
+[L188, S8]         articleNumber: '',
+[L189, S8]         publisher: '',
+[L190, S8]         address: '',
+[L191, S8]         timesCited: null,
+[L192, S8]         oaStatus: '',
+[L193, S8]         referencesList: [],
+[L194, S8]         authorsDetail: [],
+[L195, S8]         fundingList: [],
+[L196, S6]       };
+[L197, S4]     }
+[L198, S0] 
+[L199, S4]     const parsedBib = parseBibtexFields(article.raw_data || article.raw_bibtex || '');
+[L200, S0] 
+[L201, S4]     const keywords = Array.isArray(article.keywords) ? article.keywords : [];
+[L202, S4]     let authorKeywords = keywords
+[L203, S6]       .filter((k) => k && k.type === 'author')
+[L204, S6]       .map((k) => k.name || k)
+[L205, S6]       .filter(Boolean);
+[L206, S0] 
+[L207, S4]     let plusKeywords = keywords
+[L208, S6]       .filter((k) => k && k.type === 'plus')
+[L209, S6]       .map((k) => k.name || k)
+[L210, S6]       .filter(Boolean);
+[L211, S0] 
+[L212, S4]     if (authorKeywords.length === 0 && parsedBib['keywords']) {
+[L213, S8]         authorKeywords = parsedBib['keywords'].split(';').map((k) => k.trim()).filter(Boolean);
+[L214, S4]     }
+[L215, S4]     if (plusKeywords.length === 0 && parsedBib['keywords-plus']) {
+[L216, S8]         plusKeywords = parsedBib['keywords-plus'].split(';').map((k) => k.trim()).filter(Boolean);
+[L217, S4]     }
+[L218, S0] 
+[L219, S4]     const authorsDetail = Array.isArray(article.authors_detail)
+[L220, S6]       ? article.authors_detail
+[L221, S6]       : [];
+[L222, S0] 
+[L223, S4]     const corrAuthor = authorsDetail.find(
+[L224, S6]       (a) => a && a.is_corresponding && a.email
+[L225, S4]     );
+[L226, S4]     const firstAuthorWithEmail = authorsDetail.find((a) => a && a.email);
+[L227, S4]     let authorEmail =
+[L228, S6]       corrAuthor?.email || firstAuthorWithEmail?.email || parsedBib['author-email'] || '';
+[L229, S0] 
+[L230, S4]     let orcidCount = authorsDetail.filter((a) => a && a.orcid).length;
+[L231, S4]     if (orcidCount === 0 && parsedBib['orcid-numbers']) {
+[L232, S8]         orcidCount = parsedBib['orcid-numbers'].split('/').length - 1;
+[L233, S4]     }
+[L234, S0] 
+[L235, S4]     let researcherIdCount = authorsDetail.filter(
+[L236, S6]       (a) => a && a.researcher_id
+[L237, S4]     ).length;
+[L238, S4]     if (researcherIdCount === 0 && parsedBib['researcherid-numbers']) {
+[L239, S8]         researcherIdCount = parsedBib['researcherid-numbers'].split('/').length - 1;
+[L240, S4]     }
+[L241, S0] 
+[L242, S4]     const affiliationsSet = new Set(
+[L243, S6]       authorsDetail
+[L244, S8]         .map((a) => a && a.affiliation)
+[L245, S8]         .filter((aff) => typeof aff === 'string' && aff.trim() !== '')
+[L246, S4]     );
+[L247, S4]     let affiliations = Array.from(affiliationsSet).join('; ');
+[L248, S4]     
+[L249, S4]     if (!affiliations) {
+[L250, S6]       const rawAffil = parsedBib['affiliation'] || parsedBib['affiliations'] || '';
+[L251, S6]       if (typeof rawAffil === 'string' && rawAffil.includes('=')) {
+[L252, S8]         // Fallback for extremely chaotic WOS Affiliation fields that contain authors in the raw text
+[L253, S8]         const matched = rawAffil.match(/\[.*?\]\s*([^.]+)/g);
+[L254, S8]         if (matched) {
+[L255, S10]           const cleaned = matched.map((m) => m.replace(/\[.*?\]\s*/, '').trim());
+[L256, S10]           affiliations = Array.from(new Set(cleaned)).join('; ');
+[L257, S8]         } else {
+[L258, S10]           affiliations = rawAffil;
+[L259, S8]         }
+[L260, S6]       } else {
+[L261, S8]         affiliations = rawAffil;
+[L262, S6]       }
+[L263, S4]     }
+[L264, S0] 
+[L265, S4]     return {
+[L266, S6]       title: article.title || '',
+[L267, S6]       authors: article.author || '',
+[L268, S6]       year: article.year ? String(article.year) : '',
+[L269, S6]       journal: article.journal || '',
+[L270, S6]       volume: article.volume ? String(article.volume) : '',
+[L271, S6]       issue: article.issue ? String(article.issue) : '',
+[L272, S6]       pages: article.pages || '',
+[L273, S6]       doi: article.doi || '',
+[L274, S6]       abstract: article.abstract || '',
+[L275, S6]       authorKeywords,
+[L276, S6]       plusKeywords,
+[L277, S6]       researchAreas: article.research_areas || '',
+[L278, S6]       wosCategories: article.web_of_science_categories || '',
+[L279, S6]       affiliations,
+[L280, S6]       authorsDetailsCount: authorsDetail.length,
+[L281, S6]       authorEmail,
+[L282, S6]       orcidCount,
+[L283, S6]       researcherIdCount,
+[L284, S6]       fundingText: article.funding_text || '',
+[L285, S6]       type: 'Article',
+[L286, S6]       language: article.language || 'English',
+[L287, S6]       issn: article.issn || '',
+[L288, S6]       month: article.month || '',
+[L289, S6]       articleNumber: article.pages || '',
+[L290, S6]       publisher: article.publisher || '',
+[L291, S6]       address: article.address || '',
+[L292, S6]       timesCited:
+[L293, S8]         typeof article.times_cited === 'number' ? article.times_cited : null,
+[L294, S6]       oaStatus: article.oa_status || '',
+[L295, S6]       referencesList: Array.isArray(article.references_list)
+[L296, S8]         ? article.references_list
+[L297, S8]         : [],
+[L298, S6]       authorsDetail,
+[L299, S6]       fundingList: Array.isArray(article.funding_list)
+[L300, S8]         ? article.funding_list
+[L301, S8]         : [],
+[L302, S4]     };
+[L303, S2]   }, [article]);
+[L304, S0] 
+[L305, S2]   return {
+[L306, S4]     activeTab,
+[L307, S4]     setActiveTab,
+[L308, S4]     handleTabChange,
+[L309, S4]     drawerState,
+[L310, S4]     openDrawer,
+[L311, S4]     handleExpandDrawer,
+[L312, S4]     closeDrawer,
+[L313, S4]     hoverInfo,
+[L314, S4]     handleHoverInfo,
+[L315, S4]     copiedText,
+[L316, S4]     handleCopy,
+[L317, S4]     isAbstractExpanded,
+[L318, S4]     toggleAbstractExpanded,
+[L319, S4]     ...formattedData,
+[L320, S2]   };
+[L321, S0] }
+
+
+// --- backend/src/bibliography/wos_parser.py ---
+
+[L001, S0] import re
+[L002, S0] from typing import List, Dict, Any
 [L003, S0] 
-[L004, S0] const RightPanelBox = ({ title, icon, onHoverInfo, infoKey, onClick, children, copyAction }) => (
-[L005, S2]   <div 
-[L006, S4]     style={{
-[L007, S6]       backgroundColor: '#0C1427',
-[L008, S6]       border: '1px solid #18243c',
-[L009, S6]       borderRadius: '8px',
-[L010, S6]       padding: '14px 16px',
-[L011, S6]       display: 'flex',
-[L012, S6]       alignItems: 'center',
-[L013, S6]       justifyContent: 'space-between',
-[L014, S6]       cursor: onClick ? 'pointer' : 'default',
-[L015, S6]       boxSizing: 'border-box',
-[L016, S4]     }}
-[L017, S4]     onClick={onClick}
-[L018, S4]     role={onClick ? 'button' : 'region'}
-[L019, S4]     aria-label={onClick ? `Open ${title.toLowerCase()} list` : undefined}
-[L020, S2]   >
-[L021, S4]     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, overflow: 'hidden' }}>
-[L022, S6]       <div style={{ marginTop: '2px', flexShrink: 0 }}>{icon}</div>
-[L023, S6]       <div style={{ flex: 1, overflow: 'hidden' }}>
-[L024, S8]         <h3 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: '600', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-[L025, S10]           {title}
-[L026, S10]           {onHoverInfo && (
-[L027, S12]             <button 
-[L028, S14]               onMouseEnter={(e) => {
-[L029, S16]                 if(e.stopPropagation) e.stopPropagation();
-[L030, S16]                 onHoverInfo(infoKey, e);
-[L031, S14]               }}
-[L032, S14]               onMouseLeave={(e) => {
-[L033, S16]                 if(e.stopPropagation) e.stopPropagation();
-[L034, S16]                 onHoverInfo(null, null);
-[L035, S14]               }}
-[L036, S14]               onClick={(e) => e.stopPropagation()}
-[L037, S14]               style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-[L038, S14]               aria-label={`info-${infoKey}`}
-[L039, S12]             >
-[L040, S14]               <svg width="14" height="14" style={{ width: '14px', height: '14px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L041, S16]                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-[L042, S14]               </svg>
-[L043, S12]             </button>
-[L044, S10]           )}
-[L045, S8]         </h3>
-[L046, S8]         <div style={{ fontSize: '13px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-[L047, S10]           {children || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>None provided</span>}
-[L048, S8]         </div>
-[L049, S6]       </div>
-[L050, S4]     </div>
-[L051, S4]     
-[L052, S6]       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '12px' }}>
-[L053, S8]         {copyAction && children && (
-[L054, S10]           <button
-[L055, S12]             onClick={(e) => {
-[L056, S14]               e.stopPropagation();
-[L057, S14]               copyAction(children);
-[L058, S12]             }}
-[L059, S12]             style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
-[L060, S12]             aria-label="copy email"
-[L061, S10]           >
-[L062, S12]             <svg width="16" height="16" style={{ width: '16px', height: '16px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L063, S14]               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-[L064, S12]             </svg>
-[L065, S10]           </button>
-[L066, S8]         )}
-[L067, S8]         {onClick && (
-[L068, S10]           <svg
-[L069, S12]             width="14"
-[L070, S12]             height="14"
-[L071, S12]             style={{ width: '14px', height: '14px', flexShrink: 0, color: '#475569' }}
-[L072, S12]             fill="none"
-[L073, S12]             viewBox="0 0 24 24"
-[L074, S12]             stroke="currentColor"
-[L075, S10]           >
-[L076, S12]             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-[L077, S10]           </svg>
-[L078, S8]         )}
-[L079, S6]       </div>
-[L080, S2]   </div>
-[L081, S0] );
-[L082, S0] 
-[L083, S0] RightPanelBox.propTypes = {
-[L084, S2]   title: PropTypes.string.isRequired,
-[L085, S2]   icon: PropTypes.node.isRequired,
-[L086, S2]   onHoverInfo: PropTypes.func,
-[L087, S2]   infoKey: PropTypes.string,
-[L088, S2]   onClick: PropTypes.func,
-[L089, S2]   children: PropTypes.node,
-[L090, S2]   copyAction: PropTypes.func,
-[L091, S0] };
-[L092, S0] 
-[L093, S0] export default function OverviewRightColumn({
-[L094, S2]   affiliations,
-[L095, S2]   authorsDetailsCount,
-[L096, S2]   authorEmail,
-[L097, S2]   orcidCount,
-[L098, S2]   researcherIdCount,
-[L099, S2]   fundingText,
-[L100, S2]   onHoverInfo,
-[L101, S2]   onCopy,
-[L102, S2]   onExpandDrawer,
-[L103, S0] }) {
-[L104, S2]   const icons = {
-[L105, S4]     building: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
-[L106, S4]     users: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
-[L107, S4]     mail: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
-[L108, S4]     badge: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z" /></svg>,
-[L109, S4]     globe: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-[L110, S4]     cash: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-[L111, S2]   };
+[L004, S0] 
+[L005, S0] def _normalize_name(name: str) -> str:
+[L006, S4]     """Normalize names for fuzzy matching by removing non-alpha chars."""
+[L007, S4]     return re.sub(r"[^a-zA-Z]", "", name).lower()
+[L008, S0] 
+[L009, S0] 
+[L010, S0] def parse_wos_countries(entry: dict) -> List[str]:
+[L011, S4]     """Extracts unique countries from the affiliation field."""
+[L012, S4]     def get_val(*keys):
+[L013, S8]         for k, v in entry.items():
+[L014, S12]             if str(k).lower() in keys:
+[L015, S16]                 val = getattr(v, "value", v)
+[L016, S16]                 if hasattr(val, "value"):
+[L017, S20]                     val = val.value
+[L018, S16]                 s = str(val).strip()
+[L019, S16]                 while (s.startswith("{") and s.endswith("}")) or (
+[L020, S20]                     s.startswith('"') and s.endswith('"')
+[L021, S16]                 ):
+[L022, S20]                     s = s[1:-1].strip()
+[L023, S16]                 return s
+[L024, S8]         return ""
+[L025, S0] 
+[L026, S4]     affil_raw = get_val("affiliation")
+[L027, S4]     if not affil_raw:
+[L028, S8]         return []
+[L029, S8]         
+[L030, S4]     countries = set()
+[L031, S4]     lines = [
+[L032, S8]         line.strip() 
+[L033, S8]         for line in re.split(r"\.\s+(?=[A-Z\[])|\n", affil_raw) 
+[L034, S8]         if line.strip()
+[L035, S4]     ]
+[L036, S4]     
+[L037, S4]     for line in lines:
+[L038, S8]         line_clean = re.sub(r"^\[.*?\]\s*", "", line).strip()
+[L039, S8]         if not line_clean:
+[L040, S12]             continue
+[L041, S8]         parts = [p.strip() for p in line_clean.split(",")]
+[L042, S8]         if parts:
+[L043, S12]             last_part = parts[-1].rstrip(".")
+[L044, S12]             country = re.sub(r"[0-9\-]", "", last_part).strip()
+[L045, S12]             if "USA" in country.upper():
+[L046, S16]                 country = "USA"
+[L047, S12]             elif "CHINA" in country.upper():
+[L048, S16]                 country = "China"
+[L049, S12]             elif "UK" in country.upper() or "ENGLAND" in country.upper():
+[L050, S16]                 country = "UK"
+[L051, S12]             if country:
+[L052, S16]                 countries.add(country)
+[L053, S16]                 
+[L054, S4]     return sorted(list(countries))
+[L055, S0] 
+[L056, S0] 
+[L057, S0] def parse_wos_cited_references(entry: dict) -> List[Dict[str, str]]:
+[L058, S4]     """Parses cited references into structured dicts (author, year, source)."""
+[L059, S4]     def get_val(*keys):
+[L060, S8]         for k, v in entry.items():
+[L061, S12]             if str(k).lower() in keys:
+[L062, S16]                 val = getattr(v, "value", v)
+[L063, S16]                 if hasattr(val, "value"):
+[L064, S20]                     val = val.value
+[L065, S16]                 s = str(val).strip()
+[L066, S16]                 while (s.startswith("{") and s.endswith("}")) or (
+[L067, S20]                     s.startswith('"') and s.endswith('"')
+[L068, S16]                 ):
+[L069, S20]                     s = s[1:-1].strip()
+[L070, S16]                 return s
+[L071, S8]         return ""
+[L072, S0] 
+[L073, S4]     cr_raw = get_val("cited-references", "cited_references")
+[L074, S4]     if not cr_raw:
+[L075, S8]         return []
+[L076, S0] 
+[L077, S4]     parsed_crs = []
+[L078, S4]     cr_list = [cr.strip() for cr in re.split(r";|\n", cr_raw) if cr.strip()]
+[L079, S4]     
+[L080, S4]     for cr in cr_list:
+[L081, S8]         parts = [p.strip() for p in cr.split(",")]
+[L082, S8]         if not parts:
+[L083, S12]             continue
+[L084, S12]             
+[L085, S8]         author = parts[0] if len(parts) > 0 else ""
+[L086, S8]         year = ""
+[L087, S8]         source = ""
+[L088, S8]         
+[L089, S8]         if len(parts) > 1:
+[L090, S12]             if re.match(r"^\d{4}$", parts[1]):
+[L091, S16]                 year = parts[1]
+[L092, S16]                 source = ", ".join(parts[2:]) if len(parts) > 2 else ""
+[L093, S12]             else:
+[L094, S16]                 source = ", ".join(parts[1:])
+[L095, S16]                 
+[L096, S8]         doi = ""
+[L097, S8]         doi_match = re.search(r"(10\.\d{4,9}/[-._;()/:a-zA-Z0-9]+)", source)
+[L098, S8]         if doi_match:
+[L099, S12]             doi = doi_match.group(1).rstrip(".]}")
+[L100, S16]                 
+[L101, S8]         parsed_crs.append({
+[L102, S12]             "author": author,
+[L103, S12]             "year": year,
+[L104, S12]             "source": source,
+[L105, S12]             "doi": doi,
+[L106, S12]             "raw": cr
+[L107, S8]         })
+[L108, S8]         
+[L109, S4]     unique_crs = {cr["raw"]: cr for cr in parsed_crs}
+[L110, S4]     return list(unique_crs.values())
+[L111, S0] 
 [L112, S0] 
-[L113, S2]   return (
-[L114, S4]     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-[L115, S6]       <RightPanelBox 
-[L116, S8]         title="Affiliations" 
-[L117, S8]         icon={icons.building} 
-[L118, S8]         onHoverInfo={onHoverInfo} 
-[L119, S8]         infoKey="affiliations"
-[L120, S8]         onClick={affiliations ? () => onExpandDrawer('affiliations') : null}
-[L121, S6]       >
-[L122, S8]         {affiliations}
-[L123, S6]       </RightPanelBox>
-[L124, S0] 
-[L125, S6]       <RightPanelBox 
-[L126, S8]         title="Authors Details" 
-[L127, S8]         icon={icons.users} 
-[L128, S8]         onHoverInfo={onHoverInfo} 
-[L129, S8]         infoKey="authors"
-[L130, S8]         onClick={authorsDetailsCount > 0 ? () => onExpandDrawer('authors') : null}
-[L131, S6]       >
-[L132, S8]         {authorsDetailsCount ? `${authorsDetailsCount} authors (see full list)` : null}
-[L133, S6]       </RightPanelBox>
-[L134, S0] 
-[L135, S6]       <RightPanelBox 
-[L136, S8]         title="Author Email" 
-[L137, S8]         icon={icons.mail} 
-[L138, S8]         onHoverInfo={onHoverInfo} 
-[L139, S8]         infoKey="email"
-[L140, S8]         copyAction={onCopy}
-[L141, S6]       >
-[L142, S8]         {authorEmail}
-[L143, S6]       </RightPanelBox>
-[L144, S0] 
-[L145, S6]       <RightPanelBox 
-[L146, S8]         title="ORCID Numbers" 
-[L147, S8]         icon={icons.badge} 
-[L148, S8]         onHoverInfo={onHoverInfo} 
-[L149, S8]         infoKey="orcid"
-[L150, S6]       >
-[L151, S8]         {orcidCount ? `${orcidCount} ORCID IDs` : null}
-[L152, S6]       </RightPanelBox>
-[L153, S0] 
-[L154, S6]       <RightPanelBox 
-[L155, S8]         title="ResearcherID Numbers" 
-[L156, S8]         icon={icons.globe} 
-[L157, S8]         onHoverInfo={onHoverInfo} 
-[L158, S8]         infoKey="researcher-id"
-[L159, S6]       >
-[L160, S8]         {researcherIdCount ? `${researcherIdCount} Researcher IDs` : null}
-[L161, S6]       </RightPanelBox>
-[L162, S0] 
-[L163, S6]       <RightPanelBox 
-[L164, S8]         title="Funding" 
-[L165, S8]         icon={icons.cash} 
-[L166, S8]         onHoverInfo={onHoverInfo} 
-[L167, S8]         infoKey="funding"
-[L168, S8]         onClick={fundingText ? () => onExpandDrawer('funding') : null}
-[L169, S6]       >
-[L170, S8]         {fundingText}
-[L171, S6]       </RightPanelBox>
-[L172, S4]     </div>
-[L173, S2]   );
-[L174, S0] }
-[L175, S0] 
-[L176, S0] OverviewRightColumn.propTypes = {
-[L177, S2]   affiliations: PropTypes.string,
-[L178, S2]   authorsDetailsCount: PropTypes.number,
-[L179, S2]   authorEmail: PropTypes.string,
-[L180, S2]   orcidCount: PropTypes.number,
-[L181, S2]   researcherIdCount: PropTypes.number,
-[L182, S2]   fundingText: PropTypes.string,
-[L183, S2]   onHoverInfo: PropTypes.func,
-[L184, S2]   onCopy: PropTypes.func,
-[L185, S2]   onExpandDrawer: PropTypes.func,
-[L186, S0] };
+[L113, S0] def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
+[L114, S4]     """
+[L115, S4]     Parses chaotic WOS identity fields (ORCID, ResearcherID, Affiliation) 
+[L116, S4]     and cross-references them to build a structured list of authors.
+[L117, S4]     """
+[L118, S4]     def get_val(*keys):
+[L119, S8]         for k, v in entry.items():
+[L120, S12]             if str(k).lower() in keys:
+[L121, S16]                 val = getattr(v, "value", v)
+[L122, S16]                 if hasattr(val, "value"):
+[L123, S20]                     val = val.value
+[L124, S16]                 s = str(val).strip()
+[L125, S16]                 while (s.startswith("{") and s.endswith("}")) or (
+[L126, S20]                     s.startswith('"') and s.endswith('"')
+[L127, S16]                 ):
+[L128, S20]                     s = s[1:-1].strip()
+[L129, S16]                 return s
+[L130, S8]         return ""
+[L131, S0] 
+[L132, S4]     raw_authors = get_val("author")
+[L133, S4]     if not raw_authors:
+[L134, S8]         return []
+[L135, S0] 
+[L136, S4]     author_names = [
+[L137, S8]         a.strip() for a in re.split(r"\s+and\s+", raw_authors) if a.strip()
+[L138, S4]     ]
+[L139, S4]     
+[L140, S4]     details = []
+[L141, S4]     for name in author_names:
+[L142, S8]         details.append({
+[L143, S12]             "name": name,
+[L144, S12]             "email": None,
+[L145, S12]             "orcid": None,
+[L146, S12]             "researcher_id": None,
+[L147, S12]             "affiliation": None,
+[L148, S12]             "is_corresponding": False
+[L149, S8]         })
+[L150, S0] 
+[L151, S4]     # 1. Process ORCID
+[L152, S4]     orcid_raw = get_val("orcid-numbers", "orcid_numbers")
+[L153, S4]     for line in orcid_raw.replace(";", "\n").split("\n"):
+[L154, S8]         if "/" in line:
+[L155, S12]             n_part, i_part = line.rsplit("/", 1)
+[L156, S12]             n_norm = _normalize_name(n_part)
+[L157, S12]             for d in details:
+[L158, S16]                 d_norm = _normalize_name(d["name"])
+[L159, S16]                 if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
+[L160, S20]                     d["orcid"] = i_part.strip()
+[L161, S0] 
+[L162, S4]     # 2. Process ResearcherID
+[L163, S4]     rid_raw = get_val("researcherid-numbers", "researcherid")
+[L164, S4]     for line in rid_raw.replace(";", "\n").split("\n"):
+[L165, S8]         if "/" in line:
+[L166, S12]             n_part, i_part = line.rsplit("/", 1)
+[L167, S12]             n_norm = _normalize_name(n_part)
+[L168, S12]             for d in details:
+[L169, S16]                 d_norm = _normalize_name(d["name"])
+[L170, S16]                 if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
+[L171, S20]                     d["researcher_id"] = i_part.strip()
+[L172, S0] 
+[L173, S4]     # 3. Process Affiliations & Corresponding Author
+[L174, S4]     affil_raw = get_val("affiliation")
+[L175, S4]     affil_raw = affil_raw.replace("\n", " ")
+[L176, S4]     lines = [
+[L177, S8]         line.strip() 
+[L178, S8]         for line in re.split(r"\.\s+(?=[A-Z\[])", affil_raw) 
+[L179, S8]         if line.strip()
+[L180, S4]     ]
+[L181, S4]     
+[L182, S4]     for line in lines:
+[L183, S8]         is_corr = "(Corresponding Author)" in line or "(corresponding author)" in line.lower()
+[L184, S8]         line_clean = re.sub(r"\(\s*Corresponding\s*Author\s*\)", "", line, flags=re.I).strip()
+[L185, S8]         
+[L186, S8]         matched_authors = []
+[L187, S8]         for d in details:
+[L188, S12]             last_name = d["name"].split(",")[0].strip()
+[L189, S12]             if last_name and last_name.lower() in line_clean.lower():
+[L190, S16]                 matched_authors.append(d)
+[L191, S16]                 if is_corr:
+[L192, S20]                     d["is_corresponding"] = True
+[L193, S8]         
+[L194, S8]         bracket_match = re.match(r"^\[(.*?)\]\s*(.*)", line_clean)
+[L195, S8]         inst_part = bracket_match.group(2) if bracket_match else line_clean
+[L196, S8]         
+[L197, S8]         for d in matched_authors:
+[L198, S12]             if not d["affiliation"]:
+[L199, S16]                 d["affiliation"] = inst_part
+[L200, S0] 
+[L201, S4]     # 4. Process Emails (Attach to corresponding, or first author)
+[L202, S4]     email_raw = get_val("author-email", "author_email")
+[L203, S4]     emails = [e.strip() for e in email_raw.split(",") if e.strip()]
+[L204, S4]     
+[L205, S4]     corr_authors = [d for d in details if d["is_corresponding"]]
+[L206, S4]     if not corr_authors and details:
+[L207, S8]         corr_authors = [details[0]]
+[L208, S8]         
+[L209, S4]     for idx, email in enumerate(emails):
+[L210, S8]         if idx < len(corr_authors):
+[L211, S12]             corr_authors[idx]["email"] = email
+[L212, S8]         elif idx < len(details):
+[L213, S12]             details[idx]["email"] = email
+[L214, S0] 
+[L215, S4]     return details
