@@ -32,4 +32,20 @@ describe('ReferencesDataTable Dumb View State Wiring', () => {
     expect(nextRows).toHaveLength(8); // 7 + 1
     expect(screen.getByText(/Page 2 of 2/i)).toBeDefined();
   });
+
+  it('renders resizable column headers via useTableResize', () => {
+    const mockData = [{ id: 1, title: 'T', author: 'A', year: '26', journal: 'J' }];
+    const { container } = render(<ReferencesDataTable data={mockData} />);
+    
+    const headers = screen.getAllByRole('columnheader');
+    expect(headers).toHaveLength(4);
+    
+    expect(headers[0].style.width).toBe('45%');
+    expect(headers[1].style.width).toBe('20%');
+    expect(headers[2].style.width).toBe('10%');
+    expect(headers[3].style.width).toBe('25%');
+
+    const resizeHandlers = container.querySelectorAll('div[style*="col-resize"]');
+    expect(resizeHandlers).toHaveLength(4);
+  });
 });

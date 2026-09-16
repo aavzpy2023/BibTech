@@ -37,6 +37,8 @@
 │   │   │   │   ├── useReferencesTable.test.js
 │   │   │   │   ├── useReferencesUpload.js
 │   │   │   │   ├── useReferencesUpload.test.js
+│   │   │   │   ├── useTableResize.js
+│   │   │   │   ├── useTableResize.test.js
 │   │   │   ├── components/
 │   │   │   │   ├── BibliographyUploader.jsx
 │   │   │   │   ├── Layout.jsx
@@ -133,6 +135,7 @@
 │   │   │   ├── roadmap_10_cookie_authentication.md
 │   │   │   ├── roadmap_11_references_ui_and_bugfixes.md
 │   │   │   ├── roadmap_12_bib_only_and_injection_fix.md
+│   │   │   ├── roadmap_13_references_table_resizing_and_count_fix.md
 │   │   │   ├── roadmap_1_bibliography_ingestion.md
 │   │   │   ├── roadmap_2_batch_load.md
 │   │   │   ├── roadmap_3_batch_download_execution.md

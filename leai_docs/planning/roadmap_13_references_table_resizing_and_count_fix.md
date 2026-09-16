@@ -29,8 +29,9 @@ Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-13.2.2] [FRONTEND/STATE]: [1. Create useTableResize.js. 2. Implement state colWidths (defaulting to { title: 45, author: 20, year: 10, journal: 25 }) and isResizing (tracking active column and start X). 3. Implement handleMouseDown(e, colName), handleMouseMove(e), and handleMouseUp(). 4. Attach/detach mousemove and mouseup to window via useEffect when isResizing is active. 5. Return { colWidths, handleMouseDown }]. Type: Task.
 [ID-13.2.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_13_references_table_resizing_and_count_fix.md and check - [x] for Story 13.2. 2. Append > Files touched: useTableResize.js, useTableResize.test.js under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-041]]. Type: Task.
 
-- [ ] Story 13.3: Resizable Table Columns - Dumb View Wiring | [MoSCoW: MUST] | [Complexity: EASY]
-Story Context Radius: {"frontend/src/components/references/ReferencesDataTable.jsx": [""], "frontend/src/hooks/useTableResize.js": ["READ-ONLY"], "leai_docs/planning/roadmap_13_references_table_resizing_and_count_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
+- [x] Story 13.3: Resizable Table Columns - Dumb View Wiring | [MoSCoW: MUST] | [Complexity: EASY]
+> Files touched: ReferencesDataTable.jsx, ReferencesDataTable.test.jsx
+Story Context Radius:
 Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-13.3.1] [TESTING/TDE]: [1. Arrange: Render ReferencesDataTable with mock data. 2. Act: Verify <th> elements contain the resize handle <div>. 3. Assert: Verify <th> elements apply the width styles provided by the hook]. Type: Task.
 [ID-13.3.2] [FRONTEND/VIEW]: [1. Open ReferencesDataTable.jsx. 2. Import and invoke useTableResize(). 3. Inject a vertical resize handle (<div style={{ cursor: 'col-resize', width: '5px', position: 'absolute', right: 0, top: 0, bottom: 0, backgroundColor: 'transparent' }} onMouseDown={(e) => handleMouseDown(e, 'colName')}>) into each <th>. 4. Ensure <th> has position: 'relative' and applies the width from colWidths state (e.g., width: `${colWidths.title}%`). 5. Ensure retains overflow: hidden and textOverflow: 'ellipsis']. Type: Task.

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useReferencesTable } from '../../hooks/useReferencesTable';
+import { useTableResize } from '../../hooks/useTableResize';
 
 function formatShortAuthor(authorStr) {
   if (!authorStr || authorStr === 'N/A') return 'N/A';
@@ -67,6 +68,9 @@ const styles = {
     padding: '10px 14px',
     fontWeight: '600',
     color: '#f0f6fc',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
   tr: {
     borderBottom: '1px solid #30363d',
@@ -122,6 +126,8 @@ export function ReferencesDataTable({ data = [] }) {
     totalPages,
   } = useReferencesTable(data, 13);
 
+  const { colWidths, handleMouseDown } = useTableResize();
+
   if (!data || data.length === 0) {
     return (
       <div style={styles.container}>
@@ -158,10 +164,46 @@ export function ReferencesDataTable({ data = [] }) {
       <table style={styles.table}>
         <thead>
           <tr>
-            <th style={{ ...styles.th, width: '45%' }}>Title</th>
-            <th style={{ ...styles.th, width: '20%' }}>Author</th>
-            <th style={{ ...styles.th, width: '10%' }}>Year</th>
-            <th style={{ ...styles.th, width: '25%' }}>Journal</th>
+            <th style={{ ...styles.th, width: `${colWidths.title}%`, position: 'relative' }}>
+              Title
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'title')}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.author}%`, position: 'relative' }}>
+              Author
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'author')}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.year}%`, position: 'relative' }}>
+              Year
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'year')}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.journal}%`, position: 'relative' }}>
+              Journal
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'journal')}
+              />
+            </th>
           </tr>
         </thead>
         <tbody>
