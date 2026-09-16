@@ -104,6 +104,7 @@
 │   │   │   │   ├── resolver_service.py
 │   │   │   │   ├── router.py
 │   │   │   │   ├── schemas.py
+│   │   │   │   ├── wos_parser.py
 │   │   │   │   ├── zip_service.py
 │   │   │   ├── bibtech_backend.egg-info/
 │   │   │   │   ├── SOURCES.txt

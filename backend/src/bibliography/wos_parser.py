@@ -12,17 +12,26 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
     Parses chaotic WOS identity fields (ORCID, ResearcherID, Affiliation) 
     and cross-references them to build a structured list of authors.
     """
-    raw_authors = ""
-    for k, v in entry.items():
-        if k.lower() == "author":
-            raw_authors = v
-            break
+    def get_val(*keys):
+        for k, v in entry.items():
+            if str(k).lower() in keys:
+                val = getattr(v, "value", v)
+                if hasattr(val, "value"):
+                    val = val.value
+                s = str(val).strip()
+                while (s.startswith("{") and s.endswith("}")) or (
+                    s.startswith('"') and s.endswith('"')
+                ):
+                    s = s[1:-1].strip()
+                return s
+        return ""
 
+    raw_authors = get_val("author")
     if not raw_authors:
         return []
 
     author_names = [
-        a.strip() for a in re.split(r"\s+and\s+", str(raw_authors)) if a.strip()
+        a.strip() for a in re.split(r"\s+and\s+", raw_authors) if a.strip()
     ]
     
     details = []
@@ -37,8 +46,8 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
         })
 
     # 1. Process ORCID
-    orcid_raw = entry.get("orcid-numbers", "") or entry.get("orcid_numbers", "")
-    for line in str(orcid_raw).replace(";", "\n").split("\n"):
+    orcid_raw = get_val("orcid-numbers", "orcid_numbers")
+    for line in orcid_raw.replace(";", "\n").split("\n"):
         if "/" in line:
             n_part, i_part = line.rsplit("/", 1)
             n_norm = _normalize_name(n_part)
@@ -48,8 +57,8 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
                     d["orcid"] = i_part.strip()
 
     # 2. Process ResearcherID
-    rid_raw = entry.get("researcherid-numbers", "") or entry.get("researcherid", "")
-    for line in str(rid_raw).replace(";", "\n").split("\n"):
+    rid_raw = get_val("researcherid-numbers", "researcherid")
+    for line in rid_raw.replace(";", "\n").split("\n"):
         if "/" in line:
             n_part, i_part = line.rsplit("/", 1)
             n_norm = _normalize_name(n_part)
@@ -59,31 +68,36 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
                     d["researcher_id"] = i_part.strip()
 
     # 3. Process Affiliations & Corresponding Author
-    affil_raw = entry.get("affiliation", "")
-    for line in str(affil_raw).split("\n"):
-        line = line.strip()
-        if not line:
-            continue
-        
-        is_corr = "(Corresponding Author)" in line
-        line_clean = line.replace("(Corresponding Author)", "").strip()
+    affil_raw = get_val("affiliation")
+    affil_raw = affil_raw.replace("\n", " ")
+    lines = [
+        line.strip() 
+        for line in re.split(r"\.\s+(?=[A-Z\[])", affil_raw) 
+        if line.strip()
+    ]
+    
+    for line in lines:
+        is_corr = "(Corresponding Author)" in line or "(corresponding author)" in line.lower()
+        line_clean = re.sub(r"\(\s*Corresponding\s*Author\s*\)", "", line, flags=re.I).strip()
         
         matched_authors = []
         for d in details:
-            # Simple heuristic: check if author's last name is in the affiliation line
             last_name = d["name"].split(",")[0].strip()
-            if last_name and last_name in line_clean:
+            if last_name and last_name.lower() in line_clean.lower():
                 matched_authors.append(d)
                 if is_corr:
                     d["is_corresponding"] = True
         
+        bracket_match = re.match(r"^\[(.*?)\]\s*(.*)", line_clean)
+        inst_part = bracket_match.group(2) if bracket_match else line_clean
+        
         for d in matched_authors:
             if not d["affiliation"]:
-                d["affiliation"] = line_clean
+                d["affiliation"] = inst_part
 
     # 4. Process Emails (Attach to corresponding, or first author)
-    email_raw = entry.get("author-email", "") or entry.get("author_email", "")
-    emails = [e.strip() for e in str(email_raw).split(",") if e.strip()]
+    email_raw = get_val("author-email", "author_email")
+    emails = [e.strip() for e in email_raw.split(",") if e.strip()]
     
     corr_authors = [d for d in details if d["is_corresponding"]]
     if not corr_authors and details:
