@@ -15,22 +15,50 @@ describe('ReferencesDataTable', () => {
       keywords: [{ name: 'Health', type: 'author' }],
       authors_detail: [],
     },
+    {
+      id: 2,
+      title: 'Second Paper',
+      author: 'Smith, Jane',
+      year: '2022',
+      journal: 'Nature',
+      doi: '10.1038/sample.2022',
+      abstract: 'Another abstract...',
+      keywords: [],
+      authors_detail: [],
+    },
   ];
 
-  it('renders table rows and opens ReferenceDetailsModal on View Details', () => {
+  it('keeps View Details disabled when 0 rows are selected', () => {
     render(<ReferencesDataTable data={mockData} />);
+    const detailsBtn = screen.getByRole('button', { name: /view details/i });
+    expect(detailsBtn).toBeDisabled();
+  });
 
-    expect(screen.getByText('Sample Epidemiology Paper')).toBeInTheDocument();
-    expect(screen.getByText('Doe, John')).toBeInTheDocument();
-
-    const row = screen.getByText('Sample Epidemiology Paper').closest('tr');
-    fireEvent.click(row);
+  it('enables View Details when 1 row is selected without opening modal', () => {
+    render(<ReferencesDataTable data={mockData} />);
+    const row1 = screen.getByText('Sample Epidemiology Paper').closest('tr');
+    fireEvent.click(row1);
 
     const detailsBtn = screen.getByRole('button', { name: /view details/i });
     expect(detailsBtn).not.toBeDisabled();
-    fireEvent.click(detailsBtn);
 
+    // Clicking row must not open modal
+    expect(screen.queryByText('Reference Details')).not.toBeInTheDocument();
+
+    // Clicking View Details opens modal
+    fireEvent.click(detailsBtn);
     expect(screen.getByText('Reference Details')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /overview/i })).toBeInTheDocument();
+  });
+
+  it('disables View Details when more than 1 row is selected', () => {
+    render(<ReferencesDataTable data={mockData} />);
+    const checkboxes = screen.getAllByRole('checkbox');
+    // checkboxes[0] is select-all in the header, [1] is row 1, [2] is row 2
+    fireEvent.click(checkboxes[1]);
+    const detailsBtn = screen.getByRole('button', { name: /view details/i });
+    expect(detailsBtn).not.toBeDisabled();
+
+    fireEvent.click(checkboxes[2]);
+    expect(detailsBtn).toBeDisabled();
   });
 });

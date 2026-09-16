@@ -1,319 +1,651 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 16:05:54
+Date: 2026-09-16 16:09:10
 AST Mode: False
 Line Numbers: True
-Modules: BatchInput.jsx
-Processed Files: 1
+Modules: ReferencesDataTable.jsx, useReferencesTable.js, ReferencesView.jsx
+Processed Files: 3
 ===========================
 
 
 
-// --- frontend/src/components/load/BatchInput.jsx ---
+// --- frontend/src/components/references/ReferencesDataTable.jsx ---
 
 [L001, S0] import React, { useState } from 'react';
-[L002, S0] import { useDropzone } from 'react-dropzone';
-[L003, S0] import Modal from '../Modal';
-[L004, S0] 
-[L005, S0] export function extractDoisFromText(text, filename = '') {
-[L006, S2]   const isBib = filename.toLowerCase().endsWith('.bib');
-[L007, S2]   const foundDois = [];
-[L008, S2]   const missingDoisAlerts = [];
-[L009, S0] 
-[L010, S2]   if (!isBib) {
-[L011, S4]     return { foundDois, missingDoisAlerts };
-[L012, S2]   }
-[L013, S0] 
-[L014, S2]   // Fallback para evitar errores en variables no usadas (isRis)
-[L015, S2]   if (false) {
-[L016, S4]     const risRegex = /^[ \t]*DO\s+-\s+(.+)$/gim;
-[L017, S4]     let match;
-[L018, S4]     while ((match = risRegex.exec(text)) !== null) {
-[L019, S6]       const doi = match[1].trim();
-[L020, S6]       if (doi && !foundDois.includes(doi)) {
-[L021, S8]         foundDois.push(doi);
-[L022, S6]       }
-[L023, S4]     }
-[L024, S2]   }
-[L025, S0] 
-[L026, S2]   if (isBib) {
-[L027, S4]     const entryRegex = /@\w+\s*{\s*([^,]+)/gi;
-[L028, S4]     let entryMatch;
-[L029, S4]     
-[L030, S4]     while ((entryMatch = entryRegex.exec(text)) !== null) {
-[L031, S6]       const citationKey = entryMatch[1].trim();
-[L032, S6]       
-[L033, S6]       const startIndex = entryMatch.index;
-[L034, S6]       let openBraces = 0;
-[L035, S6]       let endIndex = startIndex;
-[L036, S6]       let started = false;
-[L037, S6]       
-[L038, S6]       for (let i = startIndex; i < text.length; i++) {
-[L039, S8]         if (text[i] === '{') {
-[L040, S10]           openBraces++;
-[L041, S10]           started = true;
-[L042, S8]         } else if (text[i] === '}') {
-[L043, S10]           openBraces--;
-[L044, S8]         }
-[L045, S8]         if (started && openBraces === 0) {
-[L046, S10]           endIndex = i;
-[L047, S10]           break;
-[L048, S8]         }
-[L049, S6]       }
-[L050, S6]       
-[L051, S6]       const entryText = text.substring(startIndex, endIndex + 1);
-[L052, S6]       
-[L053, S6]       const bibRegex = /\bdoi\s*=\s*(?:\{([^}]+)\}|"([^"]+)")/i;
-[L054, S6]       const doiMatch = bibRegex.exec(entryText);
-[L055, S6]       
-[L056, S6]       if (doiMatch) {
-[L057, S8]         const doi = (doiMatch[1] || doiMatch[2] || '').trim();
-[L058, S8]         if (doi && !foundDois.includes(doi)) {
-[L059, S10]           foundDois.push(doi);
-[L060, S8]         }
-[L061, S6]       } else {
-[L062, S8]         missingDoisAlerts.push(`Citation key [${citationKey}] is missing a DOI.`);
-[L063, S6]       }
-[L064, S4]     }
-[L065, S2]   }
-[L066, S0] 
-[L067, S2]   if (false && foundDois.length === 0) {
-[L068, S4]     const genericRegex = /\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+\b/gi;
-[L069, S4]     let match;
-[L070, S4]     while ((match = genericRegex.exec(text)) !== null) {
-[L071, S6]       const doi = match[0].trim();
-[L072, S6]       if (doi && !foundDois.includes(doi)) {
-[L073, S8]         foundDois.push(doi);
-[L074, S6]       }
-[L075, S4]     }
-[L076, S2]   }
-[L077, S0] 
-[L078, S2]   return { foundDois, missingDoisAlerts };
-[L079, S0] }
-[L080, S0] 
-[L081, S0] const styles = {
-[L082, S2]   container: {
-[L083, S4]     display: 'flex',
-[L084, S4]     flexDirection: 'column',
-[L085, S4]     gap: '16px',
-[L086, S4]     marginBottom: '24px'
+[L002, S0] import { useReferencesTable } from '../../hooks/useReferencesTable';
+[L003, S0] import { useTableResize } from '../../hooks/useTableResize';
+[L004, S0] import { useHoverReveal } from '../../hooks/useHoverReveal';
+[L005, S0] import { MetadataGrid } from './MetadataGrid';
+[L006, S0] import { HoverPopover } from './HoverPopover';
+[L007, S0] import ReferenceDetailsModal from './ReferenceDetailsModal';
+[L008, S0] 
+[L009, S0] function getDoiUrl(doi) {
+[L010, S2]   if (!doi) return '';
+[L011, S2]   const clean = String(doi).trim();
+[L012, S2]   if (clean.startsWith('http://') || clean.startsWith('https://')) {
+[L013, S4]     return clean;
+[L014, S2]   }
+[L015, S2]   return `https://doi.org/${clean.replace(/^doi:\s*/i, '')}`;
+[L016, S0] }
+[L017, S0] 
+[L018, S0] const styles = {
+[L019, S2]   controls: {
+[L020, S4]     display: 'flex',
+[L021, S4]     justifyContent: 'space-between',
+[L022, S4]     alignItems: 'center',
+[L023, S4]     marginBottom: '16px',
+[L024, S2]   },
+[L025, S2]   searchInput: {
+[L026, S4]     padding: '8px 12px',
+[L027, S4]     borderRadius: '6px',
+[L028, S4]     border: '1px solid #30363d',
+[L029, S4]     backgroundColor: '#0d1117',
+[L030, S4]     color: '#f0f6fc',
+[L031, S4]     width: '300px',
+[L032, S4]     outline: 'none',
+[L033, S2]   },
+[L034, S2]   pagination: {
+[L035, S4]     display: 'flex',
+[L036, S4]     justifyContent: 'space-between',
+[L037, S4]     alignItems: 'center',
+[L038, S4]     marginTop: '16px',
+[L039, S4]     padding: '8px 0',
+[L040, S2]   },
+[L041, S2]   pageBtn: {
+[L042, S4]     padding: '6px 12px',
+[L043, S4]     backgroundColor: '#21262d',
+[L044, S4]     border: '1px solid #30363d',
+[L045, S4]     color: '#f0f6fc',
+[L046, S4]     borderRadius: '6px',
+[L047, S4]     cursor: 'pointer',
+[L048, S4]     fontSize: '13px',
+[L049, S2]   },
+[L050, S2]   pageBtnDisabled: {
+[L051, S4]     opacity: 0.5,
+[L052, S4]     cursor: 'not-allowed',
+[L053, S2]   },
+[L054, S2]   container: {
+[L055, S4]     width: '100%',
+[L056, S4]     overflowX: 'auto',
+[L057, S4]     marginTop: '20px',
+[L058, S4]     position: 'relative',
+[L059, S2]   },
+[L060, S2]   table: {
+[L061, S4]     width: '100%',
+[L062, S4]     tableLayout: 'fixed',
+[L063, S4]     borderCollapse: 'collapse',
+[L064, S4]     textAlign: 'left',
+[L065, S4]     fontSize: '14px',
+[L066, S4]     fontFamily: 'system-ui, sans-serif',
+[L067, S2]   },
+[L068, S2]   th: {
+[L069, S4]     backgroundColor: '#161b22',
+[L070, S4]     borderBottom: '1px solid #30363d',
+[L071, S4]     borderRight: '1px solid #30363d',
+[L072, S4]     padding: '10px 14px',
+[L073, S4]     fontWeight: '600',
+[L074, S4]     color: '#f0f6fc',
+[L075, S4]     whiteSpace: 'nowrap',
+[L076, S4]     overflow: 'hidden',
+[L077, S4]     textOverflow: 'ellipsis',
+[L078, S2]   },
+[L079, S2]   tr: {
+[L080, S4]     borderBottom: '1px solid #30363d',
+[L081, S4]     cursor: 'pointer',
+[L082, S4]     transition: 'background-color 0.15s ease',
+[L083, S2]   },
+[L084, S2]   selectedTr: {
+[L085, S4]     backgroundColor: '#1c2128',
+[L086, S4]     outline: '1px solid #388bfd',
 [L087, S2]   },
-[L088, S2]   dropzone: {
-[L089, S4]     border: '2px dashed #0366d6',
-[L090, S4]     borderRadius: '8px',
-[L091, S4]     padding: '24px',
-[L092, S4]     textAlign: 'center',
-[L093, S4]     cursor: 'pointer',
-[L094, S4]     backgroundColor: '#161b22',
-[L095, S4]     border: '2px dashed #30363d'
-[L096, S2]   },
-[L097, S2]   dropzoneActive: {
-[L098, S4]     backgroundColor: '#e1f5fe',
-[L099, S4]     borderColor: '#0288d1'
-[L100, S2]   },
-[L101, S2]   textarea: {
-[L102, S4]     width: '100%',
-[L103, S4]     minHeight: '300px',
-[L104, S4]     padding: '12px',
-[L105, S4]     borderRadius: '6px',
-[L106, S4]     border: '1px solid #30363d',
-[L107, S4]     backgroundColor: '#0d1117',
-[L108, S4]     color: '#f0f6fc',
-[L109, S4]     fontFamily: 'monospace',
-[L110, S4]     fontSize: '13px',
-[L111, S4]     boxSizing: 'border-box'
+[L088, S2]   detailsBtn: {
+[L089, S4]     padding: '8px 14px',
+[L090, S4]     backgroundColor: '#21262d',
+[L091, S4]     color: '#f0f6fc',
+[L092, S4]     border: '1px solid #30363d',
+[L093, S4]     borderRadius: '6px',
+[L094, S4]     cursor: 'pointer',
+[L095, S4]     fontSize: '13px',
+[L096, S4]     fontWeight: '500',
+[L097, S4]     whiteSpace: 'nowrap',
+[L098, S4]     transition: 'all 0.15s ease',
+[L099, S2]   },
+[L100, S2]   detailsBtnDisabled: {
+[L101, S4]     opacity: 0.45,
+[L102, S4]     cursor: 'not-allowed',
+[L103, S2]   },
+[L104, S0] 
+[L105, S2]   td: {
+[L106, S4]     padding: '10px 14px',
+[L107, S4]     color: '#f0f6fc',
+[L108, S4]     borderRight: '1px solid #30363d',
+[L109, S4]     whiteSpace: 'nowrap',
+[L110, S4]     overflow: 'hidden',
+[L111, S4]     textOverflow: 'ellipsis',
 [L112, S2]   },
-[L113, S2]   label: {
-[L114, S4]     fontWeight: 'bold',
-[L115, S4]     fontSize: '14px',
-[L116, S4]     color: '#f0f6fc',
-[L117, S4]     marginBottom: '6px',
-[L118, S4]     display: 'block'
+[L113, S2]   empty: {
+[L114, S4]     padding: '24px',
+[L115, S4]     textAlign: 'center',
+[L116, S4]     color: '#8b949e',
+[L117, S4]     fontSize: '14px',
+[L118, S4]     fontStyle: 'italic',
 [L119, S2]   },
-[L120, S2]   fileList: {
-[L121, S4]     marginTop: '8px',
-[L122, S4]     fontSize: '13px',
-[L123, S4]     color: '#586069'
-[L124, S2]   },
-[L125, S2]   uploadBtn: {
-[L126, S4]     backgroundColor: '#0366d6', color: '#ffffff', border: 'none', borderRadius: '6px',
-[L127, S4]     padding: '8px 16px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
-[L128, S2]   },
-[L129, S2]   modalOverlay: {
-[L130, S4]     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-[L131, S4]     backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-[L132, S2]   },
-[L133, S2]   modalContent: {
-[L134, S4]     backgroundColor: '#161b22', color: '#f0f6fc', border: '1px solid #30363d', padding: '24px', borderRadius: '8px', width: '450px', maxWidth: '90%'
-[L135, S2]   },
-[L136, S2]   badge: {
-[L137, S4]     backgroundColor: '#21262d', color: '#f0f6fc', padding: '4px 8px', borderRadius: '12px', fontSize: '12px', marginLeft: '8px'
-[L138, S2]   },
-[L139, S2]   headerRow: {
-[L140, S4]     display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'
-[L141, S2]   }
-[L142, S0] };
-[L143, S0] 
-[L144, S0] export function BatchInput({
-[L145, S2]   files = [],
-[L146, S2]   dois = '',
-[L147, S2]   input,
-[L148, S2]   onInputUpdate
-[L149, S0] }) {
-[L150, S2]   const [isModalOpen, setIsModalOpen] = useState(false);
-[L151, S2]   const [missingDois, setMissingDois] = useState([]);
-[L152, S2]   const currentFiles = input?.files ?? files;
-[L153, S2]   const currentDois = input?.dois ?? dois;
-[L154, S0] 
-[L155, S2]   const onDrop = async (acceptedFiles) => {
-[L156, S4]     const validFiles = (acceptedFiles || []).filter((file) => {
-[L157, S6]       const ext = file.name.toLowerCase().split('.').pop();
-[L158, S6]       return ext === 'bib';
-[L159, S4]     });
-[L160, S0] 
-[L161, S4]     if (validFiles.length === 0) {
-[L162, S6]       alert("Only .bib files are accepted for this operation.");
-[L163, S6]       return;
-[L164, S4]     }
-[L165, S0] 
-[L166, S4]     if (onInputUpdate) {
-[L167, S6]       onInputUpdate('files', validFiles);
-[L168, S4]     }
-[L169, S0] 
-[L170, S4]     const allExtractedDois = [];
-[L171, S4]     const allMissingAlerts = [];
-[L172, S4]     for (const file of validFiles) {
-[L173, S6]       try {
-[L174, S8]         const text = await file.text();
-[L175, S8]         const { foundDois, missingDoisAlerts } = extractDoisFromText(text, file.name);
-[L176, S8]         allExtractedDois.push(...foundDois);
-[L177, S8]         allMissingAlerts.push(...missingDoisAlerts);
-[L178, S6]       } catch (err) {
-[L179, S8]         console.error('Failed to read file for DOI extraction', err);
-[L180, S6]       }
-[L181, S4]     }
-[L182, S0] 
-[L183, S4]     if (allMissingAlerts.length > 0) {
-[L184, S6]       setMissingDois(allMissingAlerts);
-[L185, S4]     }
-[L186, S0] 
-[L187, S4]     if (allExtractedDois.length > 0 && onInputUpdate) {
-[L188, S6]       const existing = currentDois
-[L189, S8]         ? currentDois
-[L190, S12]             .split('\n')
-[L191, S12]             .map((d) => d.trim())
-[L192, S12]             .filter(Boolean)
-[L193, S8]         : [];
-[L194, S6]       const merged = Array.from(new Set([...existing, ...allExtractedDois]));
-[L195, S6]       onInputUpdate('dois', merged.join('\n'));
-[L196, S4]     }
-[L197, S4]     setIsModalOpen(false);
-[L198, S2]   };
-[L199, S0] 
-[L200, S2]   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-[L201, S4]     onDrop,
-[L202, S4]     accept: {
-[L203, S6]       'text/plain': ['.bib'],
-[L204, S6]       'application/x-bibtex': ['.bib']
-[L205, S4]     }
-[L206, S2]   });
-[L207, S0] 
-[L208, S2]   const doiList = currentDois ? currentDois.split('\n').map(d => d.trim()).filter(Boolean) : [];
-[L209, S2]   const uniqueDois = Array.from(new Set(doiList));
-[L210, S2]   const doiCount = uniqueDois.length;
-[L211, S0] 
-[L212, S2]   const handleBlur = () => {
-[L213, S4]     if (currentDois && onInputUpdate) {
-[L214, S6]       onInputUpdate('dois', uniqueDois.join('\n'));
-[L215, S4]     }
-[L216, S2]   };
-[L217, S0] 
-[L218, S2]   const downloadMissingTxt = () => {
-[L219, S4]     const blob = new Blob([missingDois.join('\n')], { type: 'text/plain;charset=utf-8' });
-[L220, S4]     const url = URL.createObjectURL(blob);
-[L221, S4]     const link = document.createElement('a');
-[L222, S4]     link.href = url;
-[L223, S4]     link.download = 'missing_dois.txt';
-[L224, S4]     document.body.appendChild(link);
-[L225, S4]     link.click();
-[L226, S4]     document.body.removeChild(link);
-[L227, S4]     URL.revokeObjectURL(url);
-[L228, S2]   };
-[L229, S0] 
-[L230, S2]   return (
-[L231, S4]     <div style={styles.container}>
-[L232, S6]       <div style={styles.headerRow}>
-[L233, S8]         <label htmlFor="batch-dois-textarea" style={{ ...styles.label, marginBottom: 0 }}>
-[L234, S10]           List of DOIs (one per line)
-[L235, S10]           <span style={styles.badge}>{doiCount} PDFs to download</span>
-[L236, S8]         </label>
-[L237, S8]         <button type="button" style={styles.uploadBtn} onClick={() => setIsModalOpen(true)}>
-[L238, S10]           + Upload files
-[L239, S8]         </button>
-[L240, S6]       </div>
-[L241, S6]       <Modal
-[L242, S8]         isOpen={isModalOpen}
-[L243, S8]         onClose={() => setIsModalOpen(false)}
-[L244, S8]         title="Extract DOIs"
-[L245, S8]         description="Select .bib files to automatically extract DOIs."
-[L246, S6]       >
-[L247, S8]         <div
-[L248, S10]           {...getRootProps()}
-[L249, S10]           style={{
-[L250, S12]             ...styles.dropzone,
-[L251, S12]             ...(isDragActive ? styles.dropzoneActive : {})
-[L252, S10]           }}
-[L253, S8]         >
-[L254, S10]           <input {...getInputProps()} />
-[L255, S10]           <p style={{ margin: 0, color: '#444' }}>
-[L256, S12]             Drag or select files here / Arrastra o selecciona archivos (.bib)
-[L257, S10]           </p>
-[L258, S10]           {currentFiles && currentFiles.length > 0 && (
-[L259, S12]             <div style={styles.fileList}>
-[L260, S14]               {currentFiles.length} file(s) selected
-[L261, S12]             </div>
-[L262, S10]           )}
-[L263, S8]         </div>
-[L264, S6]       </Modal>
-[L265, S0] 
-[L266, S6]       <Modal
-[L267, S8]         isOpen={missingDois.length > 0}
-[L268, S8]         onClose={() => setMissingDois([])}
-[L269, S8]         title="Missing DOIs"
-[L270, S8]         titleColor="#cb2431"
-[L271, S8]         description="The following citation keys did not have a valid DOI associated with them:"
-[L272, S6]       >
-[L273, S12]             <ul style={{ fontSize: '13px', color: '#24292e', maxHeight: '200px', overflowY: 'auto', paddingLeft: '20px', margin: '0 0 16px 0', fontFamily: 'monospace' }}>
-[L274, S14]               {missingDois.map((msg, idx) => (
-[L275, S16]                 <li key={idx} style={{ marginBottom: '6px' }}>{msg}</li>
-[L276, S14]               ))}
-[L277, S12]             </ul>
-[L278, S12]             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-[L279, S14]               <button type="button" onClick={downloadMissingTxt} style={{ ...styles.uploadBtn, backgroundColor: '#2ea44f' }}>
-[L280, S16]                 Download .txt
-[L281, S14]               </button>
-[L282, S14]               <button type="button" onClick={() => setMissingDois([])} style={{ ...styles.uploadBtn, backgroundColor: '#f6f8fa', color: '#24292e', border: '1px solid #d1d5da' }}>
-[L283, S16]                 Close
-[L284, S14]               </button>
-[L285, S12]             </div>
-[L286, S6]       </Modal>
+[L120, S0] 
+[L121, S0] };
+[L122, S0] 
+[L123, S0] export function ReferencesDataTable({ data = [] }) {
+[L124, S2]   const [selectedRow, setSelectedRow] = useState(null);
+[L125, S2]   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+[L126, S2]   const { hoverInfo, onMouseEnter, onMouseMove, onMouseLeave } = useHoverReveal();
+[L127, S0] 
+[L128, S2]   const {
+[L129, S4]     searchQuery,
+[L130, S4]     setSearchQuery,
+[L131, S4]     currentPage,
+[L132, S4]     setCurrentPage,
+[L133, S4]     paginatedData,
+[L134, S4]     totalPages,
+[L135, S2]   } = useReferencesTable(data, 13);
+[L136, S0] 
+[L137, S2]   const { colWidths, handleMouseDown } = useTableResize();
+[L138, S0] 
+[L139, S2]   if (!data || data.length === 0) {
+[L140, S4]     return (
+[L141, S6]       <div style={styles.container}>
+[L142, S8]         <div style={styles.empty}>
+[L143, S10]           No references available to display.
+[L144, S8]         </div>
+[L145, S6]       </div>
+[L146, S4]     );
+[L147, S2]   }
+[L148, S0] 
+[L149, S2]   return (
+[L150, S4]     <div style={styles.container}>
+[L151, S6]       <div style={styles.controls}>
+[L152, S8]         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+[L153, S10]           <input
+[L154, S12]             type="text"
+[L155, S12]             placeholder="Search by title or author..."
+[L156, S12]             value={searchQuery}
+[L157, S12]             onChange={(e) => setSearchQuery(e.target.value)}
+[L158, S12]             style={styles.searchInput}
+[L159, S10]           />
+[L160, S10]           <button
+[L161, S12]             type="button"
+[L162, S12]             style={{
+[L163, S14]               ...styles.detailsBtn,
+[L164, S14]               ...(!selectedRow ? styles.detailsBtnDisabled : {}),
+[L165, S12]             }}
+[L166, S12]             disabled={!selectedRow}
+[L167, S12]             onClick={() => setIsDetailsOpen(true)}
+[L168, S10]           >
+[L169, S12]             View Details
+[L170, S10]           </button>
+[L171, S8]         </div>
+[L172, S8]         <span style={{ fontSize: '13px', color: '#8b949e' }}>
+[L173, S10]           Total References: {data.length}
+[L174, S8]         </span>
+[L175, S6]       </div>
+[L176, S6]       <table style={styles.table}>
+[L177, S8]         <thead>
+[L178, S10]           <tr>
+[L179, S12]             <th style={{ ...styles.th, width: `${colWidths.title}%`, position: 'relative' }}>
+[L180, S14]               Title
+[L181, S14]               <div
+[L182, S16]                 style={{
+[L183, S18]                   cursor: 'col-resize', width: '5px', position: 'absolute',
+[L184, S18]                   right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+[L185, S16]                 }}
+[L186, S16]                 onMouseDown={(e) => handleMouseDown(e, 'title')}
+[L187, S14]               />
+[L188, S12]             </th>
+[L189, S12]             <th style={{ ...styles.th, width: `${colWidths.author}%`, position: 'relative' }}>
+[L190, S14]               Author
+[L191, S14]               <div
+[L192, S16]                 style={{
+[L193, S18]                   cursor: 'col-resize', width: '5px', position: 'absolute',
+[L194, S18]                   right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+[L195, S16]                 }}
+[L196, S16]                 onMouseDown={(e) => handleMouseDown(e, 'author')}
+[L197, S14]               />
+[L198, S12]             </th>
+[L199, S12]             <th style={{ ...styles.th, width: `${colWidths.year}%`, position: 'relative' }}>
+[L200, S14]               Year
+[L201, S14]               <div
+[L202, S16]                 style={{
+[L203, S18]                   cursor: 'col-resize', width: '5px', position: 'absolute',
+[L204, S18]                   right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+[L205, S16]                 }}
+[L206, S16]                 onMouseDown={(e) => handleMouseDown(e, 'year')}
+[L207, S14]               />
+[L208, S12]             </th>
+[L209, S12]             <th style={{ ...styles.th, width: `${colWidths.journal}%`, position: 'relative' }}>
+[L210, S14]               Journal
+[L211, S14]               <div
+[L212, S16]                 style={{
+[L213, S18]                   cursor: 'col-resize', width: '5px', position: 'absolute',
+[L214, S18]                   right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+[L215, S16]                 }}
+[L216, S16]                 onMouseDown={(e) => handleMouseDown(e, 'journal')}
+[L217, S14]               />
+[L218, S12]             </th>
+[L219, S10]           </tr>
+[L220, S8]         </thead>
+[L221, S8]         <tbody>
+[L222, S10]           {paginatedData.map((row, index) => {
+[L223, S12]             const isSelected = selectedRow?.id != null
+[L224, S14]               ? selectedRow.id === row.id
+[L225, S14]               : selectedRow === row;
+[L226, S12]             return (
+[L227, S14]               <tr
+[L228, S16]                 key={row.id || index}
+[L229, S16]                 style={{
+[L230, S18]                   ...styles.tr,
+[L231, S18]                   ...(isSelected ? styles.selectedTr : {}),
+[L232, S16]                 }}
+[L233, S16]                 onClick={() => setSelectedRow(row)}
+[L234, S16]                 onDoubleClick={() => {
+[L235, S18]                   setSelectedRow(row);
+[L236, S18]                   setIsDetailsOpen(true);
+[L237, S16]                 }}
+[L238, S14]               >
+[L239, S14]               <td style={styles.td} title={row.title || 'N/A'}>
+[L240, S16]                 {row.title || 'N/A'}
+[L241, S14]               </td>
+[L242, S14]               <td style={styles.td} title={row.author || 'N/A'}>
+[L243, S16]                 {row.author || 'N/A'}
+[L244, S14]               </td>
+[L245, S14]               <td style={styles.td} title={String(row.year || 'N/A')}>
+[L246, S16]                 {row.year || 'N/A'}
+[L247, S14]               </td>
+[L248, S14]               <td style={styles.td} title={row.journal || 'N/A'}>
+[L249, S16]                 {row.journal || 'N/A'}
+[L250, S14]               </td>
+[L251, S12]             </tr>
+[L252, S12]             );
+[L253, S10]           })}
+[L254, S8]         </tbody>
+[L255, S6]       </table>
+[L256, S0] 
+[L257, S6]       {totalPages > 1 && (
+[L258, S8]         <div style={styles.pagination}>
+[L259, S10]           <button
+[L260, S12]             style={{ ...styles.pageBtn, ...(currentPage === 1 ? styles.pageBtnDisabled : {}) }}
+[L261, S12]             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+[L262, S12]             disabled={currentPage === 1}
+[L263, S10]           >
+[L264, S12]             Previous
+[L265, S10]           </button>
+[L266, S10]           <span style={{ fontSize: '14px', color: '#8b949e' }}>
+[L267, S12]             Page {currentPage} of {totalPages}
+[L268, S10]           </span>
+[L269, S10]           <button
+[L270, S12]             style={{ ...styles.pageBtn, ...(currentPage === totalPages ? styles.pageBtnDisabled : {}) }}
+[L271, S12]             onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+[L272, S12]             disabled={currentPage === totalPages}
+[L273, S10]           >
+[L274, S12]             Next
+[L275, S10]           </button>
+[L276, S8]         </div>
+[L277, S6]       )}
+[L278, S0] 
+[L279, S6]       <ReferenceDetailsModal
+[L280, S8]         isOpen={isDetailsOpen && !!selectedRow}
+[L281, S8]         onClose={() => setIsDetailsOpen(false)}
+[L282, S8]         article={selectedRow}
+[L283, S6]       />
+[L284, S4]     </div>
+[L285, S2]   );
+[L286, S0] }
 [L287, S0] 
-[L288, S6]       <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-[L289, S8]         <textarea
-[L290, S10]           onBlur={handleBlur}
-[L291, S10]           id="batch-dois-textarea"
-[L292, S10]           style={styles.textarea}
-[L293, S10]           placeholder="10.1000/182&#10;10.1000/183"
-[L294, S10]           value={currentDois}
-[L295, S10]           onChange={(e) => {
-[L296, S12]             if (onInputUpdate) {
-[L297, S14]               onInputUpdate('dois', e.target.value);
-[L298, S12]             }
-[L299, S10]           }}
-[L300, S8]         />
-[L301, S6]       </div>
-[L302, S4]     </div>
-[L303, S2]   );
-[L304, S0] }
-[L305, S0] 
-[L306, S0] export default BatchInput;
+[L288, S0] export default ReferencesDataTable;
+
+
+// --- frontend/src/hooks/useReferencesTable.js ---
+
+[L001, S0] import { useState, useMemo, useEffect } from 'react';
+[L002, S0] 
+[L003, S0] export function useReferencesTable(data = [], pageSize = 13) {
+[L004, S4]     const [currentPage, setCurrentPage] = useState(1);
+[L005, S4]     const [searchQuery, setSearchQuery] = useState('');
+[L006, S0] 
+[L007, S4]     // Reset pagination when search query changes
+[L008, S4]     useEffect(() => {
+[L009, S8]         setCurrentPage(1);
+[L010, S4]     }, [searchQuery]);
+[L011, S0] 
+[L012, S4]     const filteredData = useMemo(() => {
+[L013, S8]         if (!searchQuery.trim()) {
+[L014, S12]             return data;
+[L015, S8]         }
+[L016, S8]         const query = searchQuery.toLowerCase();
+[L017, S8]         return data.filter((item) => {
+[L018, S12]             return Object.values(item).some((val) => {
+[L019, S16]                 if (val === null || val === undefined) return false;
+[L020, S16]                 if (typeof val === 'object') {
+[L021, S20]                     return JSON.stringify(val).toLowerCase().includes(query);
+[L022, S16]                 }
+[L023, S16]                 return String(val).toLowerCase().includes(query);
+[L024, S12]             });
+[L025, S8]         });
+[L026, S4]     }, [data, searchQuery]);
+[L027, S0] 
+[L028, S4]     const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+[L029, S0] 
+[L030, S4]     const paginatedData = useMemo(() => {
+[L031, S8]         const startIndex = (currentPage - 1) * pageSize;
+[L032, S8]         return filteredData.slice(startIndex, startIndex + pageSize);
+[L033, S4]     }, [filteredData, currentPage, pageSize]);
+[L034, S0] 
+[L035, S4]     return {
+[L036, S8]         searchQuery,
+[L037, S8]         setSearchQuery,
+[L038, S8]         currentPage,
+[L039, S8]         setCurrentPage,
+[L040, S8]         paginatedData,
+[L041, S8]         totalPages,
+[L042, S4]     };
+[L043, S0] }
+
+
+// --- frontend/src/views/ReferencesView.jsx ---
+
+[L001, S0] import React, { useState } from 'react';
+[L002, S0] import { useReferencesUpload } from '../hooks/useReferencesUpload';
+[L003, S0] import ReferencesDataTable from '../components/references/ReferencesDataTable';
+[L004, S0] import UploadReferencesModal from '../components/references/UploadReferencesModal';
+[L005, S0] 
+[L006, S0] const styles = {
+[L007, S2]   container: {
+[L008, S4]     fontFamily: 'system-ui, sans-serif',
+[L009, S4]     padding: '0',
+[L010, S4]     color: '#24292e',
+[L011, S2]   },
+[L012, S2]   header: {
+[L013, S4]     display: 'flex',
+[L014, S4]     justifyContent: 'space-between',
+[L015, S4]     alignItems: 'center',
+[L016, S4]     marginBottom: '20px',
+[L017, S4]     flexWrap: 'wrap',
+[L018, S4]     gap: '12px',
+[L019, S2]   },
+[L020, S2]   modalBtn: {
+[L021, S4]     backgroundColor: '#0366d6',
+[L022, S4]     color: '#ffffff',
+[L023, S4]     border: 'none',
+[L024, S4]     borderRadius: '6px',
+[L025, S4]     padding: '10px 18px',
+[L026, S4]     fontSize: '14px',
+[L027, S4]     fontWeight: '600',
+[L028, S4]     cursor: 'pointer',
+[L029, S4]     boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+[L030, S2]   },
+[L031, S2]   card: {
+[L032, S4]     border: 'none',
+[L033, S4]     borderRadius: '10px',
+[L034, S4]     padding: '24px',
+[L035, S4]     backgroundColor: '#161b22',
+[L036, S4]     boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+[L037, S4]     marginBottom: '24px',
+[L038, S2]   },
+[L039, S2]   title: {
+[L040, S4]     fontSize: '24px',
+[L041, S4]     fontWeight: 'bold',
+[L042, S4]     color: '#f0f6fc',
+[L043, S4]     margin: '0 0 8px 0'
+[L044, S2]   },
+[L045, S2]   description: {
+[L046, S4]     fontSize: '14px',
+[L047, S4]     color: '#586069',
+[L048, S4]     marginBottom: '20px',
+[L049, S2]   },
+[L050, S2]   formGroup: {
+[L051, S4]     marginBottom: '20px',
+[L052, S2]   },
+[L053, S2]   label: {
+[L054, S4]     display: 'block',
+[L055, S4]     fontWeight: '500',
+[L056, S4]     marginBottom: '8px',
+[L057, S4]     fontSize: '14px',
+[L058, S2]   },
+[L059, S2]   input: {
+[L060, S4]     width: '100%',
+[L061, S4]     maxWidth: '380px',
+[L062, S4]     padding: '10px 12px',
+[L063, S4]     fontSize: '14px',
+[L064, S4]     border: '1px solid #d1d5da',
+[L065, S4]     borderRadius: '6px',
+[L066, S4]     boxSizing: 'border-box',
+[L067, S4]     outline: 'none',
+[L068, S2]   },
+[L069, S2]   hint: {
+[L070, S4]     fontSize: '12px',
+[L071, S4]     color: '#6a737d',
+[L072, S4]     marginTop: '6px',
+[L073, S2]   },
+[L074, S2]   uploaderWrapper: {
+[L075, S4]     transition: 'opacity 0.2s ease',
+[L076, S2]   },
+[L077, S2]   errorBox: {
+[L078, S4]     backgroundColor: '#ffeef0',
+[L079, S4]     color: '#cb2431',
+[L080, S4]     border: '1px solid #f97583',
+[L081, S4]     padding: '12px 16px',
+[L082, S4]     borderRadius: '6px',
+[L083, S4]     marginBottom: '16px',
+[L084, S4]     fontSize: '14px',
+[L085, S2]   },
+[L086, S2]   successBox: {
+[L087, S4]     backgroundColor: '#dcffe4',
+[L088, S4]     color: '#165c26',
+[L089, S4]     border: '1px solid #85e89d',
+[L090, S4]     padding: '16px',
+[L091, S4]     borderRadius: '6px',
+[L092, S4]     marginTop: '24px',
+[L093, S2]   },
+[L094, S2]   successTitle: {
+[L095, S4]     fontWeight: '600',
+[L096, S4]     margin: '0 0 8px 0',
+[L097, S4]     fontSize: '16px',
+[L098, S2]   },
+[L099, S2]   badge: {
+[L100, S4]     display: 'inline-block',
+[L101, S4]     backgroundColor: '#2ea44f',
+[L102, S4]     color: '#ffffff',
+[L103, S4]     padding: '4px 10px',
+[L104, S4]     borderRadius: '12px',
+[L105, S4]     fontSize: '12px',
+[L106, S4]     fontWeight: '600',
+[L107, S4]     marginTop: '4px',
+[L108, S2]   },
+[L109, S0] };
+[L110, S0] 
+[L111, S0] export function ReferencesView() {
+[L112, S2]   const [isModalOpen, setIsModalOpen] = useState(false);
+[L113, S2]   const [tableData, setTableData] = useState([]);
+[L114, S2]   const [_dummyState, _setDummy] = useState([
+[L115, S4]     {
+[L116, S6]       id: 1,
+[L117, S6]       title: 'Attention Is All You Need',
+[L118, S6]       author: 'Vaswani, A. et al.',
+[L119, S6]       year: 2017,
+[L120, S6]       journal: 'NeurIPS',
+[L121, S4]     },
+[L122, S4]     {
+[L123, S6]       id: 2,
+[L124, S6]       title: 'Deep Residual Learning for Image Recognition',
+[L125, S6]       author: 'He, K. et al.',
+[L126, S6]       year: 2016,
+[L127, S6]       journal: 'CVPR',
+[L128, S4]     },
+[L129, S2]   ]);
+[L130, S0] 
+[L131, S2]   const {
+[L132, S4]     projectCode,
+[L133, S4]     setProjectCode,
+[L134, S4]     isLoading,
+[L135, S4]     isSuccess,
+[L136, S4]     error,
+[L137, S4]     insertedCount,
+[L138, S4]     uploadAndInject,
+[L139, S4]     resetStatus,
+[L140, S2]   } = useReferencesUpload();
+[L141, S0] 
+[L142, S2]   const fetchProjectReferences = React.useCallback(async (code) => {
+[L143, S4]     if (!code || !code.trim()) {
+[L144, S6]       setTableData([]);
+[L145, S6]       return;
+[L146, S4]     }
+[L147, S4]     try {
+[L148, S6]       const res = await fetch(
+[L149, S8]         `/api/bibliography/references?project_code=${encodeURIComponent(code.trim())}`
+[L150, S6]       );
+[L151, S6]       if (res.ok) {
+[L152, S8]         const data = await res.json();
+[L153, S8]         setTableData(data);
+[L154, S6]       }
+[L155, S4]     } catch {
+[L156, S6]       // Ignorado si falla la red
+[L157, S4]     }
+[L158, S2]   }, []);
+[L159, S0] 
+[L160, S2]   React.useEffect(() => {
+[L161, S4]     if (projectCode) {
+[L162, S6]       fetchProjectReferences(projectCode);
+[L163, S4]     }
+[L164, S2]   }, [projectCode, fetchProjectReferences]);
+[L165, S0] 
+[L166, S2]   return (
+[L167, S4]     <div style={styles.container}>
+[L168, S6]       <div style={styles.header}>
+[L169, S8]         <div>
+[L170, S6]       <h2 style={{ ...styles.title, margin: 0 }}>
+[L171, S8]         Bibliographic References
+[L172, S6]       </h2>
+[L173, S6]       <p style={{ ...styles.description, margin: '4px 0 0 0' }}>
+[L174, S8]         View and manage persisted publications.
+[L175, S8]         {projectCode && (
+[L176, S10]           <span> Active project: <strong>{projectCode}</strong></span>
+[L177, S8]         )}
+[L178, S10]           </p>
+[L179, S8]         </div>
+[L180, S8]         <button
+[L181, S10]           style={styles.modalBtn}
+[L182, S6]       onClick={() => {
+[L183, S8]         if (resetStatus) resetStatus();
+[L184, S8]         setIsModalOpen(true);
+[L185, S6]       }}
+[L186, S4]     >
+[L187, S6]       + Add
+[L188, S4]     </button>
+[L189, S6]       </div>
+[L190, S0] 
+[L191, S6]       <div style={styles.card}>
+[L192, S8]         <ReferencesDataTable data={tableData} />
+[L193, S6]       </div>
+[L194, S0] 
+[L195, S6]       <UploadReferencesModal
+[L196, S8]         isOpen={isModalOpen}
+[L197, S8]         onClose={() => setIsModalOpen(false)}
+[L198, S8]         projectCode={projectCode}
+[L199, S8]         setProjectCode={setProjectCode}
+[L200, S8]         uploadAndInject={async (files) => {
+[L201, S10]           const parsed = await uploadAndInject(files);
+[L202, S10]           if (parsed) {
+[L203, S12]             fetchProjectReferences(projectCode);
+[L204, S10]           }
+[L205, S8]         }}
+[L206, S8]         isLoading={isLoading}
+[L207, S8]         isSuccess={isSuccess}
+[L208, S8]         error={error}
+[L209, S8]         insertedCount={insertedCount}
+[L210, S6]       />
+[L211, S4]     </div>
+[L212, S2]   );
+[L213, S0] }
+[L214, S0] 
+[L215, S0] function _legacyUnused() {
+[L216, S2]   return (
+[L217, S4]     <div>
+[L218, S6]       <div>
+[L219, S8]         <h2>Ingesta</h2>
+[L220, S8]         <p style={styles.description}>
+[L221, S10]           Asocie archivos bibliográficos (.ris o .bib) a un proyecto de
+[L222, S10]           investigación para persistir sus artículos.
+[L223, S8]         </p>
+[L224, S0] 
+[L225, S8]         <div style={styles.formGroup}>
+[L226, S10]           <label htmlFor="project-code-input" style={styles.label}>
+[L227, S12]             Código del Proyecto *
+[L228, S10]           </label>
+[L229, S10]           <input
+[L230, S12]             id="project-code-input"
+[L231, S12]             type="text"
+[L232, S12]             placeholder="Ej: PROJ-AI-2026"
+[L233, S12]             value={projectCode}
+[L234, S12]             onChange={(e) => setProjectCode(e.target.value)}
+[L235, S12]             style={styles.input}
+[L236, S10]           />
+[L237, S10]           {!isProjectReady && (
+[L238, S12]             <p style={styles.hint}>
+[L239, S14]               Debe ingresar un código de proyecto para habilitar el cargador.
+[L240, S12]             </p>
+[L241, S10]           )}
+[L242, S8]         </div>
+[L243, S0] 
+[L244, S8]         {error && <div style={styles.errorBox}>❌ {error}</div>}
+[L245, S8]         {isLoading && (
+[L246, S10]           <p style={{ color: '#0366d6', fontWeight: '500' }}>
+[L247, S12]             Inyectando referencias en base de datos...
+[L248, S10]           </p>
+[L249, S8]         )}
+[L250, S0] 
+[L251, S8]         <div
+[L252, S10]           style={{
+[L253, S12]             ...styles.uploaderWrapper,
+[L254, S12]             opacity: isProjectReady ? 1 : 0.45,
+[L255, S12]             pointerEvents: isProjectReady ? 'auto' : 'none',
+[L256, S10]           }}
+[L257, S8]         >
+[L258, S10]           <BibliographyUploader
+[L259, S12]             onUpload={(file) => {
+[L260, S14]               if (isProjectReady) {
+[L261, S16]                 uploadAndInject(file);
+[L262, S14]               }
+[L263, S12]             }}
+[L264, S10]           />
+[L265, S8]         </div>
+[L266, S0] 
+[L267, S8]         {isSuccess && (
+[L268, S10]           <div style={styles.successBox}>
+[L269, S12]             <p style={styles.successTitle}>
+[L270, S14]               ¡Ingesta completada con éxito!
+[L271, S12]             </p>
+[L272, S12]             <p style={{ margin: '4px 0' }}>
+[L273, S14]               Proyecto:{' '}
+[L274, S14]               <strong>{projectCode}</strong>
+[L275, S12]             </p>
+[L276, S12]             <p style={{ margin: '4px 0' }}>
+[L277, S14]               Total de artículos registrados:{' '}
+[L278, S14]               <strong>{insertedCount}</strong>
+[L279, S12]             </p>
+[L280, S12]             <span style={styles.badge}>Persistido en DB</span>
+[L281, S12]             <ReferencesDataTable
+[L282, S14]               data={[
+[L283, S16]                 {
+[L284, S18]                   id: 1,
+[L285, S18]                   title: `Artículos asociados a ${projectCode}`,
+[L286, S18]                   author: 'Verificado',
+[L287, S18]                   year: new Date().getFullYear(),
+[L288, S18]                   journal: 'Repositorio Local',
+[L289, S16]                 },
+[L290, S14]               ]}
+[L291, S12]             />
+[L292, S10]           </div>
+[L293, S8]         )}
+[L294, S6]       </div>
+[L295, S4]     </div>
+[L296, S2]   );
+[L297, S0] }
+[L298, S0] 
+[L299, S0] export default ReferencesView;

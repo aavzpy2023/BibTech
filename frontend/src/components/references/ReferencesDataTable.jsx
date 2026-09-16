@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { useReferencesTable } from '../../hooks/useReferencesTable';
 import { useTableResize } from '../../hooks/useTableResize';
-import { useHoverReveal } from '../../hooks/useHoverReveal';
-import { MetadataGrid } from './MetadataGrid';
-import { HoverPopover } from './HoverPopover';
 import ReferenceDetailsModal from './ReferenceDetailsModal';
 
 function getDoiUrl(doi) {
@@ -121,9 +118,8 @@ const styles = {
 };
 
 export function ReferencesDataTable({ data = [] }) {
-  const [selectedRow, setSelectedRow] = useState(null);
+  const [selectedRows, setSelectedRows] = useState([]);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const { hoverInfo, onMouseEnter, onMouseMove, onMouseLeave } = useHoverReveal();
 
   const {
     searchQuery,
@@ -135,6 +131,72 @@ export function ReferencesDataTable({ data = [] }) {
   } = useReferencesTable(data, 13);
 
   const { colWidths, handleMouseDown } = useTableResize();
+
+  const isSingleSelected = selectedRows.length === 1;
+  const singleSelectedRow = isSingleSelected ? selectedRows[0] : null;
+
+  const isRowSelected = (row) =>
+    selectedRows.some((r) =>
+      r.id != null && row.id != null ? r.id === row.id : r === row
+    );
+
+  const handleCheckboxChange = (row, e) => {
+    e.stopPropagation();
+    setSelectedRows((prev) => {
+      const exists = prev.some((r) =>
+        r.id != null && row.id != null ? r.id === row.id : r === row
+      );
+      if (exists) {
+        return prev.filter((r) =>
+          r.id != null && row.id != null ? r.id !== row.id : r !== row
+        );
+      }
+      return [...prev, row];
+    });
+  };
+
+  const handleRowClick = (row, e) => {
+    if (e.target.type === 'checkbox') return;
+    if (e.ctrlKey || e.metaKey) {
+      handleCheckboxChange(row, e);
+    } else {
+      setSelectedRows((prev) => {
+        const isOnlyThis =
+          prev.length === 1 &&
+          (prev[0].id != null && row.id != null
+            ? prev[0].id === row.id
+            : prev[0] === row);
+        if (isOnlyThis) {
+          return [];
+        }
+        return [row];
+      });
+    }
+  };
+
+  const allVisibleSelected =
+    paginatedData.length > 0 &&
+    paginatedData.every((r) => isRowSelected(r));
+
+  const handleSelectAll = (e) => {
+    e.stopPropagation();
+    if (allVisibleSelected) {
+      const visibleKeys = new Set(
+        paginatedData.map((r) => (r.id != null ? r.id : r))
+      );
+      setSelectedRows((prev) =>
+        prev.filter((r) => !visibleKeys.has(r.id != null ? r.id : r))
+      );
+    } else {
+      const currentKeys = new Set(
+        selectedRows.map((r) => (r.id != null ? r.id : r))
+      );
+      const toAdd = paginatedData.filter(
+        (r) => !currentKeys.has(r.id != null ? r.id : r)
+      );
+      setSelectedRows((prev) => [...prev, ...toAdd]);
+    }
+  };
 
   if (!data || data.length === 0) {
     return (
@@ -161,9 +223,9 @@ export function ReferencesDataTable({ data = [] }) {
             type="button"
             style={{
               ...styles.detailsBtn,
-              ...(!selectedRow ? styles.detailsBtnDisabled : {}),
+              ...(!isSingleSelected ? styles.detailsBtnDisabled : {}),
             }}
-            disabled={!selectedRow}
+            disabled={!isSingleSelected}
             onClick={() => setIsDetailsOpen(true)}
           >
             View Details
@@ -171,11 +233,21 @@ export function ReferencesDataTable({ data = [] }) {
         </div>
         <span style={{ fontSize: '13px', color: '#8b949e' }}>
           Total References: {data.length}
+          {selectedRows.length > 0 ? ` (${selectedRows.length} selected)` : ''}
         </span>
       </div>
       <table style={styles.table}>
         <thead>
           <tr>
+            <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+              <input
+                type="checkbox"
+                aria-label="Select all references on this page"
+                checked={allVisibleSelected}
+                onChange={handleSelectAll}
+                style={{ cursor: 'pointer' }}
+              />
+            </th>
             <th style={{ ...styles.th, width: `${colWidths.title}%`, position: 'relative' }}>
               Title
               <div
@@ -220,9 +292,7 @@ export function ReferencesDataTable({ data = [] }) {
         </thead>
         <tbody>
           {paginatedData.map((row, index) => {
-            const isSelected = selectedRow?.id != null
-              ? selectedRow.id === row.id
-              : selectedRow === row;
+            const isSelected = isRowSelected(row);
             return (
               <tr
                 key={row.id || index}
@@ -230,12 +300,20 @@ export function ReferencesDataTable({ data = [] }) {
                   ...styles.tr,
                   ...(isSelected ? styles.selectedTr : {}),
                 }}
-                onClick={() => setSelectedRow(row)}
-                onDoubleClick={() => {
-                  setSelectedRow(row);
-                  setIsDetailsOpen(true);
-                }}
+                onClick={(e) => handleRowClick(row, e)}
               >
+              <td
+                style={{ ...styles.td, width: '40px', textAlign: 'center' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  aria-label={`Select reference ${row.title || ''}`}
+                  checked={isSelected}
+                  onChange={(e) => handleCheckboxChange(row, e)}
+                  style={{ cursor: 'pointer' }}
+                />
+              </td>
               <td style={styles.td} title={row.title || 'N/A'}>
                 {row.title || 'N/A'}
               </td>
@@ -277,9 +355,9 @@ export function ReferencesDataTable({ data = [] }) {
       )}
 
       <ReferenceDetailsModal
-        isOpen={isDetailsOpen && !!selectedRow}
+        isOpen={isDetailsOpen && isSingleSelected}
         onClose={() => setIsDetailsOpen(false)}
-        article={selectedRow}
+        article={singleSelectedRow}
       />
     </div>
   );
