@@ -6,7 +6,16 @@ from sqlalchemy.exc import OperationalError
 
 try:
     from .schemas import ParsedReference
-    from ..database.models.core import Article, Project, ProjectArticle
+    from ..database.models.core import (
+        Article,
+        Project,
+        ProjectArticle,
+        Country,
+        ArticleCountry,
+        CitedReference,
+        ArticleCitation,
+        Journal,
+    )
     from ..database.models.identity import (
         Author,
         AuthorArticle,
@@ -20,6 +29,11 @@ except (ImportError, ValueError):
         Article,
         Project,
         ProjectArticle,
+        Country,
+        ArticleCountry,
+        CitedReference,
+        ArticleCitation,
+        Journal,
     )
     from backend.src.database.models.identity import (
         Author,
@@ -91,6 +105,28 @@ def _bulk_inject_references(
             if a.title:
                 existing_by_title[a.title] = a
 
+    # 0. Bulk inject Journals
+    all_journals = set()
+    for ref in refs:
+        if ref.journal and ref.journal.strip():
+            all_journals.add(ref.journal.strip()[:255])
+            
+    existing_journals = {}
+    if all_journals:
+        for j in db.query(Journal).filter(Journal.name.in_(all_journals)).all():
+            existing_journals[j.name] = j.id
+            
+        new_journals = [
+            {"name": j_name}
+            for j_name in all_journals
+            if j_name not in existing_journals
+        ]
+        if new_journals:
+            stmt_j = _get_insert_stmt(Journal, db).values(new_journals)
+            db.execute(stmt_j)
+            for j in db.query(Journal).filter(Journal.name.in_(all_journals)).all():
+                existing_journals[j.name] = j.id
+
     seen_batch_dois = set()
     seen_batch_titles = set()
     new_articles_data = []
@@ -118,10 +154,14 @@ def _bulk_inject_references(
             except (ValueError, TypeError):
                 year_val = None
 
+        j_name = ref.journal.strip()[:255] if ref.journal else None
+        j_id = existing_journals.get(j_name) if j_name else None
+
         new_articles_data.append(
             {
                 "title": title_val,
                 "journal": ref.journal,
+                "journal_id": j_id,
                 "year": year_val,
                 "doi": doi_val,
                 "abstract": getattr(ref, "abstract", None),
@@ -405,6 +445,122 @@ def _bulk_inject_references(
                 keyword_articles_data
             )
             db.execute(stmt_ka)
+
+    # 6. Bulk inject Countries
+    all_countries = set()
+    for ref in refs:
+        if getattr(ref, "countries", None):
+            for c in ref.countries:
+                if c and str(c).strip():
+                    all_countries.add(str(c).strip()[:100])
+                    
+    if all_countries:
+        existing_countries = {
+            c.name: c.id
+            for c in db.query(Country).filter(Country.name.in_(all_countries)).all()
+        }
+        new_countries = [
+            {"name": c_name}
+            for c_name in all_countries
+            if c_name not in existing_countries
+        ]
+        if new_countries:
+            stmt_c = _get_insert_stmt(Country, db).values(new_countries)
+            db.execute(stmt_c)
+            existing_countries = {
+                c.name: c.id
+                for c in db.query(Country).filter(Country.name.in_(all_countries)).all()
+            }
+            
+        article_countries_data = []
+        seen_ac_links = set()
+        for ref in refs:
+            if not getattr(ref, "countries", None):
+                continue
+            doi_val = (ref.doi or "").strip() or None
+            title_val = (ref.title or "").strip() or "Untitled"
+            art = existing_by_doi.get(doi_val) if doi_val else None
+            if not art:
+                art = existing_by_title.get(title_val)
+            if not art:
+                continue
+                
+            for c in ref.countries:
+                c_name = str(c).strip()[:100]
+                c_id = existing_countries.get(c_name)
+                if c_id and (art.id, c_id) not in seen_ac_links:
+                    article_countries_data.append({
+                        "article_id": art.id,
+                        "country_id": c_id
+                    })
+                    seen_ac_links.add((art.id, c_id))
+                    
+        if article_countries_data:
+            stmt_ac = _get_insert_stmt(ArticleCountry, db).values(article_countries_data)
+            db.execute(stmt_ac)
+
+    # 7. Bulk inject Cited References
+    all_crs = {}
+    for ref in refs:
+        if getattr(ref, "cited_references", None):
+            for cr in ref.cited_references:
+                raw = cr.get("raw")
+                if raw and str(raw).strip():
+                    raw_clean = str(raw).strip()
+                    all_crs[raw_clean] = {
+                        "raw_string": raw_clean,
+                        "author": (cr.get("author") or "")[:255] or None,
+                        "year": int(cr.get("year")) if cr.get("year") and str(cr.get("year")).isdigit() else None,
+                        "source": (cr.get("source") or "")[:255] or None,
+                    }
+                    
+    if all_crs:
+        existing_crs = {
+            cr.raw_string: cr.id
+            for cr in db.query(CitedReference).filter(CitedReference.raw_string.in_(all_crs.keys())).all()
+        }
+        new_crs = [
+            cr_data
+            for raw, cr_data in all_crs.items()
+            if raw not in existing_crs
+        ]
+        if new_crs:
+            stmt_cr = _get_insert_stmt(CitedReference, db).values(new_crs)
+            db.execute(stmt_cr)
+            existing_crs = {
+                cr.raw_string: cr.id
+                for cr in db.query(CitedReference).filter(CitedReference.raw_string.in_(all_crs.keys())).all()
+            }
+            
+        article_citations_data = []
+        seen_cr_links = set()
+        for ref in refs:
+            if not getattr(ref, "cited_references", None):
+                continue
+            doi_val = (ref.doi or "").strip() or None
+            title_val = (ref.title or "").strip() or "Untitled"
+            art = existing_by_doi.get(doi_val) if doi_val else None
+            if not art:
+                art = existing_by_title.get(title_val)
+            if not art:
+                continue
+                
+            for cr in ref.cited_references:
+                raw = cr.get("raw")
+                if not raw:
+                    continue
+                raw_clean = str(raw).strip()
+                cr_id = existing_crs.get(raw_clean)
+                if cr_id and (art.id, cr_id) not in seen_cr_links:
+                    article_citations_data.append({
+                        "article_id": art.id,
+                        "cited_reference_id": cr_id
+                    })
+                    seen_cr_links.add((art.id, cr_id))
+                    
+        if article_citations_data:
+            stmt_acr = _get_insert_stmt(ArticleCitation, db).values(article_citations_data)
+            db.execute(stmt_acr)
 
     db.commit()
     return len(linked_article_ids)

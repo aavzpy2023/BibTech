@@ -25,9 +25,9 @@ To support advanced bibliometric network analysis (Co-citation, Bibliographic Co
 ## [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
 - **Goal**: Update `injection_service.py` to bulk-insert the new relational entities safely and performantly.
 - **Tasks**:
-  - [ ] Bulk inject `countries` idempotently and link via `article_countries`.
-  - [ ] Bulk inject `cited_references` idempotently and link via `article_citations`.
-  - [ ] Refactor `journal` mapping logic to dynamically build the `journals` dimension.
+  - [x] Bulk inject `countries` idempotently and link via `article_countries`.
+  - [x] Bulk inject `cited_references` idempotently and link via `article_citations`.
+  - [x] Refactor `journal` mapping logic to dynamically build the `journals` dimension.
 - **Validations**: Assert zero unique constraint violations during bulk import and benchmark execution time.
 
 ## [REQ-055] Alembic Migration Generation & Schema Upgrade

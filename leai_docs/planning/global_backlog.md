@@ -96,7 +96,7 @@
 - [x] Story 18.0: Roadmap & Planning Initialization
 - [x] [REQ-052] Database Schema Expansion (Countries, Journals, Cited References)
 - [x] [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
-- [ ] [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
+- [x] [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
 - [ ] [REQ-055] Alembic Migration Generation & Schema Upgrade
 
 ## Active Roadmaps

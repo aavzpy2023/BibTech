@@ -1,6 +1,6 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 18:33:08
+Date: 2026-09-16 18:36:36
 AST Mode: False
 Line Numbers: True
 Modules: roadmap_18_bibliometric_data_warehouse.md
@@ -31,9 +31,9 @@ Processed Files: 1
 [L018, S0] ## [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
 [L019, S0] - **Goal**: Refactor `wos_parser.py` and `parser_service.py` to cleanly extract the new dimensions.
 [L020, S0] - **Tasks**:
-[L021, S2]   - [ ] Implement a country extractor algorithm from the `Affiliations` raw string (e.g., regex isolating the last segment of the comma-separated address).
-[L022, S2]   - [ ] Implement a cited references (CR) parser to split the semicolon-separated strings into individual unique reference identifiers (Author, Year, Source).
-[L023, S2]   - [ ] Ensure `schemas.py` (`ParsedReference`) supports the newly extracted data arrays.
+[L021, S2]   - [x] Implement a country extractor algorithm from the `Affiliations` raw string (e.g., regex isolating the last segment of the comma-separated address).
+[L022, S2]   - [x] Implement a cited references (CR) parser to split the semicolon-separated strings into individual unique reference identifiers (Author, Year, Source).
+[L023, S2]   - [x] Ensure `schemas.py` (`ParsedReference`) supports the newly extracted data arrays.
 [L024, S0] 
 [L025, S0] ## [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
 [L026, S0] - **Goal**: Update `injection_service.py` to bulk-insert the new relational entities safely and performantly.

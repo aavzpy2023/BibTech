@@ -1,64 +1,642 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-16 18:30:20
+Date: 2026-09-16 18:34:48
 AST Mode: True
 Line Numbers: False
-Modules: parser_service.py
-Processed Files: 1
+Modules: injection_service.py, core.py
+Processed Files: 2
 ===========================
 
 
 
-// --- backend/src/bibliography/parser_service.py ---
+// --- backend/src/bibliography/injection_service.py ---
 
-import datetime
-from typing import List, Optional
+"""Service for persisting bibliographic references into the database."""
 import re
-import bibtexparser
-from .schemas import ParsedReference
-from .wos_parser import parse_wos_authors_detail, parse_wos_countries, parse_wos_cited_references
+from typing import List, Optional
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError
 
-def _extract_bib_int(entry, key: str) -> Optional[int]:
-    """..."""
+try:
+    from .schemas import ParsedReference
+    from ..database.models.core import Article, Project, ProjectArticle
+    from ..database.models.identity import (
+        Author,
+        AuthorArticle,
+        Affiliation,
+        Keyword,
+        KeywordArticle,
+    )
+except (ImportError, ValueError):
+    from backend.src.bibliography.schemas import ParsedReference
+    from backend.src.database.models.core import (
+        Article,
+        Project,
+        ProjectArticle,
+    )
+    from backend.src.database.models.identity import (
+        Author,
+        AuthorArticle,
+        Affiliation,
+        Keyword,
+        KeywordArticle,
+    )
+    from backend.src.bibliography.schemas import ParsedReference
+    from backend.src.database.models.core import (
+        Article,
+        Project,
+        ProjectArticle,
+    )
 
-def _extract_bib_field(entry, key: str) -> Optional[str]:
-    """..."""
 
-def _parse_bibtex_entries(content: str) -> list:
-    """..."""
-
-def _clean_year(val: Optional[str]) -> Optional[str]:
-    """..."""
-
-def _extract_ris_title(entry: dict) -> Optional[str]:
-    """..."""
-
-def _extract_ris_journal(entry: dict) -> Optional[str]:
-    """..."""
-
-def _extract_ris_authors(entry: dict) -> Optional[str]:
-    """..."""
-
-def _extract_ris_year(entry: dict) -> Optional[str]:
-    """..."""
-
-def _extract_ris_doi(entry: dict) -> Optional[str]:
-    """..."""
-
-def _parse_ris_fallback(content: str) -> list:
-    """..."""
-
-def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
-    if ext.lower() != '.bib':
-        raise ValueError(f'Unsupported extension: {ext}')
-    now = datetime.datetime.now(datetime.timezone.utc)
+def _get_insert_stmt(table_or_model, db: Session):
+    dialect_name = ""
     try:
-        entries = _parse_bibtex_entries(content)
+        if db.bind:
+            dialect_name = db.bind.dialect.name
     except Exception:
-        entries = []
-    if not entries:
-        raise ValueError('No se encontraron items válidos en el archivo .bib')
-    return [ParsedReference(author=_extract_bib_field(entry, 'author'), year=_extract_bib_field(entry, 'year'), title=_extract_bib_field(entry, 'title'), journal=_extract_bib_field(entry, 'journal'), doi=_extract_bib_field(entry, 'doi'), abstract=_extract_bib_field(entry, 'abstract'), publisher=_extract_bib_field(entry, 'publisher'), language=_extract_bib_field(entry, 'language'), keywords=_extract_bib_field(entry, 'keywords'), keywords_plus=_extract_bib_field(entry, 'keywords_plus'), research_areas=_extract_bib_field(entry, 'research_areas'), web_of_science_categories=_extract_bib_field(entry, 'web_of_science_categories'), funding_text=_extract_bib_field(entry, 'funding_text'), journal_iso=_extract_bib_field(entry, 'journal_iso'), oa_status=_extract_bib_field(entry, 'oa_status'), issn=_extract_bib_field(entry, 'issn'), volume=_extract_bib_field(entry, 'volume'), issue=_extract_bib_field(entry, 'issue'), pages=_extract_bib_field(entry, 'pages'), times_cited=_extract_bib_int(entry, 'times_cited'), cited_references_count=_extract_bib_int(entry, 'cited_references_count'), authors_detail=parse_wos_authors_detail(entry if isinstance(entry, dict) else getattr(entry, 'fields_dict', {})), upload_datetime=now) for entry in entries]
+        pass
+    if dialect_name == "postgresql":
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-def _deprecated_parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
+        return pg_insert(table_or_model).on_conflict_do_nothing()
+    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
+    return sqlite_insert(table_or_model).on_conflict_do_nothing()
+
+
+def _bulk_inject_references(
+    db: Session, refs: List[ParsedReference], project_code: str
+) -> int:
+    """Persist parsed references and associate them with a project in bulk."""
+    project = db.query(Project).filter(Project.name == project_code).first()
+    if not project:
+        project = Project(name=project_code)
+        db.add(project)
+        db.flush()
+
+    if not refs:
+        db.commit()
+        return 0
+
+    all_dois = {
+        ref.doi.strip()
+        for ref in refs
+        if ref.doi and ref.doi.strip()
+    }
+    all_titles = {
+        ref.title.strip()
+        for ref in refs
+        if ref.title and ref.title.strip()
+    }
+
+    existing_by_doi = {}
+    if all_dois:
+        for a in db.query(Article).filter(Article.doi.in_(all_dois)).all():
+            if a.doi:
+                existing_by_doi[a.doi] = a
+
+    existing_by_title = {}
+    if all_titles:
+        for a in (
+            db.query(Article).filter(Article.title.in_(all_titles)).all()
+        ):
+            if a.title:
+                existing_by_title[a.title] = a
+
+    seen_batch_dois = set()
+    seen_batch_titles = set()
+    new_articles_data = []
+
+    for ref in refs:
+        doi_val = (ref.doi or "").strip() or None
+        title_val = (ref.title or "").strip() or "Untitled"
+
+        if doi_val:
+            if doi_val in seen_batch_dois or doi_val in existing_by_doi:
+                continue
+            seen_batch_dois.add(doi_val)
+        else:
+            if (
+                title_val in seen_batch_titles
+                or title_val in existing_by_title
+            ):
+                continue
+            seen_batch_titles.add(title_val)
+
+        year_val: Optional[int] = None
+        if ref.year:
+            try:
+                year_val = int(float(str(ref.year).strip()))
+            except (ValueError, TypeError):
+                year_val = None
+
+        new_articles_data.append(
+            {
+                "title": title_val,
+                "journal": ref.journal,
+                "year": year_val,
+                "doi": doi_val,
+                "abstract": getattr(ref, "abstract", None),
+                "publisher": getattr(ref, "publisher", None),
+                "language": getattr(ref, "language", None),
+                "research_areas": getattr(ref, "research_areas", None),
+                "web_of_science_categories": getattr(
+                    ref, "web_of_science_categories", None
+                ),
+                "funding_text": getattr(ref, "funding_text", None),
+                "journal_iso": getattr(ref, "journal_iso", None),
+                "oa_status": getattr(ref, "oa_status", None),
+                "issn": getattr(ref, "issn", None),
+                "volume": getattr(ref, "volume", None),
+                "issue": getattr(ref, "issue", None),
+                "pages": getattr(ref, "pages", None),
+                "times_cited": getattr(ref, "times_cited", None),
+                "cited_references_count": getattr(
+                    ref, "cited_references_count", None
+                ),
+                "raw_data": getattr(ref, "raw_data", None) or (str(ref.author) if ref.author else None),
+            }
+        )
+
+    if new_articles_data:
+        stmt = _get_insert_stmt(Article, db).values(new_articles_data)
+        db.execute(stmt)
+
+    if all_dois:
+        for a in db.query(Article).filter(Article.doi.in_(all_dois)).all():
+            if a.doi:
+                existing_by_doi[a.doi] = a
+
+    if all_titles:
+        for a in (
+            db.query(Article).filter(Article.title.in_(all_titles)).all()
+        ):
+            if a.title:
+                existing_by_title[a.title] = a
+
+    linked_article_ids = set()
+    project_articles_data = []
+    seen_proj_links = set(
+        (
+            pa.project_id,
+            pa.article_id,
+        )
+        for pa in db.query(ProjectArticle)
+        .filter(ProjectArticle.project_id == project.id)
+        .all()
+    )
+
+    for ref in refs:
+        doi_val = (ref.doi or "").strip() or None
+        title_val = (ref.title or "").strip() or "Untitled"
+        art = existing_by_doi.get(doi_val) if doi_val else None
+        if not art:
+            art = existing_by_title.get(title_val)
+
+        if art:
+            linked_article_ids.add(art.id)
+            if (project.id, art.id) not in seen_proj_links:
+                project_articles_data.append(
+                    {
+                        "project_id": project.id,
+                        "article_id": art.id,
+                        "status": "pending",
+                    }
+                )
+                seen_proj_links.add((project.id, art.id))
+
+    if project_articles_data:
+        stmt_pa = _get_insert_stmt(ProjectArticle, db).values(
+            project_articles_data
+        )
+        db.execute(stmt_pa)
+
+    # 1. Bulk inject affiliations from authors_detail
+    all_affil_strings = set()
+    for ref in refs:
+        if getattr(ref, "authors_detail", None):
+            for ad in ref.authors_detail:
+                aff = ad.get("affiliation")
+                if aff and str(aff).strip():
+                    all_affil_strings.add(str(aff).strip()[:255])
+
+    existing_affils = {}
+    if all_affil_strings:
+        for aff in (
+            db.query(Affiliation)
+            .filter(Affiliation.institution.in_(all_affil_strings))
+            .all()
+        ):
+            existing_affils[aff.institution] = aff.id
+        
+        new_affils = [
+            {"institution": inst}
+            for inst in all_affil_strings
+            if inst not in existing_affils
+        ]
+        if new_affils:
+            stmt_aff = _get_insert_stmt(Affiliation, db).values(new_affils)
+            db.execute(stmt_aff)
+            for aff in (
+                db.query(Affiliation)
+                .filter(Affiliation.institution.in_(all_affil_strings))
+                .all()
+            ):
+                existing_affils[aff.institution] = aff.id
+
+    # 2. Extract author metadata map (ORCID, email, affiliation_id)
+    author_info_map = {}
+    all_authors_raw = set()
+    for ref in refs:
+        if getattr(ref, "authors_detail", None):
+            for ad in ref.authors_detail:
+                name = (ad.get("name") or "").strip()[:255]
+                if name:
+                    all_authors_raw.add(name)
+                    aff_str = (ad.get("affiliation") or "").strip()[:255]
+                    aff_id = existing_affils.get(aff_str)
+                    author_info_map[name] = {
+                        "name": name,
+                        "orcid": (ad.get("orcid") or "")[:50] or None,
+                        "email": (ad.get("email") or "")[:255] or None,
+                        "affiliation_id": aff_id,
+                    }
+        elif ref.author:
+            for a_name in re.split(r"\s+and\s+", str(ref.author), flags=re.I):
+                clean = a_name.strip()[:255]
+                if clean:
+                    all_authors_raw.add(clean)
+                    if clean not in author_info_map:
+                        author_info_map[clean] = {
+                            "name": clean,
+                            "orcid": None,
+                            "email": None,
+                            "affiliation_id": None,
+                        }
+
+    # 3. Bulk inject authors
+    if all_authors_raw:
+        existing_authors = {
+            auth.name: auth
+            for auth in db.query(Author)
+            .filter(Author.name.in_(all_authors_raw))
+            .all()
+        }
+        new_authors = [
+            author_info_map.get(name, {"name": name})
+            for name in all_authors_raw
+            if name not in existing_authors
+        ]
+        if new_authors:
+            stmt_auth = _get_insert_stmt(Author, db).values(new_authors)
+            db.execute(stmt_auth)
+            existing_authors = {
+                auth.name: auth
+                for auth in db.query(Author)
+                .filter(Author.name.in_(all_authors_raw))
+                .all()
+            }
+
+        # 4. Link authors to articles with corresponding flag
+        author_articles_data = []
+        seen_auth_links = set()
+        for ref in refs:
+            doi_val = (ref.doi or "").strip() or None
+            title_val = (ref.title or "").strip() or "Untitled"
+            art = existing_by_doi.get(doi_val) if doi_val else None
+            if not art:
+                art = existing_by_title.get(title_val)
+            if not art:
+                continue
+
+            author_items = []
+            if getattr(ref, "authors_detail", None):
+                author_items = [
+                    (
+                        (ad.get("name") or "").strip()[:255],
+                        bool(ad.get("is_corresponding", False)),
+                    )
+                    for ad in ref.authors_detail
+                    if (ad.get("name") or "").strip()
+                ]
+            elif ref.author:
+                author_items = [
+                    (a.strip()[:255], False)
+                    for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
+                    if a.strip()
+                ]
+
+            for idx, (a_name, is_corr) in enumerate(author_items):
+                auth_obj = existing_authors.get(a_name)
+                if (
+                    auth_obj
+                    and (auth_obj.id, art.id) not in seen_auth_links
+                ):
+                    author_articles_data.append(
+                        {
+                            "author_id": auth_obj.id,
+                            "article_id": art.id,
+                            "author_order": idx + 1,
+                            "is_corresponding": is_corr,
+                        }
+                    )
+                    seen_auth_links.add((auth_obj.id, art.id))
+
+        if author_articles_data:
+            stmt_aa = _get_insert_stmt(AuthorArticle, db).values(
+                author_articles_data
+            )
+            db.execute(stmt_aa)
+
+    # 5. Bulk inject keywords (Author Keywords and Keywords-Plus)
+    all_keywords_to_process = set()
+    for ref in refs:
+        if ref.keywords:
+            for kw in str(ref.keywords).split(";"):
+                k_clean = kw.strip()[:255]
+                if k_clean:
+                    all_keywords_to_process.add((k_clean, "author"))
+        if getattr(ref, "keywords_plus", None):
+            for kw in str(ref.keywords_plus).split(";"):
+                k_clean = kw.strip()[:255]
+                if k_clean:
+                    all_keywords_to_process.add((k_clean, "plus"))
+
+    if all_keywords_to_process:
+        kw_names = {k[0] for k in all_keywords_to_process}
+        existing_kws = {
+            (k.name, k.type): k.id
+            for k in db.query(Keyword).filter(Keyword.name.in_(kw_names)).all()
+        }
+        new_kws = [
+            {"name": name, "type": k_type}
+            for name, k_type in all_keywords_to_process
+            if (name, k_type) not in existing_kws
+        ]
+        if new_kws:
+            stmt_kw = _get_insert_stmt(Keyword, db).values(new_kws)
+            db.execute(stmt_kw)
+            existing_kws = {
+                (k.name, k.type): k.id
+                for k in db.query(Keyword).filter(Keyword.name.in_(kw_names)).all()
+            }
+
+        keyword_articles_data = []
+        seen_kw_links = set()
+        for ref in refs:
+            doi_val = (ref.doi or "").strip() or None
+            title_val = (ref.title or "").strip() or "Untitled"
+            art = existing_by_doi.get(doi_val) if doi_val else None
+            if not art:
+                art = existing_by_title.get(title_val)
+            if not art:
+                continue
+
+            ref_kws = []
+            if ref.keywords:
+                for kw in str(ref.keywords).split(";"):
+                    k_clean = kw.strip()[:255]
+                    if k_clean:
+                        ref_kws.append((k_clean, "author"))
+            if getattr(ref, "keywords_plus", None):
+                for kw in str(ref.keywords_plus).split(";"):
+                    k_clean = kw.strip()[:255]
+                    if k_clean:
+                        ref_kws.append((k_clean, "plus"))
+
+            for k_tuple in ref_kws:
+                kw_id = existing_kws.get(k_tuple)
+                if kw_id and (kw_id, art.id) not in seen_kw_links:
+                    keyword_articles_data.append(
+                        {"keyword_id": kw_id, "article_id": art.id}
+                    )
+                    seen_kw_links.add((kw_id, art.id))
+
+        if keyword_articles_data:
+            stmt_ka = _get_insert_stmt(KeywordArticle, db).values(
+                keyword_articles_data
+            )
+            db.execute(stmt_ka)
+
+    db.commit()
+    return len(linked_article_ids)
+
+
+def inject_references_to_db(
+    db: Session, refs: List[ParsedReference], project_code: str
+) -> int:
+    try:
+        return _bulk_inject_references(db, refs, project_code)
+    except OperationalError:
+        raise RuntimeError("Database connection failed")
+
+
+def _inject_references_inner(
+    db: Session, refs: List[ParsedReference], project_code: str
+) -> int:
+    """Persist parsed references and associate them with a project."""
+    return _bulk_inject_references(db, refs, project_code)
+
+
+def _legacy_inject_references_unused(
+    db: Session, refs: List[ParsedReference], project_code: str
+) -> int:
+    project = db.query(Project).filter(Project.name == project_code).first()
+    if not project:
+        project = Project(name=project_code)
+        db.add(project)
+        db.flush()
+
+    linked_article_ids = set()
+    seen_proj_links = set()
+    seen_auth_links = set()
+
+    for ref in refs:
+        year_val: Optional[int] = None
+        if ref.year:
+            try:
+                year_val = int(float(str(ref.year).strip()))
+            except (ValueError, TypeError):
+                year_val = None
+
+        doi_val = getattr(ref, "doi", None)
+        article = None
+        
+        if doi_val:
+            article = db.query(Article).filter(Article.doi == doi_val).first()
+        if not article:
+            title_val = ref.title or "Untitled"
+            article = db.query(Article).filter(Article.title == title_val).first()
+            
+        if not article:
+            article = Article(
+                title=ref.title or "Untitled",
+                journal=ref.journal,
+                year=year_val,
+                doi=doi_val,
+            )
+            db.add(article)
+            db.flush()
+
+        link = None
+        if (project.id, article.id) not in seen_proj_links:
+            link = db.query(ProjectArticle).filter(
+                ProjectArticle.project_id == project.id,
+                ProjectArticle.article_id == article.id
+            ).first()
+        
+        if not link and (project.id, article.id) not in seen_proj_links:
+            db.add(ProjectArticle(project_id=project.id, article_id=article.id))
+            db.flush()
+        seen_proj_links.add((project.id, article.id))
+
+        linked_article_ids.add(article.id)
+
+        if ref.author:
+            if not getattr(article, "raw_data", None):
+                article.raw_data = str(ref.author)
+            auth_list = [
+                a.strip()
+                for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
+                if a.strip()
+            ]
+            for idx, a_name in enumerate(auth_list):
+                c_name = a_name[:255]
+                auth_obj = (
+                    db.query(Author).filter(Author.name == c_name).first()
+                )
+                if not auth_obj:
+                    auth_obj = Author(name=c_name)
+                    db.add(auth_obj)
+                    db.flush()
+                a_link = None
+                if (auth_obj.id, article.id) not in seen_auth_links:
+                    a_link = (
+                        db.query(AuthorArticle)
+                        .filter(
+                            AuthorArticle.author_id == auth_obj.id,
+                            AuthorArticle.article_id == article.id,
+                        )
+                        .first()
+                    )
+                if not a_link and (auth_obj.id, article.id) not in seen_auth_links:
+                    db.add(
+                        AuthorArticle(
+                            author_id=auth_obj.id,
+                            article_id=article.id,
+                            author_order=idx + 1,
+                        )
+                    )
+                    db.flush()
+                seen_auth_links.add((auth_obj.id, article.id))
+
+    db.commit()
+    return len(linked_article_ids)
+
+
+
+// --- backend/src/database/models/core.py ---
+
+"""Core relational database models for projects and articles."""
+from datetime import datetime, timezone
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy.orm import relationship
+from ..session import Base
+
+class Project(Base):
     """..."""
+
+class Article(Base):
+    """Represents an academic publication with bibliographic data."""
+    __tablename__ = 'articles'
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key integer identifier')
+    doi = Column(String(255), unique=True, index=True, nullable=True, comment='Normalized DOI unique key')
+    title = Column(Text, nullable=False, comment='Full title of the article or publication')
+    journal = Column(String(255), nullable=True, comment='Journal or venue publishing the article')
+    journal_id = Column(Integer, ForeignKey('journals.id', ondelete='SET NULL'), nullable=True, comment='Foreign key linking to journals table for dimensional modeling')
+    year = Column(Integer, nullable=True, comment='Publication calendar year')
+    volume = Column(String(50), nullable=True, comment='Journal publication volume')
+    issue = Column(String(50), nullable=True, comment='Journal publication issue')
+    pages = Column(String(50), nullable=True, comment='Article page range or article number')
+    abstract = Column(Text, nullable=True, comment='Full text abstract of the article')
+    publisher = Column(String(255), nullable=True, comment='Publisher or imprint name of the article')
+    language = Column(String(50), nullable=True, comment='Primary language of the publication')
+    research_areas = Column(Text, nullable=True, comment='Research areas or Web of Science categories')
+    web_of_science_categories = Column(Text, nullable=True, comment='Specific Web of Science categorical metadata')
+    funding_text = Column(Text, nullable=True, comment='Funding acknowledgment text or grant information')
+    journal_iso = Column(String(255), nullable=True, comment='ISO abbreviation of the journal name')
+    oa_status = Column(String(50), nullable=True, comment='Open Access status indicator')
+    issn = Column(String(50), nullable=True, comment='International Standard Serial Number')
+    times_cited = Column(Integer, nullable=True, comment='Number of times the article has been cited globally')
+    cited_references_count = Column(Integer, nullable=True, comment='Number of references cited by this article')
+    raw_data = Column(Text, nullable=True, comment='Raw bibliographic payload (e.g. BibTeX or RIS)')
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, comment='UTC timestamp when article was ingested')
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False, comment='UTC timestamp when article record was updated')
+    project_articles = relationship('ProjectArticle', back_populates='article', cascade='all, delete-orphan')
+    projects = relationship('Project', secondary='project_articles', back_populates='articles', viewonly=True)
+    author_articles = relationship('AuthorArticle', back_populates='article', cascade='all, delete-orphan')
+    authors = relationship('Author', secondary='author_articles', back_populates='articles', viewonly=True)
+    keyword_articles = relationship('KeywordArticle', back_populates='article', cascade='all, delete-orphan')
+    keywords = relationship('Keyword', secondary='keyword_articles', back_populates='articles', viewonly=True)
+    references = relationship('Reference', back_populates='article', cascade='all, delete-orphan')
+    funding = relationship('Funding', back_populates='article', cascade='all, delete-orphan')
+    downloads = relationship('Download', back_populates='article', cascade='all, delete-orphan')
+    journal_entity = relationship('Journal', back_populates='articles')
+    article_countries = relationship('ArticleCountry', back_populates='article', cascade='all, delete-orphan')
+    countries = relationship('Country', secondary='article_countries', back_populates='articles', viewonly=True)
+    article_citations = relationship('ArticleCitation', back_populates='article', cascade='all, delete-orphan')
+    cited_references = relationship('CitedReference', secondary='article_citations', back_populates='articles', viewonly=True)
+
+class ProjectArticle(Base):
+    """..."""
+
+class ArticleCountry(Base):
+    """Junction model mapping articles to countries."""
+    __tablename__ = 'article_countries'
+    __table_args__ = (UniqueConstraint('article_id', 'country_id', name='uq_article_country'),)
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key junction identifier')
+    article_id = Column(Integer, ForeignKey('articles.id', ondelete='CASCADE'), nullable=False, index=True, comment='Foreign key linking to articles.id')
+    country_id = Column(Integer, ForeignKey('countries.id', ondelete='CASCADE'), nullable=False, index=True, comment='Foreign key linking to countries.id')
+    article = relationship('Article', back_populates='article_countries')
+    country = relationship('Country', back_populates='article_countries')
+
+class ArticleCitation(Base):
+    """Junction model connecting an article to cited references."""
+    __tablename__ = 'article_citations'
+    __table_args__ = (UniqueConstraint('article_id', 'cited_reference_id', name='uq_article_citation'),)
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key junction identifier')
+    article_id = Column(Integer, ForeignKey('articles.id', ondelete='CASCADE'), nullable=False, index=True, comment='Foreign key linking to citing article')
+    cited_reference_id = Column(Integer, ForeignKey('cited_references.id', ondelete='CASCADE'), nullable=False, index=True, comment='Foreign key linking to cited reference')
+    article = relationship('Article', back_populates='article_citations')
+    cited_reference = relationship('CitedReference', back_populates='article_citations')
+
+class Country(Base):
+    """Represents a geographical country involved in the publication."""
+    __tablename__ = 'countries'
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key integer identifier')
+    name = Column(String(100), nullable=False, unique=True, index=True, comment='Standardized name of the country')
+    article_countries = relationship('ArticleCountry', back_populates='country', cascade='all, delete-orphan')
+    articles = relationship('Article', secondary='article_countries', back_populates='countries', viewonly=True)
+
+class CitedReference(Base):
+    """Represents a unique cited reference extracted from an article."""
+    __tablename__ = 'cited_references'
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key integer identifier')
+    raw_string = Column(Text, nullable=False, unique=True, index=True, comment='Raw unique string representing this reference')
+    author = Column(String(255), nullable=True, comment='Extracted first author of the reference')
+    year = Column(Integer, nullable=True, comment='Extracted publication year of the reference')
+    source = Column(String(255), nullable=True, comment='Extracted journal or source of the reference')
+    doi = Column(String(255), nullable=True, index=True, comment='DOI of the cited reference if available')
+    article_citations = relationship('ArticleCitation', back_populates='cited_reference', cascade='all, delete-orphan')
+    articles = relationship('Article', secondary='article_citations', back_populates='cited_references', viewonly=True)
+
+class Journal(Base):
+    """Represents an academic journal or publication venue."""
+    __tablename__ = 'journals'
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key integer identifier')
+    name = Column(String(255), nullable=False, unique=True, index=True, comment='Full name of the journal')
+    iso_abbreviation = Column(String(255), nullable=True, comment='ISO abbreviation of the journal')
+    issn = Column(String(50), nullable=True, comment='International Standard Serial Number')
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, comment='UTC timestamp of creation')
+    articles = relationship('Article', back_populates='journal_entity')
