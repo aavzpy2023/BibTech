@@ -1,26 +1,26 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 10:37:58
+Date: 2026-09-16 11:05:54
 AST Mode: False
 Line Numbers: True
-Modules: core.py, test_core_models.py
+Modules: identity.py, test_identity_models.py
 Processed Files: 2
 ===========================
 
 
 
-// --- backend/src/database/models/core.py ---
+// --- backend/src/database/models/identity.py ---
 
-[L001, S0] """Core relational database models for projects and articles."""
+[L001, S0] """Identity domain models for affiliations, authors, and article authorship."""
 [L002, S0] from datetime import datetime, timezone
 [L003, S0] 
 [L004, S0] from sqlalchemy import (
-[L005, S4]     Column,
-[L006, S4]     DateTime,
-[L007, S4]     ForeignKey,
-[L008, S4]     Integer,
-[L009, S4]     String,
-[L010, S4]     Text,
+[L005, S4]     Boolean,
+[L006, S4]     Column,
+[L007, S4]     DateTime,
+[L008, S4]     ForeignKey,
+[L009, S4]     Integer,
+[L010, S4]     String,
 [L011, S4]     UniqueConstraint,
 [L012, S0] )
 [L013, S0] from sqlalchemy.orm import relationship
@@ -28,195 +28,195 @@ Processed Files: 2
 [L015, S0] from ..session import Base
 [L016, S0] 
 [L017, S0] 
-[L018, S0] class Project(Base):
-[L019, S4]     """Represents a research project containing bibliographies."""
+[L018, S0] class Affiliation(Base):
+[L019, S4]     """Represents an academic institution or research organization."""
 [L020, S0] 
-[L021, S4]     __tablename__ = "projects"
+[L021, S4]     __tablename__ = "affiliations"
 [L022, S0] 
 [L023, S4]     id = Column(
 [L024, S8]         Integer,
 [L025, S8]         primary_key=True,
 [L026, S8]         autoincrement=True,
-[L027, S8]         comment="Primary key integer identifier",
+[L027, S8]         comment="Primary key identifier for affiliation",
 [L028, S4]     )
-[L029, S4]     name = Column(
+[L029, S4]     institution = Column(
 [L030, S8]         String(255),
 [L031, S8]         nullable=False,
-[L032, S8]         comment="Project display and reference name",
+[L032, S8]         comment="Institution or organization name",
 [L033, S4]     )
-[L034, S4]     description = Column(
-[L035, S8]         Text,
+[L034, S4]     department = Column(
+[L035, S8]         String(255),
 [L036, S8]         nullable=True,
-[L037, S8]         comment="Detailed description of the project",
+[L037, S8]         comment="Academic department or laboratory division",
 [L038, S4]     )
-[L039, S4]     hashed_password = Column(
-[L040, S8]         String(255),
+[L039, S4]     country = Column(
+[L040, S8]         String(100),
 [L041, S8]         nullable=True,
-[L042, S8]         comment="Bcrypt hashed project password",
+[L042, S8]         comment="Country location of the institution",
 [L043, S4]     )
 [L044, S4]     created_at = Column(
 [L045, S8]         DateTime,
 [L046, S8]         default=lambda: datetime.now(timezone.utc),
 [L047, S8]         nullable=False,
-[L048, S8]         comment="UTC timestamp when the project was created",
+[L048, S8]         comment="UTC timestamp when affiliation was created",
 [L049, S4]     )
-[L050, S4]     updated_at = Column(
-[L051, S8]         DateTime,
-[L052, S8]         default=lambda: datetime.now(timezone.utc),
-[L053, S8]         onupdate=lambda: datetime.now(timezone.utc),
-[L054, S8]         nullable=False,
-[L055, S8]         comment="UTC timestamp when the project was last updated",
-[L056, S4]     )
-[L057, S0] 
-[L058, S4]     project_articles = relationship(
-[L059, S8]         "ProjectArticle",
-[L060, S8]         back_populates="project",
-[L061, S8]         cascade="all, delete-orphan",
-[L062, S4]     )
-[L063, S4]     articles = relationship(
-[L064, S8]         "Article",
-[L065, S8]         secondary="project_articles",
-[L066, S8]         back_populates="projects",
-[L067, S8]         viewonly=True,
-[L068, S4]     )
-[L069, S4]     downloads = relationship(
-[L070, S8]         "Download",
-[L071, S8]         back_populates="project",
-[L072, S8]         cascade="all, delete-orphan",
-[L073, S4]     )
-[L074, S0] 
-[L075, S0] 
-[L076, S0] class Article(Base):
-[L077, S4]     """Represents an academic publication with bibliographic data."""
-[L078, S0] 
-[L079, S4]     __tablename__ = "articles"
-[L080, S0] 
-[L081, S4]     id = Column(
+[L050, S0] 
+[L051, S4]     authors = relationship("Author", back_populates="affiliation")
+[L052, S0] 
+[L053, S0] 
+[L054, S0] class Author(Base):
+[L055, S4]     """Represents a researcher or publication contributor."""
+[L056, S0] 
+[L057, S4]     __tablename__ = "authors"
+[L058, S0] 
+[L059, S4]     id = Column(
+[L060, S8]         Integer,
+[L061, S8]         primary_key=True,
+[L062, S8]         autoincrement=True,
+[L063, S8]         comment="Primary key identifier for author",
+[L064, S4]     )
+[L065, S4]     name = Column(
+[L066, S8]         String(255),
+[L067, S8]         nullable=False,
+[L068, S8]         comment="Full name of the author or researcher",
+[L069, S4]     )
+[L070, S4]     orcid = Column(
+[L071, S8]         String(50),
+[L072, S8]         nullable=True,
+[L073, S8]         index=True,
+[L074, S8]         comment="Author's ORCID identifier",
+[L075, S4]     )
+[L076, S4]     email = Column(
+[L077, S8]         String(255),
+[L078, S8]         nullable=True,
+[L079, S8]         comment="Contact email address for the author",
+[L080, S4]     )
+[L081, S4]     affiliation_id = Column(
 [L082, S8]         Integer,
-[L083, S8]         primary_key=True,
-[L084, S8]         autoincrement=True,
-[L085, S8]         comment="Primary key integer identifier",
+[L083, S8]         ForeignKey("affiliations.id", ondelete="SET NULL"),
+[L084, S8]         nullable=True,
+[L085, S8]         comment="Foreign key linking to affiliations.id",
 [L086, S4]     )
-[L087, S4]     doi = Column(
-[L088, S8]         String(255),
-[L089, S8]         unique=True,
-[L090, S8]         index=True,
-[L091, S8]         nullable=True,
-[L092, S8]         comment="Normalized DOI unique key",
-[L093, S4]     )
-[L094, S4]     title = Column(
-[L095, S8]         Text,
-[L096, S8]         nullable=False,
-[L097, S8]         comment="Full title of the article or publication",
-[L098, S4]     )
-[L099, S4]     journal = Column(
-[L100, S8]         String(255),
-[L101, S8]         nullable=True,
-[L102, S8]         comment="Journal or venue publishing the article",
-[L103, S4]     )
-[L104, S4]     year = Column(
-[L105, S8]         Integer,
-[L106, S8]         nullable=True,
-[L107, S8]         comment="Publication calendar year",
-[L108, S4]     )
-[L109, S4]     volume = Column(
-[L110, S8]         String(50),
-[L111, S8]         nullable=True,
-[L112, S8]         comment="Journal publication volume",
-[L113, S4]     )
-[L114, S4]     issue = Column(
-[L115, S8]         String(50),
-[L116, S8]         nullable=True,
-[L117, S8]         comment="Journal publication issue",
+[L087, S4]     created_at = Column(
+[L088, S8]         DateTime,
+[L089, S8]         default=lambda: datetime.now(timezone.utc),
+[L090, S8]         nullable=False,
+[L091, S8]         comment="UTC timestamp when author record was created",
+[L092, S4]     )
+[L093, S0] 
+[L094, S4]     affiliation = relationship("Affiliation", back_populates="authors")
+[L095, S4]     author_articles = relationship(
+[L096, S8]         "AuthorArticle",
+[L097, S8]         back_populates="author",
+[L098, S8]         cascade="all, delete-orphan",
+[L099, S4]     )
+[L100, S4]     articles = relationship(
+[L101, S8]         "Article",
+[L102, S8]         secondary="author_articles",
+[L103, S8]         back_populates="authors",
+[L104, S8]         viewonly=True,
+[L105, S4]     )
+[L106, S0] 
+[L107, S0] 
+[L108, S0] class AuthorArticle(Base):
+[L109, S4]     """Junction model connecting authors to articles with authorship metadata."""
+[L110, S0] 
+[L111, S4]     __tablename__ = "author_articles"
+[L112, S4]     __table_args__ = (
+[L113, S8]         UniqueConstraint(
+[L114, S12]             "author_id",
+[L115, S12]             "article_id",
+[L116, S12]             name="uq_author_article",
+[L117, S8]         ),
 [L118, S4]     )
-[L119, S4]     pages = Column(
-[L120, S8]         String(50),
-[L121, S8]         nullable=True,
-[L122, S8]         comment="Article page range or article number",
-[L123, S4]     )
-[L124, S4]     abstract = Column(
-[L125, S8]         Text,
-[L126, S8]         nullable=True,
-[L127, S8]         comment="Full text abstract of the article",
-[L128, S4]     )
-[L129, S4]     raw_data = Column(
-[L130, S8]         Text,
-[L131, S8]         nullable=True,
-[L132, S8]         comment="Raw bibliographic payload (e.g. BibTeX or RIS)",
-[L133, S4]     )
-[L134, S4]     created_at = Column(
-[L135, S8]         DateTime,
-[L136, S8]         default=lambda: datetime.now(timezone.utc),
-[L137, S8]         nullable=False,
-[L138, S8]         comment="UTC timestamp when article was ingested",
-[L139, S4]     )
-[L140, S4]     updated_at = Column(
-[L141, S8]         DateTime,
-[L142, S8]         default=lambda: datetime.now(timezone.utc),
-[L143, S8]         onupdate=lambda: datetime.now(timezone.utc),
-[L144, S8]         nullable=False,
-[L145, S8]         comment="UTC timestamp when article record was updated",
-[L146, S4]     )
-[L147, S0] 
-[L148, S4]     project_articles = relationship(
-[L149, S8]         "ProjectArticle",
-[L150, S8]         back_populates="article",
-[L151, S8]         cascade="all, delete-orphan",
-[L152, S4]     )
-[L153, S4]     projects = relationship(
-[L154, S8]         "Project",
-[L155, S8]         secondary="project_articles",
-[L156, S8]         back_populates="articles",
-[L157, S8]         viewonly=True,
-[L158, S4]     )
-[L159, S4]     author_articles = relationship(
-[L160, S8]         "AuthorArticle",
-[L161, S8]         back_populates="article",
-[L162, S8]         cascade="all, delete-orphan",
-[L163, S4]     )
-[L164, S4]     authors = relationship(
-[L165, S8]         "Author",
-[L166, S8]         secondary="author_articles",
-[L167, S8]         back_populates="articles",
-[L168, S8]         viewonly=True,
-[L169, S4]     )
-[L170, S4]     keyword_articles = relationship(
-[L171, S8]         "KeywordArticle",
-[L172, S8]         back_populates="article",
-[L173, S8]         cascade="all, delete-orphan",
-[L174, S4]     )
-[L175, S4]     keywords = relationship(
-[L176, S8]         "Keyword",
-[L177, S8]         secondary="keyword_articles",
-[L178, S8]         back_populates="articles",
-[L179, S8]         viewonly=True,
-[L180, S4]     )
-[L181, S4]     references = relationship(
-[L182, S8]         "Reference",
-[L183, S8]         back_populates="article",
-[L184, S8]         cascade="all, delete-orphan",
-[L185, S4]     )
-[L186, S4]     funding = relationship(
-[L187, S8]         "Funding",
-[L188, S8]         back_populates="article",
-[L189, S8]         cascade="all, delete-orphan",
-[L190, S4]     )
-[L191, S4]     downloads = relationship(
-[L192, S8]         "Download",
-[L193, S8]         back_populates="article",
-[L194, S8]         cascade="all, delete-orphan",
+[L119, S0] 
+[L120, S4]     id = Column(
+[L121, S8]         Integer,
+[L122, S8]         primary_key=True,
+[L123, S8]         autoincrement=True,
+[L124, S8]         comment="Primary key junction identifier",
+[L125, S4]     )
+[L126, S4]     author_id = Column(
+[L127, S8]         Integer,
+[L128, S8]         ForeignKey("authors.id", ondelete="CASCADE"),
+[L129, S8]         nullable=False,
+[L130, S8]         comment="Foreign key linking to authors.id",
+[L131, S4]     )
+[L132, S4]     article_id = Column(
+[L133, S8]         Integer,
+[L134, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L135, S8]         nullable=False,
+[L136, S8]         comment="Foreign key linking to articles.id",
+[L137, S4]     )
+[L138, S4]     author_order = Column(
+[L139, S8]         Integer,
+[L140, S8]         default=1,
+[L141, S8]         nullable=False,
+[L142, S8]         comment="Order of authorship in the publication (1-based)",
+[L143, S4]     )
+[L144, S4]     is_corresponding = Column(
+[L145, S8]         Boolean,
+[L146, S8]         default=False,
+[L147, S8]         nullable=False,
+[L148, S8]         comment="Flag indicating if this author is the corresponding author",
+[L149, S4]     )
+[L150, S0] 
+[L151, S4]     author = relationship("Author", back_populates="author_articles")
+[L152, S4]     article = relationship("Article", back_populates="author_articles")
+[L153, S0] 
+[L154, S0] 
+[L155, S0] class Keyword(Base):
+[L156, S4]     """Represents a descriptive keyword, MeSH term, or topical tag."""
+[L157, S0] 
+[L158, S4]     __tablename__ = "keywords"
+[L159, S0] 
+[L160, S4]     id = Column(
+[L161, S8]         Integer,
+[L162, S8]         primary_key=True,
+[L163, S8]         autoincrement=True,
+[L164, S8]         comment="Primary key identifier for keyword",
+[L165, S4]     )
+[L166, S4]     name = Column(
+[L167, S8]         String(255),
+[L168, S8]         nullable=False,
+[L169, S8]         index=True,
+[L170, S8]         comment="Normalized keyword or term string",
+[L171, S4]     )
+[L172, S4]     type = Column(
+[L173, S8]         String(50),
+[L174, S8]         default="author",
+[L175, S8]         nullable=False,
+[L176, S8]         comment="Classification type of keyword (e.g. author, mesh, index)",
+[L177, S4]     )
+[L178, S4]     created_at = Column(
+[L179, S8]         DateTime,
+[L180, S8]         default=lambda: datetime.now(timezone.utc),
+[L181, S8]         nullable=False,
+[L182, S8]         comment="UTC timestamp when keyword was registered",
+[L183, S4]     )
+[L184, S0] 
+[L185, S4]     keyword_articles = relationship(
+[L186, S8]         "KeywordArticle",
+[L187, S8]         back_populates="keyword",
+[L188, S8]         cascade="all, delete-orphan",
+[L189, S4]     )
+[L190, S4]     articles = relationship(
+[L191, S8]         "Article",
+[L192, S8]         secondary="keyword_articles",
+[L193, S8]         back_populates="keywords",
+[L194, S8]         viewonly=True,
 [L195, S4]     )
 [L196, S0] 
 [L197, S0] 
-[L198, S0] class ProjectArticle(Base):
-[L199, S4]     """Junction model connecting projects to articles."""
+[L198, S0] class KeywordArticle(Base):
+[L199, S4]     """Junction model connecting keywords to articles."""
 [L200, S0] 
-[L201, S4]     __tablename__ = "project_articles"
+[L201, S4]     __tablename__ = "keyword_articles"
 [L202, S4]     __table_args__ = (
 [L203, S8]         UniqueConstraint(
-[L204, S12]             "project_id",
+[L204, S12]             "keyword_id",
 [L205, S12]             "article_id",
-[L206, S12]             name="uq_project_article",
+[L206, S12]             name="uq_keyword_article",
 [L207, S8]         ),
 [L208, S4]     )
 [L209, S0] 
@@ -226,11 +226,11 @@ Processed Files: 2
 [L213, S8]         autoincrement=True,
 [L214, S8]         comment="Primary key junction identifier",
 [L215, S4]     )
-[L216, S4]     project_id = Column(
+[L216, S4]     keyword_id = Column(
 [L217, S8]         Integer,
-[L218, S8]         ForeignKey("projects.id", ondelete="CASCADE"),
+[L218, S8]         ForeignKey("keywords.id", ondelete="CASCADE"),
 [L219, S8]         nullable=False,
-[L220, S8]         comment="Foreign key linking to projects.id",
+[L220, S8]         comment="Foreign key linking to keywords.id",
 [L221, S4]     )
 [L222, S4]     article_id = Column(
 [L223, S8]         Integer,
@@ -238,135 +238,154 @@ Processed Files: 2
 [L225, S8]         nullable=False,
 [L226, S8]         comment="Foreign key linking to articles.id",
 [L227, S4]     )
-[L228, S4]     status = Column(
-[L229, S8]         String(50),
-[L230, S8]         default="pending",
+[L228, S4]     created_at = Column(
+[L229, S8]         DateTime,
+[L230, S8]         default=lambda: datetime.now(timezone.utc),
 [L231, S8]         nullable=False,
-[L232, S8]         comment="Processing or download status of the article in the project",
+[L232, S8]         comment="UTC timestamp when keyword was linked to article",
 [L233, S4]     )
-[L234, S4]     added_at = Column(
-[L235, S8]         DateTime,
-[L236, S8]         default=lambda: datetime.now(timezone.utc),
-[L237, S8]         nullable=False,
-[L238, S8]         comment="UTC timestamp when article was associated with project",
-[L239, S4]     )
-[L240, S0] 
-[L241, S4]     project = relationship("Project", back_populates="project_articles")
-[L242, S4]     article = relationship("Article", back_populates="project_articles")
+[L234, S0] 
+[L235, S4]     keyword = relationship("Keyword", back_populates="keyword_articles")
+[L236, S4]     article = relationship("Article", back_populates="keyword_articles")
 
 
-// --- backend/tests/database/test_core_models.py ---
+// --- backend/tests/database/test_identity_models.py ---
 
-[L001, S0] """Hexagonal zero-I/O tests for Core Domain Models (Projects & Articles)."""
+[L001, S0] """Hexagonal zero-I/O tests for Identity Domain Models (Authors & Affiliations)."""
 [L002, S0] import unittest
 [L003, S0] 
 [L004, S0] from sqlalchemy import create_engine
 [L005, S0] from sqlalchemy.orm import Session, sessionmaker
 [L006, S0] 
-[L007, S0] from src.database.models.core import Article, Project, ProjectArticle
-[L008, S0] from src.database.session import Base
-[L009, S0] 
-[L010, S0] 
-[L011, S0] class TestCoreModels(unittest.TestCase):
-[L012, S4]     """Validates Project, Article, and ProjectArticle schema and relationships."""
-[L013, S0] 
-[L014, S4]     def setUp(self) -> None:
-[L015, S8]         """Initialize in-memory SQLite engine and tables for zero-I/O testing."""
-[L016, S8]         self.engine = create_engine("sqlite:///:memory:")
-[L017, S8]         Base.metadata.create_all(self.engine)
-[L018, S8]         self.SessionLocal = sessionmaker(bind=self.engine)
-[L019, S8]         self.session: Session = self.SessionLocal()
+[L007, S0] from src.database.models.core import Article
+[L008, S0] from src.database.models.identity import (
+[L009, S4]     Affiliation,
+[L010, S4]     Author,
+[L011, S4]     AuthorArticle,
+[L012, S4]     Keyword,
+[L013, S4]     KeywordArticle,
+[L014, S0] )
+[L015, S0] from src.database.session import Base
+[L016, S0] 
+[L017, S0] 
+[L018, S0] class TestIdentityModels(unittest.TestCase):
+[L019, S4]     """Validates Affiliation, Author, and AuthorArticle schema and relationships."""
 [L020, S0] 
-[L021, S4]     def tearDown(self) -> None:
-[L022, S8]         """Clean up in-memory session and tables."""
-[L023, S8]         self.session.close()
-[L024, S8]         Base.metadata.drop_all(self.engine)
-[L025, S8]         self.engine.dispose()
-[L026, S0] 
-[L027, S4]     def test_create_project_and_article_m2m(self) -> None:
-[L028, S8]         """Verify bidirectional relationship between Project and Article."""
-[L029, S8]         project = Project(
-[L030, S12]             name="Deep Learning Survey",
-[L031, S12]             description="Investigation on Transformers",
-[L032, S12]             hashed_password="mocked_bcrypt_hash_12345",
-[L033, S8]         )
-[L034, S8]         article = Article(
-[L035, S12]             doi="10.1000/182",
-[L036, S12]             title="Attention Is All You Need",
-[L037, S12]             journal="NeurIPS",
-[L038, S12]             year=2017,
-[L039, S12]             volume="30",
-[L040, S12]             pages="5998-6008",
-[L041, S12]             abstract="The dominant sequence transduction models...",
-[L042, S8]         )
-[L043, S8]         self.session.add_all([project, article])
-[L044, S8]         self.session.commit()
-[L045, S0] 
-[L046, S8]         link = ProjectArticle(
-[L047, S12]             project_id=project.id,
-[L048, S12]             article_id=article.id,
-[L049, S12]             status="pending",
-[L050, S8]         )
-[L051, S8]         self.session.add(link)
-[L052, S8]         self.session.commit()
-[L053, S0] 
-[L054, S8]         self.session.refresh(project)
-[L055, S8]         self.session.refresh(article)
-[L056, S0] 
-[L057, S8]         self.assertEqual(len(project.project_articles), 1)
-[L058, S8]         self.assertEqual(
-[L059, S12]             project.project_articles[0].article.doi, "10.1000/182"
-[L060, S8]         )
-[L061, S8]         self.assertEqual(len(project.articles), 1)
-[L062, S8]         self.assertEqual(
-[L063, S12]             project.articles[0].title, "Attention Is All You Need"
-[L064, S8]         )
-[L065, S0] 
-[L066, S8]         self.assertEqual(len(article.project_articles), 1)
-[L067, S8]         self.assertEqual(
-[L068, S12]             article.project_articles[0].project.hashed_password,
-[L069, S12]             "mocked_bcrypt_hash_12345",
+[L021, S4]     def setUp(self) -> None:
+[L022, S8]         """Initialize in-memory SQLite engine and tables for zero-I/O testing."""
+[L023, S8]         self.engine = create_engine("sqlite:///:memory:")
+[L024, S8]         Base.metadata.create_all(self.engine)
+[L025, S8]         self.SessionLocal = sessionmaker(bind=self.engine)
+[L026, S8]         self.session: Session = self.SessionLocal()
+[L027, S0] 
+[L028, S4]     def tearDown(self) -> None:
+[L029, S8]         """Clean up in-memory session and tables."""
+[L030, S8]         self.session.close()
+[L031, S8]         Base.metadata.drop_all(self.engine)
+[L032, S8]         self.engine.dispose()
+[L033, S0] 
+[L034, S4]     def test_author_affiliation_and_article_m2m(self) -> None:
+[L035, S8]         """Verify navigation: article.authors[0].affiliation.institution."""
+[L036, S8]         affiliation = Affiliation(
+[L037, S12]             institution="Stanford University",
+[L038, S12]             department="Computer Science",
+[L039, S12]             country="USA",
+[L040, S8]         )
+[L041, S8]         self.session.add(affiliation)
+[L042, S8]         self.session.commit()
+[L043, S0] 
+[L044, S8]         author = Author(
+[L045, S12]             name="John Doe",
+[L046, S12]             orcid="0000-0002-1825-0097",
+[L047, S12]             email="johndoe@stanford.edu",
+[L048, S12]             affiliation_id=affiliation.id,
+[L049, S8]         )
+[L050, S8]         article = Article(
+[L051, S12]             doi="10.1000/182",
+[L052, S12]             title="Foundations of AI",
+[L053, S12]             journal="Science",
+[L054, S8]         )
+[L055, S8]         self.session.add_all([author, article])
+[L056, S8]         self.session.commit()
+[L057, S0] 
+[L058, S8]         link = AuthorArticle(
+[L059, S12]             author_id=author.id,
+[L060, S12]             article_id=article.id,
+[L061, S12]             author_order=1,
+[L062, S12]             is_corresponding=True,
+[L063, S8]         )
+[L064, S8]         self.session.add(link)
+[L065, S8]         self.session.commit()
+[L066, S0] 
+[L067, S8]         # Query Article and explicitly assert author affiliation matches
+[L068, S8]         queried_article = (
+[L069, S12]             self.session.query(Article).filter_by(doi="10.1000/182").one()
 [L070, S8]         )
-[L071, S8]         self.assertEqual(len(article.projects), 1)
-[L072, S8]         self.assertEqual(article.projects[0].name, "Deep Learning Survey")
-[L073, S0] 
-[L074, S4]     def test_article_extended_metadata_persistence(self) -> None:
-[L075, S8]         """Verify that newly added extended .bib metadata fields persist correctly."""
-[L076, S8]         article = Article(
-[L077, S12]             title="Extended Metadata Paper",
-[L078, S12]             abstract="A novel approach to metadata.",
-[L079, S12]             publisher="Tech Press",
-[L080, S12]             language="English",
-[L081, S12]             keywords="metadata; bibliography; parsing",
-[L082, S12]             research_areas="Computer Science",
-[L083, S12]             web_of_science_categories="Computer Science, Information Systems",
-[L084, S12]             funding_text="Supported by AI Grant 2026",
-[L085, S12]             journal_iso="J. Tech. Press",
-[L086, S12]             oa_status="Gold",
-[L087, S12]             doi="10.1000/extended",
-[L088, S12]             issn="1234-5678",
-[L089, S12]             times_cited=42,
-[L090, S12]             cited_references_count=10,
-[L091, S8]         )
-[L092, S8]         self.session.add(article)
-[L093, S8]         self.session.commit()
-[L094, S8]         self.session.refresh(article)
-[L095, S0] 
-[L096, S8]         self.assertEqual(article.publisher, "Tech Press")
-[L097, S8]         self.assertEqual(article.times_cited, 42)
-[L098, S8]         self.assertEqual(article.language, "English")
-[L099, S8]         self.assertEqual(article.oa_status, "Gold")
-[L100, S0] 
-[L101, S4]     def test_semantic_comments_present_on_all_columns(self) -> None:
-[L102, S8]         """Enforce Semantic Primacy: every column must contain a comment."""
-[L103, S8]         models = [Project, Article, ProjectArticle]
-[L104, S8]         for model in models:
-[L105, S12]             for col in model.__table__.columns:
-[L106, S16]                 self.assertIsNotNone(
-[L107, S20]                     col.comment,
-[L108, S20]                     f"Column '{col.name}' in '{model.__tablename__}' lacks comment",
-[L109, S16]                 )
-[L110, S16]                 self.assertTrue(
-[L111, S20]                     len(col.comment.strip()) > 0,
-[L112, S20]                     f"Comment on '{col.name}' in '{model.__tablename__}' is empty",
-[L113, S16]                 )
+[L071, S8]         self.assertEqual(len(queried_article.authors), 1)
+[L072, S8]         self.assertEqual(
+[L073, S12]             queried_article.authors[0].affiliation.institution,
+[L074, S12]             "Stanford University",
+[L075, S8]         )
+[L076, S8]         self.assertEqual(
+[L077, S12]             queried_article.author_articles[0].author_order,
+[L078, S12]             1,
+[L079, S8]         )
+[L080, S8]         self.assertTrue(queried_article.author_articles[0].is_corresponding)
+[L081, S0] 
+[L082, S8]         # Reverse traversal
+[L083, S8]         self.assertEqual(len(author.articles), 1)
+[L084, S8]         self.assertEqual(author.articles[0].title, "Foundations of AI")
+[L085, S0] 
+[L086, S4]     def test_keyword_article_m2m(self) -> None:
+[L087, S8]         """Verify Keyword creation and linkage to Article."""
+[L088, S8]         article = Article(
+[L089, S12]             doi="10.1000/keyword-test",
+[L090, S12]             title="Transformer Architectures",
+[L091, S12]             journal="arXiv",
+[L092, S8]         )
+[L093, S8]         keyword = Keyword(
+[L094, S12]             name="deep learning",
+[L095, S12]             type="author",
+[L096, S8]         )
+[L097, S8]         self.session.add_all([article, keyword])
+[L098, S8]         self.session.commit()
+[L099, S0] 
+[L100, S8]         link = KeywordArticle(
+[L101, S12]             keyword_id=keyword.id,
+[L102, S12]             article_id=article.id,
+[L103, S8]         )
+[L104, S8]         self.session.add(link)
+[L105, S8]         self.session.commit()
+[L106, S0] 
+[L107, S8]         queried = (
+[L108, S12]             self.session.query(Article)
+[L109, S12]             .filter_by(doi="10.1000/keyword-test")
+[L110, S12]             .one()
+[L111, S8]         )
+[L112, S8]         self.assertGreater(len(queried.keywords), 0)
+[L113, S8]         self.assertEqual(queried.keywords[0].name, "deep learning")
+[L114, S8]         self.assertEqual(queried.keywords[0].type, "author")
+[L115, S8]         self.assertEqual(len(keyword.articles), 1)
+[L116, S8]         self.assertEqual(
+[L117, S12]             keyword.articles[0].title, "Transformer Architectures"
+[L118, S8]         )
+[L119, S0] 
+[L120, S4]     def test_semantic_comments_present_on_all_identity_columns(self) -> None:
+[L121, S8]         """Enforce Semantic Primacy: every column must contain a comment."""
+[L122, S8]         models = [
+[L123, S12]             Affiliation,
+[L124, S12]             Author,
+[L125, S12]             AuthorArticle,
+[L126, S12]             Keyword,
+[L127, S12]             KeywordArticle,
+[L128, S8]         ]
+[L129, S8]         for model in models:
+[L130, S12]             for col in model.__table__.columns:
+[L131, S16]                 self.assertIsNotNone(
+[L132, S20]                     col.comment,
+[L133, S20]                     f"Column '{col.name}' in '{model.__tablename__}' lacks comment",
+[L134, S16]                 )
+[L135, S16]                 self.assertTrue(
+[L136, S20]                     len(col.comment.strip()) > 0,
+[L137, S20]                     f"Comment on '{col.name}' in '{model.__tablename__}' is empty",
+[L138, S16]                 )

@@ -95,7 +95,6 @@ class TestCoreModels(unittest.TestCase):
             abstract="A novel approach to metadata.",
             publisher="Tech Press",
             language="English",
-            keywords="metadata; bibliography; parsing",
             research_areas="Computer Science",
             web_of_science_categories="Computer Science, Information Systems",
             funding_text="Supported by AI Grant 2026",

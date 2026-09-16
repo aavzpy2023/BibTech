@@ -136,11 +136,6 @@ class Article(Base):
         nullable=True,
         comment="Primary language of the publication",
     )
-    keywords = Column(
-        Text,
-        nullable=True,
-        comment="Raw keywords string extracted from bib data",
-    )
     research_areas = Column(
         Text,
         nullable=True,
@@ -227,9 +222,10 @@ class Article(Base):
         back_populates="article",
         cascade="all, delete-orphan",
     )
-    keyword_entities = relationship(
+    keywords = relationship(
         "Keyword",
         secondary="keyword_articles",
+        back_populates="articles",
         viewonly=True,
     )
     references = relationship(
