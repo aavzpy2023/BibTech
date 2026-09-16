@@ -64,6 +64,8 @@
 │   │   │   │   │   ├── OverviewLeftColumn.test.jsx
 │   │   │   │   │   ├── OverviewRightColumn.jsx
 │   │   │   │   │   ├── OverviewRightColumn.test.jsx
+│   │   │   │   │   ├── ReferenceDrawer.jsx
+│   │   │   │   │   ├── ReferenceDrawer.test.jsx
 │   │   │   │   │   ├── ReferenceHeroBlock.jsx
 │   │   │   │   │   ├── ReferenceHeroBlock.test.jsx
 │   │   │   │   │   ├── ReferencesDataTable.jsx

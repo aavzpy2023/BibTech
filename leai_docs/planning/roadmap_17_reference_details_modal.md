@@ -74,7 +74,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.6.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-051]]. Type: Task.
   > Files touched: ReferenceDrawer.jsx, ReferenceDrawer.test.jsx
 
-- [ ] Story 17.7: State Fractality Enforcement (useReferenceDetails Hook) | [MoSCoW: MUST] | [Complexity: HARD]
+- [x] Story 17.7: State Fractality Enforcement (useReferenceDetails Hook) | [MoSCoW: MUST] | [Complexity: HARD]
   Business Requirement: Centralize and isolate ALL UI logic, formatting, tab switching, and Drawer/Tooltip visibility into a custom hook. Zero markup allowed here.
   Story Context Radius: {"frontend/src/hooks/useReferenceDetails.js": [""], "frontend/src/hooks/useReferenceDetails.test.js": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
@@ -82,6 +82,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.7.1] [TESTING/TDE]: [1. Arrange: Render useReferenceDetails.test.js via @testing-library/react-hooks with a mock DB article object. 2. Act: Call setActiveTab('Metadata') and openDrawer('authors', data). 3. Assert: Expect result.current.activeTab to equal 'Metadata' and result.current.drawerState.isOpen to be true with corresponding payload]. Type: Task.
   [ID-17.7.2] [FRONTEND/HOOK]: [1. Create frontend/src/hooks/useReferenceDetails.js. 2. Define standard useState hooks for activeTab (default 'Overview'), drawerState (default hidden), and hoverInfo. 3. Export these states alongside curried dispatcher functions (handleCopy, handleExpandDrawer, handleTabChange)]. Type: Task.
   [ID-17.7.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-051]]. Type: Task.
+  > Files touched: useReferenceDetails.js, useReferenceDetails.test.js
 
 - [ ] Story 17.8: Assembler, DI Wiring & DataTable Integration | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Wire the Dumb Views (17.2-17.6) and the State Hook (17.7) into ReferenceDetailsModal.jsx, and inject it securely into ReferencesDataTable.jsx.
