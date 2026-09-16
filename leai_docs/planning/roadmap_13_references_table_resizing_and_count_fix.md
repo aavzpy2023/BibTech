@@ -21,8 +21,9 @@ Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-13.1.3] [FRONTEND/VIEW]: [1. Open UploadReferencesModal.jsx. 2. Extract parsedCount from the hook props. 3. Update the isSuccess UI block to display both counts: "Parsed X references from file. Inserted Y new references into project."]. Type: Task.
 [ID-13.1.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_13_references_table_resizing_and_count_fix.md and check - [x] for Story 13.1. 2. Append > Files touched: useReferencesUpload.js, UploadReferencesModal.jsx under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-040]]. Type: Task.
 
-- [ ] Story 13.2: Resizable Table Columns - State Fractality (Custom Hook) | [MoSCoW: MUST] | [Complexity: MEDIUM]
-Story Context Radius: {"frontend/src/hooks/useTableResize.js": [""], "frontend/src/hooks/useTableResize.test.js": [""], "leai_docs/planning/roadmap_13_references_table_resizing_and_count_fix.md": [""], "leai_docs/planning/global_backlog.md": [""]}
+- [x] Story 13.2: Resizable Table Columns - State Fractality (Custom Hook) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+> Files touched: useTableResize.js, useTableResize.test.js
+Story Context Radius:
 Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-13.2.1] [TESTING/TDE]: [1. Arrange: Render useTableResize hook with initial widths. 2. Act: Simulate handleMouseDown on a column, then dispatch mousemove on the window with a positive X delta, then mouseup. 3. Assert: Verify the target column's width state has increased and respects minimum width constraints]. Type: Task.
 [ID-13.2.2] [FRONTEND/STATE]: [1. Create useTableResize.js. 2. Implement state colWidths (defaulting to { title: 45, author: 20, year: 10, journal: 25 }) and isResizing (tracking active column and start X). 3. Implement handleMouseDown(e, colName), handleMouseMove(e), and handleMouseUp(). 4. Attach/detach mousemove and mouseup to window via useEffect when isResizing is active. 5. Return { colWidths, handleMouseDown }]. Type: Task.
