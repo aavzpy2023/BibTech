@@ -66,11 +66,13 @@
 │   │   │   │   │   ├── OverviewLeftColumn.test.jsx
 │   │   │   │   │   ├── OverviewRightColumn.jsx
 │   │   │   │   │   ├── OverviewRightColumn.test.jsx
+│   │   │   │   │   ├── ReferenceDetailsModal.jsx
 │   │   │   │   │   ├── ReferenceDrawer.jsx
 │   │   │   │   │   ├── ReferenceDrawer.test.jsx
 │   │   │   │   │   ├── ReferenceHeroBlock.jsx
 │   │   │   │   │   ├── ReferenceHeroBlock.test.jsx
 │   │   │   │   │   ├── ReferencesDataTable.jsx
+│   │   │   │   │   ├── ReferencesDataTable.test.jsx
 │   │   │   │   │   ├── UploadReferencesModal.jsx
 │   ├── backend/
 │   │   ├── Dockerfile

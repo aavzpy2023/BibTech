@@ -86,7 +86,6 @@ const styles = {
     marginBottom: '24px'
   },
   dropzone: {
-    border: '2px dashed #0366d6',
     borderRadius: '8px',
     padding: '24px',
     textAlign: 'center',
