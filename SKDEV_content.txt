@@ -1,369 +1,198 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 11:15:28
+Date: 2026-09-16 11:30:52
 AST Mode: False
 Line Numbers: True
-Modules: injection_service.py, test_injection.py
-Processed Files: 2
+Modules: 004_add_tracking_models.py
+Processed Files: 1
 ===========================
 
 
 
-// --- backend/src/bibliography/injection_service.py ---
+// --- backend/alembic/versions/004_add_tracking_models.py ---
 
-[L001, S0] """Service for persisting bibliographic references into the database."""
-[L002, S0] import re
-[L003, S0] from typing import List, Optional
-[L004, S0] from sqlalchemy.orm import Session
-[L005, S0] from sqlalchemy.exc import OperationalError
+[L001, S0] """Add tracking models
+[L002, S0] 
+[L003, S0] Revision ID: 004_add_tracking_models
+[L004, S0] Revises: 003_add_keywords
+[L005, S0] Create Date: 2026-09-14 20:30:00.000000
 [L006, S0] 
-[L007, S0] try:
-[L008, S4]     from .schemas import ParsedReference
-[L009, S4]     from ..database.models.core import Article, Project, ProjectArticle
-[L010, S4]     from ..database.models.identity import Author, AuthorArticle
-[L011, S0] except (ImportError, ValueError):
-[L012, S4]     from backend.src.bibliography.schemas import ParsedReference
-[L013, S4]     from backend.src.database.models.core import (
-[L014, S8]         Article,
-[L015, S8]         Project,
-[L016, S8]         ProjectArticle,
-[L017, S4]     )
-[L018, S4]     from backend.src.database.models.identity import (
-[L019, S8]         Author,
-[L020, S8]         AuthorArticle,
-[L021, S4]     )
-[L022, S4]     from backend.src.bibliography.schemas import ParsedReference
-[L023, S4]     from backend.src.database.models.core import (
-[L024, S8]         Article,
-[L025, S8]         Project,
-[L026, S8]         ProjectArticle,
-[L027, S4]     )
-[L028, S0] 
-[L029, S0] 
-[L030, S0] def inject_references_to_db(
-[L031, S4]     db: Session, refs: List[ParsedReference], project_code: str
-[L032, S0] ) -> int:
-[L033, S4]     try:
-[L034, S8]         return _inject_references_inner(db, refs, project_code)
-[L035, S4]     except OperationalError:
-[L036, S8]         raise RuntimeError("Database connection failed")
-[L037, S0] 
-[L038, S0] 
-[L039, S0] def _inject_references_inner(
-[L040, S4]     db: Session, refs: List[ParsedReference], project_code: str
-[L041, S0] ) -> int:
-[L042, S4]     """Persist parsed references and associate them with a project."""
-[L043, S4]     project = db.query(Project).filter(Project.name == project_code).first()
-[L044, S4]     if not project:
-[L045, S8]         project = Project(name=project_code)
-[L046, S8]         db.add(project)
-[L047, S8]         db.flush()
-[L048, S0] 
-[L049, S4]     linked_article_ids = set()
-[L050, S4]     seen_proj_links = set()
-[L051, S4]     seen_auth_links = set()
-[L052, S0] 
-[L053, S4]     for ref in refs:
-[L054, S8]         year_val: Optional[int] = None
-[L055, S8]         if ref.year:
-[L056, S12]             try:
-[L057, S16]                 year_val = int(float(str(ref.year).strip()))
-[L058, S12]             except (ValueError, TypeError):
-[L059, S16]                 year_val = None
-[L060, S0] 
-[L061, S8]         doi_val = getattr(ref, "doi", None)
-[L062, S8]         article = None
-[L063, S8]         
-[L064, S8]         if doi_val:
-[L065, S12]             article = db.query(Article).filter(Article.doi == doi_val).first()
-[L066, S8]         if not article:
-[L067, S12]             title_val = ref.title or "Untitled"
-[L068, S12]             article = db.query(Article).filter(Article.title == title_val).first()
-[L069, S12]             
-[L070, S8]         if not article:
-[L071, S12]             article = Article(
-[L072, S16]                 title=ref.title or "Untitled",
-[L073, S16]                 journal=ref.journal,
-[L074, S16]                 year=year_val,
-[L075, S16]                 doi=doi_val,
-[L076, S12]             )
-[L077, S12]             db.add(article)
-[L078, S12]             db.flush()
-[L079, S0] 
-[L080, S8]         link = None
-[L081, S8]         if (project.id, article.id) not in seen_proj_links:
-[L082, S12]             link = db.query(ProjectArticle).filter(
-[L083, S16]                 ProjectArticle.project_id == project.id,
-[L084, S16]                 ProjectArticle.article_id == article.id
-[L085, S12]             ).first()
-[L086, S8]         
-[L087, S8]         if not link and (project.id, article.id) not in seen_proj_links:
-[L088, S12]             db.add(ProjectArticle(project_id=project.id, article_id=article.id))
-[L089, S12]             db.flush()
-[L090, S8]         seen_proj_links.add((project.id, article.id))
-[L091, S0] 
-[L092, S8]         linked_article_ids.add(article.id)
-[L093, S0] 
-[L094, S8]         if ref.author:
-[L095, S12]             if not getattr(article, "raw_data", None):
-[L096, S16]                 article.raw_data = str(ref.author)
-[L097, S12]             auth_list = [
-[L098, S16]                 a.strip()
-[L099, S16]                 for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
-[L100, S16]                 if a.strip()
-[L101, S12]             ]
-[L102, S12]             for idx, a_name in enumerate(auth_list):
-[L103, S16]                 c_name = a_name[:255]
-[L104, S16]                 auth_obj = (
-[L105, S20]                     db.query(Author).filter(Author.name == c_name).first()
-[L106, S16]                 )
-[L107, S16]                 if not auth_obj:
-[L108, S20]                     auth_obj = Author(name=c_name)
-[L109, S20]                     db.add(auth_obj)
-[L110, S20]                     db.flush()
-[L111, S16]                 a_link = None
-[L112, S16]                 if (auth_obj.id, article.id) not in seen_auth_links:
-[L113, S20]                     a_link = (
-[L114, S24]                         db.query(AuthorArticle)
-[L115, S24]                         .filter(
-[L116, S28]                             AuthorArticle.author_id == auth_obj.id,
-[L117, S28]                             AuthorArticle.article_id == article.id,
-[L118, S24]                         )
-[L119, S24]                         .first()
-[L120, S20]                     )
-[L121, S16]                 if not a_link and (auth_obj.id, article.id) not in seen_auth_links:
-[L122, S20]                     db.add(
-[L123, S24]                         AuthorArticle(
-[L124, S28]                             author_id=auth_obj.id,
-[L125, S28]                             article_id=article.id,
-[L126, S28]                             author_order=idx + 1,
-[L127, S24]                         )
-[L128, S20]                     )
-[L129, S20]                     db.flush()
-[L130, S16]                 seen_auth_links.add((auth_obj.id, article.id))
-[L131, S0] 
-[L132, S4]     db.commit()
-[L133, S4]     return len(linked_article_ids)
-
-
-// --- backend/tests/bibliography/test_injection.py ---
-
-[L001, S0] """Unit tests for bibliography injection repository and service."""
-[L002, S0] import sys
-[L003, S0] from datetime import datetime, timezone
-[L004, S0] from pathlib import Path
-[L005, S0] import pytest
-[L006, S0] from sqlalchemy import create_engine
-[L007, S0] from sqlalchemy.orm import sessionmaker
-[L008, S0] 
-[L009, S0] _root = Path(__file__).resolve().parents[3]
-[L010, S0] if str(_root) not in sys.path:
-[L011, S4]     sys.path.insert(0, str(_root))
+[L007, S0] """
+[L008, S0] from typing import Sequence, Union
+[L009, S0] 
+[L010, S0] from alembic import op
+[L011, S0] import sqlalchemy as sa
 [L012, S0] 
-[L013, S0] try:
-[L014, S4]     from src.bibliography.injection_service import inject_references_to_db
-[L015, S4]     from src.bibliography.schemas import ParsedReference
-[L016, S4]     from src.database.models import core, identity, tracking
-[L017, S4]     from src.database.models.core import Article, Project, ProjectArticle
-[L018, S4]     from src.database.session import Base
-[L019, S0] except ImportError:
-[L020, S4]     from backend.src.bibliography.injection_service import (
-[L021, S8]         inject_references_to_db,
-[L022, S4]     )
-[L023, S4]     from backend.src.bibliography.schemas import ParsedReference
-[L024, S4]     from backend.src.database.models import core, identity, tracking
-[L025, S4]     from backend.src.database.models.core import (
-[L026, S8]         Article,
-[L027, S8]         Project,
-[L028, S8]         ProjectArticle,
-[L029, S4]     )
-[L030, S4]     from backend.src.database.session import Base
-[L031, S0] 
-[L032, S0] 
-[L033, S0] @pytest.fixture
-[L034, S0] def in_memory_db():
-[L035, S4]     engine = create_engine("sqlite:///:memory:")
-[L036, S4]     Base.metadata.create_all(bind=engine)
-[L037, S4]     session_factory = sessionmaker(
-[L038, S8]         autocommit=False, autoflush=False, bind=engine
-[L039, S4]     )
-[L040, S4]     session = session_factory()
-[L041, S4]     try:
-[L042, S8]         yield session
-[L043, S4]     finally:
-[L044, S8]         session.close()
-[L045, S0] 
-[L046, S0] 
-[L047, S0] def test_inject_references_to_db_success(in_memory_db):
-[L048, S4]     now = datetime.now(timezone.utc)
-[L049, S4]     mock_refs = [
-[L050, S8]         ParsedReference(
-[L051, S12]             title="Deep Residual Learning for Image Recognition",
-[L052, S12]             author="He, K. and Zhang, X.",
-[L053, S12]             year="2016",
-[L054, S12]             journal="CVPR",
-[L055, S12]             upload_datetime=now,
-[L056, S8]         ),
-[L057, S8]         ParsedReference(
-[L058, S12]             title="Attention Is All You Need",
-[L059, S12]             author="Vaswani, A. and Shazeer, N.",
-[L060, S12]             year="2017",
-[L061, S12]             journal="NeurIPS",
-[L062, S12]             upload_datetime=now,
-[L063, S8]         ),
-[L064, S4]     ]
-[L065, S0] 
-[L066, S4]     inserted = inject_references_to_db(in_memory_db, mock_refs, "TEST-PROJ")
-[L067, S0] 
-[L068, S4]     assert inserted == 2
-[L069, S4]     proj = (
-[L070, S8]         in_memory_db.query(Project)
-[L071, S8]         .filter(Project.name == "TEST-PROJ")
-[L072, S8]         .first()
-[L073, S4]     )
-[L074, S4]     assert proj is not None
-[L075, S4]     assert proj.name == "TEST-PROJ"
-[L076, S0] 
-[L077, S4]     articles = in_memory_db.query(Article).all()
-[L078, S4]     assert len(articles) == 2
-[L079, S4]     titles = [a.title for a in articles]
-[L080, S4]     assert "Deep Residual Learning for Image Recognition" in titles
-[L081, S4]     assert "Attention Is All You Need" in titles
-[L082, S0] 
-[L083, S4]     links = in_memory_db.query(ProjectArticle).all()
-[L084, S4]     assert len(links) == 2
-[L085, S4]     for link in links:
-[L086, S8]         assert link.project_id == proj.id
-[L087, S0] 
-[L088, S0] 
-[L089, S0] def test_inject_references_reuses_existing_project(in_memory_db):
-[L090, S4]     now = datetime.now(timezone.utc)
-[L091, S4]     ref_batch_1 = [
-[L092, S8]         ParsedReference(
-[L093, S12]             title="Paper One",
-[L094, S12]             author="Author One",
-[L095, S12]             year="2020",
-[L096, S12]             journal="Journal A",
-[L097, S12]             upload_datetime=now,
-[L098, S8]         )
-[L099, S4]     ]
-[L100, S4]     ref_batch_2 = [
-[L101, S8]         ParsedReference(
-[L102, S12]             title="Paper Two",
-[L103, S12]             author="Author Two",
-[L104, S12]             year="2021",
-[L105, S12]             journal="Journal B",
-[L106, S12]             upload_datetime=now,
-[L107, S8]         )
-[L108, S4]     ]
-[L109, S0] 
-[L110, S4]     count1 = inject_references_to_db(in_memory_db, ref_batch_1, "REUSE-PROJ")
-[L111, S4]     count2 = inject_references_to_db(in_memory_db, ref_batch_2, "REUSE-PROJ")
-[L112, S0] 
-[L113, S4]     assert count1 == 1
-[L114, S4]     assert count2 == 1
-[L115, S4]     projects = (
-[L116, S8]         in_memory_db.query(Project)
-[L117, S8]         .filter(Project.name == "REUSE-PROJ")
-[L118, S8]         .all()
+[L013, S0] # revision identifiers, used by Alembic.
+[L014, S0] revision: str = "004_add_tracking_models"
+[L015, S0] down_revision: Union[str, None] = "003_add_keywords"
+[L016, S0] branch_labels: Union[str, Sequence[str], None] = None
+[L017, S0] depends_on: Union[str, Sequence[str], None] = None
+[L018, S0] 
+[L019, S0] 
+[L020, S0] def upgrade() -> None:
+[L021, S4]     op.create_table(
+[L022, S8]         "references",
+[L023, S8]         sa.Column(
+[L024, S12]             "id",
+[L025, S12]             sa.Integer(),
+[L026, S12]             autoincrement=True,
+[L027, S12]             nullable=False,
+[L028, S12]             comment="Primary key identifier for reference",
+[L029, S8]         ),
+[L030, S8]         sa.Column(
+[L031, S12]             "article_id",
+[L032, S12]             sa.Integer(),
+[L033, S12]             nullable=False,
+[L034, S12]             comment="Foreign key linking to the referencing article",
+[L035, S8]         ),
+[L036, S8]         sa.Column(
+[L037, S12]             "raw_citation",
+[L038, S12]             sa.Text(),
+[L039, S12]             nullable=False,
+[L040, S12]             comment=(
+[L041, S16]                 "Full text or formatted citation string of the reference"
+[L042, S12]             ),
+[L043, S8]         ),
+[L044, S8]         sa.Column(
+[L045, S12]             "doi",
+[L046, S12]             sa.String(length=255),
+[L047, S12]             nullable=True,
+[L048, S12]             comment="Extracted or resolved DOI for cited reference",
+[L049, S8]         ),
+[L050, S8]         sa.Column(
+[L051, S12]             "title",
+[L052, S12]             sa.Text(),
+[L053, S12]             nullable=True,
+[L054, S12]             comment="Title of the cited reference",
+[L055, S8]         ),
+[L056, S8]         sa.Column(
+[L057, S12]             "year",
+[L058, S12]             sa.Integer(),
+[L059, S12]             nullable=True,
+[L060, S12]             comment="Publication year of the cited reference",
+[L061, S8]         ),
+[L062, S8]         sa.Column(
+[L063, S12]             "created_at",
+[L064, S12]             sa.DateTime(),
+[L065, S12]             nullable=False,
+[L066, S12]             comment="UTC timestamp when reference was extracted",
+[L067, S8]         ),
+[L068, S8]         sa.ForeignKeyConstraint(
+[L069, S12]             ["article_id"], ["articles.id"], ondelete="CASCADE"
+[L070, S8]         ),
+[L071, S8]         sa.PrimaryKeyConstraint("id"),
+[L072, S4]     )
+[L073, S4]     op.create_index(
+[L074, S8]         op.f("ix_references_doi"), "references", ["doi"], unique=False
+[L075, S4]     )
+[L076, S4]     op.create_table(
+[L077, S8]         "funding",
+[L078, S8]         sa.Column(
+[L079, S12]             "id",
+[L080, S12]             sa.Integer(),
+[L081, S12]             autoincrement=True,
+[L082, S12]             nullable=False,
+[L083, S12]             comment="Primary key identifier for funding record",
+[L084, S8]         ),
+[L085, S8]         sa.Column(
+[L086, S12]             "article_id",
+[L087, S12]             sa.Integer(),
+[L088, S12]             nullable=False,
+[L089, S12]             comment="Foreign key linking to funded article",
+[L090, S8]         ),
+[L091, S8]         sa.Column(
+[L092, S12]             "agency",
+[L093, S12]             sa.String(length=255),
+[L094, S12]             nullable=False,
+[L095, S12]             comment="Name of funding agency or institution",
+[L096, S8]         ),
+[L097, S8]         sa.Column(
+[L098, S12]             "grant_number",
+[L099, S12]             sa.String(length=100),
+[L100, S12]             nullable=True,
+[L101, S12]             comment="Specific grant or award identification number",
+[L102, S8]         ),
+[L103, S8]         sa.Column(
+[L104, S12]             "country",
+[L105, S12]             sa.String(length=100),
+[L106, S12]             nullable=True,
+[L107, S12]             comment="Country of funding organization",
+[L108, S8]         ),
+[L109, S8]         sa.Column(
+[L110, S12]             "created_at",
+[L111, S12]             sa.DateTime(),
+[L112, S12]             nullable=False,
+[L113, S12]             comment="UTC timestamp when funding record was created",
+[L114, S8]         ),
+[L115, S8]         sa.ForeignKeyConstraint(
+[L116, S12]             ["article_id"], ["articles.id"], ondelete="CASCADE"
+[L117, S8]         ),
+[L118, S8]         sa.PrimaryKeyConstraint("id"),
 [L119, S4]     )
-[L120, S4]     assert len(projects) == 1
-[L121, S0] 
-[L122, S4]     links = in_memory_db.query(ProjectArticle).all()
-[L123, S4]     assert len(links) == 2
-[L124, S0] 
-[L125, S0] 
-[L126, S0] def test_inject_references_with_optional_and_invalid_fields(in_memory_db):
-[L127, S4]     now = datetime.now(timezone.utc)
-[L128, S4]     refs = [
-[L129, S8]         ParsedReference(
-[L130, S12]             title="Missing Year Paper",
-[L131, S12]             author=None,
-[L132, S12]             year=None,
-[L133, S12]             journal=None,
-[L134, S12]             upload_datetime=now,
-[L135, S8]         ),
-[L136, S8]         ParsedReference(
-[L137, S12]             title="String Year Paper",
-[L138, S12]             author="Author",
-[L139, S12]             year="invalid_year",
-[L140, S12]             journal="Journal C",
-[L141, S12]             upload_datetime=now,
-[L142, S8]         ),
-[L143, S4]     ]
-[L144, S0] 
-[L145, S4]     inserted = inject_references_to_db(in_memory_db, refs, "OPT-PROJ")
-[L146, S4]     assert inserted == 2
-[L147, S0] 
-[L148, S4]     article_none = (
-[L149, S8]         in_memory_db.query(Article)
-[L150, S8]         .filter(Article.title == "Missing Year Paper")
-[L151, S8]         .first()
-[L152, S4]     )
-[L153, S4]     assert article_none is not None
-[L154, S4]     assert article_none.year is None
-[L155, S0] 
-[L156, S4]     article_inv = (
-[L157, S8]         in_memory_db.query(Article)
-[L158, S8]         .filter(Article.title == "String Year Paper")
-[L159, S8]         .first()
-[L160, S4]     )
-[L161, S4]     assert article_inv is not None
-[L162, S4]     assert article_inv.year is None
-[L163, S0] 
-[L164, S0] 
-[L165, S0] def test_inject_references_empty_list(in_memory_db):
-[L166, S4]     inserted = inject_references_to_db(in_memory_db, [], "EMPTY-PROJ")
-[L167, S4]     assert inserted == 0
-[L168, S4]     proj = (
-[L169, S8]         in_memory_db.query(Project)
-[L170, S8]         .filter(Project.name == "EMPTY-PROJ")
-[L171, S8]         .first()
-[L172, S4]     )
-[L173, S4]     assert proj is not None
-[L174, S0] 
-[L175, S0] 
-[L176, S0] def test_models_and_router_imports_resolve_without_src_package():
-[L177, S4]     import importlib
-[L178, S4]     models_pkg = importlib.import_module("backend.src.database.models")
-[L179, S4]     assert hasattr(models_pkg, "Article")
-[L180, S4]     assert hasattr(models_pkg, "Project")
-[L181, S4]     assert hasattr(models_pkg, "ProjectArticle")
-[L182, S0] 
-[L183, S0] 
-[L184, S0] def test_inject_references_db_operational_error():
-[L185, S4]     from sqlalchemy.exc import OperationalError
-[L186, S4]     from unittest.mock import MagicMock
-[L187, S0] 
-[L188, S4]     now = datetime.now(timezone.utc)
-[L189, S4]     mock_refs = [ParsedReference(title="Test", upload_datetime=now)]
-[L190, S4]     
-[L191, S4]     mock_db = MagicMock()
-[L192, S4]     mock_db.query.side_effect = OperationalError("mock", "mock", "mock")
-[L193, S4]     
-[L194, S4]     with pytest.raises(RuntimeError, match="Database connection failed"):
-[L195, S8]         inject_references_to_db(mock_db, mock_refs, "ERR-PROJ")
-[L196, S0] 
-[L197, S0] 
-[L198, S0] def test_inject_references_deduplicates_within_batch(in_memory_db):
-[L199, S4]     now = datetime.now(timezone.utc)
-[L200, S4]     dup_refs = [
-[L201, S8]         ParsedReference(
-[L202, S12]             title="Duplicate Paper",
-[L203, S12]             doi="10.1000/dup",
-[L204, S12]             upload_datetime=now,
-[L205, S8]         ),
-[L206, S8]         ParsedReference(
-[L207, S12]             title="Duplicate Paper",
-[L208, S12]             doi="10.1000/dup",
-[L209, S12]             upload_datetime=now,
-[L210, S8]         ),
-[L211, S4]     ]
-[L212, S4]     inserted = inject_references_to_db(in_memory_db, dup_refs, "DUP-PROJ")
-[L213, S4]     assert inserted == 1
-[L214, S4]     articles = (
-[L215, S8]         in_memory_db.query(Article)
-[L216, S8]         .filter(Article.doi == "10.1000/dup")
-[L217, S8]         .all()
-[L218, S4]     )
-[L219, S4]     assert len(articles) == 1
+[L120, S4]     op.create_table(
+[L121, S8]         "downloads",
+[L122, S8]         sa.Column(
+[L123, S12]             "id",
+[L124, S12]             sa.Integer(),
+[L125, S12]             autoincrement=True,
+[L126, S12]             nullable=False,
+[L127, S12]             comment="Primary key identifier for download record",
+[L128, S8]         ),
+[L129, S8]         sa.Column(
+[L130, S12]             "article_id",
+[L131, S12]             sa.Integer(),
+[L132, S12]             nullable=False,
+[L133, S12]             comment="Foreign key linking to downloaded article",
+[L134, S8]         ),
+[L135, S8]         sa.Column(
+[L136, S12]             "project_id",
+[L137, S12]             sa.Integer(),
+[L138, S12]             nullable=False,
+[L139, S12]             comment="Foreign key linking to parent project",
+[L140, S8]         ),
+[L141, S8]         sa.Column(
+[L142, S12]             "source",
+[L143, S12]             sa.String(length=100),
+[L144, S12]             nullable=False,
+[L145, S12]             comment="Download source or resolver (e.g. unpaywall, openalex)",
+[L146, S8]         ),
+[L147, S8]         sa.Column(
+[L148, S12]             "file_path",
+[L149, S12]             sa.String(length=500),
+[L150, S12]             nullable=True,
+[L151, S12]             comment="Local or cloud storage path of downloaded PDF",
+[L152, S8]         ),
+[L153, S8]         sa.Column(
+[L154, S12]             "file_size_bytes",
+[L155, S12]             sa.Integer(),
+[L156, S12]             nullable=True,
+[L157, S12]             comment="Size of downloaded file in bytes",
+[L158, S8]         ),
+[L159, S8]         sa.Column(
+[L160, S12]             "status",
+[L161, S12]             sa.String(length=50),
+[L162, S12]             nullable=False,
+[L163, S12]             comment="Download status (e.g. completed, failed, in_progress)",
+[L164, S8]         ),
+[L165, S8]         sa.Column(
+[L166, S12]             "downloaded_at",
+[L167, S12]             sa.DateTime(),
+[L168, S12]             nullable=False,
+[L169, S12]             comment="UTC timestamp when download occurred",
+[L170, S8]         ),
+[L171, S8]         sa.ForeignKeyConstraint(
+[L172, S12]             ["article_id"], ["articles.id"], ondelete="CASCADE"
+[L173, S8]         ),
+[L174, S8]         sa.ForeignKeyConstraint(
+[L175, S12]             ["project_id"], ["projects.id"], ondelete="CASCADE"
+[L176, S8]         ),
+[L177, S8]         sa.PrimaryKeyConstraint("id"),
+[L178, S4]     )
+[L179, S0] 
+[L180, S0] 
+[L181, S0] def downgrade() -> None:
+[L182, S4]     op.drop_table("downloads")
+[L183, S4]     op.drop_table("funding")
+[L184, S4]     op.drop_index(op.f("ix_references_doi"), table_name="references")
+[L185, S4]     op.drop_table("references")
