@@ -4,7 +4,7 @@ import { useTableResize } from '../../hooks/useTableResize';
 import { useHoverReveal } from '../../hooks/useHoverReveal';
 import { MetadataGrid } from './MetadataGrid';
 import { HoverPopover } from './HoverPopover';
-import Modal from '../Modal';
+import ReferenceDetailsModal from './ReferenceDetailsModal';
 
 function getDoiUrl(doi) {
   if (!doi) return '';
@@ -276,24 +276,11 @@ export function ReferencesDataTable({ data = [] }) {
         </div>
       )}
 
-      <Modal
+      <ReferenceDetailsModal
         isOpen={isDetailsOpen && !!selectedRow}
         onClose={() => setIsDetailsOpen(false)}
-        title="Reference Details & DB Audit"
-        maxWidth="680px"
-      >
-        {selectedRow && (
-          <>
-            <MetadataGrid
-              data={selectedRow}
-              onHover={onMouseEnter}
-              onMove={onMouseMove}
-              onLeave={onMouseLeave}
-            />
-            <HoverPopover info={hoverInfo} />
-          </>
-        )}
-      </Modal>
+        article={selectedRow}
+      />
     </div>
   );
 }

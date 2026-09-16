@@ -84,7 +84,7 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.7.3] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Sync global backlog for [REQ-051]]. Type: Task.
   > Files touched: useReferenceDetails.js, useReferenceDetails.test.js
 
-- [ ] Story 17.8: Assembler, DI Wiring & DataTable Integration | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 17.8: Assembler, DI Wiring & DataTable Integration | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Wire the Dumb Views (17.2-17.6) and the State Hook (17.7) into ReferenceDetailsModal.jsx, and inject it securely into ReferencesDataTable.jsx.
   Story Context Radius: {"frontend/src/components/references/ReferenceDetailsModal.jsx": [""], "frontend/src/components/references/ReferencesDataTable.jsx": [""], "frontend/src/components/references/ReferencesDataTable.test.jsx": [""], "context.md": [""], "leai_docs/planning/roadmap_17_reference_details_modal.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
@@ -93,3 +93,4 @@ EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE | [ISOLATED 
   [ID-17.8.2] [FRONTEND/WIRING]: [1. Create ReferenceDetailsModal.jsx. Invoke useReferenceDetails(). Pass the exact destructured states and callbacks to the child dumb components (ModalTemplate, ReferenceHeroBlock, OverviewLeftColumn, OverviewRightColumn, MetricsFooterCards, ReferenceDrawer). 2. Add Tab navigation markup bound strictly to the hook's active state. 3. Open ReferencesDataTable.jsx, delete the legacy inline modal code, and explicitly mount <ReferenceDetailsModal /> passing necessary open/close triggers]. Type: Task.
   [ID-17.8.3] [DOCUMENTATION/SYNC]: [1. Open context.md at root. 2. Document the strict Dumb View vs State Hook architecture applied to the Reference Details module]. Type: Task.
   [ID-17.8.4] [PLANNING/SYNC]: [1. Sync - [x] in roadmap. 2. Append touched files. 3. Open leai_docs/planning/global_backlog.md and verify all [REQ-047] to [REQ-051] are marked - [x]]. Type: Task.
+  > Files touched: ReferenceDetailsModal.jsx, ReferencesDataTable.jsx, ReferencesDataTable.test.jsx, context.md

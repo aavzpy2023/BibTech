@@ -35,6 +35,8 @@
 │   │   │   │   ├── useHoverReveal.test.js
 │   │   │   │   ├── useQueueState.js
 │   │   │   │   ├── useQueueState.test.js
+│   │   │   │   ├── useReferenceDetails.js
+│   │   │   │   ├── useReferenceDetails.test.js
 │   │   │   │   ├── useReferencesTable.js
 │   │   │   │   ├── useReferencesTable.test.js
 │   │   │   │   ├── useReferencesUpload.js

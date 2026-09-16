@@ -13,6 +13,9 @@
 - **Core Entities**:
   - `ParsedReference`: Author, Year, Title, Journal, and Upload Datetime.
 - **Key Modules**:
+  - `frontend/src/components/common/ModalTemplate.jsx`: Reusable base modal dumb view.
+  - `frontend/src/hooks/useReferenceDetails.js`: Centralized hook enforcing State Fractality for modal views.
+  - `frontend/src/components/references/ReferenceDetailsModal.jsx`: Assembler component wiring dumb views and state hook.
   - `backend/src/bibliography/parser_service.py`: Pure parsing core using
     `rispy` and `bibtexparser`. Zero I/O coupling.
   - `backend/src/bibliography/router.py`: FastAPI boundary exposing
