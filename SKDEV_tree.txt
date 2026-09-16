@@ -59,8 +59,11 @@
 │   │   │   │   ├── references/
 │   │   │   │   │   ├── HoverPopover.jsx
 │   │   │   │   │   ├── MetadataGrid.jsx
+│   │   │   │   │   ├── MetricsFooterCards.jsx
 │   │   │   │   │   ├── OverviewLeftColumn.jsx
 │   │   │   │   │   ├── OverviewLeftColumn.test.jsx
+│   │   │   │   │   ├── OverviewRightColumn.jsx
+│   │   │   │   │   ├── OverviewRightColumn.test.jsx
 │   │   │   │   │   ├── ReferenceHeroBlock.jsx
 │   │   │   │   │   ├── ReferenceHeroBlock.test.jsx
 │   │   │   │   │   ├── ReferencesDataTable.jsx
