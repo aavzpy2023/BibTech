@@ -1,325 +1,12 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-16 10:24:47
+Date: 2026-09-16 10:30:56
 AST Mode: True
 Line Numbers: False
-Modules: global_backlog.md, UploadReferencesModal.jsx, core.py, env.py, schemas.py, parser_service.py, injection_service.py
-Processed Files: 7
+Modules: core.py, test_core_models.py
+Processed Files: 2
 ===========================
 
-
-
-// --- leai_docs/planning/global_backlog.md ---
-
-# Global Backlog
-
-## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
-- [x] Story 1.0: Roadmap &amp; Planning Initialization
-- [x] Story 1.1: Project Dependencies &amp; Context Genesis
-
-## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
-- [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
-- [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
-- [x] [REQ-003] Bibliography Data Display &amp; Table View
-
-## EPIC 3: BATCH LOAD INTERFACE
-- [x] [REQ-004] Frontend Routing &amp; Main Layout
-- [x] [REQ-005] Load View - State Fractality (Custom Hook)
-- [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
-- [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
-
-## EPIC 4: BATCH DOWNLOAD EXECUTION
-- [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
-- [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
-- [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
-- [x] [REQ-011] Frontend SSE Hook State Integration
-
-## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
-- [x] [REQ-012] Load View Validation &amp; Label Updates
-- [x] [REQ-013] Queue View State &amp; UI Assembly
-- [x] [REQ-014] Backend ZIP Service &amp; Download Action
-
-## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
-- [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
-- [x] [REQ-016] Identity Domain Models &amp; Keywords
-- [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
-
-## EPIC 7: REFERENCES DATABASE INGESTION
-- [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
-- [x] [REQ-019] References Data Table View
-- [x] [REQ-020] Frontend Injection State Hook
-- [x] [REQ-021] References View Routing &amp; Assembly
-
-## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
-- [x] [REQ-022] Multiple File Upload Logic (FIFO Queue)
-- [x] [REQ-023] References Tab Translation to English
-- [x] [REQ-024] UI Standardization (Width & Headers)
-
-## EPIC 9: LOCAL FILE BATCH DOWNLOAD
-- [x] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
-- [x] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
-
-## EPIC 10: INSTITUTIONAL IP DIRECT RESOLVER
-- [x] [REQ-027] Institutional Direct PDF URL Extractor (Landing Page Metadata)
-- [x] [REQ-028] Cascading Resolver Fallback Chain Integration
-
-## EPIC 11: COOKIE AUTHENTICATION PASSTHROUGH
-- [x] [REQ-029] Frontend UI State Fractality & Dumb View Wiring (Cookies)
-- [x] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
-- [x] [REQ-031] CLI Argument Cookie Support (Script OCP)
-
-## EPIC 12: REFERENCES UI REFINEMENT & BACKEND BUGFIX
-- [x] [REQ-032] Backend Typing Bugfix (Micro-Surgery)
-- [x] [REQ-033] UploadReferencesModal Dark Mode Compliance
-- [x] [REQ-034] References Table Pagination & Search State (State Fractality)
-- [x] [REQ-035] References Table Dumb View Wiring
-
-## EPIC 13: BIB ONLY INGESTION & INJECTION RESILIENCE
-- [x] Story 12.0: Roadmap & Planning Initialization
-- [x] [REQ-036] Backend Router Boundary Marshal (.bib Restriction)
-- [x] [REQ-038] Backend Parser Core Logic (.bib Extraction)
-- [x] [REQ-039] Backend Injection DB Resilience
-- [x] [REQ-037] Frontend Hook State Fractality (.bib Validation)
-
-## EPIC 14: REFERENCES TABLE RESIZING & COUNT FIX
-- [x] Story 13.0: Roadmap & Planning Initialization
-- [x] [REQ-040] Synchronize and Clarify Imported vs. Displayed References Count
-- [x] [REQ-041] Resizable Table Columns (State Fractality & View Wiring)
-
-## Active Roadmaps
-- [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
-- [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
-- [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
-- [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
-- [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
-- [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
-- [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
-- [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
-- [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
-- [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
-- [Roadmap 11: References UI Refinement & Backend Bugfix](roadmap_11_references_ui_and_bugfixes.md)
-- [Roadmap 12: Bib Only Ingestion & Injection Resilience](roadmap_12_bib_only_and_injection_fix.md)
-- [Roadmap 13: References Table Resizing & Count Fix](roadmap_13_references_table_resizing_and_count_fix.md)
-
-
-// --- frontend/src/components/references/UploadReferencesModal.jsx ---
-
-import React from 'react';
-import BibliographyUploader from '../BibliographyUploader';
-import Modal from '../Modal';
-
-const styles = {
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    backdropFilter: 'blur(2px)',
-  },
-  modal: {
-    backgroundColor: '#161b22',
-    border: '1px solid #30363d',
-    borderRadius: '8px',
-    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.18)',
-    width: '100%',
-    maxWidth: '450px',
-    padding: '24px',
-    boxSizing: 'border-box',
-    position: 'relative',
-    maxHeight: '90vh',
-    overflowY: 'auto',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '16px',
-  },
-  title: {
-    margin: 0,
-    fontSize: '18px',
-    fontWeight: '600',
-    color: '#f0f6fc',
-  },
-  closeBtn: {
-    background: 'none',
-    border: 'none',
-    fontSize: '18px',
-    cursor: 'pointer',
-    color: '#8b949e',
-    padding: 0,
-  },
-  description: {
-    fontSize: '14px',
-    color: '#8b949e',
-    marginTop: 0,
-    marginBottom: '20px',
-  },
-  formGroup: {
-    marginBottom: '20px',
-  },
-  label: {
-    display: 'block',
-    fontSize: '14px',
-    fontWeight: '500',
-    marginBottom: '8px',
-    color: '#f0f6fc',
-  },
-  input: {
-    width: '100%',
-    padding: '10px 12px',
-    fontSize: '14px',
-    backgroundColor: '#0d1117',
-    color: '#f0f6fc',
-    border: '1px solid #30363d',
-    borderRadius: '6px',
-    boxSizing: 'border-box',
-    outline: 'none',
-  },
-  hint: {
-    fontSize: '12px',
-    color: '#8b949e',
-    marginTop: '6px',
-    marginBottom: 0,
-  },
-  uploaderWrapper: {
-    transition: 'opacity 0.2s ease',
-  },
-  errorBox: {
-    backgroundColor: '#ffeef0',
-    color: '#cb2431',
-    border: '1px solid #f97583',
-    padding: '10px 14px',
-    borderRadius: '6px',
-    marginBottom: '16px',
-    fontSize: '13px',
-  },
-  successBox: {
-    backgroundColor: '#dcffe4',
-    color: '#165c26',
-    border: '1px solid #85e89d',
-    padding: '14px 16px',
-    borderRadius: '6px',
-    marginTop: '16px',
-    marginBottom: '16px',
-  },
-  successTitle: {
-    margin: '0 0 6px 0',
-    fontWeight: '600',
-    fontSize: '15px',
-  },
-  footer: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '12px',
-    marginTop: '20px',
-  },
-  cancelBtn: {
-    padding: '8px 16px',
-    fontSize: '14px',
-    color: '#f0f6fc',
-    backgroundColor: '#21262d',
-    border: '1px solid #30363d',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: '500',
-  },
-};
-
-export function UploadReferencesModal({
-  isOpen,
-  onClose,
-  projectCode,
-  setProjectCode,
-  uploadAndInject,
-  isLoading,
-  isSuccess,
-  error,
-  insertedCount,
-  parsedCount,
-}) {
-  if (!isOpen) return null;
-
-  const isProjectReady = Boolean(projectCode && projectCode.trim());
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="New References Ingestion"
-      description="Enter the project code and select .bib files to persist in the database."
-    >
-    <div style={styles.formGroup}>
-      <label htmlFor="modal-project-code" style={styles.label}>
-        Project Code or Name *
-      </label>
-      <input
-        id="modal-project-code"
-        type="text"
-        placeholder="Ex: PROJ-AI-2026"
-            value={projectCode}
-            onChange={(e) => setProjectCode(e.target.value)}
-            style={styles.input}
-            autoFocus
-          />
-      {!isProjectReady && (
-        <p style={styles.hint}>
-          Provide a project name to enable the uploader.
-        </p>
-      )}
-        </div>
-
-        {error && <div style={styles.errorBox}>❌ {error}</div>}
-    {isLoading && (
-      <p style={{ color: '#0366d6', fontWeight: '500', fontSize: '14px' }}>
-        Injecting references into database...
-      </p>
-    )}
-
-    {isSuccess && (
-      <div style={styles.successBox}>
-        <p style={styles.successTitle}>Ingestion completed!</p>
-        <p style={{ margin: '0 0 6px 0', fontSize: '13px' }}>
-          Parsed <strong>{parsedCount}</strong> references from file.
-        </p>
-        <p style={{ margin: 0, fontSize: '13px' }}>
-          Inserted <strong>{insertedCount}</strong> new references into project <strong>{projectCode}</strong>.
-        </p>
-          </div>
-        )}
-
-        <div
-          style={{
-            ...styles.uploaderWrapper,
-            opacity: isProjectReady ? 1 : 0.45,
-            pointerEvents: isProjectReady ? 'auto' : 'none',
-          }}
-        >
-          <BibliographyUploader
-            onUpload={(file) => {
-              if (isProjectReady) {
-                uploadAndInject(file);
-              }
-            }}
-          />
-        </div>
-
-    <div style={styles.footer}>
-      <button style={styles.cancelBtn} onClick={onClose}>
-        {isSuccess ? 'Close' : 'Cancel'}
-      </button>
-    </div>
-    </Modal>
-  );
-}
-
-export default UploadReferencesModal;
 
 
 // --- backend/src/database/models/core.py ---
@@ -334,133 +21,119 @@ class Project(Base):
     """..."""
 
 class Article(Base):
-    """..."""
+    """Represents an academic publication with bibliographic data."""
+    __tablename__ = 'articles'
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key integer identifier')
+    doi = Column(String(255), unique=True, index=True, nullable=True, comment='Normalized DOI unique key')
+    title = Column(Text, nullable=False, comment='Full title of the article or publication')
+    journal = Column(String(255), nullable=True, comment='Journal or venue publishing the article')
+    year = Column(Integer, nullable=True, comment='Publication calendar year')
+    volume = Column(String(50), nullable=True, comment='Journal publication volume')
+    issue = Column(String(50), nullable=True, comment='Journal publication issue')
+    pages = Column(String(50), nullable=True, comment='Article page range or article number')
+    abstract = Column(Text, nullable=True, comment='Full text abstract of the article')
+    raw_data = Column(Text, nullable=True, comment='Raw bibliographic payload (e.g. BibTeX or RIS)')
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, comment='UTC timestamp when article was ingested')
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False, comment='UTC timestamp when article record was updated')
+    project_articles = relationship('ProjectArticle', back_populates='article', cascade='all, delete-orphan')
+    projects = relationship('Project', secondary='project_articles', back_populates='articles', viewonly=True)
+    author_articles = relationship('AuthorArticle', back_populates='article', cascade='all, delete-orphan')
+    authors = relationship('Author', secondary='author_articles', back_populates='articles', viewonly=True)
+    keyword_articles = relationship('KeywordArticle', back_populates='article', cascade='all, delete-orphan')
+    keywords = relationship('Keyword', secondary='keyword_articles', back_populates='articles', viewonly=True)
+    references = relationship('Reference', back_populates='article', cascade='all, delete-orphan')
+    funding = relationship('Funding', back_populates='article', cascade='all, delete-orphan')
+    downloads = relationship('Download', back_populates='article', cascade='all, delete-orphan')
 
 class ProjectArticle(Base):
     """..."""
 
 
-// --- backend/alembic/env.py ---
+// --- backend/tests/database/test_core_models.py ---
 
-import os
-import sys
-from logging.config import fileConfig
-from alembic import context
-from sqlalchemy import engine_from_config, pool
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
-try:
-    from src.database.session import Base
-    import src.database.models.core
-    import src.database.models.identity
-    import src.database.models.tracking
-except ImportError:
-    from backend.src.database.session import Base
-    import backend.src.database.models.core
-    import backend.src.database.models.identity
-    import backend.src.database.models.tracking
-    import backend.src.database.models.core
-config = context.config
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
-db_url = os.getenv('DATABASE_URL')
-if db_url:
-    config.set_main_option('sqlalchemy.url', db_url)
-target_metadata = Base.metadata
+"""Hexagonal zero-I/O tests for Core Domain Models (Projects & Articles)."""
+import unittest
 
-def run_migrations_offline() -> None:
-    """..."""
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
-def run_migrations_online() -> None:
-    """..."""
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
+from src.database.models.core import Article, Project, ProjectArticle
+from src.database.session import Base
 
 
-// --- backend/src/bibliography/schemas.py ---
+class TestCoreModels(unittest.TestCase):
+    """Validates Project, Article, and ProjectArticle schema and relationships."""
 
-from datetime import datetime
-from typing import Optional, List, Dict, Any, AsyncGenerator
-from pydantic import BaseModel, ConfigDict, Field
+    def setUp(self) -> None:
+        """Initialize in-memory SQLite engine and tables for zero-I/O testing."""
+        self.engine = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(self.engine)
+        self.SessionLocal = sessionmaker(bind=self.engine)
+        self.session: Session = self.SessionLocal()
 
-class ZipDownloadRequest(BaseModel):
-    """..."""
+    def tearDown(self) -> None:
+        """Clean up in-memory session and tables."""
+        self.session.close()
+        Base.metadata.drop_all(self.engine)
+        self.engine.dispose()
 
-class BatchDownloadRequest(BaseModel):
-    """..."""
+    def test_create_project_and_article_m2m(self) -> None:
+        """Verify bidirectional relationship between Project and Article."""
+        project = Project(
+            name="Deep Learning Survey",
+            description="Investigation on Transformers",
+            hashed_password="mocked_bcrypt_hash_12345",
+        )
+        article = Article(
+            doi="10.1000/182",
+            title="Attention Is All You Need",
+            journal="NeurIPS",
+            year=2017,
+            volume="30",
+            pages="5998-6008",
+            abstract="The dominant sequence transduction models...",
+        )
+        self.session.add_all([project, article])
+        self.session.commit()
 
-class LocalBatchDownloadRequest(BaseModel):
-    """..."""
+        link = ProjectArticle(
+            project_id=project.id,
+            article_id=article.id,
+            status="pending",
+        )
+        self.session.add(link)
+        self.session.commit()
 
-class ParsedReference(BaseModel):
-    """..."""
+        self.session.refresh(project)
+        self.session.refresh(article)
 
+        self.assertEqual(len(project.project_articles), 1)
+        self.assertEqual(
+            project.project_articles[0].article.doi, "10.1000/182"
+        )
+        self.assertEqual(len(project.articles), 1)
+        self.assertEqual(
+            project.articles[0].title, "Attention Is All You Need"
+        )
 
-// --- backend/src/bibliography/parser_service.py ---
+        self.assertEqual(len(article.project_articles), 1)
+        self.assertEqual(
+            article.project_articles[0].project.hashed_password,
+            "mocked_bcrypt_hash_12345",
+        )
+        self.assertEqual(len(article.projects), 1)
+        self.assertEqual(article.projects[0].name, "Deep Learning Survey")
 
-import datetime
-from typing import List, Optional
-import re
-import bibtexparser
-from .schemas import ParsedReference
-
-def _extract_bib_field(entry, key: str) -> Optional[str]:
-    """..."""
-
-def _parse_bibtex_entries(content: str) -> list:
-    """..."""
-
-def _clean_year(val: Optional[str]) -> Optional[str]:
-    """..."""
-
-def _extract_ris_title(entry: dict) -> Optional[str]:
-    """..."""
-
-def _extract_ris_journal(entry: dict) -> Optional[str]:
-    """..."""
-
-def _extract_ris_authors(entry: dict) -> Optional[str]:
-    """..."""
-
-def _extract_ris_year(entry: dict) -> Optional[str]:
-    """..."""
-
-def _extract_ris_doi(entry: dict) -> Optional[str]:
-    """..."""
-
-def _parse_ris_fallback(content: str) -> list:
-    """..."""
-
-def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
-    """..."""
-
-def _deprecated_parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
-    """..."""
-
-
-// --- backend/src/bibliography/injection_service.py ---
-
-"""Service for persisting bibliographic references into the database."""
-import re
-from typing import List, Optional
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import OperationalError
-try:
-    from .schemas import ParsedReference
-    from ..database.models.core import Article, Project, ProjectArticle
-    from ..database.models.identity import Author, AuthorArticle
-except (ImportError, ValueError):
-    from backend.src.bibliography.schemas import ParsedReference
-    from backend.src.database.models.core import Article, Project, ProjectArticle
-    from backend.src.database.models.identity import Author, AuthorArticle
-    from backend.src.bibliography.schemas import ParsedReference
-    from backend.src.database.models.core import Article, Project, ProjectArticle
-
-def inject_references_to_db(db: Session, refs: List[ParsedReference], project_code: str) -> int:
-    """..."""
-
-def _inject_references_inner(db: Session, refs: List[ParsedReference], project_code: str) -> int:
-    """..."""
+    def test_semantic_comments_present_on_all_columns(self) -> None:
+        """Enforce Semantic Primacy: every column must contain a comment."""
+        models = [Project, Article, ProjectArticle]
+        for model in models:
+            for col in model.__table__.columns:
+                self.assertIsNotNone(
+                    col.comment,
+                    f"Column '{col.name}' in '{model.__tablename__}' lacks comment",
+                )
+                self.assertTrue(
+                    len(col.comment.strip()) > 0,
+                    f"Comment on '{col.name}' in '{model.__tablename__}' is empty",
+                )

@@ -79,4 +79,19 @@ class ParsedReference(BaseModel):
     title: Optional[str] = None
     journal: Optional[str] = None
     doi: Optional[str] = None
+    abstract: Optional[str] = None
+    publisher: Optional[str] = None
+    language: Optional[str] = None
+    keywords: Optional[str] = None
+    research_areas: Optional[str] = None
+    web_of_science_categories: Optional[str] = None
+    funding_text: Optional[str] = None
+    journal_iso: Optional[str] = None
+    oa_status: Optional[str] = None
+    issn: Optional[str] = None
+    volume: Optional[str] = None
+    issue: Optional[str] = None
+    pages: Optional[str] = None
+    times_cited: Optional[int] = None
+    cited_references_count: Optional[int] = None
     upload_datetime: datetime

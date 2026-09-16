@@ -22,7 +22,7 @@ complexity_aggregate: "HARD"
   - [ID-15.1.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md and check - [x] for Story 15.1. 2. Append > Files touched: [list of modified/read files] under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-042]]. Type: Task.
   > Files touched: frontend/src/components/references/UploadReferencesModal.jsx, frontend/src/components/references/UploadReferencesModal.test.jsx, leai_docs/planning/global_backlog.md, leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md
 
-- [ ] Story 15.2: Database Schema Expansion & State Preservation | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 15.2: Database Schema Expansion & State Preservation | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Expand the Article database model to store comprehensive .bib metadata while strictly preserving existing data via Alembic. (<-- REQ-043)
   Story Context Radius: {"backend/src/database/models/core.py": [""], "backend/alembic/env.py": [""]}
   Layered Technical Breakdown:
@@ -30,14 +30,16 @@ complexity_aggregate: "HARD"
   - [ID-15.2.2] [CORE/MODELS]: [1. Open backend/src/database/models/core.py. 2. Add new Column(String/Text) definitions to Article for: abstract, publisher, language, keywords, research_areas, web_of_science_categories, funding_text, journal_iso, oa_status, doi, issn. Add Column(Integer) for times_cited, cited_references_count. 3. CRITICAL: Every new column MUST include a comment='...' payload in English explaining its purpose]. Type: Task.
   - [ID-15.2.3] [CORE/MIGRATION]: [1. Run alembic revision --autogenerate -m "add_article_extended_metadata". 2. Open the generated migration file in backend/alembic/versions/. 3. CRITICAL: Audit the file to ensure ONLY op.add_column exists. Delete any accidental op.drop_column directives to prevent data wipeout. 4. Run alembic upgrade head]. Type: Task.
   - [ID-15.2.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md and check - [x] for Story 15.2. 2. Append > Files touched: [list of modified/read files] under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-043]]. Type: Task.
+  > Files touched: backend/tests/database/test_core_models.py, backend/src/database/models/core.py, leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md, leai_docs/planning/global_backlog.md
 
-- [ ] Story 15.3: Boundary Marshal Schema Expansion | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 15.3: Boundary Marshal Schema Expansion | [MoSCoW: MUST] | [Complexity: EASY]
   Business Requirement: Expand the Pydantic schema to act as a Boundary Marshal for the new metadata fields. (<-- REQ-044)
   Story Context Radius: {"backend/src/bibliography/schemas.py": ["*"]}
   Layered Technical Breakdown:
   - [ID-15.3.1] [TESTING/TDE]: [1. Arrange: Create a dictionary with the new extended fields. 2. Act: Instantiate ParsedReference(**data). 3. Assert: Verify the schema validates and correctly types the optional fields]. Type: Task.
   - [ID-15.3.2] [CORE/SCHEMAS]: [1. Open backend/src/bibliography/schemas.py. 2. Add corresponding Optional[str] and Optional[int] fields to the ParsedReference model matching the new DB columns exactly. 3. Save the file]. Type: Task.
   - [ID-15.3.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md and check - [x] for Story 15.3. 2. Append > Files touched: [list of modified/read files] under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-044]]. Type: Task.
+  > Files touched: backend/src/bibliography/schemas.py, backend/tests/bibliography/test_schemas.py, leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md, leai_docs/planning/global_backlog.md
 
 - [ ] Story 15.4: Parser Core Logic (Micro-Surgery) | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Update the parser service to extract the new metadata fields from .bib files and map them to the Boundary Marshal. (<-- REQ-044)

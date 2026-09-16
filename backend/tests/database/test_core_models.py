@@ -71,6 +71,33 @@ class TestCoreModels(unittest.TestCase):
         self.assertEqual(len(article.projects), 1)
         self.assertEqual(article.projects[0].name, "Deep Learning Survey")
 
+    def test_article_extended_metadata_persistence(self) -> None:
+        """Verify that newly added extended .bib metadata fields persist correctly."""
+        article = Article(
+            title="Extended Metadata Paper",
+            abstract="A novel approach to metadata.",
+            publisher="Tech Press",
+            language="English",
+            keywords="metadata; bibliography; parsing",
+            research_areas="Computer Science",
+            web_of_science_categories="Computer Science, Information Systems",
+            funding_text="Supported by AI Grant 2026",
+            journal_iso="J. Tech. Press",
+            oa_status="Gold",
+            doi="10.1000/extended",
+            issn="1234-5678",
+            times_cited=42,
+            cited_references_count=10,
+        )
+        self.session.add(article)
+        self.session.commit()
+        self.session.refresh(article)
+
+        self.assertEqual(article.publisher, "Tech Press")
+        self.assertEqual(article.times_cited, 42)
+        self.assertEqual(article.language, "English")
+        self.assertEqual(article.oa_status, "Gold")
+
     def test_semantic_comments_present_on_all_columns(self) -> None:
         """Enforce Semantic Primacy: every column must contain a comment."""
         models = [Project, Article, ProjectArticle]

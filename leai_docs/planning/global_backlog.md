@@ -76,8 +76,8 @@
 ## EPIC 15: BIBLIOGRAPHIC METADATA EXPANSION & BULK INJECTION
 - [x] Story 15.0: Roadmap & Planning Initialization
 - [x] [REQ-042] Frontend UI Dumb View Wiring (Text Standardization)
-- [ ] [REQ-043] Database Schema Expansion & State Preservation
-- [ ] [REQ-044] Boundary Marshal Schema & Parser Core Logic
+- [x] [REQ-043] Database Schema Expansion & State Preservation
+- [x] [REQ-044] Boundary Marshal Schema & Parser Core Logic
 - [ ] [REQ-045] Bulk Injection Refactoring (Performance & Concurrency)
 
 ## Active Roadmaps
