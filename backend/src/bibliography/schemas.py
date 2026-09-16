@@ -94,4 +94,5 @@ class ParsedReference(BaseModel):
     pages: Optional[str] = None
     times_cited: Optional[int] = None
     cited_references_count: Optional[int] = None
+    raw_data: Optional[str] = None
     upload_datetime: datetime

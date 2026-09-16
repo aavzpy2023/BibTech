@@ -1,891 +1,490 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 17:22:19
+Date: 2026-09-16 17:35:09
 AST Mode: False
 Line Numbers: True
-Modules: parser_service.py, useReferenceDetails.js, core.py
-Processed Files: 3
+Modules: schemas.py, injection_service.py
+Processed Files: 2
 ===========================
 
 
 
-// --- backend/src/bibliography/parser_service.py ---
+// --- backend/src/bibliography/schemas.py ---
 
-[L001, S0] import datetime
-[L002, S0] from typing import List, Optional
-[L003, S0] import re
-[L004, S0] import bibtexparser
-[L005, S0] from .schemas import ParsedReference
-[L006, S0] 
-[L007, S0] 
-[L008, S0] def _extract_bib_int(entry, key: str) -> Optional[int]:
-[L009, S4]     val = _extract_bib_field(entry, key)
-[L010, S4]     if val:
-[L011, S8]         match = re.search(r"\b(\d+)\b", str(val))
-[L012, S8]         if match:
-[L013, S12]             try:
-[L014, S16]                 return int(match.group(1))
-[L015, S12]             except ValueError:
-[L016, S16]                 return None
-[L017, S4]     return None
-[L018, S0] 
-[L019, S0] 
-[L020, S0] def _extract_bib_field(entry, key: str) -> Optional[str]:
-[L021, S4]     target_keys = {
-[L022, S8]         key.lower(),
-[L023, S8]         key.lower().replace("_", "-"),
-[L024, S8]         key.lower().replace("-", "_"),
-[L025, S4]     }
-[L026, S4]     if key.lower() == "journal":
-[L027, S8]         target_keys.update(
-[L028, S12]             {"journaltitle", "booktitle", "series", "journal-iso"}
-[L029, S8]         )
-[L030, S4]     elif key.lower() == "title":
-[L031, S8]         target_keys.update({"booktitle", "ti"})
-[L032, S4]     elif key.lower() == "year":
-[L033, S8]         target_keys.update({"date", "py"})
-[L034, S4]     elif key.lower() == "abstract":
-[L035, S8]         target_keys.update({"ab"})
-[L036, S4]     elif key.lower() == "publisher":
-[L037, S8]         target_keys.update({"pu"})
-[L038, S4]     elif key.lower() == "language":
-[L039, S8]         target_keys.update({"la"})
-[L040, S4]     elif key.lower() == "keywords":
-[L041, S8]         target_keys.update(
-[L042, S12]             {"keyword", "kw", "author_keywords", "author-keywords", "de"}
-[L043, S8]         )
-[L044, S4]     elif key.lower() == "research_areas":
-[L045, S8]         target_keys.update({"research-areas", "sc"})
-[L046, S4]     elif key.lower() == "web_of_science_categories":
-[L047, S8]         target_keys.update({"web-of-science-categories", "wc"})
-[L048, S4]     elif key.lower() == "funding_text":
-[L049, S8]         target_keys.update({"funding-text", "funding", "fx"})
-[L050, S4]     elif key.lower() == "journal_iso":
-[L051, S8]         target_keys.update({"journal-iso", "ji", "j9"})
-[L052, S4]     elif key.lower() == "oa_status":
-[L053, S8]         target_keys.update({"oa", "oa-status", "open_access"})
-[L054, S4]     elif key.lower() == "issn":
-[L055, S8]         target_keys.update({"sn", "eissn"})
-[L056, S4]     elif key.lower() == "volume":
-[L057, S8]         target_keys.update({"vl"})
-[L058, S4]     elif key.lower() == "issue":
-[L059, S8]         target_keys.update({"number", "is"})
-[L060, S4]     elif key.lower() == "pages":
-[L061, S8]         target_keys.update({"page", "bp", "ar"})
-[L062, S4]     elif key.lower() in ("times_cited", "times-cited"):
-[L063, S8]         target_keys.update({"tc", "times-cited", "times_cited"})
-[L064, S4]     elif key.lower() in ("cited_references_count", "cited-references-count"):
-[L065, S8]         target_keys.update(
-[L066, S12]             {"cited-references", "cited_references", "nr", "cr"}
-[L067, S8]         )
-[L068, S0] 
-[L069, S4]     val = None
-[L070, S4]     if isinstance(entry, dict):
-[L071, S8]         for k, v in entry.items():
-[L072, S12]             if str(k).lower() in target_keys:
-[L073, S16]                 val = v
-[L074, S16]                 break
-[L075, S4]     elif hasattr(entry, "fields_dict"):
-[L076, S8]         for k, v in entry.fields_dict.items():
-[L077, S12]             if str(k).lower() in target_keys:
-[L078, S16]                 val = getattr(v, "value", str(v))
-[L079, S16]                 break
-[L080, S4]     elif hasattr(entry, "fields"):
-[L081, S8]         for field in entry.fields:
-[L082, S12]             f_key = getattr(field, "key", None)
-[L083, S12]             if f_key and str(f_key).lower() in target_keys:
-[L084, S16]                 val = getattr(field, "value", str(field))
-[L085, S16]                 break
-[L086, S4]     elif hasattr(entry, key):
-[L087, S8]         val = getattr(entry, key)
-[L088, S4]     elif hasattr(entry, "get"):
-[L089, S8]         for tk in target_keys:
-[L090, S12]             try:
-[L091, S16]                 v = entry.get(tk) or entry.get(tk.capitalize())
-[L092, S16]                 if v is not None:
-[L093, S20]                     val = v
-[L094, S20]                     break
-[L095, S12]             except Exception:
-[L096, S16]                 pass
-[L097, S4]     else:
-[L098, S8]         val = None
-[L099, S0] 
-[L100, S4]     if val is not None:
-[L101, S8]         if hasattr(val, "value"):
-[L102, S12]             val = val.value
-[L103, S8]         cleaned = str(val).strip()
-[L104, S8]         while (cleaned.startswith("{") and cleaned.endswith("}")) or (
-[L105, S12]             cleaned.startswith('"') and cleaned.endswith('"')
-[L106, S8]         ):
-[L107, S12]             cleaned = cleaned[1:-1].strip()
-[L108, S8]         cleaned = re.sub(r"\s+", " ", cleaned)
-[L109, S8]         if key.lower() == "year":
-[L110, S12]             match = re.search(r"\b(19\d\d|20\d\d)\b", cleaned)
-[L111, S0] 
-[L112, S0] 
-[L113, S12]             return match.group(1) if match else (cleaned or None)
-[L114, S8]         return cleaned or None
-[L115, S4]     return None
-[L116, S0] 
-[L117, S0] 
-[L118, S0] def _parse_bibtex_entries(content: str) -> list:
-[L119, S4]     if hasattr(bibtexparser, "parse_string"):
-[L120, S8]         result = bibtexparser.parse_string(content)
-[L121, S8]         return list(getattr(result, "entries", getattr(result, "blocks", [])))
-[L122, S4]     if hasattr(bibtexparser, "loads"):
-[L123, S8]         result = bibtexparser.loads(content)
-[L124, S8]         return list(getattr(result, "entries", []))
-[L125, S4]     if hasattr(bibtexparser, "bparser"):
-[L126, S8]         parser = bibtexparser.bparser.BibTexParser()
-[L127, S8]         result = parser.parse(content)
-[L128, S8]         return list(getattr(result, "entries", []))
-[L129, S4]     return []
-[L130, S0] 
-[L131, S0] 
-[L132, S0] def _clean_year(val: Optional[str]) -> Optional[str]:
-[L133, S4]     if not val:
-[L134, S8]         return None
-[L135, S4]     match = re.search(r"\b(19\d\d|20\d\d)\b", str(val))
-[L136, S4]     if match:
-[L137, S8]         return match.group(1)
-[L138, S4]     cleaned = re.sub(r"[^\d]", "", str(val))
-[L139, S4]     return cleaned[:4] if len(cleaned) >= 4 else (cleaned or None)
-[L140, S0] 
-[L141, S0] 
-[L142, S0] def _extract_ris_title(entry: dict) -> Optional[str]:
-[L143, S4]     return (
-[L144, S8]         entry.get("title")
-[L145, S8]         or entry.get("primary_title")
-[L146, S8]         or entry.get("TI")
-[L147, S8]         or entry.get("T1")
-[L148, S8]         or entry.get("CT")
-[L149, S8]         or None
-[L150, S4]     )
-[L151, S0] 
-[L152, S0] 
-[L153, S0] def _extract_ris_journal(entry: dict) -> Optional[str]:
-[L154, S4]     return (
-[L155, S8]         entry.get("journal_name")
-[L156, S8]         or entry.get("secondary_title")
-[L157, S8]         or entry.get("alternate_title1")
-[L158, S8]         or entry.get("alternate_title2")
-[L159, S8]         or entry.get("alternate_title3")
-[L160, S8]         or entry.get("source")
-[L161, S8]         or entry.get("SO")
-[L162, S8]         or entry.get("T2")
-[L163, S8]         or entry.get("JO")
-[L164, S8]         or entry.get("JF")
-[L165, S8]         or entry.get("JA")
-[L166, S8]         or entry.get("J2")
-[L167, S8]         or None
-[L168, S4]     )
-[L169, S0] 
-[L170, S0] 
-[L171, S0] def _extract_ris_authors(entry: dict) -> Optional[str]:
-[L172, S4]     authors = (
-[L173, S8]         entry.get("authors")
-[L174, S8]         or entry.get("primary_authors")
-[L175, S8]         or entry.get("AU")
-[L176, S8]         or entry.get("A1")
-[L177, S8]         or []
-[L178, S4]     )
-[L179, S4]     if isinstance(authors, list):
-[L180, S8]         clean_authors = [str(a).strip() for a in authors if str(a).strip()]
-[L181, S8]         return " and ".join(clean_authors) if clean_authors else None
-[L182, S4]     if isinstance(authors, str) and authors.strip():
-[L183, S8]         return authors.strip()
-[L184, S4]     return None
-[L185, S0] 
-[L186, S0] 
-[L187, S0] def _extract_ris_year(entry: dict) -> Optional[str]:
-[L188, S4]     raw_year = (
-[L189, S8]         entry.get("year")
-[L190, S8]         or entry.get("publication_year")
-[L191, S8]         or entry.get("PY")
-[L192, S8]         or entry.get("Y1")
-[L193, S8]         or entry.get("DA")
-[L194, S8]         or None
-[L195, S4]     )
-[L196, S4]     return _clean_year(raw_year)
-[L197, S0] 
-[L198, S0] 
-[L199, S0] def _extract_ris_doi(entry: dict) -> Optional[str]:
-[L200, S4]     doi = entry.get("doi") or entry.get("DO") or entry.get("DI") or None
-[L201, S4]     if doi:
-[L202, S8]         return (
-[L203, S12]             str(doi)
-[L204, S12]             .strip()
-[L205, S12]             .replace("https://doi.org/", "")
-[L206, S12]             .replace("http://doi.org/", "")
-[L207, S8]         )
-[L208, S4]     return None
-[L209, S0] 
-[L210, S0] 
-[L211, S0] def _parse_ris_fallback(content: str) -> list:
-[L212, S4]     entries = []
-[L213, S4]     current_entry = {}
-[L214, S4]     current_tag = None
-[L215, S0] 
-[L216, S4]     for line in content.splitlines():
-[L217, S8]         line = line.strip()
-[L218, S8]         if not line:
-[L219, S12]             continue
-[L220, S8]         match = re.match(r"^([A-Z0-9]{2})\s*-\s*(.*)$", line)
-[L221, S8]         if match:
-[L222, S12]             tag, val = match.group(1), match.group(2).strip()
-[L223, S12]             current_tag = tag
-[L224, S12]             if tag == "TY":
-[L225, S16]                 if current_entry and (
-[L226, S20]                     current_entry.get("TI")
-[L227, S20]                     or current_entry.get("title")
-[L228, S20]                     or current_entry.get("AU")
-[L229, S16]                 ):
-[L230, S20]                     entries.append(current_entry)
-[L231, S16]                 current_entry = {"TY": val, "authors": []}
-[L232, S12]             elif tag == "ER":
-[L233, S16]                 if current_entry:
-[L234, S20]                     entries.append(current_entry)
-[L235, S20]                     current_entry = {}
-[L236, S12]             elif tag in ("AU", "A1"):
-[L237, S16]                 if "authors" not in current_entry:
-[L238, S20]                     current_entry["authors"] = []
-[L239, S16]                 current_entry["authors"].append(val)
-[L240, S12]             else:
-[L241, S16]                 current_entry[tag] = val
-[L242, S8]         elif current_tag and current_entry:
-[L243, S12]             if current_tag not in ("AU", "A1") and current_tag in current_entry:
-[L244, S16]                 current_entry[current_tag] += " " + line
-[L245, S0] 
-[L246, S4]     if current_entry and (
-[L247, S8]         current_entry.get("TI")
-[L248, S8]         or current_entry.get("title")
-[L249, S8]         or current_entry.get("AU")
-[L250, S4]     ):
-[L251, S8]         entries.append(current_entry)
-[L252, S0] 
-[L253, S4]     return entries
-[L254, S0] 
-[L255, S0] 
-[L256, S0] def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
-[L257, S4]     if ext.lower() != ".bib":
-[L258, S8]         raise ValueError(f"Unsupported extension: {ext}")
-[L259, S8]         
-[L260, S4]     now = datetime.datetime.now(datetime.timezone.utc)
-[L261, S4]     try:
-[L262, S8]         entries = _parse_bibtex_entries(content)
-[L263, S4]     except Exception:
-[L264, S8]         entries = []
-[L265, S8]         
-[L266, S4]     if not entries:
-[L267, S8]         raise ValueError("No se encontraron items válidos en el archivo .bib")
-[L268, S8]         
-[L269, S4]     return [
-[L270, S8]         ParsedReference(
-[L271, S12]             author=_extract_bib_field(entry, "author"),
-[L272, S12]             year=_extract_bib_field(entry, "year"),
-[L273, S12]             title=_extract_bib_field(entry, "title"),
-[L274, S12]             journal=_extract_bib_field(entry, "journal"),
-[L275, S12]             doi=_extract_bib_field(entry, "doi"),
-[L276, S12]             abstract=_extract_bib_field(entry, "abstract"),
-[L277, S12]             publisher=_extract_bib_field(entry, "publisher"),
-[L278, S12]             language=_extract_bib_field(entry, "language"),
-[L279, S12]             keywords=_extract_bib_field(entry, "keywords"),
-[L280, S12]             research_areas=_extract_bib_field(entry, "research_areas"),
-[L281, S12]             web_of_science_categories=_extract_bib_field(
-[L282, S16]                 entry, "web_of_science_categories"
-[L283, S12]             ),
-[L284, S12]             funding_text=_extract_bib_field(entry, "funding_text"),
-[L285, S12]             journal_iso=_extract_bib_field(entry, "journal_iso"),
-[L286, S12]             oa_status=_extract_bib_field(entry, "oa_status"),
-[L287, S12]             issn=_extract_bib_field(entry, "issn"),
-[L288, S12]             volume=_extract_bib_field(entry, "volume"),
-[L289, S12]             issue=_extract_bib_field(entry, "issue"),
-[L290, S12]             pages=_extract_bib_field(entry, "pages"),
-[L291, S12]             times_cited=_extract_bib_int(entry, "times_cited"),
-[L292, S12]             cited_references_count=_extract_bib_int(
-[L293, S16]                 entry, "cited_references_count"
-[L294, S12]             ),
-[L295, S12]             upload_datetime=now,
-[L296, S8]         )
-[L297, S8]         for entry in entries
-[L298, S4]     ]
-[L299, S0] 
-[L300, S0] 
-[L301, S0] def _deprecated_parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
-[L302, S4]     parsed_refs: List[ParsedReference] = []
-[L303, S4]     now = datetime.datetime.now(datetime.timezone.utc)
-[L304, S4]     
-[L305, S4]     if ext.lower() == ".ris":
-[L306, S8]         entries = []
-[L307, S8]         try:
-[L308, S12]             entries = rispy.loads(content, skip_unknown_tags=True)
-[L309, S8]         except Exception:
-[L310, S12]             entries = []
-[L311, S0] 
-[L312, S8]         fallback_entries = _parse_ris_fallback(content)
-[L313, S8]         if len(fallback_entries) > len(entries):
-[L314, S12]             entries = fallback_entries
-[L315, S0] 
-[L316, S8]         for entry in entries:
-[L317, S12]             authors = entry.get("authors", [])
-[L318, S12]             author_str = " and ".join(authors) if isinstance(authors, list) else authors
-[L319, S12]             
-[L320, S12]             parsed_refs.append(
-[L321, S16]                 ParsedReference(
-[L322, S20]                     author=_extract_ris_authors(entry),
-[L323, S20]                     year=_extract_ris_year(entry),
-[L324, S20]                     title=_extract_ris_title(entry),
-[L325, S20]                     journal=_extract_ris_journal(entry),
-[L326, S20]                     doi=_extract_ris_doi(entry),
-[L327, S20]                     upload_datetime=now,
-[L328, S16]                 )
-[L329, S12]             )
-[L330, S12]             
-[L331, S4]     elif ext.lower() == ".bib":
-[L332, S8]         try:
-[L333, S12]             entries = _parse_bibtex_entries(content)
-[L334, S8]         except Exception:
-[L335, S12]             entries = []
-[L336, S12]             
-[L337, S8]         for entry in entries:
-[L338, S12]             parsed_refs.append(
-[L339, S16]                 ParsedReference(
-[L340, S20]                     author=_extract_bib_field(entry, "author"),
-[L341, S20]                     year=_extract_bib_field(entry, "year"),
-[L342, S20]                     title=_extract_bib_field(entry, "title"),
-[L343, S20]                     journal=_extract_bib_field(entry, "journal"),
-[L344, S20]                     doi=_extract_bib_field(entry, "doi"),
-[L345, S20]                     upload_datetime=now,
-[L346, S16]                 )
-[L347, S12]             )
-[L348, S4]     else:
-[L349, S8]         raise ValueError(f"Unsupported extension: {ext}")
-[L350, S8]         
-[L351, S4]     return parsed_refs
-
-
-// --- frontend/src/hooks/useReferenceDetails.js ---
-
-[L001, S0] import { useState, useMemo, useCallback } from 'react';
-[L002, S0] 
-[L003, S0] export default function useReferenceDetails(article = null) {
-[L004, S2]   const [activeTab, setActiveTab] = useState('Overview');
-[L005, S2]   const [drawerState, setDrawerState] = useState({
-[L006, S4]     isOpen: false,
-[L007, S4]     type: 'references',
-[L008, S4]     title: '',
-[L009, S4]     data: [],
-[L010, S2]   });
-[L011, S2]   const [hoverInfo, setHoverInfo] = useState(null);
-[L012, S2]   const [copiedText, setCopiedText] = useState(null);
-[L013, S2]   const [isAbstractExpanded, setIsAbstractExpanded] = useState(false);
-[L014, S0] 
-[L015, S2]   const handleTabChange = useCallback((tab) => {
-[L016, S4]     setActiveTab(tab);
-[L017, S2]   }, []);
-[L018, S0] 
-[L019, S2]   const openDrawer = useCallback(
-[L020, S4]     (type, data = null, title = '') => {
-[L021, S6]       let resolvedData = data;
-[L022, S6]       let resolvedTitle = title;
-[L023, S0] 
-[L024, S6]       if (!resolvedData && article) {
-[L025, S8]         if (type === 'authors') {
-[L026, S10]           resolvedData = article.authors_detail || [];
-[L027, S10]           resolvedTitle = resolvedTitle || 'Authors Details';
-[L028, S8]         } else if (type === 'references') {
-[L029, S10]           resolvedData = article.references_list || [];
-[L030, S10]           resolvedTitle = resolvedTitle || 'Cited References';
-[L031, S8]         } else if (type === 'funding') {
-[L032, S10]           const hasList =
-[L033, S12]             article.funding_list && article.funding_list.length > 0;
-[L034, S10]           resolvedData = hasList
-[L035, S12]             ? article.funding_list
-[L036, S12]             : article.funding_text
-[L037, S12]             ? [article.funding_text]
-[L038, S12]             : [];
-[L039, S10]           resolvedTitle = resolvedTitle || 'Funding Acknowledgments';
-[L040, S8]         } else if (type === 'abstract') {
-[L041, S10]           resolvedData = article.abstract ? [article.abstract] : [];
-[L042, S10]           resolvedTitle = resolvedTitle || 'Full Abstract';
-[L043, S8]         }
-[L044, S6]       }
-[L045, S0] 
-[L046, S6]       setDrawerState({
-[L047, S8]         isOpen: true,
-[L048, S8]         type: type || 'references',
-[L049, S8]         title: resolvedTitle || 'Details',
-[L050, S8]         data: resolvedData || [],
-[L051, S6]       });
-[L052, S4]     },
-[L053, S4]     [article]
-[L054, S2]   );
-[L055, S0] 
-[L056, S2]   const handleExpandDrawer = useCallback(
-[L057, S4]     (type, customData, customTitle) => {
-[L058, S6]       openDrawer(type, customData, customTitle);
-[L059, S4]     },
-[L060, S4]     [openDrawer]
-[L061, S2]   );
-[L062, S0] 
-[L063, S2]   const closeDrawer = useCallback(() => {
-[L064, S4]     setDrawerState((prev) => ({
-[L065, S6]       ...prev,
-[L066, S6]       isOpen: false,
-[L067, S4]     }));
-[L068, S2]   }, []);
-[L069, S0] 
-[L070, S2]   const handleHoverInfo = useCallback((key, event) => {
-[L071, S4]     if (!key) {
-[L072, S6]       setHoverInfo(null);
-[L073, S6]       return;
-[L074, S4]     }
-[L075, S4]     setHoverInfo({
-[L076, S6]       key,
-[L077, S6]       rect: event?.currentTarget?.getBoundingClientRect?.() || null,
-[L078, S4]     });
-[L079, S2]   }, []);
-[L080, S0] 
-[L081, S2]   const handleCopy = useCallback(async (text) => {
-[L082, S4]     if (!text) return;
-[L083, S4]     try {
-[L084, S6]       if (
-[L085, S8]         typeof navigator !== 'undefined' &&
-[L086, S8]         navigator.clipboard &&
-[L087, S8]         navigator.clipboard.writeText
-[L088, S6]       ) {
-[L089, S8]         await navigator.clipboard.writeText(text);
-[L090, S6]       }
-[L091, S6]       setCopiedText(text);
-[L092, S6]       setTimeout(() => setCopiedText(null), 2500);
-[L093, S4]     } catch {
-[L094, S6]       // Fallback or silent error handling
-[L095, S4]     }
-[L096, S2]   }, []);
-[L097, S0] 
-[L098, S2]   const toggleAbstractExpanded = useCallback(() => {
-[L099, S4]     setIsAbstractExpanded((prev) => !prev);
-[L100, S2]   }, []);
-[L101, S0] 
-[L102, S2]   const formattedData = useMemo(() => {
-[L103, S4]     if (!article) {
-[L104, S6]       return {
-[L105, S8]         title: '',
-[L106, S8]         authors: '',
-[L107, S8]         year: '',
-[L108, S8]         journal: '',
-[L109, S8]         volume: '',
-[L110, S8]         issue: '',
-[L111, S8]         pages: '',
-[L112, S8]         doi: '',
-[L113, S8]         abstract: '',
-[L114, S8]         authorKeywords: [],
-[L115, S8]         plusKeywords: [],
-[L116, S8]         researchAreas: '',
-[L117, S8]         wosCategories: '',
-[L118, S8]         affiliations: '',
-[L119, S8]         authorsDetailsCount: 0,
-[L120, S8]         authorEmail: '',
-[L121, S8]         orcidCount: 0,
-[L122, S8]         researcherIdCount: 0,
-[L123, S8]         fundingText: '',
-[L124, S8]         type: 'Article',
-[L125, S8]         language: 'English',
-[L126, S8]         issn: '',
-[L127, S8]         month: '',
-[L128, S8]         articleNumber: '',
-[L129, S8]         publisher: '',
-[L130, S8]         address: '',
-[L131, S8]         timesCited: null,
-[L132, S8]         oaStatus: '',
-[L133, S8]         referencesList: [],
-[L134, S8]         authorsDetail: [],
-[L135, S8]         fundingList: [],
-[L136, S6]       };
-[L137, S4]     }
-[L138, S0] 
-[L139, S4]     const keywords = Array.isArray(article.keywords) ? article.keywords : [];
-[L140, S4]     const authorKeywords = keywords
-[L141, S6]       .filter((k) => k && k.type === 'author')
-[L142, S6]       .map((k) => k.name || k)
-[L143, S6]       .filter(Boolean);
-[L144, S0] 
-[L145, S4]     const plusKeywords = keywords
-[L146, S6]       .filter((k) => k && k.type === 'plus')
-[L147, S6]       .map((k) => k.name || k)
-[L148, S6]       .filter(Boolean);
-[L149, S0] 
-[L150, S4]     const authorsDetail = Array.isArray(article.authors_detail)
-[L151, S6]       ? article.authors_detail
-[L152, S6]       : [];
-[L153, S0] 
-[L154, S4]     const corrAuthor = authorsDetail.find(
-[L155, S6]       (a) => a && a.is_corresponding && a.email
-[L156, S4]     );
-[L157, S4]     const firstAuthorWithEmail = authorsDetail.find((a) => a && a.email);
-[L158, S4]     const authorEmail =
-[L159, S6]       corrAuthor?.email || firstAuthorWithEmail?.email || '';
-[L160, S0] 
-[L161, S4]     const orcidCount = authorsDetail.filter((a) => a && a.orcid).length;
-[L162, S4]     const researcherIdCount = authorsDetail.filter(
-[L163, S6]       (a) => a && a.researcher_id
-[L164, S4]     ).length;
-[L165, S0] 
-[L166, S4]     const affiliationsSet = new Set(
-[L167, S6]       authorsDetail.map((a) => a && a.affiliation).filter(Boolean)
-[L168, S4]     );
-[L169, S4]     const affiliations = Array.from(affiliationsSet).join('; ');
-[L170, S0] 
-[L171, S4]     return {
-[L172, S6]       title: article.title || '',
-[L173, S6]       authors: article.author || '',
-[L174, S6]       year: article.year ? String(article.year) : '',
-[L175, S6]       journal: article.journal || '',
-[L176, S6]       volume: article.volume ? String(article.volume) : '',
-[L177, S6]       issue: article.issue ? String(article.issue) : '',
-[L178, S6]       pages: article.pages || '',
-[L179, S6]       doi: article.doi || '',
-[L180, S6]       abstract: article.abstract || '',
-[L181, S6]       authorKeywords,
-[L182, S6]       plusKeywords,
-[L183, S6]       researchAreas: article.research_areas || '',
-[L184, S6]       wosCategories: article.web_of_science_categories || '',
-[L185, S6]       affiliations,
-[L186, S6]       authorsDetailsCount: authorsDetail.length,
-[L187, S6]       authorEmail,
-[L188, S6]       orcidCount,
-[L189, S6]       researcherIdCount,
-[L190, S6]       fundingText: article.funding_text || '',
-[L191, S6]       type: 'Article',
-[L192, S6]       language: article.language || 'English',
-[L193, S6]       issn: article.issn || '',
-[L194, S6]       month: article.month || '',
-[L195, S6]       articleNumber: article.pages || '',
-[L196, S6]       publisher: article.publisher || '',
-[L197, S6]       address: article.address || '',
-[L198, S6]       timesCited:
-[L199, S8]         typeof article.times_cited === 'number' ? article.times_cited : null,
-[L200, S6]       oaStatus: article.oa_status || '',
-[L201, S6]       referencesList: Array.isArray(article.references_list)
-[L202, S8]         ? article.references_list
-[L203, S8]         : [],
-[L204, S6]       authorsDetail,
-[L205, S6]       fundingList: Array.isArray(article.funding_list)
-[L206, S8]         ? article.funding_list
-[L207, S8]         : [],
-[L208, S4]     };
-[L209, S2]   }, [article]);
-[L210, S0] 
-[L211, S2]   return {
-[L212, S4]     activeTab,
-[L213, S4]     setActiveTab,
-[L214, S4]     handleTabChange,
-[L215, S4]     drawerState,
-[L216, S4]     openDrawer,
-[L217, S4]     handleExpandDrawer,
-[L218, S4]     closeDrawer,
-[L219, S4]     hoverInfo,
-[L220, S4]     handleHoverInfo,
-[L221, S4]     copiedText,
-[L222, S4]     handleCopy,
-[L223, S4]     isAbstractExpanded,
-[L224, S4]     toggleAbstractExpanded,
-[L225, S4]     ...formattedData,
-[L226, S2]   };
-[L227, S0] }
-
-
-// --- backend/src/database/models/core.py ---
-
-[L001, S0] """Core relational database models for projects and articles."""
-[L002, S0] from datetime import datetime, timezone
-[L003, S0] 
-[L004, S0] from sqlalchemy import (
-[L005, S4]     Column,
-[L006, S4]     DateTime,
-[L007, S4]     ForeignKey,
-[L008, S4]     Integer,
-[L009, S4]     String,
-[L010, S4]     Text,
-[L011, S4]     UniqueConstraint,
-[L012, S0] )
-[L013, S0] from sqlalchemy.orm import relationship
-[L014, S0] 
-[L015, S0] from ..session import Base
-[L016, S0] 
+[L001, S0] from datetime import datetime
+[L002, S0] from typing import Optional, List, Dict, Any, AsyncGenerator
+[L003, S0] from pydantic import BaseModel, ConfigDict, Field
+[L004, S0] 
+[L005, S0] 
+[L006, S0] class ZipDownloadRequest(BaseModel):
+[L007, S4]     model_config = ConfigDict(strict=True, extra="forbid")
+[L008, S0] 
+[L009, S4]     batch_name: str = Field(
+[L010, S8]         ...,
+[L011, S8]         description="The name of the batch folder containing the PDFs.",
+[L012, S4]     )
+[L013, S4]     dois: List[str] = Field(
+[L014, S8]         ...,
+[L015, S8]         description="List of DOIs to include in the ZIP archive.",
+[L016, S4]     )
 [L017, S0] 
-[L018, S0] class Project(Base):
-[L019, S4]     """Represents a research project containing bibliographies."""
-[L020, S0] 
-[L021, S4]     __tablename__ = "projects"
-[L022, S0] 
-[L023, S4]     id = Column(
-[L024, S8]         Integer,
-[L025, S8]         primary_key=True,
-[L026, S8]         autoincrement=True,
-[L027, S8]         comment="Primary key integer identifier",
+[L018, S0] 
+[L019, S0] class BatchDownloadRequest(BaseModel):
+[L020, S4]     cookies: Optional[str] = Field(
+[L021, S8]         None, description="Optional raw session cookies to bypass 403 blocks."
+[L022, S4]     )
+[L023, S4]     model_config = ConfigDict(strict=True, extra="forbid")
+[L024, S0] 
+[L025, S4]     dois: List[str] = Field(
+[L026, S8]         ...,
+[L027, S8]         description="List of Digital Object Identifiers to fetch."
 [L028, S4]     )
-[L029, S4]     name = Column(
-[L030, S8]         String(255),
-[L031, S8]         nullable=False,
-[L032, S8]         comment="Project display and reference name",
+[L029, S4]     delay: int = Field(
+[L030, S8]         ...,
+[L031, S8]         ge=0,
+[L032, S8]         description="Delay in seconds between sequential downloads."
 [L033, S4]     )
-[L034, S4]     description = Column(
-[L035, S8]         Text,
-[L036, S8]         nullable=True,
-[L037, S8]         comment="Detailed description of the project",
+[L034, S4]     destination: str = Field(
+[L035, S8]         ...,
+[L036, S8]         min_length=1,
+[L037, S8]         description="Target directory path for storing downloaded PDF files."
 [L038, S4]     )
-[L039, S4]     hashed_password = Column(
-[L040, S8]         String(255),
-[L041, S8]         nullable=True,
-[L042, S8]         comment="Bcrypt hashed project password",
+[L039, S4]     email: str = Field(
+[L040, S8]         ...,
+[L041, S8]         min_length=1,
+[L042, S8]         description="Contact email address for academic API polite pools."
 [L043, S4]     )
-[L044, S4]     created_at = Column(
-[L045, S8]         DateTime,
-[L046, S8]         default=lambda: datetime.now(timezone.utc),
-[L047, S8]         nullable=False,
-[L048, S8]         comment="UTC timestamp when the project was created",
+[L044, S0] 
+[L045, S0] 
+[L046, S0] class LocalBatchDownloadRequest(BaseModel):
+[L047, S4]     cookies: Optional[str] = Field(
+[L048, S8]         None, description="Optional raw session cookies to bypass 403 blocks."
 [L049, S4]     )
-[L050, S4]     updated_at = Column(
-[L051, S8]         DateTime,
-[L052, S8]         default=lambda: datetime.now(timezone.utc),
-[L053, S8]         onupdate=lambda: datetime.now(timezone.utc),
-[L054, S8]         nullable=False,
-[L055, S8]         comment="UTC timestamp when the project was last updated",
+[L050, S4]     model_config = ConfigDict(strict=True, extra="forbid")
+[L051, S0] 
+[L052, S4]     file_path: str = Field(
+[L053, S8]         ...,
+[L054, S8]         min_length=1,
+[L055, S8]         description="Absolute or relative path to the local bibliography file."
 [L056, S4]     )
-[L057, S0] 
-[L058, S4]     project_articles = relationship(
-[L059, S8]         "ProjectArticle",
-[L060, S8]         back_populates="project",
-[L061, S8]         cascade="all, delete-orphan",
-[L062, S4]     )
-[L063, S4]     articles = relationship(
-[L064, S8]         "Article",
-[L065, S8]         secondary="project_articles",
-[L066, S8]         back_populates="projects",
-[L067, S8]         viewonly=True,
-[L068, S4]     )
-[L069, S4]     downloads = relationship(
-[L070, S8]         "Download",
-[L071, S8]         back_populates="project",
-[L072, S8]         cascade="all, delete-orphan",
-[L073, S4]     )
-[L074, S0] 
-[L075, S0] 
-[L076, S0] class Article(Base):
-[L077, S4]     """Represents an academic publication with bibliographic data."""
-[L078, S0] 
-[L079, S4]     __tablename__ = "articles"
-[L080, S0] 
-[L081, S4]     id = Column(
-[L082, S8]         Integer,
-[L083, S8]         primary_key=True,
-[L084, S8]         autoincrement=True,
-[L085, S8]         comment="Primary key integer identifier",
-[L086, S4]     )
-[L087, S4]     doi = Column(
-[L088, S8]         String(255),
-[L089, S8]         unique=True,
-[L090, S8]         index=True,
-[L091, S8]         nullable=True,
-[L092, S8]         comment="Normalized DOI unique key",
-[L093, S4]     )
-[L094, S4]     title = Column(
-[L095, S8]         Text,
-[L096, S8]         nullable=False,
-[L097, S8]         comment="Full title of the article or publication",
-[L098, S4]     )
-[L099, S4]     journal = Column(
-[L100, S8]         String(255),
-[L101, S8]         nullable=True,
-[L102, S8]         comment="Journal or venue publishing the article",
-[L103, S4]     )
-[L104, S4]     year = Column(
-[L105, S8]         Integer,
-[L106, S8]         nullable=True,
-[L107, S8]         comment="Publication calendar year",
-[L108, S4]     )
-[L109, S4]     volume = Column(
-[L110, S8]         String(50),
-[L111, S8]         nullable=True,
-[L112, S8]         comment="Journal publication volume",
-[L113, S4]     )
-[L114, S4]     issue = Column(
-[L115, S8]         String(50),
-[L116, S8]         nullable=True,
-[L117, S8]         comment="Journal publication issue",
-[L118, S4]     )
-[L119, S4]     pages = Column(
-[L120, S8]         String(50),
-[L121, S8]         nullable=True,
-[L122, S8]         comment="Article page range or article number",
-[L123, S4]     )
-[L124, S4]     abstract = Column(
-[L125, S8]         Text,
-[L126, S8]         nullable=True,
-[L127, S8]         comment="Full text abstract of the article",
-[L128, S4]     )
-[L129, S4]     publisher = Column(
-[L130, S8]         String(255),
-[L131, S8]         nullable=True,
-[L132, S8]         comment="Publisher or imprint name of the article",
-[L133, S4]     )
-[L134, S4]     language = Column(
-[L135, S8]         String(50),
-[L136, S8]         nullable=True,
-[L137, S8]         comment="Primary language of the publication",
-[L138, S4]     )
-[L139, S4]     research_areas = Column(
-[L140, S8]         Text,
-[L141, S8]         nullable=True,
-[L142, S8]         comment="Research areas or Web of Science categories",
-[L143, S4]     )
-[L144, S4]     web_of_science_categories = Column(
-[L145, S8]         Text,
-[L146, S8]         nullable=True,
-[L147, S8]         comment="Specific Web of Science categorical metadata",
-[L148, S4]     )
-[L149, S4]     funding_text = Column(
-[L150, S8]         Text,
-[L151, S8]         nullable=True,
-[L152, S8]         comment="Funding acknowledgment text or grant information",
-[L153, S4]     )
-[L154, S4]     journal_iso = Column(
-[L155, S8]         String(255),
-[L156, S8]         nullable=True,
-[L157, S8]         comment="ISO abbreviation of the journal name",
-[L158, S4]     )
-[L159, S4]     oa_status = Column(
-[L160, S8]         String(50),
-[L161, S8]         nullable=True,
-[L162, S8]         comment="Open Access status indicator",
-[L163, S4]     )
-[L164, S4]     issn = Column(
-[L165, S8]         String(50),
-[L166, S8]         nullable=True,
-[L167, S8]         comment="International Standard Serial Number",
-[L168, S4]     )
-[L169, S4]     times_cited = Column(
-[L170, S8]         Integer,
-[L171, S8]         nullable=True,
-[L172, S8]         comment="Number of times the article has been cited globally",
-[L173, S4]     )
-[L174, S4]     cited_references_count = Column(
-[L175, S8]         Integer,
-[L176, S8]         nullable=True,
-[L177, S8]         comment="Number of references cited by this article",
-[L178, S4]     )
-[L179, S4]     raw_data = Column(
-[L180, S8]         Text,
-[L181, S8]         nullable=True,
-[L182, S8]         comment="Raw bibliographic payload (e.g. BibTeX or RIS)",
-[L183, S4]     )
-[L184, S4]     created_at = Column(
-[L185, S8]         DateTime,
-[L186, S8]         default=lambda: datetime.now(timezone.utc),
-[L187, S8]         nullable=False,
-[L188, S8]         comment="UTC timestamp when article was ingested",
-[L189, S4]     )
-[L190, S4]     updated_at = Column(
-[L191, S8]         DateTime,
-[L192, S8]         default=lambda: datetime.now(timezone.utc),
-[L193, S8]         onupdate=lambda: datetime.now(timezone.utc),
-[L194, S8]         nullable=False,
-[L195, S8]         comment="UTC timestamp when article record was updated",
-[L196, S4]     )
-[L197, S0] 
-[L198, S4]     project_articles = relationship(
-[L199, S8]         "ProjectArticle",
-[L200, S8]         back_populates="article",
-[L201, S8]         cascade="all, delete-orphan",
-[L202, S4]     )
-[L203, S4]     projects = relationship(
-[L204, S8]         "Project",
-[L205, S8]         secondary="project_articles",
-[L206, S8]         back_populates="articles",
-[L207, S8]         viewonly=True,
-[L208, S4]     )
-[L209, S4]     author_articles = relationship(
-[L210, S8]         "AuthorArticle",
-[L211, S8]         back_populates="article",
-[L212, S8]         cascade="all, delete-orphan",
-[L213, S4]     )
-[L214, S4]     authors = relationship(
-[L215, S8]         "Author",
-[L216, S8]         secondary="author_articles",
-[L217, S8]         back_populates="articles",
-[L218, S8]         viewonly=True,
-[L219, S4]     )
-[L220, S4]     keyword_articles = relationship(
-[L221, S8]         "KeywordArticle",
-[L222, S8]         back_populates="article",
-[L223, S8]         cascade="all, delete-orphan",
-[L224, S4]     )
-[L225, S4]     keywords = relationship(
-[L226, S8]         "Keyword",
-[L227, S8]         secondary="keyword_articles",
-[L228, S8]         back_populates="articles",
-[L229, S8]         viewonly=True,
-[L230, S4]     )
-[L231, S4]     references = relationship(
-[L232, S8]         "Reference",
-[L233, S8]         back_populates="article",
-[L234, S8]         cascade="all, delete-orphan",
-[L235, S4]     )
-[L236, S4]     funding = relationship(
-[L237, S8]         "Funding",
-[L238, S8]         back_populates="article",
-[L239, S8]         cascade="all, delete-orphan",
-[L240, S4]     )
-[L241, S4]     downloads = relationship(
-[L242, S8]         "Download",
-[L243, S8]         back_populates="article",
-[L244, S8]         cascade="all, delete-orphan",
-[L245, S4]     )
-[L246, S0] 
-[L247, S0] 
-[L248, S0] class ProjectArticle(Base):
-[L249, S4]     """Junction model connecting projects to articles."""
-[L250, S0] 
-[L251, S4]     __tablename__ = "project_articles"
-[L252, S4]     __table_args__ = (
-[L253, S8]         UniqueConstraint(
-[L254, S12]             "project_id",
-[L255, S12]             "article_id",
-[L256, S12]             name="uq_project_article",
-[L257, S8]         ),
-[L258, S4]     )
-[L259, S0] 
-[L260, S4]     id = Column(
-[L261, S8]         Integer,
-[L262, S8]         primary_key=True,
-[L263, S8]         autoincrement=True,
-[L264, S8]         comment="Primary key junction identifier",
-[L265, S4]     )
-[L266, S4]     project_id = Column(
-[L267, S8]         Integer,
-[L268, S8]         ForeignKey("projects.id", ondelete="CASCADE"),
-[L269, S8]         nullable=False,
-[L270, S8]         comment="Foreign key linking to projects.id",
-[L271, S4]     )
-[L272, S4]     article_id = Column(
-[L273, S8]         Integer,
-[L274, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
-[L275, S8]         nullable=False,
-[L276, S8]         comment="Foreign key linking to articles.id",
-[L277, S4]     )
-[L278, S4]     status = Column(
-[L279, S8]         String(50),
-[L280, S8]         default="pending",
-[L281, S8]         nullable=False,
-[L282, S8]         comment="Processing or download status of the article in the project",
-[L283, S4]     )
-[L284, S4]     added_at = Column(
-[L285, S8]         DateTime,
-[L286, S8]         default=lambda: datetime.now(timezone.utc),
-[L287, S8]         nullable=False,
-[L288, S8]         comment="UTC timestamp when article was associated with project",
-[L289, S4]     )
-[L290, S0] 
-[L291, S4]     project = relationship("Project", back_populates="project_articles")
-[L292, S4]     article = relationship("Article", back_populates="project_articles")
+[L057, S4]     destination: str = Field(
+[L058, S8]         ...,
+[L059, S8]         min_length=1,
+[L060, S8]         description="Target directory path for storing downloaded PDF files."
+[L061, S4]     )
+[L062, S4]     email: str = Field(
+[L063, S8]         ...,
+[L064, S8]         min_length=1,
+[L065, S8]         description="Contact email address for academic API polite pools."
+[L066, S4]     )
+[L067, S4]     delay: int = Field(
+[L068, S8]         5,
+[L069, S8]         ge=0,
+[L070, S8]         description="Delay in seconds between sequential downloads."
+[L071, S4]     )
+[L072, S0] 
+[L073, S0] 
+[L074, S0] class ParsedReference(BaseModel):
+[L075, S4]     model_config = ConfigDict(strict=True, extra="forbid")
+[L076, S4]     
+[L077, S4]     author: Optional[str] = None
+[L078, S4]     year: Optional[str] = None
+[L079, S4]     title: Optional[str] = None
+[L080, S4]     journal: Optional[str] = None
+[L081, S4]     doi: Optional[str] = None
+[L082, S4]     abstract: Optional[str] = None
+[L083, S4]     publisher: Optional[str] = None
+[L084, S4]     language: Optional[str] = None
+[L085, S4]     keywords: Optional[str] = None
+[L086, S4]     research_areas: Optional[str] = None
+[L087, S4]     web_of_science_categories: Optional[str] = None
+[L088, S4]     funding_text: Optional[str] = None
+[L089, S4]     journal_iso: Optional[str] = None
+[L090, S4]     oa_status: Optional[str] = None
+[L091, S4]     issn: Optional[str] = None
+[L092, S4]     volume: Optional[str] = None
+[L093, S4]     issue: Optional[str] = None
+[L094, S4]     pages: Optional[str] = None
+[L095, S4]     times_cited: Optional[int] = None
+[L096, S4]     cited_references_count: Optional[int] = None
+[L097, S4]     upload_datetime: datetime
+
+
+// --- backend/src/bibliography/injection_service.py ---
+
+[L001, S0] """Service for persisting bibliographic references into the database."""
+[L002, S0] import re
+[L003, S0] from typing import List, Optional
+[L004, S0] from sqlalchemy.orm import Session
+[L005, S0] from sqlalchemy.exc import OperationalError
+[L006, S0] 
+[L007, S0] try:
+[L008, S4]     from .schemas import ParsedReference
+[L009, S4]     from ..database.models.core import Article, Project, ProjectArticle
+[L010, S4]     from ..database.models.identity import Author, AuthorArticle
+[L011, S0] except (ImportError, ValueError):
+[L012, S4]     from backend.src.bibliography.schemas import ParsedReference
+[L013, S4]     from backend.src.database.models.core import (
+[L014, S8]         Article,
+[L015, S8]         Project,
+[L016, S8]         ProjectArticle,
+[L017, S4]     )
+[L018, S4]     from backend.src.database.models.identity import (
+[L019, S8]         Author,
+[L020, S8]         AuthorArticle,
+[L021, S4]     )
+[L022, S4]     from backend.src.bibliography.schemas import ParsedReference
+[L023, S4]     from backend.src.database.models.core import (
+[L024, S8]         Article,
+[L025, S8]         Project,
+[L026, S8]         ProjectArticle,
+[L027, S4]     )
+[L028, S0] 
+[L029, S0] 
+[L030, S0] def _get_insert_stmt(table_or_model, db: Session):
+[L031, S4]     dialect_name = ""
+[L032, S4]     try:
+[L033, S8]         if db.bind:
+[L034, S12]             dialect_name = db.bind.dialect.name
+[L035, S4]     except Exception:
+[L036, S8]         pass
+[L037, S4]     if dialect_name == "postgresql":
+[L038, S8]         from sqlalchemy.dialects.postgresql import insert as pg_insert
+[L039, S0] 
+[L040, S8]         return pg_insert(table_or_model).on_conflict_do_nothing()
+[L041, S4]     from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+[L042, S0] 
+[L043, S4]     return sqlite_insert(table_or_model).on_conflict_do_nothing()
+[L044, S0] 
+[L045, S0] 
+[L046, S0] def _bulk_inject_references(
+[L047, S4]     db: Session, refs: List[ParsedReference], project_code: str
+[L048, S0] ) -> int:
+[L049, S4]     """Persist parsed references and associate them with a project in bulk."""
+[L050, S4]     project = db.query(Project).filter(Project.name == project_code).first()
+[L051, S4]     if not project:
+[L052, S8]         project = Project(name=project_code)
+[L053, S8]         db.add(project)
+[L054, S8]         db.flush()
+[L055, S0] 
+[L056, S4]     if not refs:
+[L057, S8]         db.commit()
+[L058, S8]         return 0
+[L059, S0] 
+[L060, S4]     all_dois = {
+[L061, S8]         ref.doi.strip()
+[L062, S8]         for ref in refs
+[L063, S8]         if ref.doi and ref.doi.strip()
+[L064, S4]     }
+[L065, S4]     all_titles = {
+[L066, S8]         ref.title.strip()
+[L067, S8]         for ref in refs
+[L068, S8]         if ref.title and ref.title.strip()
+[L069, S4]     }
+[L070, S0] 
+[L071, S4]     existing_by_doi = {}
+[L072, S4]     if all_dois:
+[L073, S8]         for a in db.query(Article).filter(Article.doi.in_(all_dois)).all():
+[L074, S12]             if a.doi:
+[L075, S16]                 existing_by_doi[a.doi] = a
+[L076, S0] 
+[L077, S4]     existing_by_title = {}
+[L078, S4]     if all_titles:
+[L079, S8]         for a in (
+[L080, S12]             db.query(Article).filter(Article.title.in_(all_titles)).all()
+[L081, S8]         ):
+[L082, S12]             if a.title:
+[L083, S16]                 existing_by_title[a.title] = a
+[L084, S0] 
+[L085, S4]     seen_batch_dois = set()
+[L086, S4]     seen_batch_titles = set()
+[L087, S4]     new_articles_data = []
+[L088, S0] 
+[L089, S4]     for ref in refs:
+[L090, S8]         doi_val = (ref.doi or "").strip() or None
+[L091, S8]         title_val = (ref.title or "").strip() or "Untitled"
+[L092, S0] 
+[L093, S8]         if doi_val:
+[L094, S12]             if doi_val in seen_batch_dois or doi_val in existing_by_doi:
+[L095, S16]                 continue
+[L096, S12]             seen_batch_dois.add(doi_val)
+[L097, S8]         else:
+[L098, S12]             if (
+[L099, S16]                 title_val in seen_batch_titles
+[L100, S16]                 or title_val in existing_by_title
+[L101, S12]             ):
+[L102, S16]                 continue
+[L103, S12]             seen_batch_titles.add(title_val)
+[L104, S0] 
+[L105, S8]         year_val: Optional[int] = None
+[L106, S8]         if ref.year:
+[L107, S12]             try:
+[L108, S16]                 year_val = int(float(str(ref.year).strip()))
+[L109, S12]             except (ValueError, TypeError):
+[L110, S16]                 year_val = None
+[L111, S0] 
+[L112, S8]         new_articles_data.append(
+[L113, S12]             {
+[L114, S16]                 "title": title_val,
+[L115, S16]                 "journal": ref.journal,
+[L116, S16]                 "year": year_val,
+[L117, S16]                 "doi": doi_val,
+[L118, S16]                 "abstract": getattr(ref, "abstract", None),
+[L119, S16]                 "publisher": getattr(ref, "publisher", None),
+[L120, S16]                 "language": getattr(ref, "language", None),
+[L121, S16]                 "research_areas": getattr(ref, "research_areas", None),
+[L122, S16]                 "web_of_science_categories": getattr(
+[L123, S20]                     ref, "web_of_science_categories", None
+[L124, S16]                 ),
+[L125, S16]                 "funding_text": getattr(ref, "funding_text", None),
+[L126, S16]                 "journal_iso": getattr(ref, "journal_iso", None),
+[L127, S16]                 "oa_status": getattr(ref, "oa_status", None),
+[L128, S16]                 "issn": getattr(ref, "issn", None),
+[L129, S16]                 "volume": getattr(ref, "volume", None),
+[L130, S16]                 "issue": getattr(ref, "issue", None),
+[L131, S16]                 "pages": getattr(ref, "pages", None),
+[L132, S16]                 "times_cited": getattr(ref, "times_cited", None),
+[L133, S16]                 "cited_references_count": getattr(
+[L134, S20]                     ref, "cited_references_count", None
+[L135, S16]                 ),
+[L136, S16]                 "raw_data": str(ref.author) if ref.author else None,
+[L137, S12]             }
+[L138, S8]         )
+[L139, S0] 
+[L140, S4]     if new_articles_data:
+[L141, S8]         stmt = _get_insert_stmt(Article, db).values(new_articles_data)
+[L142, S8]         db.execute(stmt)
+[L143, S0] 
+[L144, S4]     if all_dois:
+[L145, S8]         for a in db.query(Article).filter(Article.doi.in_(all_dois)).all():
+[L146, S12]             if a.doi:
+[L147, S16]                 existing_by_doi[a.doi] = a
+[L148, S0] 
+[L149, S4]     if all_titles:
+[L150, S8]         for a in (
+[L151, S12]             db.query(Article).filter(Article.title.in_(all_titles)).all()
+[L152, S8]         ):
+[L153, S12]             if a.title:
+[L154, S16]                 existing_by_title[a.title] = a
+[L155, S0] 
+[L156, S4]     linked_article_ids = set()
+[L157, S4]     project_articles_data = []
+[L158, S4]     seen_proj_links = set(
+[L159, S8]         (
+[L160, S12]             pa.project_id,
+[L161, S12]             pa.article_id,
+[L162, S8]         )
+[L163, S8]         for pa in db.query(ProjectArticle)
+[L164, S8]         .filter(ProjectArticle.project_id == project.id)
+[L165, S8]         .all()
+[L166, S4]     )
+[L167, S0] 
+[L168, S4]     for ref in refs:
+[L169, S8]         doi_val = (ref.doi or "").strip() or None
+[L170, S8]         title_val = (ref.title or "").strip() or "Untitled"
+[L171, S8]         art = existing_by_doi.get(doi_val) if doi_val else None
+[L172, S8]         if not art:
+[L173, S12]             art = existing_by_title.get(title_val)
+[L174, S0] 
+[L175, S8]         if art:
+[L176, S12]             linked_article_ids.add(art.id)
+[L177, S12]             if (project.id, art.id) not in seen_proj_links:
+[L178, S16]                 project_articles_data.append(
+[L179, S20]                     {
+[L180, S24]                         "project_id": project.id,
+[L181, S24]                         "article_id": art.id,
+[L182, S24]                         "status": "pending",
+[L183, S20]                     }
+[L184, S16]                 )
+[L185, S16]                 seen_proj_links.add((project.id, art.id))
+[L186, S0] 
+[L187, S4]     if project_articles_data:
+[L188, S8]         stmt_pa = _get_insert_stmt(ProjectArticle, db).values(
+[L189, S12]             project_articles_data
+[L190, S8]         )
+[L191, S8]         db.execute(stmt_pa)
+[L192, S0] 
+[L193, S4]     all_authors_raw = set()
+[L194, S4]     for ref in refs:
+[L195, S8]         if ref.author:
+[L196, S12]             for a_name in re.split(
+[L197, S16]                 r"\s+and\s+", str(ref.author), flags=re.I
+[L198, S12]             ):
+[L199, S16]                 clean = a_name.strip()[:255]
+[L200, S16]                 if clean:
+[L201, S20]                     all_authors_raw.add(clean)
+[L202, S0] 
+[L203, S4]     if all_authors_raw:
+[L204, S8]         existing_authors = {
+[L205, S12]             auth.name: auth
+[L206, S12]             for auth in db.query(Author)
+[L207, S12]             .filter(Author.name.in_(all_authors_raw))
+[L208, S12]             .all()
+[L209, S8]         }
+[L210, S8]         new_authors = [
+[L211, S12]             {"name": name}
+[L212, S12]             for name in all_authors_raw
+[L213, S12]             if name not in existing_authors
+[L214, S8]         ]
+[L215, S8]         if new_authors:
+[L216, S12]             stmt_auth = _get_insert_stmt(Author, db).values(new_authors)
+[L217, S12]             db.execute(stmt_auth)
+[L218, S12]             existing_authors = {
+[L219, S16]                 auth.name: auth
+[L220, S16]                 for auth in db.query(Author)
+[L221, S16]                 .filter(Author.name.in_(all_authors_raw))
+[L222, S16]                 .all()
+[L223, S12]             }
+[L224, S0] 
+[L225, S8]         author_articles_data = []
+[L226, S8]         seen_auth_links = set()
+[L227, S8]         for ref in refs:
+[L228, S12]             doi_val = (ref.doi or "").strip() or None
+[L229, S12]             title_val = (ref.title or "").strip() or "Untitled"
+[L230, S12]             art = existing_by_doi.get(doi_val) if doi_val else None
+[L231, S12]             if not art:
+[L232, S16]                 art = existing_by_title.get(title_val)
+[L233, S12]             if not art or not ref.author:
+[L234, S16]                 continue
+[L235, S0] 
+[L236, S12]             auth_list = [
+[L237, S16]                 a.strip()[:255]
+[L238, S16]                 for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
+[L239, S16]                 if a.strip()
+[L240, S12]             ]
+[L241, S12]             for idx, a_name in enumerate(auth_list):
+[L242, S16]                 auth_obj = existing_authors.get(a_name)
+[L243, S16]                 if (
+[L244, S20]                     auth_obj
+[L245, S20]                     and (auth_obj.id, art.id) not in seen_auth_links
+[L246, S16]                 ):
+[L247, S20]                     author_articles_data.append(
+[L248, S24]                         {
+[L249, S28]                             "author_id": auth_obj.id,
+[L250, S28]                             "article_id": art.id,
+[L251, S28]                             "author_order": idx + 1,
+[L252, S28]                             "is_corresponding": False,
+[L253, S24]                         }
+[L254, S20]                     )
+[L255, S20]                     seen_auth_links.add((auth_obj.id, art.id))
+[L256, S0] 
+[L257, S8]         if author_articles_data:
+[L258, S12]             stmt_aa = _get_insert_stmt(AuthorArticle, db).values(
+[L259, S16]                 author_articles_data
+[L260, S12]             )
+[L261, S12]             db.execute(stmt_aa)
+[L262, S0] 
+[L263, S4]     db.commit()
+[L264, S4]     return len(linked_article_ids)
+[L265, S0] 
+[L266, S0] 
+[L267, S0] def inject_references_to_db(
+[L268, S4]     db: Session, refs: List[ParsedReference], project_code: str
+[L269, S0] ) -> int:
+[L270, S4]     try:
+[L271, S8]         return _bulk_inject_references(db, refs, project_code)
+[L272, S4]     except OperationalError:
+[L273, S8]         raise RuntimeError("Database connection failed")
+[L274, S0] 
+[L275, S0] 
+[L276, S0] def _inject_references_inner(
+[L277, S4]     db: Session, refs: List[ParsedReference], project_code: str
+[L278, S0] ) -> int:
+[L279, S4]     """Persist parsed references and associate them with a project."""
+[L280, S4]     return _bulk_inject_references(db, refs, project_code)
+[L281, S0] 
+[L282, S0] 
+[L283, S0] def _legacy_inject_references_unused(
+[L284, S4]     db: Session, refs: List[ParsedReference], project_code: str
+[L285, S0] ) -> int:
+[L286, S4]     project = db.query(Project).filter(Project.name == project_code).first()
+[L287, S4]     if not project:
+[L288, S8]         project = Project(name=project_code)
+[L289, S8]         db.add(project)
+[L290, S8]         db.flush()
+[L291, S0] 
+[L292, S4]     linked_article_ids = set()
+[L293, S4]     seen_proj_links = set()
+[L294, S4]     seen_auth_links = set()
+[L295, S0] 
+[L296, S4]     for ref in refs:
+[L297, S8]         year_val: Optional[int] = None
+[L298, S8]         if ref.year:
+[L299, S12]             try:
+[L300, S16]                 year_val = int(float(str(ref.year).strip()))
+[L301, S12]             except (ValueError, TypeError):
+[L302, S16]                 year_val = None
+[L303, S0] 
+[L304, S8]         doi_val = getattr(ref, "doi", None)
+[L305, S8]         article = None
+[L306, S8]         
+[L307, S8]         if doi_val:
+[L308, S12]             article = db.query(Article).filter(Article.doi == doi_val).first()
+[L309, S8]         if not article:
+[L310, S12]             title_val = ref.title or "Untitled"
+[L311, S12]             article = db.query(Article).filter(Article.title == title_val).first()
+[L312, S12]             
+[L313, S8]         if not article:
+[L314, S12]             article = Article(
+[L315, S16]                 title=ref.title or "Untitled",
+[L316, S16]                 journal=ref.journal,
+[L317, S16]                 year=year_val,
+[L318, S16]                 doi=doi_val,
+[L319, S12]             )
+[L320, S12]             db.add(article)
+[L321, S12]             db.flush()
+[L322, S0] 
+[L323, S8]         link = None
+[L324, S8]         if (project.id, article.id) not in seen_proj_links:
+[L325, S12]             link = db.query(ProjectArticle).filter(
+[L326, S16]                 ProjectArticle.project_id == project.id,
+[L327, S16]                 ProjectArticle.article_id == article.id
+[L328, S12]             ).first()
+[L329, S8]         
+[L330, S8]         if not link and (project.id, article.id) not in seen_proj_links:
+[L331, S12]             db.add(ProjectArticle(project_id=project.id, article_id=article.id))
+[L332, S12]             db.flush()
+[L333, S8]         seen_proj_links.add((project.id, article.id))
+[L334, S0] 
+[L335, S8]         linked_article_ids.add(article.id)
+[L336, S0] 
+[L337, S8]         if ref.author:
+[L338, S12]             if not getattr(article, "raw_data", None):
+[L339, S16]                 article.raw_data = str(ref.author)
+[L340, S12]             auth_list = [
+[L341, S16]                 a.strip()
+[L342, S16]                 for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
+[L343, S16]                 if a.strip()
+[L344, S12]             ]
+[L345, S12]             for idx, a_name in enumerate(auth_list):
+[L346, S16]                 c_name = a_name[:255]
+[L347, S16]                 auth_obj = (
+[L348, S20]                     db.query(Author).filter(Author.name == c_name).first()
+[L349, S16]                 )
+[L350, S16]                 if not auth_obj:
+[L351, S20]                     auth_obj = Author(name=c_name)
+[L352, S20]                     db.add(auth_obj)
+[L353, S20]                     db.flush()
+[L354, S16]                 a_link = None
+[L355, S16]                 if (auth_obj.id, article.id) not in seen_auth_links:
+[L356, S20]                     a_link = (
+[L357, S24]                         db.query(AuthorArticle)
+[L358, S24]                         .filter(
+[L359, S28]                             AuthorArticle.author_id == auth_obj.id,
+[L360, S28]                             AuthorArticle.article_id == article.id,
+[L361, S24]                         )
+[L362, S24]                         .first()
+[L363, S20]                     )
+[L364, S16]                 if not a_link and (auth_obj.id, article.id) not in seen_auth_links:
+[L365, S20]                     db.add(
+[L366, S24]                         AuthorArticle(
+[L367, S28]                             author_id=auth_obj.id,
+[L368, S28]                             article_id=article.id,
+[L369, S28]                             author_order=idx + 1,
+[L370, S24]                         )
+[L371, S20]                     )
+[L372, S20]                     db.flush()
+[L373, S16]                 seen_auth_links.add((auth_obj.id, article.id))
+[L374, S0] 
+[L375, S4]     db.commit()
+[L376, S4]     return len(linked_article_ids)

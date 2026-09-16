@@ -133,7 +133,7 @@ def _bulk_inject_references(
                 "cited_references_count": getattr(
                     ref, "cited_references_count", None
                 ),
-                "raw_data": str(ref.author) if ref.author else None,
+                "raw_data": getattr(ref, "raw_data", None) or (str(ref.author) if ref.author else None),
             }
         )
 
