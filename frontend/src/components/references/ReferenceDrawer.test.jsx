@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import ReferenceDrawer from './ReferenceDrawer';
 
-describe('ReferenceDrawer', () => {
+describe('ReferenceDrawer (Field Detail Sub-Modal)', () => {
   const mockItems = [
     { id: '1', title: 'Paper 1', doi: '10.1000/1', year: 2020 },
     { id: '2', title: 'Paper 2', doi: '10.1000/2', year: 2021 },
@@ -27,7 +27,7 @@ describe('ReferenceDrawer', () => {
     const items = screen.getAllByTestId('drawer-item');
     expect(items.length).toBe(5);
 
-    const closeBtn = screen.getByRole('button', { name: /close drawer/i });
+    const closeBtn = screen.getByRole('button', { name: /close/i });
     fireEvent.click(closeBtn);
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
@@ -56,7 +56,7 @@ describe('ReferenceDrawer', () => {
     expect(screen.getByText('Corresponding')).toBeInTheDocument();
   });
 
-  it('applies translate-x-full when isOpen is false', () => {
+  it('does not render into DOM when isOpen is false', () => {
     const { container } = render(
       <ReferenceDrawer
         isOpen={false}
@@ -66,7 +66,6 @@ describe('ReferenceDrawer', () => {
       />
     );
 
-    const drawer = container.firstChild;
-    expect(drawer).toHaveClass('translate-x-full');
+    expect(container.firstChild).toBeNull();
   });
 });

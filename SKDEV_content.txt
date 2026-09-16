@@ -1,666 +1,12 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 16:24:03
+Date: 2026-09-16 16:31:41
 AST Mode: False
 Line Numbers: True
-Modules: ModalTemplate.jsx, MetricsFooterCards.jsx, OverviewLeftColumn.jsx, OverviewRightColumn.jsx, ReferenceDetailsModal.jsx, ReferenceDrawer.jsx, ReferenceHeroBlock.jsx
-Processed Files: 7
+Modules: ReferenceDetailsModal.jsx, ReferenceDrawer.jsx, ReferenceDrawer.test.jsx
+Processed Files: 3
 ===========================
 
-
-
-// --- frontend/src/components/common/ModalTemplate.jsx ---
-
-[L001, S0] import React from 'react';
-[L002, S0] import PropTypes from 'prop-types';
-[L003, S0] import { createPortal } from 'react-dom';
-[L004, S0] 
-[L005, S0] const styles = {
-[L006, S2]   overlay: {
-[L007, S4]     position: 'fixed',
-[L008, S4]     top: 0,
-[L009, S4]     left: 0,
-[L010, S4]     right: 0,
-[L011, S4]     bottom: 0,
-[L012, S4]     backgroundColor: 'rgba(10, 15, 30, 0.85)',
-[L013, S4]     backdropFilter: 'blur(6px)',
-[L014, S4]     WebkitBackdropFilter: 'blur(6px)',
-[L015, S4]     display: 'flex',
-[L016, S4]     alignItems: 'center',
-[L017, S4]     justifyContent: 'center',
-[L018, S4]     zIndex: 1000,
-[L019, S4]     padding: '16px',
-[L020, S4]     boxSizing: 'border-box',
-[L021, S2]   },
-[L022, S2]   modal: (maxWidth) => ({
-[L023, S4]     backgroundColor: '#0F172A',
-[L024, S4]     border: '1px solid #334155',
-[L025, S4]     borderRadius: '12px',
-[L026, S4]     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
-[L027, S4]     width: '100%',
-[L028, S4]     maxWidth: typeof maxWidth === 'string' && maxWidth.includes('px')
-[L029, S6]       ? maxWidth
-[L030, S6]       : '1180px',
-[L031, S4]     maxHeight: '90vh',
-[L032, S4]     display: 'flex',
-[L033, S4]     flexDirection: 'column',
-[L034, S4]     position: 'relative',
-[L035, S4]     overflow: 'hidden',
-[L036, S4]     color: '#f8fafc',
-[L037, S4]     fontFamily: 'system-ui, -apple-system, sans-serif',
-[L038, S4]     boxSizing: 'border-box',
-[L039, S2]   }),
-[L040, S2]   header: {
-[L041, S4]     display: 'flex',
-[L042, S4]     alignItems: 'center',
-[L043, S4]     justifyContent: 'space-between',
-[L044, S4]     padding: '16px 24px',
-[L045, S4]     borderBottom: '1px solid #1e293b',
-[L046, S4]     backgroundColor: '#0F172A',
-[L047, S2]   },
-[L048, S2]   headerContent: {
-[L049, S4]     fontSize: '18px',
-[L050, S4]     fontWeight: '600',
-[L051, S4]     color: '#f8fafc',
-[L052, S4]     display: 'flex',
-[L053, S4]     alignItems: 'center',
-[L054, S4]     gap: '12px',
-[L055, S2]   },
-[L056, S2]   closeBtn: {
-[L057, S4]     background: 'none',
-[L058, S4]     border: 'none',
-[L059, S4]     color: '#94a3b8',
-[L060, S4]     cursor: 'pointer',
-[L061, S4]     padding: '6px',
-[L062, S4]     borderRadius: '6px',
-[L063, S4]     display: 'flex',
-[L064, S4]     alignItems: 'center',
-[L065, S4]     justifyContent: 'center',
-[L066, S2]   },
-[L067, S2]   body: {
-[L068, S4]     flex: 1,
-[L069, S4]     overflowY: 'auto',
-[L070, S4]     padding: '24px',
-[L071, S4]     position: 'relative',
-[L072, S4]     boxSizing: 'border-box',
-[L073, S2]   },
-[L074, S2]   footer: {
-[L075, S4]     padding: '16px 24px',
-[L076, S4]     borderTop: '1px solid #1e293b',
-[L077, S4]     backgroundColor: 'rgba(15, 23, 42, 0.5)',
-[L078, S2]   },
-[L079, S0] };
-[L080, S0] 
-[L081, S0] export default function ModalTemplate({
-[L082, S2]   isOpen,
-[L083, S2]   onClose,
-[L084, S2]   header,
-[L085, S2]   footer,
-[L086, S2]   children,
-[L087, S2]   maxWidth = '1180px',
-[L088, S0] }) {
-[L089, S2]   if (!isOpen) return null;
-[L090, S0] 
-[L091, S2]   const modalContent = (
-[L092, S4]     <div
-[L093, S6]       style={styles.overlay}
-[L094, S6]       onClick={onClose}
-[L095, S6]       role="presentation"
-[L096, S4]     >
-[L097, S6]       <div
-[L098, S8]         style={styles.modal(maxWidth)}
-[L099, S8]         onClick={(e) => e.stopPropagation()}
-[L100, S8]         role="dialog"
-[L101, S8]         aria-modal="true"
-[L102, S6]       >
-[L103, S8]         <div style={styles.header}>
-[L104, S10]           <div style={styles.headerContent}>{header}</div>
-[L105, S10]           <button
-[L106, S12]             onClick={onClose}
-[L107, S12]             style={styles.closeBtn}
-[L108, S12]             aria-label="Close modal"
-[L109, S10]           >
-[L110, S12]             <svg
-[L111, S14]               style={{ width: '22px', height: '22px' }}
-[L112, S14]               fill="none"
-[L113, S14]               viewBox="0 0 24 24"
-[L114, S14]               stroke="currentColor"
-[L115, S12]             >
-[L116, S14]               <path
-[L117, S16]                 strokeLinecap="round"
-[L118, S16]                 strokeLinejoin="round"
-[L119, S16]                 strokeWidth={2}
-[L120, S16]                 d="M6 18L18 6M6 6l12 12"
-[L121, S14]               />
-[L122, S12]             </svg>
-[L123, S10]           </button>
-[L124, S8]         </div>
-[L125, S0] 
-[L126, S8]         <div style={styles.body}>{children}</div>
-[L127, S0] 
-[L128, S8]         {footer && <div style={styles.footer}>{footer}</div>}
-[L129, S6]       </div>
-[L130, S4]     </div>
-[L131, S2]   );
-[L132, S0] 
-[L133, S2]   return createPortal(modalContent, document.body);
-[L134, S0] }
-[L135, S0] 
-[L136, S0] ModalTemplate.propTypes = {
-[L137, S2]   isOpen: PropTypes.bool.isRequired,
-[L138, S2]   onClose: PropTypes.func.isRequired,
-[L139, S2]   header: PropTypes.node,
-[L140, S2]   footer: PropTypes.node,
-[L141, S2]   children: PropTypes.node.isRequired,
-[L142, S2]   maxWidth: PropTypes.string,
-[L143, S0] };
-
-
-// --- frontend/src/components/references/MetricsFooterCards.jsx ---
-
-[L001, S0] import React from 'react';
-[L002, S0] import PropTypes from 'prop-types';
-[L003, S0] 
-[L004, S0] export default function MetricsFooterCards({
-[L005, S2]   type,
-[L006, S2]   language,
-[L007, S2]   issn,
-[L008, S2]   month,
-[L009, S2]   articleNumber,
-[L010, S2]   pages,
-[L011, S2]   publisher,
-[L012, S2]   address,
-[L013, S2]   timesCited,
-[L014, S2]   oaStatus,
-[L015, S2]   onHoverInfo,
-[L016, S0] }) {
-[L017, S2]   const getOABadgeClass = (status) => {
-[L018, S4]     if (!status) return 'bg-gray-800 text-gray-400';
-[L019, S4]     const s = status.toLowerCase();
-[L020, S4]     if (s.includes('gold')) return 'bg-green-900/30 text-green-400 border-green-800/50';
-[L021, S4]     if (s.includes('green')) return 'bg-emerald-900/30 text-emerald-400 border-emerald-800/50';
-[L022, S4]     if (s.includes('bronze')) return 'bg-amber-900/30 text-amber-400 border-amber-800/50';
-[L023, S4]     return 'bg-gray-800 text-gray-300 border-gray-700';
-[L024, S2]   };
-[L025, S0] 
-[L026, S2]   const PropRow = ({ label, value }) => (
-[L027, S4]     <div className="flex text-sm">
-[L028, S6]       <span className="w-32 text-gray-500 shrink-0">{label}</span>
-[L029, S6]       <span className="text-gray-300 font-medium truncate">{value || '—'}</span>
-[L030, S4]     </div>
-[L031, S2]   );
-[L032, S0] 
-[L033, S2]   PropRow.propTypes = {
-[L034, S4]     label: PropTypes.string.isRequired,
-[L035, S4]     value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-[L036, S2]   };
-[L037, S0] 
-[L038, S2]   const iconInfo = (
-[L039, S4]     <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L040, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-[L041, S4]     </svg>
-[L042, S2]   );
-[L043, S0] 
-[L044, S2]   return (
-[L045, S4]     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-[L046, S6]       {/* Bibliographic Card */}
-[L047, S6]       <div className="border border-gray-800 rounded-lg p-5 bg-gray-900/40">
-[L048, S8]         <div className="flex items-center gap-2 mb-4">
-[L049, S10]           <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L050, S12]             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-[L051, S10]           </svg>
-[L052, S10]           <h3 className="font-semibold text-gray-200 flex items-center gap-2">
-[L053, S12]             Bibliographic Information
-[L054, S12]             {onHoverInfo && (
-[L055, S14]               <button 
-[L056, S16]                 onMouseEnter={(e) => onHoverInfo('biblio-info', e)}
-[L057, S16]                 onMouseLeave={() => onHoverInfo(null, null)}
-[L058, S16]                 className="focus:outline-none"
-[L059, S16]                 aria-label="info-biblio"
-[L060, S14]               >
-[L061, S16]                 {iconInfo}
-[L062, S14]               </button>
-[L063, S12]             )}
-[L064, S10]           </h3>
-[L065, S8]         </div>
-[L066, S8]         
-[L067, S8]         <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-[L068, S10]           <div className="flex flex-col gap-3">
-[L069, S12]             <PropRow label="Type" value={type} />
-[L070, S12]             <PropRow label="Language" value={language} />
-[L071, S12]             <PropRow label="ISSN / EISSN" value={issn} />
-[L072, S12]             <PropRow label="Month" value={month} />
-[L073, S10]           </div>
-[L074, S10]           <div className="flex flex-col gap-3">
-[L075, S12]             <PropRow label="Article Number" value={articleNumber} />
-[L076, S12]             <PropRow label="Pages" value={pages} />
-[L077, S12]             <PropRow label="Publisher" value={publisher} />
-[L078, S12]             <PropRow label="Address" value={address} />
-[L079, S10]           </div>
-[L080, S8]         </div>
-[L081, S6]       </div>
-[L082, S0] 
-[L083, S6]       {/* Metrics Card */}
-[L084, S6]       <div className="border border-gray-800 rounded-lg p-5 bg-gray-900/40">
-[L085, S8]         <div className="flex items-center gap-2 mb-4">
-[L086, S10]           <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L087, S12]             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-[L088, S10]           </svg>
-[L089, S10]           <h3 className="font-semibold text-gray-200 flex items-center gap-2">
-[L090, S12]             Database & Metrics
-[L091, S12]             {onHoverInfo && (
-[L092, S14]               <button 
-[L093, S16]                 onMouseEnter={(e) => onHoverInfo('metrics-info', e)}
-[L094, S16]                 onMouseLeave={() => onHoverInfo(null, null)}
-[L095, S16]                 className="focus:outline-none"
-[L096, S16]                 aria-label="info-metrics"
-[L097, S14]               >
-[L098, S16]                 {iconInfo}
-[L099, S14]               </button>
-[L100, S12]             )}
-[L101, S10]           </h3>
-[L102, S8]         </div>
-[L103, S0] 
-[L104, S8]         <div className="flex flex-col gap-3">
-[L105, S10]           <PropRow label="Times Cited" value={timesCited} />
-[L106, S10]           
-[L107, S10]           <div className="flex text-sm items-center">
-[L108, S12]             <span className="w-48 text-gray-500 shrink-0">OA</span>
-[L109, S12]             {oaStatus ? (
-[L110, S14]               <span className={`px-2 py-0.5 rounded text-xs border font-medium ${getOABadgeClass(oaStatus)}`}>
-[L111, S16]                 {oaStatus}
-[L112, S14]               </span>
-[L113, S12]             ) : (
-[L114, S14]               <span className="text-gray-300 font-medium">—</span>
-[L115, S12]             )}
-[L116, S10]           </div>
-[L117, S8]         </div>
-[L118, S6]       </div>
-[L119, S4]     </div>
-[L120, S2]   );
-[L121, S0] }
-[L122, S0] 
-[L123, S0] MetricsFooterCards.propTypes = {
-[L124, S2]   type: PropTypes.string,
-[L125, S2]   language: PropTypes.string,
-[L126, S2]   issn: PropTypes.string,
-[L127, S2]   month: PropTypes.string,
-[L128, S2]   articleNumber: PropTypes.string,
-[L129, S2]   pages: PropTypes.string,
-[L130, S2]   publisher: PropTypes.string,
-[L131, S2]   address: PropTypes.string,
-[L132, S2]   timesCited: PropTypes.number,
-[L133, S2]   oaStatus: PropTypes.string,
-[L134, S2]   onHoverInfo: PropTypes.func,
-[L135, S0] };
-
-
-// --- frontend/src/components/references/OverviewLeftColumn.jsx ---
-
-[L001, S0] import React from 'react';
-[L002, S0] import PropTypes from 'prop-types';
-[L003, S0] 
-[L004, S0] const SectionCard = ({ title, icon, onHoverInfo, infoKey, children }) => (
-[L005, S2]   <div className="border border-gray-800 rounded-lg p-4 bg-gray-900/40">
-[L006, S4]     <div className="flex items-center justify-between mb-3">
-[L007, S6]       <div className="flex items-center gap-2">
-[L008, S8]         {icon}
-[L009, S8]         <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-2">
-[L010, S10]           {title}
-[L011, S10]           {onHoverInfo && (
-[L012, S12]             <button 
-[L013, S14]               onMouseEnter={(e) => onHoverInfo(infoKey, e)}
-[L014, S14]               onMouseLeave={() => onHoverInfo(null, null)}
-[L015, S14]               className="text-gray-500 hover:text-gray-300 focus:outline-none"
-[L016, S14]               aria-label={`info-${infoKey}`}
-[L017, S12]             >
-[L018, S14]               <svg 
-[L019, S16]                 className="w-4 h-4" 
-[L020, S16]                 fill="none" 
-[L021, S16]                 viewBox="0 0 24 24" 
-[L022, S16]                 stroke="currentColor"
-[L023, S14]               >
-[L024, S16]                 <path 
-[L025, S18]                   strokeLinecap="round" 
-[L026, S18]                   strokeLinejoin="round" 
-[L027, S18]                   strokeWidth={2} 
-[L028, S18]                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
-[L029, S16]                 />
-[L030, S14]               </svg>
-[L031, S12]             </button>
-[L032, S10]           )}
-[L033, S8]         </h3>
-[L034, S6]       </div>
-[L035, S4]     </div>
-[L036, S4]     <div className="text-sm text-gray-300">
-[L037, S6]       {children}
-[L038, S4]     </div>
-[L039, S2]   </div>
-[L040, S0] );
-[L041, S0] 
-[L042, S0] SectionCard.propTypes = {
-[L043, S2]   title: PropTypes.string.isRequired,
-[L044, S2]   icon: PropTypes.node,
-[L045, S2]   onHoverInfo: PropTypes.func,
-[L046, S2]   infoKey: PropTypes.string,
-[L047, S2]   children: PropTypes.node.isRequired,
-[L048, S0] };
-[L049, S0] 
-[L050, S0] export default function OverviewLeftColumn({
-[L051, S2]   abstract,
-[L052, S2]   authorKeywords,
-[L053, S2]   plusKeywords,
-[L054, S2]   researchAreas,
-[L055, S2]   wosCategories,
-[L056, S2]   onExpandAbstract,
-[L057, S2]   onHoverInfo,
-[L058, S0] }) {
-[L059, S2]   const renderChips = (items) => {
-[L060, S4]     if (!items || items.length === 0) {
-[L061, S6]       return <span className="text-gray-500 italic">None provided</span>;
-[L062, S4]     }
-[L063, S4]     return (
-[L064, S6]       <div className="flex flex-wrap gap-2">
-[L065, S8]         {items.map((item, idx) => (
-[L066, S10]           <span 
-[L067, S12]             key={idx}
-[L068, S12]             className="px-3 py-1 bg-gray-800 border border-gray-700 text-gray-300 rounded-full text-xs font-medium"
-[L069, S10]           >
-[L070, S12]             {item}
-[L071, S10]           </span>
-[L072, S8]         ))}
-[L073, S6]       </div>
-[L074, S4]     );
-[L075, S2]   };
-[L076, S0] 
-[L077, S2]   const renderBox = (text) => {
-[L078, S4]     if (!text) return <span className="text-gray-500 italic">None provided</span>;
-[L079, S4]     return (
-[L080, S6]       <div className="bg-gray-800/50 border border-gray-700/50 rounded p-2 text-xs text-gray-300 break-words">
-[L081, S8]         {text}
-[L082, S6]       </div>
-[L083, S4]     );
-[L084, S2]   };
-[L085, S0] 
-[L086, S2]   const docIcon = (
-[L087, S4]     <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L088, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-[L089, S4]     </svg>
-[L090, S2]   );
-[L091, S2]   
-[L092, S2]   const tagIcon = (
-[L093, S4]     <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L094, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-[L095, S4]     </svg>
-[L096, S2]   );
-[L097, S0] 
-[L098, S2]   const linkIcon = (
-[L099, S4]     <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L100, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-[L101, S4]     </svg>
-[L102, S2]   );
-[L103, S0] 
-[L104, S2]   const globeIcon = (
-[L105, S4]     <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L106, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-[L107, S4]     </svg>
-[L108, S2]   );
-[L109, S0] 
-[L110, S2]   const filterIcon = (
-[L111, S4]     <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L112, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-[L113, S4]     </svg>
-[L114, S2]   );
-[L115, S0] 
-[L116, S2]   return (
-[L117, S4]     <div className="flex flex-col gap-4">
-[L118, S6]       <SectionCard 
-[L119, S8]         title="Abstract" 
-[L120, S8]         icon={docIcon} 
-[L121, S8]         onHoverInfo={onHoverInfo} 
-[L122, S8]         infoKey="abstract"
-[L123, S6]       >
-[L124, S8]         <div className="relative">
-[L125, S10]           <p className="line-clamp-4 text-gray-300 leading-relaxed break-words">
-[L126, S12]             {abstract || 'No abstract available.'}
-[L127, S10]           </p>
-[L128, S10]           {abstract && abstract.length > 200 && (
-[L129, S12]             <button 
-[L130, S14]               onClick={onExpandAbstract}
-[L131, S14]               className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 mt-2"
-[L132, S12]             >
-[L133, S14]               View full abstract
-[L134, S14]               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L135, S16]                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-[L136, S14]               </svg>
-[L137, S12]             </button>
-[L138, S10]           )}
-[L139, S8]         </div>
-[L140, S6]       </SectionCard>
-[L141, S0] 
-[L142, S6]       <SectionCard 
-[L143, S8]         title="Keywords" 
-[L144, S8]         icon={tagIcon} 
-[L145, S8]         onHoverInfo={onHoverInfo} 
-[L146, S8]         infoKey="keywords"
-[L147, S6]       >
-[L148, S8]         {renderChips(authorKeywords)}
-[L149, S6]       </SectionCard>
-[L150, S0] 
-[L151, S6]       <SectionCard 
-[L152, S8]         title="Keywords-Plus" 
-[L153, S8]         icon={linkIcon} 
-[L154, S8]         onHoverInfo={onHoverInfo} 
-[L155, S8]         infoKey="keywords-plus"
-[L156, S6]       >
-[L157, S8]         {renderChips(plusKeywords)}
-[L158, S6]       </SectionCard>
-[L159, S0] 
-[L160, S6]       <SectionCard 
-[L161, S8]         title="Research Areas" 
-[L162, S8]         icon={globeIcon} 
-[L163, S8]         onHoverInfo={onHoverInfo} 
-[L164, S8]         infoKey="research-areas"
-[L165, S6]       >
-[L166, S8]         {renderBox(researchAreas)}
-[L167, S6]       </SectionCard>
-[L168, S0] 
-[L169, S6]       <SectionCard 
-[L170, S8]         title="Web of Science Categories" 
-[L171, S8]         icon={filterIcon} 
-[L172, S8]         onHoverInfo={onHoverInfo} 
-[L173, S8]         infoKey="wos-categories"
-[L174, S6]       >
-[L175, S8]         {renderBox(wosCategories)}
-[L176, S6]       </SectionCard>
-[L177, S4]     </div>
-[L178, S2]   );
-[L179, S0] }
-[L180, S0] 
-[L181, S0] OverviewLeftColumn.propTypes = {
-[L182, S2]   abstract: PropTypes.string,
-[L183, S2]   authorKeywords: PropTypes.arrayOf(PropTypes.string),
-[L184, S2]   plusKeywords: PropTypes.arrayOf(PropTypes.string),
-[L185, S2]   researchAreas: PropTypes.string,
-[L186, S2]   wosCategories: PropTypes.string,
-[L187, S2]   onExpandAbstract: PropTypes.func,
-[L188, S2]   onHoverInfo: PropTypes.func,
-[L189, S0] };
-
-
-// --- frontend/src/components/references/OverviewRightColumn.jsx ---
-
-[L001, S0] import React from 'react';
-[L002, S0] import PropTypes from 'prop-types';
-[L003, S0] 
-[L004, S0] const RightPanelBox = ({ title, icon, onHoverInfo, infoKey, onClick, children, copyAction }) => (
-[L005, S2]   <div 
-[L006, S4]     className={`border border-gray-800 rounded-lg p-4 bg-gray-900/40 flex items-center justify-between group ${onClick ? 'cursor-pointer hover:border-gray-600 transition-colors' : ''}`}
-[L007, S4]     onClick={onClick}
-[L008, S4]     role={onClick ? 'button' : 'region'}
-[L009, S4]     aria-label={onClick ? `Open ${title.toLowerCase()} list` : undefined}
-[L010, S2]   >
-[L011, S4]     <div className="flex items-start gap-4 flex-1 overflow-hidden">
-[L012, S6]       <div className="mt-1">{icon}</div>
-[L013, S6]       <div className="flex-1 overflow-hidden">
-[L014, S8]         <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-2 mb-1">
-[L015, S10]           {title}
-[L016, S10]           {onHoverInfo && (
-[L017, S12]             <button 
-[L018, S14]               onMouseEnter={(e) => {
-[L019, S16]                 if(e.stopPropagation) e.stopPropagation();
-[L020, S16]                 onHoverInfo(infoKey, e);
-[L021, S14]               }}
-[L022, S14]               onMouseLeave={(e) => {
-[L023, S16]                 if(e.stopPropagation) e.stopPropagation();
-[L024, S16]                 onHoverInfo(null, null);
-[L025, S14]               }}
-[L026, S14]               onClick={(e) => e.stopPropagation()}
-[L027, S14]               className="text-gray-500 hover:text-gray-300 focus:outline-none"
-[L028, S14]               aria-label={`info-${infoKey}`}
-[L029, S12]             >
-[L030, S14]               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L031, S16]                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-[L032, S14]               </svg>
-[L033, S12]             </button>
-[L034, S10]           )}
-[L035, S8]         </h3>
-[L036, S8]         <div className="text-sm text-gray-400 line-clamp-2 pr-2">
-[L037, S10]           {children || <span className="italic opacity-50">None provided</span>}
-[L038, S8]         </div>
-[L039, S6]       </div>
-[L040, S4]     </div>
-[L041, S4]     
-[L042, S4]     <div className="flex items-center gap-3 shrink-0">
-[L043, S6]       {copyAction && children && (
-[L044, S8]         <button
-[L045, S10]           onClick={(e) => {
-[L046, S12]             e.stopPropagation();
-[L047, S12]             copyAction(children);
-[L048, S10]           }}
-[L049, S10]           className="text-gray-500 hover:text-white p-1 rounded transition-colors"
-[L050, S10]           aria-label="copy email"
-[L051, S8]         >
-[L052, S10]           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L053, S12]             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-[L054, S10]           </svg>
-[L055, S8]         </button>
-[L056, S6]       )}
-[L057, S6]       {onClick && (
-[L058, S8]         <svg className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L059, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-[L060, S8]         </svg>
-[L061, S6]       )}
-[L062, S4]     </div>
-[L063, S2]   </div>
-[L064, S0] );
-[L065, S0] 
-[L066, S0] RightPanelBox.propTypes = {
-[L067, S2]   title: PropTypes.string.isRequired,
-[L068, S2]   icon: PropTypes.node.isRequired,
-[L069, S2]   onHoverInfo: PropTypes.func,
-[L070, S2]   infoKey: PropTypes.string,
-[L071, S2]   onClick: PropTypes.func,
-[L072, S2]   children: PropTypes.node,
-[L073, S2]   copyAction: PropTypes.func,
-[L074, S0] };
-[L075, S0] 
-[L076, S0] export default function OverviewRightColumn({
-[L077, S2]   affiliations,
-[L078, S2]   authorsDetailsCount,
-[L079, S2]   authorEmail,
-[L080, S2]   orcidCount,
-[L081, S2]   researcherIdCount,
-[L082, S2]   fundingText,
-[L083, S2]   onHoverInfo,
-[L084, S2]   onCopy,
-[L085, S2]   onExpandDrawer,
-[L086, S0] }) {
-[L087, S2]   const icons = {
-[L088, S4]     building: <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
-[L089, S4]     users: <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
-[L090, S4]     mail: <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
-[L091, S4]     badge: <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>,
-[L092, S4]     globe: <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-[L093, S4]     cash: <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-[L094, S2]   };
-[L095, S0] 
-[L096, S2]   return (
-[L097, S4]     <div className="flex flex-col gap-3">
-[L098, S6]       <RightPanelBox 
-[L099, S8]         title="Affiliations" 
-[L100, S8]         icon={icons.building} 
-[L101, S8]         onHoverInfo={onHoverInfo} 
-[L102, S8]         infoKey="affiliations"
-[L103, S8]         onClick={authorsDetailsCount > 0 ? () => onExpandDrawer('authors') : null}
-[L104, S6]       >
-[L105, S8]         {affiliations}
-[L106, S6]       </RightPanelBox>
-[L107, S0] 
-[L108, S6]       <RightPanelBox 
-[L109, S8]         title="Authors Details" 
-[L110, S8]         icon={icons.users} 
-[L111, S8]         onHoverInfo={onHoverInfo} 
-[L112, S8]         infoKey="authors"
-[L113, S8]         onClick={authorsDetailsCount > 0 ? () => onExpandDrawer('authors') : null}
-[L114, S6]       >
-[L115, S8]         {authorsDetailsCount ? `${authorsDetailsCount} authors (see full list)` : null}
-[L116, S6]       </RightPanelBox>
-[L117, S0] 
-[L118, S6]       <RightPanelBox 
-[L119, S8]         title="Author Email" 
-[L120, S8]         icon={icons.mail} 
-[L121, S8]         onHoverInfo={onHoverInfo} 
-[L122, S8]         infoKey="email"
-[L123, S8]         copyAction={onCopy}
-[L124, S6]       >
-[L125, S8]         {authorEmail}
-[L126, S6]       </RightPanelBox>
-[L127, S0] 
-[L128, S6]       <RightPanelBox 
-[L129, S8]         title="ORCID Numbers" 
-[L130, S8]         icon={icons.badge} 
-[L131, S8]         onHoverInfo={onHoverInfo} 
-[L132, S8]         infoKey="orcid"
-[L133, S8]         onClick={orcidCount > 0 ? () => onExpandDrawer('authors') : null}
-[L134, S6]       >
-[L135, S8]         {orcidCount ? `${orcidCount} ORCID IDs` : null}
-[L136, S6]       </RightPanelBox>
-[L137, S0] 
-[L138, S6]       <RightPanelBox 
-[L139, S8]         title="ResearcherID Numbers" 
-[L140, S8]         icon={icons.globe} 
-[L141, S8]         onHoverInfo={onHoverInfo} 
-[L142, S8]         infoKey="researcher-id"
-[L143, S8]         onClick={researcherIdCount > 0 ? () => onExpandDrawer('authors') : null}
-[L144, S6]       >
-[L145, S8]         {researcherIdCount ? `${researcherIdCount} Researcher IDs` : null}
-[L146, S6]       </RightPanelBox>
-[L147, S0] 
-[L148, S6]       <RightPanelBox 
-[L149, S8]         title="Funding" 
-[L150, S8]         icon={icons.cash} 
-[L151, S8]         onHoverInfo={onHoverInfo} 
-[L152, S8]         infoKey="funding"
-[L153, S8]         onClick={fundingText ? () => onExpandDrawer('funding') : null}
-[L154, S6]       >
-[L155, S8]         {fundingText}
-[L156, S6]       </RightPanelBox>
-[L157, S4]     </div>
-[L158, S2]   );
-[L159, S0] }
-[L160, S0] 
-[L161, S0] OverviewRightColumn.propTypes = {
-[L162, S2]   affiliations: PropTypes.string,
-[L163, S2]   authorsDetailsCount: PropTypes.number,
-[L164, S2]   authorEmail: PropTypes.string,
-[L165, S2]   orcidCount: PropTypes.number,
-[L166, S2]   researcherIdCount: PropTypes.number,
-[L167, S2]   fundingText: PropTypes.string,
-[L168, S2]   onHoverInfo: PropTypes.func,
-[L169, S2]   onCopy: PropTypes.func,
-[L170, S2]   onExpandDrawer: PropTypes.func,
-[L171, S0] };
 
 
 // --- frontend/src/components/references/ReferenceDetailsModal.jsx ---
@@ -997,274 +343,194 @@ Processed Files: 7
 [L045, S8]         </div>
 [L046, S8]         <button
 [L047, S10]           onClick={onClose}
-[L048, S10]           className="text-gray-400 hover:text-white p-1 rounded transition-colors"
+[L048, S10]           style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
 [L049, S10]           aria-label="Close drawer"
 [L050, S8]         >
 [L051, S10]           <svg
-[L052, S12]             className="w-5 h-5"
-[L053, S12]             fill="none"
-[L054, S12]             viewBox="0 0 24 24"
-[L055, S12]             stroke="currentColor"
-[L056, S10]           >
-[L057, S12]             <path
-[L058, S14]               strokeLinecap="round"
-[L059, S14]               strokeLinejoin="round"
-[L060, S14]               strokeWidth={2}
-[L061, S14]               d="M6 18L18 6M6 6l12 12"
-[L062, S12]             />
-[L063, S10]           </svg>
-[L064, S8]         </button>
-[L065, S6]       </div>
-[L066, S0] 
-[L067, S6]       {/* Content Body */}
-[L068, S6]       <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-800">
-[L069, S8]         {!data || data.length === 0 ? (
-[L070, S10]           <div className="text-center py-12 text-gray-500 text-sm italic">
-[L071, S12]             No items available
-[L072, S10]           </div>
-[L073, S8]         ) : (
-[L074, S10]           data.map((item, index) => (
-[L075, S12]             <div
-[L076, S14]               key={item.id || index}
-[L077, S14]               data-testid="drawer-item"
-[L078, S14]               className="p-4 rounded-lg bg-gray-900/50 border border-gray-800/80 hover:border-gray-700 transition-colors text-sm"
-[L079, S12]             >
-[L080, S14]               {type === 'references' && (
-[L081, S16]                 <div className="flex flex-col gap-1.5">
-[L082, S18]                   <div className="font-medium text-gray-200 leading-snug">
-[L083, S20]                     {item.title || item.raw_citation || 'Untitled Reference'}
-[L084, S18]                   </div>
-[L085, S18]                   <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
-[L086, S20]                     {item.year && <span>Year: {item.year}</span>}
-[L087, S20]                     {item.doi && (
-[L088, S22]                       <span className="text-blue-400 font-mono truncate max-w-[200px]">
-[L089, S24]                         DOI: {item.doi}
-[L090, S22]                       </span>
-[L091, S20]                     )}
-[L092, S18]                   </div>
-[L093, S16]                 </div>
-[L094, S14]               )}
-[L095, S0] 
-[L096, S14]               {type === 'authors' && (
-[L097, S16]                 <div className="flex flex-col gap-1.5">
-[L098, S18]                   <div className="flex items-center justify-between">
-[L099, S20]                     <span className="font-medium text-gray-200">
-[L100, S22]                       {item.name || 'Unknown Author'}
-[L101, S20]                     </span>
-[L102, S20]                     {item.is_corresponding && (
-[L103, S22]                       <span className="px-1.5 py-0.5 text-[10px] uppercase font-semibold bg-blue-900/40 text-blue-400 border border-blue-800/60 rounded">
-[L104, S24]                         Corresponding
-[L105, S22]                       </span>
-[L106, S20]                     )}
-[L107, S18]                   </div>
-[L108, S18]                   {item.affiliation && (
-[L109, S20]                     <div className="text-xs text-gray-400">
-[L110, S22]                       {item.affiliation}
-[L111, S20]                     </div>
-[L112, S18]                   )}
-[L113, S18]                   <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-500">
-[L114, S20]                     {item.email && <span>Email: {item.email}</span>}
-[L115, S20]                     {item.orcid && <span>ORCID: {item.orcid}</span>}
-[L116, S18]                   </div>
-[L117, S16]                 </div>
-[L118, S14]               )}
-[L119, S0] 
-[L120, S14]               {type === 'funding' && (
-[L121, S16]                 <div className="flex flex-col gap-1">
-[L122, S18]                   <div className="font-medium text-gray-200">
-[L123, S20]                     {item.agency || 'Funding Agency'}
-[L124, S18]                   </div>
-[L125, S18]                   {item.grant_number && (
-[L126, S20]                     <div className="text-xs text-gray-400">
-[L127, S22]                       Grant:{' '}
-[L128, S22]                       <span className="font-mono text-gray-300">
-[L129, S24]                         {item.grant_number}
-[L130, S22]                       </span>
-[L131, S20]                     </div>
-[L132, S18]                   )}
-[L133, S18]                   {item.country && (
-[L134, S20]                     <div className="text-xs text-gray-500">{item.country}</div>
-[L135, S18]                   )}
-[L136, S16]                 </div>
-[L137, S14]               )}
-[L138, S0] 
-[L139, S14]               {type !== 'references' &&
-[L140, S16]                 type !== 'authors' &&
-[L141, S16]                 type !== 'funding' && (
-[L142, S18]                   <div className="text-gray-300">
-[L143, S20]                     {typeof item === 'string' ? item : JSON.stringify(item)}
-[L144, S18]                   </div>
-[L145, S16]                 )}
-[L146, S12]             </div>
-[L147, S10]           ))
-[L148, S8]         )}
-[L149, S6]       </div>
-[L150, S4]     </div>
-[L151, S2]   );
-[L152, S0] }
-[L153, S0] 
-[L154, S0] ReferenceDrawer.propTypes = {
-[L155, S2]   isOpen: PropTypes.bool.isRequired,
-[L156, S2]   onClose: PropTypes.func.isRequired,
-[L157, S2]   title: PropTypes.string,
-[L158, S2]   type: PropTypes.oneOf(['references', 'authors', 'funding', 'generic']),
-[L159, S2]   data: PropTypes.array,
-[L160, S0] };
+[L052, S12]             width="20"
+[L053, S12]             height="20"
+[L054, S12]             style={{ width: '20px', height: '20px', flexShrink: 0 }}
+[L055, S12]             fill="none"
+[L056, S12]             viewBox="0 0 24 24"
+[L057, S12]             stroke="currentColor"
+[L058, S10]           >
+[L059, S12]             <path
+[L060, S14]               strokeLinecap="round"
+[L061, S14]               strokeLinejoin="round"
+[L062, S14]               strokeWidth={2}
+[L063, S14]               d="M6 18L18 6M6 6l12 12"
+[L064, S12]             />
+[L065, S10]           </svg>
+[L066, S8]         </button>
+[L067, S6]       </div>
+[L068, S0] 
+[L069, S6]       {/* Content Body */}
+[L070, S6]       <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-800">
+[L071, S8]         {!data || data.length === 0 ? (
+[L072, S10]           <div className="text-center py-12 text-gray-500 text-sm italic">
+[L073, S12]             No items available
+[L074, S10]           </div>
+[L075, S8]         ) : (
+[L076, S10]           data.map((item, index) => (
+[L077, S12]             <div
+[L078, S14]               key={item.id || index}
+[L079, S14]               data-testid="drawer-item"
+[L080, S14]               className="p-4 rounded-lg bg-gray-900/50 border border-gray-800/80 hover:border-gray-700 transition-colors text-sm"
+[L081, S12]             >
+[L082, S14]               {type === 'references' && (
+[L083, S16]                 <div className="flex flex-col gap-1.5">
+[L084, S18]                   <div className="font-medium text-gray-200 leading-snug">
+[L085, S20]                     {item.title || item.raw_citation || 'Untitled Reference'}
+[L086, S18]                   </div>
+[L087, S18]                   <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400">
+[L088, S20]                     {item.year && <span>Year: {item.year}</span>}
+[L089, S20]                     {item.doi && (
+[L090, S22]                       <span className="text-blue-400 font-mono truncate max-w-[200px]">
+[L091, S24]                         DOI: {item.doi}
+[L092, S22]                       </span>
+[L093, S20]                     )}
+[L094, S18]                   </div>
+[L095, S16]                 </div>
+[L096, S14]               )}
+[L097, S0] 
+[L098, S14]               {type === 'authors' && (
+[L099, S16]                 <div className="flex flex-col gap-1.5">
+[L100, S18]                   <div className="flex items-center justify-between">
+[L101, S20]                     <span className="font-medium text-gray-200">
+[L102, S22]                       {item.name || 'Unknown Author'}
+[L103, S20]                     </span>
+[L104, S20]                     {item.is_corresponding && (
+[L105, S22]                       <span className="px-1.5 py-0.5 text-[10px] uppercase font-semibold bg-blue-900/40 text-blue-400 border border-blue-800/60 rounded">
+[L106, S24]                         Corresponding
+[L107, S22]                       </span>
+[L108, S20]                     )}
+[L109, S18]                   </div>
+[L110, S18]                   {item.affiliation && (
+[L111, S20]                     <div className="text-xs text-gray-400">
+[L112, S22]                       {item.affiliation}
+[L113, S20]                     </div>
+[L114, S18]                   )}
+[L115, S18]                   <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-500">
+[L116, S20]                     {item.email && <span>Email: {item.email}</span>}
+[L117, S20]                     {item.orcid && <span>ORCID: {item.orcid}</span>}
+[L118, S18]                   </div>
+[L119, S16]                 </div>
+[L120, S14]               )}
+[L121, S0] 
+[L122, S14]               {type === 'funding' && (
+[L123, S16]                 <div className="flex flex-col gap-1">
+[L124, S18]                   <div className="font-medium text-gray-200">
+[L125, S20]                     {item.agency || 'Funding Agency'}
+[L126, S18]                   </div>
+[L127, S18]                   {item.grant_number && (
+[L128, S20]                     <div className="text-xs text-gray-400">
+[L129, S22]                       Grant:{' '}
+[L130, S22]                       <span className="font-mono text-gray-300">
+[L131, S24]                         {item.grant_number}
+[L132, S22]                       </span>
+[L133, S20]                     </div>
+[L134, S18]                   )}
+[L135, S18]                   {item.country && (
+[L136, S20]                     <div className="text-xs text-gray-500">{item.country}</div>
+[L137, S18]                   )}
+[L138, S16]                 </div>
+[L139, S14]               )}
+[L140, S0] 
+[L141, S14]               {type !== 'references' &&
+[L142, S16]                 type !== 'authors' &&
+[L143, S16]                 type !== 'funding' && (
+[L144, S18]                   <div className="text-gray-300">
+[L145, S20]                     {typeof item === 'string' ? item : JSON.stringify(item)}
+[L146, S18]                   </div>
+[L147, S16]                 )}
+[L148, S12]             </div>
+[L149, S10]           ))
+[L150, S8]         )}
+[L151, S6]       </div>
+[L152, S4]     </div>
+[L153, S2]   );
+[L154, S0] }
+[L155, S0] 
+[L156, S0] ReferenceDrawer.propTypes = {
+[L157, S2]   isOpen: PropTypes.bool.isRequired,
+[L158, S2]   onClose: PropTypes.func.isRequired,
+[L159, S2]   title: PropTypes.string,
+[L160, S2]   type: PropTypes.oneOf(['references', 'authors', 'funding', 'generic']),
+[L161, S2]   data: PropTypes.array,
+[L162, S0] };
 
 
-// --- frontend/src/components/references/ReferenceHeroBlock.jsx ---
+// --- frontend/src/components/references/ReferenceDrawer.test.jsx ---
 
-[L001, S0] import React from 'react';
-[L002, S0] import PropTypes from 'prop-types';
-[L003, S0] 
-[L004, S0] export default function ReferenceHeroBlock({
-[L005, S2]   title,
-[L006, S2]   authors,
-[L007, S2]   year,
-[L008, S2]   journal,
-[L009, S2]   volume,
-[L010, S2]   issue,
-[L011, S2]   pages,
-[L012, S2]   doi,
-[L013, S2]   onCopyDoi,
-[L014, S0] }) {
-[L015, S2]   return (
-[L016, S4]     <div
-[L017, S6]       style={{
-[L018, S8]         display: 'flex',
-[L019, S8]         flexDirection: 'column',
-[L020, S8]         gap: '12px',
-[L021, S8]         borderBottom: '1px solid #1e293b',
-[L022, S8]         paddingBottom: '20px',
-[L023, S8]         marginBottom: '20px',
-[L024, S6]       }}
-[L025, S4]     >
-[L026, S6]       <h2
-[L027, S8]         style={{
-[L028, S10]           fontSize: '22px',
-[L029, S10]           fontWeight: '700',
-[L030, S10]           color: '#f8fafc',
-[L031, S10]           margin: 0,
-[L032, S10]           lineHeight: '1.3',
-[L033, S8]         }}
-[L034, S6]       >
-[L035, S8]         {title || 'Untitled'}
-[L036, S6]       </h2>
-[L037, S0] 
-[L038, S6]       <div style={{ fontSize: '14px', color: '#94a3b8' }}>
-[L039, S8]         {authors || 'N/A'}
-[L040, S6]       </div>
-[L041, S0] 
-[L042, S6]       <div
-[L043, S8]         style={{
-[L044, S10]           display: 'flex',
-[L045, S10]           flexWrap: 'wrap',
-[L046, S10]           alignItems: 'center',
-[L047, S10]           gap: '20px',
-[L048, S10]           fontSize: '13px',
-[L049, S10]           color: '#cbd5e1',
-[L050, S10]           marginTop: '6px',
-[L051, S8]         }}
-[L052, S6]       >
-[L053, S8]         {/* Year */}
-[L054, S8]         <div className="flex flex-col gap-1 min-w-[80px]">
-[L055, S10]           <div className="flex items-center gap-2">
-[L056, S12]             <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L057, S14]               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-[L058, S12]             </svg>
-[L059, S12]             <span className="font-medium text-gray-100">{year || '—'}</span>
-[L060, S10]           </div>
-[L061, S10]           <span className="text-xs text-gray-500">Year</span>
-[L062, S8]         </div>
-[L063, S0] 
-[L064, S8]         <div className="w-px h-8 bg-gray-800 hidden sm:block"></div>
-[L065, S0] 
-[L066, S8]         {/* Journal */}
-[L067, S8]         <div className="flex flex-col gap-1 min-w-[140px]">
-[L068, S10]           <div className="flex items-center gap-2">
-[L069, S12]             <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L070, S14]               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-[L071, S12]             </svg>
-[L072, S12]             <span className="font-medium text-gray-100 truncate max-w-[200px]" title={journal}>
-[L073, S14]               {journal || '—'}
-[L074, S12]             </span>
-[L075, S10]           </div>
-[L076, S10]           <span className="text-xs text-gray-500">Journal</span>
-[L077, S8]         </div>
-[L078, S0] 
-[L079, S8]         <div className="w-px h-8 bg-gray-800 hidden sm:block"></div>
-[L080, S0] 
-[L081, S8]         {/* Volume & Issue */}
-[L082, S8]         <div className="flex gap-4">
-[L083, S10]           <div className="flex flex-col gap-1 min-w-[60px]">
-[L084, S12]             <div className="flex items-center gap-2">
-[L085, S14]               <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L086, S16]                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-[L087, S14]               </svg>
-[L088, S14]               <span className="font-medium text-gray-100">{volume ? `Vol. ${volume}` : '—'}</span>
-[L089, S12]             </div>
-[L090, S12]             <span className="text-xs text-gray-500">Volume</span>
-[L091, S10]           </div>
-[L092, S10]           
-[L093, S10]           <div className="flex flex-col gap-1 min-w-[60px]">
-[L094, S12]             <div className="flex items-center h-5">
-[L095, S14]               <span className="font-medium text-gray-100 pl-6">{issue ? `Issue ${issue}` : '—'}</span>
-[L096, S12]             </div>
-[L097, S12]             <span className="text-xs text-gray-500 pl-6">Issue</span>
-[L098, S10]           </div>
-[L099, S8]         </div>
-[L100, S0] 
-[L101, S8]         <div className="w-px h-8 bg-gray-800 hidden sm:block"></div>
-[L102, S0] 
-[L103, S8]         {/* Pages */}
-[L104, S8]         <div className="flex flex-col gap-1 min-w-[80px]">
-[L105, S10]           <div className="flex items-center gap-2">
-[L106, S12]             <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L107, S14]               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-[L108, S12]             </svg>
-[L109, S12]             <span className="font-medium text-gray-100">{pages ? `pp. ${pages}` : '—'}</span>
-[L110, S10]           </div>
-[L111, S10]           <span className="text-xs text-gray-500">Pages</span>
-[L112, S8]         </div>
-[L113, S0] 
-[L114, S8]         <div className="w-px h-8 bg-gray-800 hidden sm:block"></div>
-[L115, S0] 
-[L116, S8]         {/* DOI */}
-[L117, S8]         <div className="flex flex-col gap-1">
-[L118, S10]           <div className="flex items-center gap-2 h-5">
-[L119, S12]             <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L120, S14]               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-[L121, S12]             </svg>
-[L122, S12]             {doi ? (
-[L123, S14]               <button 
-[L124, S16]                 onClick={() => onCopyDoi(doi)}
-[L125, S16]                 className="font-medium text-blue-400 hover:text-blue-300 hover:underline transition-colors flex items-center gap-1"
-[L126, S16]                 aria-label={`Copy DOI: ${doi}`}
-[L127, S14]               >
-[L128, S16]                 {doi}
-[L129, S16]                 <svg className="w-3 h-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L130, S18]                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-[L131, S16]                 </svg>
-[L132, S14]               </button>
-[L133, S12]             ) : (
-[L134, S14]               <span className="font-medium text-gray-100">—</span>
-[L135, S12]             )}
-[L136, S10]           </div>
-[L137, S10]           <span className="text-xs text-gray-500">DOI</span>
-[L138, S8]         </div>
-[L139, S6]       </div>
-[L140, S4]     </div>
-[L141, S2]   );
-[L142, S0] }
-[L143, S0] 
-[L144, S0] ReferenceHeroBlock.propTypes = {
-[L145, S2]   title: PropTypes.string,
-[L146, S2]   authors: PropTypes.string,
-[L147, S2]   year: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-[L148, S2]   journal: PropTypes.string,
-[L149, S2]   volume: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-[L150, S2]   issue: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-[L151, S2]   pages: PropTypes.string,
-[L152, S2]   doi: PropTypes.string,
-[L153, S2]   onCopyDoi: PropTypes.func.isRequired,
-[L154, S0] };
+[L001, S0] import { render, screen, fireEvent } from '@testing-library/react';
+[L002, S0] import { describe, it, expect, vi } from 'vitest';
+[L003, S0] import ReferenceDrawer from './ReferenceDrawer';
+[L004, S0] 
+[L005, S0] describe('ReferenceDrawer', () => {
+[L006, S2]   const mockItems = [
+[L007, S4]     { id: '1', title: 'Paper 1', doi: '10.1000/1', year: 2020 },
+[L008, S4]     { id: '2', title: 'Paper 2', doi: '10.1000/2', year: 2021 },
+[L009, S4]     { id: '3', title: 'Paper 3', doi: '10.1000/3', year: 2022 },
+[L010, S4]     { id: '4', title: 'Paper 4', doi: '10.1000/4', year: 2023 },
+[L011, S4]     { id: '5', title: 'Paper 5', doi: '10.1000/5', year: 2024 },
+[L012, S2]   ];
+[L013, S0] 
+[L014, S2]   it('renders 5 items and triggers onClose when close button is clicked', () => {
+[L015, S4]     const mockOnClose = vi.fn();
+[L016, S4]     render(
+[L017, S6]       <ReferenceDrawer
+[L018, S8]         isOpen={true}
+[L019, S8]         onClose={mockOnClose}
+[L020, S8]         title="References"
+[L021, S8]         type="references"
+[L022, S8]         data={mockItems}
+[L023, S6]       />
+[L024, S4]     );
+[L025, S0] 
+[L026, S4]     expect(screen.getByText('References')).toBeInTheDocument();
+[L027, S4]     const items = screen.getAllByTestId('drawer-item');
+[L028, S4]     expect(items.length).toBe(5);
+[L029, S0] 
+[L030, S4]     const closeBtn = screen.getByRole('button', { name: /close drawer/i });
+[L031, S4]     fireEvent.click(closeBtn);
+[L032, S4]     expect(mockOnClose).toHaveBeenCalledTimes(1);
+[L033, S2]   });
+[L034, S0] 
+[L035, S2]   it('renders authors accurately when type is authors', () => {
+[L036, S4]     const mockAuthors = [
+[L037, S6]       {
+[L038, S8]         id: 'a1',
+[L039, S8]         name: 'Alice Smith',
+[L040, S8]         affiliation: 'MIT',
+[L041, S8]         is_corresponding: true,
+[L042, S6]       },
+[L043, S4]     ];
+[L044, S4]     render(
+[L045, S6]       <ReferenceDrawer
+[L046, S8]         isOpen={true}
+[L047, S8]         onClose={vi.fn()}
+[L048, S8]         title="Authors Details"
+[L049, S8]         type="authors"
+[L050, S8]         data={mockAuthors}
+[L051, S6]       />
+[L052, S4]     );
+[L053, S0] 
+[L054, S4]     expect(screen.getByText('Alice Smith')).toBeInTheDocument();
+[L055, S4]     expect(screen.getByText('MIT')).toBeInTheDocument();
+[L056, S4]     expect(screen.getByText('Corresponding')).toBeInTheDocument();
+[L057, S2]   });
+[L058, S0] 
+[L059, S2]   it('applies translate-x-full when isOpen is false', () => {
+[L060, S4]     const { container } = render(
+[L061, S6]       <ReferenceDrawer
+[L062, S8]         isOpen={false}
+[L063, S8]         onClose={vi.fn()}
+[L064, S8]         title="References"
+[L065, S8]         data={[]}
+[L066, S6]       />
+[L067, S4]     );
+[L068, S0] 
+[L069, S4]     const drawer = container.firstChild;
+[L070, S4]     expect(drawer).toHaveClass('translate-x-full');
+[L071, S2]   });
+[L072, S0] });
