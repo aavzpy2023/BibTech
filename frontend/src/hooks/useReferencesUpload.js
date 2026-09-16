@@ -29,6 +29,13 @@ export function useReferencesUpload() {
       
       const files = Array.isArray(filesInput) ? filesInput : [filesInput];
 
+      const hasInvalid = files.some(f => !f.name.toLowerCase().endsWith('.bib'));
+      if (hasInvalid) {
+        setError('Solo se permiten archivos .bib');
+        setIsSuccess(false);
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
       setIsSuccess(false);

@@ -37,9 +37,10 @@ complexity_aggregate: "MEDIUM"
   - [ID-12.3.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.3. 2. Append > Files touched: backend/src/bibliography/injection_service.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-039]. Type: Task.
   > Files touched: backend/src/bibliography/injection_service.py
 
-- [ ] Story 12.4: Frontend Hook State Fractality (.bib Validation)
+- [x] Story 12.4: Frontend Hook State Fractality (.bib Validation) | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-037)
   Story Context Radius: `{"frontend/src/hooks/useReferencesUpload.js": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
   Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
   - [ID-12.4.1] [TESTING/TDE]: [1. Arrange: Mock a file object with name "test.ris". 2. Act: Invoke uploadAndInject with the mock file. 3. Assert: Verify that setError is called with "Solo se permiten archivos .bib" and no fetch request is executed]. Type: Task.
   - [ID-12.4.2] [LOGIC/UI_STATE]: [1. Open frontend/src/hooks/useReferencesUpload.js. 2. In uploadAndInject, iterate over files and verify file.name.toLowerCase().endsWith('.bib'). If false, call setError('Solo se permiten archivos .bib'), setIsSuccess(false), and return. 3. Ensure backend error payloads (like the 503 DB error) are correctly passed to setError]. Type: Task.
   - [ID-12.4.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.4. 2. Append > Files touched: frontend/src/hooks/useReferencesUpload.js under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-037]. Type: Task.
+  > Files touched: frontend/src/hooks/useReferencesUpload.js

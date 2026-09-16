@@ -1,377 +1,239 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-15 20:52:39
+Date: 2026-09-15 21:00:48
 AST Mode: True
 Line Numbers: False
-Modules: test_router.py, roadmap_12_bib_only_and_injection_fix.md
+Modules: useReferencesUpload.js, useReferencesUpload.test.js
 Processed Files: 2
 ===========================
 
 
 
-// --- backend/tests/bibliography/test_router.py ---
+// --- frontend/src/hooks/useReferencesUpload.js ---
 
-import sys
-from pathlib import Path
-from io import BytesIO
-import asyncio
-from unittest.mock import patch, MagicMock, mock_open
-from datetime import datetime, timezone
-import pytest
+import { useState, useCallback } from 'react';
 
-_root = Path(__file__).resolve().parents[3]
-if str(_root) not in sys.path:
-    sys.path.insert(0, str(_root))
-
-from fastapi import UploadFile, HTTPException
-from backend.main import app
-from backend.src.bibliography.schemas import ParsedReference
-
-try:
-    from fastapi.testclient import TestClient
-    client = TestClient(app)
-    HAS_TESTCLIENT = True
-except (RuntimeError, ImportError):
-    client = None
-    HAS_TESTCLIENT = False
-
-from backend.src.bibliography.router import (
-    upload_bibliography,
-    batch_download,
-    download_zip,
-    inject_bibliography,
-)
-from backend.src.bibliography.schemas import (
-    BatchDownloadRequest,
-    ZipDownloadRequest,
-    LocalBatchDownloadRequest,
-)
-
-def test_upload_bibliography_direct_success():
-    mock_ref = ParsedReference(
-        author="Test Author",
-        year="2024",
-        title="Test Title",
-        journal="Test Journal",
-        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc)
-    )
-    with patch(
-        "backend.src.bibliography.router.parse_bibliography_content",
-        return_value=[mock_ref]
-    ):
-        file = UploadFile(
-            filename="test.ris",
-            file=BytesIO(b"fake ris content")
-        )
-        result = asyncio.run(upload_bibliography(file))
-        assert len(result) == 1
-        assert result[0].title == "Test Title"
-
-def test_upload_bibliography_direct_invalid_extension():
-    file = UploadFile(
-        filename="test.txt",
-        file=BytesIO(b"fake txt content")
-    )
-    with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(upload_bibliography(file))
-    assert exc_info.value.status_code == 400
-    assert "Unsupported file extension" in exc_info.value.detail
-
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx2 not installed")
-@patch("backend.src.bibliography.router.parse_bibliography_content")
-def test_upload_bibliography_success(mock_parse):
-    # Arrange
-    mock_ref = ParsedReference(
-        author="Test Author",
-        year="2024",
-        title="Test Title",
-        journal="Test Journal",
-        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc)
-    )
-    mock_parse.return_value = [mock_ref]
-
-    file_content = b"fake ris content"
-    files = {"file": ("test.ris", file_content, "text/plain")}
-    
-    # Act
-    response = client.post("/api/bibliography/upload", files=files)
-    
-    # Assert
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 1
-    assert data[0]["title"] == "Test Title"
-    assert data[0]["author"] == "Test Author"
-    mock_parse.assert_called_once_with("fake ris content", ".ris")
-
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx2 not installed")
-def test_upload_bibliography_invalid_extension():
-    # Arrange
-    file_content = b"fake txt content"
-    files = {"file": ("test.txt", file_content, "text/plain")}
-    
-    # Act
-    response = client.post("/api/bibliography/upload", files=files)
-    
-    # Assert
-    assert response.status_code == 400
-    assert "Unsupported file extension" in response.json()["detail"]
-
-
-async def _run_batch_download_direct():
-    async def mock_generator(*args, **kwargs):
-        yield '{"log": "test"}'
-
-    req = BatchDownloadRequest(
-        dois=["10.1000/182"],
-        delay=0,
-        destination="/tmp/downloads",
-        email="test@example.com",
-        cookies="auth=123",
-    )
-    with patch(
-        "backend.src.bibliography.router.execute_batch_download",
-        side_effect=mock_generator,
-    ):
-        response = await batch_download(req)
-        assert response.media_type == "text/event-stream"
-        chunks = [chunk async for chunk in response.body_iterator]
-        assert chunks == ['data: {"log": "test"}\n\n']
-
-
-def test_batch_download_endpoint_direct():
-    asyncio.run(_run_batch_download_direct())
-
-
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
-def test_batch_download_endpoint_client():
-    async def mock_generator(*args, **kwargs):
-        yield '{"log": "test"}'
-
-    payload = {
-        "dois": ["10.1000/182"],
-        "delay": 0,
-        "destination": "/tmp/downloads",
-        "email": "test@example.com",
-        "cookies": "auth=123",
+export function useReferencesUpload() {
+  const [projectCode, setProjectCode] = useState(() => {
+    try {
+      return localStorage.getItem('last_project_code') || '';
+    } catch {
+      return '';
     }
-    with patch(
-        "backend.src.bibliography.router.execute_batch_download",
-        side_effect=mock_generator,
-    ):
-        response = client.post(
-            "/api/bibliography/batch-download", json=payload
-        )
-        assert response.status_code == 200
-        assert "text/event-stream" in response.headers["content-type"]
-        assert 'data: {"log": "test"}\n\n' in response.text
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState(null);
+  const [insertedCount, setInsertedCount] = useState(null);
+
+  const uploadAndInject = useCallback(
+    async (filesInput) => {
+      if (!projectCode || !projectCode.trim()) {
+        setError('El código de proyecto es requerido');
+        setIsSuccess(false);
+        return;
+      }
+
+      if (!filesInput || (Array.isArray(filesInput) && filesInput.length === 0)) {
+        setError('Debe seleccionar un archivo bibliográfico válido');
+        setIsSuccess(false);
+        return;
+      }
+      
+      const files = Array.isArray(filesInput) ? filesInput : [filesInput];
+
+      setIsLoading(true);
+      setError(null);
+      setIsSuccess(false);
+
+      try {
+        let totalInserted = 0;
+        const allParsed = [];
+
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('project_code', projectCode.trim());
+
+          const response = await fetch('/api/bibliography/inject', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errPayload = await response.json().catch(() => ({}));
+          throw new Error(
+            errPayload.detail || 'Error al inyectar referencias'
+          );
+        }
+
+        const data = await response.json();
+        totalInserted += (data.inserted ?? 0);
+
+        try {
+          const uploadForm = new FormData();
+          uploadForm.append('file', file);
+          const parseRes = await fetch('/api/bibliography/upload', {
+            method: 'POST',
+            body: uploadForm,
+          });
+          if (parseRes.ok) {
+            const parsed = await parseRes.json();
+            if (Array.isArray(parsed)) allParsed.push(...parsed);
+          }
+        } catch {}
+        }
+
+        try {
+          localStorage.setItem('last_project_code', projectCode.trim());
+        } catch {}
+        setIsSuccess(true);
+        setInsertedCount(totalInserted);
+        return allParsed;
+      } catch (err) {
+        setError(err.message || 'Error inesperado durante la carga');
+        setIsSuccess(false);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [projectCode]
+  );
+
+  const resetStatus = useCallback(() => {
+    setIsSuccess(false);
+    setError(null);
+  }, []);
+
+  return {
+    projectCode,
+    setProjectCode,
+    isLoading,
+    isSuccess,
+    error,
+    insertedCount,
+    uploadAndInject,
+    resetStatus,
+  };
+}
+
+export default useReferencesUpload;
 
 
-async def _run_download_zip_direct():
-    dummy_io = BytesIO(b"PK\x03\x04fakezip")
-    req = ZipDownloadRequest(batch_name="test", dois=[])
-    with patch(
-        "backend.src.bibliography.router.create_zip_from_pdfs",
-        return_value=dummy_io,
-    ) as mock_service:
-        response = await download_zip(req)
-        assert response.media_type == "application/zip"
-        assert (
-            response.headers["Content-Disposition"]
-            == "attachment; filename=test.zip"
-        )
-        mock_service.assert_called_once_with("test", [])
+// --- frontend/src/hooks/useReferencesUpload.test.js ---
 
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useReferencesUpload } from './useReferencesUpload';
 
-def test_download_zip_endpoint_direct():
-    asyncio.run(_run_download_zip_direct())
+describe('useReferencesUpload', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
 
+  it('should initialize projectCode from localStorage if present', () => {
+    localStorage.setItem('last_project_code', 'DEFAULT-PROJ');
+    const { result } = renderHook(() => useReferencesUpload());
+    expect(result.current.projectCode).toBe('DEFAULT-PROJ');
+  });
 
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
-def test_download_zip_endpoint_client():
-    dummy_io = BytesIO(b"PK\x03\x04fakezip")
-    payload = {"batch_name": "test", "dois": []}
-    with patch(
-        "backend.src.bibliography.router.create_zip_from_pdfs",
-        return_value=dummy_io,
-    ) as mock_service:
-        response = client.post(
-            "/api/bibliography/download-zip", json=payload
-        )
-        assert response.status_code == 200
-        assert response.headers["content-type"] == "application/zip"
-        assert (
-            response.headers["content-disposition"]
-            == "attachment; filename=test.zip"
-        )
-        mock_service.assert_called_once_with("test", [])
+  it('should upload and inject multiple files sequentially (FIFO)', async () => {
+    const mockFile = new File(['fake ris content'], 'test.ris', {
+      type: 'text/plain',
+    });
+    const mockFile2 = new File(['fake bib'], 'test2.bib', { type: 'text/plain' });
 
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: 'Success', inserted: 5 }),
+    });
 
-def test_inject_bibliography_direct_success():
-    mock_ref = ParsedReference(
-        author="Test Author",
-        year="2024",
-        title="Test Title",
-        journal="Test Journal",
-        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
-    )
-    with patch(
-        "backend.src.bibliography.router.parse_bibliography_content",
-        return_value=[mock_ref],
-    ), patch(
-        "backend.src.bibliography.router.inject_references_to_db",
-        return_value=10,
-    ):
-        file = UploadFile(
-            filename="references.ris",
-            file=BytesIO(b"fake ris content"),
-        )
-        fake_db = MagicMock()
-        result = asyncio.run(
-            inject_bibliography(file, "PROJ-1", fake_db)
-        )
-        assert result == {"message": "Success", "inserted": 10}
+    const { result } = renderHook(() => useReferencesUpload());
 
+    act(() => {
+      result.current.setProjectCode('TEST');
+    });
 
-def test_inject_bibliography_direct_invalid_extension():
-    file = UploadFile(
-        filename="references.txt",
-        file=BytesIO(b"fake txt content"),
-    )
-    fake_db = MagicMock()
-    with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(inject_bibliography(file, "PROJ-1", fake_db))
-    assert exc_info.value.status_code == 400
-    assert "Unsupported file extension" in exc_info.value.detail
+    await act(async () => {
+      await result.current.uploadAndInject([mockFile, mockFile2]);
+    });
 
+    expect(global.fetch).toHaveBeenCalledTimes(4); // 2 files * 2 requests
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toBe('/api/bibliography/inject');
+    expect(options.method).toBe('POST');
+    expect(options.body).toBeInstanceOf(FormData);
+    expect(options.body.get('file')).toBe(mockFile);
+    expect(options.body.get('project_code')).toBe('TEST');
+    expect(result.current.isSuccess).toBe(true);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBeNull();
+    expect(result.current.insertedCount).toBe(10); // 2 files * 5
+    expect(localStorage.getItem('last_project_code')).toBe('TEST');
+  });
 
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
-@patch("backend.src.bibliography.router.inject_references_to_db")
-@patch("backend.src.bibliography.router.parse_bibliography_content")
-def test_inject_bibliography_endpoint_success(mock_parse, mock_inject):
-    from backend.src.bibliography.router import get_db
+  it('should abort and set error if project code is missing', async () =>>
+    const mockFile = new File(['content'], 'test.ris', {
+      type: 'text/plain',
+    });
+    global.fetch = vi.fn();
 
-    mock_db = MagicMock()
-    app.dependency_overrides[get_db] = lambda: mock_db
-    try:
-        mock_ref = ParsedReference(
-            author="Test Author",
-            year="2024",
-            title="Test Title",
-            journal="Test Journal",
-            upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
-        )
-        mock_parse.return_value = [mock_ref]
-        mock_inject.return_value = 10
+    const { result } = renderHook(() => useReferencesUpload());
 
-        file_content = b"fake ris content"
-        files = {"file": ("test.ris", file_content, "text/plain")}
-        data = {"project_code": "PROJ-1"}
+    await act(async () => {
+      await result.current.uploadAndInject(mockFile);
+    });
 
-        response = client.post(
-            "/api/bibliography/inject", files=files, data=data
-        )
-        assert response.status_code == 200
-        assert response.json() == {"message": "Success", "inserted": 10}
-        mock_inject.assert_called_once_with(mock_db, [mock_ref], "PROJ-1")
-    finally:
-        app.dependency_overrides.pop(get_db, None)
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.error).toBe(
+      'El código de proyecto es requerido'
+    );
+  });
 
+  it('should abort and set error if file is missing', async () => {
+    global.fetch = vi.fn();
 
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
-def test_inject_bibliography_endpoint_invalid_extension():
-    file_content = b"fake txt content"
-    files = {"file": ("test.txt", file_content, "text/plain")}
-    data = {"project_code": "PROJ-1"}
+    const { result } = renderHook(() => useReferencesUpload());
 
-    response = client.post(
-        "/api/bibliography/inject", files=files, data=data
-    )
-    assert response.status_code == 400
-    assert "Unsupported file extension" in response.json()["detail"]
+    act(() => {
+      result.current.setProjectCode('TEST');
+    });
 
+    await act(async () => {
+      await result.current.uploadAndInject(null);
+    });
 
-@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
-def test_batch_download_local_endpoint_client():
-    async def mock_generator(*args, **kwargs):
-        yield '{"log": "local test"}'
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.error).toBe(
+      'Debe seleccionar un archivo bibliográfico válido'
+    );
+  });
 
-    payload = {
-        "file_path": "/fake/path.bib",
-        "delay": 0,
-        "destination": "/tmp/downloads",
-        "email": "test@example.com",
-        "cookies": "auth=123",
-    }
-    fake_bib = "Some content with DOI: 10.1000/182 and another 10.1000/182"
+  it('should handle API error gracefully', async () => {
+    const mockFile = new File(['bad content'], 'test.txt', {
+      type: 'text/plain',
+    });
 
-    mock_ref = ParsedReference(
-        author="Test Author",
-        year="2024",
-        title="Test Title",
-        journal="Test Journal",
-        doi="10.1000/182",
-        upload_datetime=datetime(2024, 1, 1, tzinfo=timezone.utc),
-    )
-    with patch("builtins.open", mock_open(read_data=fake_bib)), patch(
-        "backend.src.bibliography.router.parse_bibliography_content",
-        return_value=[mock_ref],
-    ), patch(
-        "backend.src.bibliography.router.execute_batch_download",
-        side_effect=mock_generator,
-    ) as mock_exec:
-        response = client.post(
-            "/api/bibliography/batch-download-local", json=payload
-        )
-        assert response.status_code == 200
-        assert "text/event-stream" in response.headers["content-type"]
-        assert 'data: {"log": "local test"}\n\n' in response.text
-        
-        args, _ = mock_exec.call_args
-        assert args[0] == ["10.1000/182"]
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ detail: 'Unsupported file extension' }),
+    });
 
+    const { result } = renderHook(() => useReferencesUpload());
 
-// --- leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md ---
+    act(() => {
+      result.current.setProjectCode('TEST');
+    });
 
----
-type: "roadmap"
-epic_name: "EPIC 13: BIB ONLY INGESTION & INJECTION RESILIENCE"
-domain: "Bibliography Ingestion"
-complexity_aggregate: "MEDIUM"
----
+    await act(async () => {
+      await result.current.uploadAndInject(mockFile);
+    });
 
-# EPIC 13: BIB ONLY INGESTION & INJECTION RESILIENCE | BIBLIOGRAPHY VERTICAL
-
-- [x] Story 12.0: Roadmap & Planning Initialization | [MoSCoW: MUST] | [Complexity: TRIVIAL]
-  Business Requirement: Initialize sequential agentic memory state trackers ensuring DAG dependencies.
-  Story Context Radius: `{"leai_docs/planning/global_backlog.md": ["*"]}`
-  Layered Technical Breakdown:
-  - [ID-12.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Append EPIC 13, its [REQ-036] to [REQ-039] list, and the Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md]. Type: Task.
-
-- [ ] Story 12.1: Backend Router Boundary Marshal (.bib Restriction) | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-036)
-  Story Context Radius: `{"backend/src/bibliography/router.py": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
-  Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
-  - [ID-12.1.1] [TESTING/TDE]: [1. Arrange: Mock UploadFile with a .ris extension. 2. Act: Invoke _process_upload with the mock file. 3. Assert: Verify that an HTTPException with status 400 is raised]. Type: Task.
-  - [ID-12.1.2] [LOGIC/IO]: [1. Open backend/src/bibliography/router.py. 2. In _process_upload and _process_inject, modify the extension validation to strictly allow ONLY [".bib"]. 3. In _process_inject, add a try...except block around the inject_references_to_db call to catch RuntimeError and raise an HTTPException with status 503 and detail "Error de conexión a la base de datos. Intente nuevamente."]. Type: Task.
-  - [ID-12.1.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.1. 2. Append > Files touched: backend/src/bibliography/router.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-036]. Type: Task.
-
-- [ ] Story 12.2: Backend Parser Core Logic (.bib Extraction) | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-038)
-  Story Context Radius: `{"backend/src/bibliography/parser_service.py": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
-  Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
-  - [ID-12.2.1] [TESTING/TDE]: [1. Arrange: Mock a .bib string with no valid entries. 2. Act: Invoke parse_bibliography_content with the mock string and ext=".bib". 3. Assert: Verify that a ValueError is raised]. Type: Task.
-  - [ID-12.2.2] [LOGIC/CORE]: [1. Open backend/src/bibliography/parser_service.py. 2. Delete all .ris parsing functions (_extract_ris_*, _parse_ris_fallback) and the .ris branch in parse_bibliography_content. 3. In parse_bibliography_content, if entries is empty after _parse_bibtex_entries, raise ValueError("No se encontraron items válidos en el archivo .bib")]. Type: Task.
-  - [ID-12.2.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.2. 2. Append > Files touched: backend/src/bibliography/parser_service.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-038]. Type: Task.
-
-- [ ] Story 12.3: Backend Injection DB Resilience | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-039)
-  Story Context Radius: `{"backend/src/bibliography/injection_service.py": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
-  Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
-  - [ID-12.3.1] [TESTING/TDE]: [1. Arrange: Mock the SQLAlchemy Session so that db.query() raises sqlalchemy.exc.OperationalError. 2. Act: Invoke inject_references_to_db. 3. Assert: Verify that a RuntimeError is raised]. Type: Task.
-  - [ID-12.3.2] [LOGIC/DB]: [1. Open backend/src/bibliography/injection_service.py. 2. Import OperationalError from sqlalchemy.exc. 3. Wrap the DB query and commit logic inside inject_references_to_db in a try...except OperationalError block. 4. If caught, raise RuntimeError("Database connection failed")]. Type: Task.
-  - [ID-12.3.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.3. 2. Append > Files touched: backend/src/bibliography/injection_service.py under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-039]. Type: Task.
-
-- [ ] Story 12.4: Frontend Hook State Fractality (.bib Validation) | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-037)
-  Story Context Radius: `{"frontend/src/hooks/useReferencesUpload.js": [""], "leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}`
-  Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
-  - [ID-12.4.1] [TESTING/TDE]: [1. Arrange: Mock a file object with name "test.ris". 2. Act: Invoke uploadAndInject with the mock file. 3. Assert: Verify that setError is called with "Solo se permiten archivos .bib" and no fetch request is executed]. Type: Task.
-  - [ID-12.4.2] [LOGIC/UI_STATE]: [1. Open frontend/src/hooks/useReferencesUpload.js. 2. In uploadAndInject, iterate over files and verify file.name.toLowerCase().endsWith('.bib'). If false, call setError('Solo se permiten archivos .bib'), setIsSuccess(false), and return. 3. Ensure backend error payloads (like the 503 DB error) are correctly passed to setError]. Type: Task.
-  - [ID-12.4.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_12_bib_only_and_injection_fix.md and check - [x] for Story 12.4. 2. Append > Files touched: frontend/src/hooks/useReferencesUpload.js under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for REQ-037]. Type: Task.
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe('Unsupported file extension');
+  });
+});

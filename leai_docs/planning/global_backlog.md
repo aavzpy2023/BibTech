@@ -66,7 +66,7 @@
 - [x] [REQ-036] Backend Router Boundary Marshal (.bib Restriction)
 - [x] [REQ-038] Backend Parser Core Logic (.bib Extraction)
 - [x] [REQ-039] Backend Injection DB Resilience
-- [ ] [REQ-037] Frontend Hook State Fractality (.bib Validation)
+- [x] [REQ-037] Frontend Hook State Fractality (.bib Validation)
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)

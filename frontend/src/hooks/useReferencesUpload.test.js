@@ -15,7 +15,7 @@ describe('useReferencesUpload', () => {
   });
 
   it('should upload and inject multiple files sequentially (FIFO)', async () => {
-    const mockFile = new File(['fake ris content'], 'test.ris', {
+    const mockFile = new File(['fake bib content'], 'test1.bib', {
       type: 'text/plain',
     });
     const mockFile2 = new File(['fake bib'], 'test2.bib', { type: 'text/plain' });
@@ -49,8 +49,8 @@ describe('useReferencesUpload', () => {
     expect(localStorage.getItem('last_project_code')).toBe('TEST');
   });
 
-  it('should abort and set error if project code is missing', async () =>>
-    const mockFile = new File(['content'], 'test.ris', {
+  it('should abort and set error if project code is missing', async () => {
+    const mockFile = new File(['content'], 'test.bib', {
       type: 'text/plain',
     });
     global.fetch = vi.fn();
@@ -88,14 +88,28 @@ describe('useReferencesUpload', () => {
     );
   });
 
+  it('should handle frontend validation error for non .bib files', async () => {
+    const mockFile = new File(['content'], 'test.ris');
+    global.fetch = vi.fn();
+    
+    const { result } = renderHook(() => useReferencesUpload());
+    act(() => { result.current.setProjectCode('TEST'); });
+    
+    await act(async () => { await result.current.uploadAndInject(mockFile); });
+    
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.error).toBe('Solo se permiten archivos .bib');
+  });
+
   it('should handle API error gracefully', async () => {
-    const mockFile = new File(['bad content'], 'test.txt', {
+    const mockFile = new File(['bad content'], 'test.bib', {
       type: 'text/plain',
     });
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
-      json: async () => ({ detail: 'Unsupported file extension' }),
+      json: async () => ({ detail: 'Error de conexión a la base de datos' }),
     });
 
     const { result } = renderHook(() => useReferencesUpload());
@@ -110,6 +124,6 @@ describe('useReferencesUpload', () => {
 
     expect(result.current.isSuccess).toBe(false);
     expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBe('Unsupported file extension');
+    expect(result.current.error).toBe('Error de conexión a la base de datos');
   });
 });
