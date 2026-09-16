@@ -1,5 +1,62 @@
 import { useState, useMemo, useCallback } from 'react';
 
+function parseBibtexFields(raw) {
+    if (!raw || typeof raw !== 'string') return {};
+    const fields = {};
+    const bodyStart = raw.indexOf(',');
+    if (bodyStart === -1) return {};
+    const body = raw.slice(bodyStart + 1);
+
+    let i = 0;
+    const n = body.length;
+    while (i < n) {
+        while (i < n && /[\s,]/.test(body[i])) i++;
+        if (i >= n || body[i] === '}') break;
+
+        const keyStart = i;
+        while (i < n && body[i] !== '=' && body[i] !== '}' && !/\s/.test(body[i])) {
+            i++;
+        }
+        const key = body.slice(keyStart, i).trim().toLowerCase();
+        while (i < n && /[\s=]/.test(body[i])) i++;
+        if (i >= n || body[i] === '}') break;
+
+        let val = '';
+        if (body[i] === '{') {
+            i++;
+            let depth = 1;
+            const valStart = i;
+            while (i < n && depth > 0) {
+                if (body[i] === '{') depth++;
+                else if (body[i] === '}') depth--;
+                if (depth > 0) i++;
+            }
+            val = body.slice(valStart, i).trim();
+            i++;
+        } else if (body[i] === '"') {
+            i++;
+            const valStart = i;
+            while (i < n && body[i] !== '"') {
+                if (body[i] === '\\' && i + 1 < n) i++;
+                i++;
+            }
+            val = body.slice(valStart, i).trim();
+            i++;
+        } else {
+            const valStart = i;
+            while (i < n && body[i] !== ',' && body[i] !== '}' && body[i] !== '\n') {
+                i++;
+            }
+            val = body.slice(valStart, i).trim();
+        }
+
+        if (key && val) {
+            fields[key] = val.replace(/\\_/g, '_').replace(/\s+/g, ' ');
+        }
+    }
+    return fields;
+}
+
 export default function useReferenceDetails(article = null) {
   const [activeTab, setActiveTab] = useState('Overview');
   const [drawerState, setDrawerState] = useState({
@@ -136,16 +193,25 @@ export default function useReferenceDetails(article = null) {
       };
     }
 
+    const parsedBib = parseBibtexFields(article.raw_data || article.raw_bibtex || '');
+
     const keywords = Array.isArray(article.keywords) ? article.keywords : [];
-    const authorKeywords = keywords
+    let authorKeywords = keywords
       .filter((k) => k && k.type === 'author')
       .map((k) => k.name || k)
       .filter(Boolean);
 
-    const plusKeywords = keywords
+    let plusKeywords = keywords
       .filter((k) => k && k.type === 'plus')
       .map((k) => k.name || k)
       .filter(Boolean);
+
+    if (authorKeywords.length === 0 && parsedBib['keywords']) {
+        authorKeywords = parsedBib['keywords'].split(';').map((k) => k.trim()).filter(Boolean);
+    }
+    if (plusKeywords.length === 0 && parsedBib['keywords-plus']) {
+        plusKeywords = parsedBib['keywords-plus'].split(';').map((k) => k.trim()).filter(Boolean);
+    }
 
     const authorsDetail = Array.isArray(article.authors_detail)
       ? article.authors_detail
@@ -155,18 +221,28 @@ export default function useReferenceDetails(article = null) {
       (a) => a && a.is_corresponding && a.email
     );
     const firstAuthorWithEmail = authorsDetail.find((a) => a && a.email);
-    const authorEmail =
-      corrAuthor?.email || firstAuthorWithEmail?.email || '';
+    let authorEmail =
+      corrAuthor?.email || firstAuthorWithEmail?.email || parsedBib['author-email'] || '';
 
-    const orcidCount = authorsDetail.filter((a) => a && a.orcid).length;
-    const researcherIdCount = authorsDetail.filter(
+    let orcidCount = authorsDetail.filter((a) => a && a.orcid).length;
+    if (orcidCount === 0 && parsedBib['orcid-numbers']) {
+        orcidCount = parsedBib['orcid-numbers'].split('/').length - 1;
+    }
+
+    let researcherIdCount = authorsDetail.filter(
       (a) => a && a.researcher_id
     ).length;
+    if (researcherIdCount === 0 && parsedBib['researcherid-numbers']) {
+        researcherIdCount = parsedBib['researcherid-numbers'].split('/').length - 1;
+    }
 
     const affiliationsSet = new Set(
       authorsDetail.map((a) => a && a.affiliation).filter(Boolean)
     );
-    const affiliations = Array.from(affiliationsSet).join('; ');
+    let affiliations = Array.from(affiliationsSet).join('; ');
+    if (!affiliations) {
+        affiliations = parsedBib['affiliation'] || parsedBib['affiliations'] || '';
+    }
 
     return {
       title: article.title || '',

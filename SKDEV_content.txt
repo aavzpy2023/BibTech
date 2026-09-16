@@ -1,1019 +1,891 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 17:12:06
+Date: 2026-09-16 17:22:19
 AST Mode: False
 Line Numbers: True
-Modules: ReferenceDetailsModal.jsx, OverviewRightColumn.jsx, OverviewLeftColumn.jsx, MetadataGrid.jsx
-Processed Files: 4
+Modules: parser_service.py, useReferenceDetails.js, core.py
+Processed Files: 3
 ===========================
 
 
 
-// --- frontend/src/components/references/ReferenceDetailsModal.jsx ---
+// --- backend/src/bibliography/parser_service.py ---
 
-[L001, S0] import React from 'react';
-[L002, S0] import PropTypes from 'prop-types';
-[L003, S0] import ModalTemplate from '../common/ModalTemplate';
-[L004, S0] import ReferenceHeroBlock from './ReferenceHeroBlock';
-[L005, S0] import OverviewLeftColumn from './OverviewLeftColumn';
-[L006, S0] import OverviewRightColumn from './OverviewRightColumn';
-[L007, S0] import MetricsFooterCards from './MetricsFooterCards';
-[L008, S0] import ReferenceDrawer from './ReferenceDrawer';
-[L009, S0] import useReferenceDetails from '../../hooks/useReferenceDetails';
-[L010, S0] 
-[L011, S0] export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
-[L012, S2]   const {
-[L013, S4]     activeTab,
-[L014, S4]     handleTabChange,
-[L015, S4]     drawerState,
-[L016, S4]     handleExpandDrawer,
-[L017, S4]     closeDrawer,
-[L018, S4]     handleHoverInfo,
-[L019, S4]     handleCopy,
-[L020, S4]     isAbstractExpanded,
-[L021, S4]     toggleAbstractExpanded,
-[L022, S4]     title,
-[L023, S4]     authors,
-[L024, S4]     year,
-[L025, S4]     journal,
-[L026, S4]     volume,
-[L027, S4]     issue,
-[L028, S4]     pages,
-[L029, S4]     doi,
-[L030, S4]     abstract,
-[L031, S4]     authorKeywords,
-[L032, S4]     plusKeywords,
-[L033, S4]     researchAreas,
-[L034, S4]     wosCategories,
-[L035, S4]     affiliations,
-[L036, S4]     authorsDetailsCount,
-[L037, S4]     authorEmail,
-[L038, S4]     orcidCount,
-[L039, S4]     researcherIdCount,
-[L040, S4]     fundingText,
-[L041, S4]     type,
-[L042, S4]     language,
-[L043, S4]     issn,
-[L044, S4]     month,
-[L045, S4]     articleNumber,
-[L046, S4]     publisher,
-[L047, S4]     address,
-[L048, S4]     timesCited,
-[L049, S4]     oaStatus,
-[L050, S4]     referencesList,
-[L051, S4]     authorsDetail,
-[L052, S2]   } = useReferenceDetails(article);
-[L053, S0] 
-[L054, S2]   if (!article) return null;
-[L055, S0] 
-[L056, S2]   const tabs = [
-[L057, S4]     {
-[L058, S6]       id: 'Overview',
-[L059, S6]       label: 'Overview',
-[L060, S6]       icon: (
-[L061, S8]         <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L062, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-[L063, S8]         </svg>
-[L064, S6]       ),
-[L065, S4]     },
-[L066, S4]     {
-[L067, S6]       id: 'Metadata',
-[L068, S6]       label: 'Metadata',
-[L069, S6]       icon: (
-[L070, S8]         <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L071, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-[L072, S8]         </svg>
-[L073, S6]       ),
-[L074, S4]     },
-[L075, S4]     {
-[L076, S6]       id: 'Authors & Institutions',
-[L077, S6]       label: 'Authors & Institutions',
-[L078, S6]       icon: (
-[L079, S8]         <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L080, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-[L081, S8]         </svg>
-[L082, S6]       ),
-[L083, S4]     },
-[L084, S4]     {
-[L085, S6]       id: 'References',
-[L086, S6]       label: 'References',
-[L087, S6]       icon: (
-[L088, S8]         <svg width="15" height="15" style={{ width: '15px', height: '15px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L089, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-[L090, S8]         </svg>
-[L091, S6]       ),
-[L092, S4]     },
-[L093, S2]   ];
-[L094, S0] 
-[L095, S2]   return (
-[L096, S4]     <ModalTemplate
-[L097, S6]       isOpen={isOpen}
-[L098, S6]       onClose={onClose}
-[L099, S6]       header={
-[L100, S8]         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-[L101, S10]           <svg
-[L102, S12]             style={{ width: '20px', height: '20px', color: '#60a5fa' }}
-[L103, S12]             fill="none"
-[L104, S12]             viewBox="0 0 24 24"
-[L105, S12]             stroke="currentColor"
-[L106, S10]           >
-[L107, S12]             <path
-[L108, S14]               strokeLinecap="round"
-[L109, S14]               strokeLinejoin="round"
-[L110, S14]               strokeWidth={2}
-[L111, S14]               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-[L112, S12]             />
-[L113, S10]           </svg>
-[L114, S10]           <span>Reference Details</span>
-[L115, S8]         </div>
-[L116, S6]       }
-[L117, S6]       maxWidth="1180px"
-[L118, S4]     >
-[L119, S6]       <div style={{ position: 'relative' }}>
-[L120, S8]         <ReferenceHeroBlock
-[L121, S10]           title={title}
-[L122, S10]           authors={authors}
-[L123, S10]           year={year}
-[L124, S10]           journal={journal}
-[L125, S10]           volume={volume}
-[L126, S10]           issue={issue}
-[L127, S10]           pages={pages}
-[L128, S10]           doi={doi}
-[L129, S10]           onCopyDoi={handleCopy}
-[L130, S8]         />
-[L131, S0] 
-[L132, S8]         {/* Tabs Header */}
-[L133, S8]         <div
-[L134, S10]           style={{
-[L135, S12]             display: 'flex',
-[L136, S12]             borderBottom: '1px solid #1e293b',
-[L137, S12]             marginBottom: '24px',
-[L138, S12]             gap: '24px',
-[L139, S10]           }}
-[L140, S8]         >
-[L141, S10]           {tabs.map((tab) => {
-[L142, S12]             const isActive = activeTab === tab.id;
-[L143, S12]             return (
-[L144, S14]               <button
-[L145, S16]                 key={tab.id}
-[L146, S16]                 onClick={() => handleTabChange(tab.id)}
-[L147, S16]                 style={{
-[L148, S18]                   background: 'none',
-[L149, S18]                   border: 'none',
-[L150, S18]                   borderBottom: isActive ? '2px solid #38bdf8' : '2px solid transparent',
-[L151, S18]                   color: isActive ? '#38bdf8' : '#94a3b8',
-[L152, S18]                   fontWeight: isActive ? '600' : '500',
-[L153, S18]                   fontSize: '14px',
-[L154, S18]                   padding: '0 0 12px 0',
-[L155, S18]                   cursor: 'pointer',
-[L156, S18]                   display: 'flex',
-[L157, S18]                   alignItems: 'center',
-[L158, S18]                   gap: '8px',
-[L159, S16]                 }}
-[L160, S14]               >
-[L161, S16]                 {tab.icon}
-[L162, S16]                 <span>{tab.label}</span>
-[L163, S14]               </button>
-[L164, S12]             );
-[L165, S10]           })}
-[L166, S8]         </div>
-[L167, S0] 
-[L168, S8]         {/* Tab Content Panels */}
-[L169, S8]         {activeTab === 'Overview' && (
-[L170, S10]           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-[L171, S12]             <div
-[L172, S14]               style={{
-[L173, S16]                 display: 'grid',
-[L174, S16]                 gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-[L175, S16]                 gap: '20px',
-[L176, S14]               }}
-[L177, S12]             >
-[L178, S14]               <OverviewLeftColumn
-[L179, S16]                 abstract={abstract}
-[L180, S16]                 authorKeywords={authorKeywords}
-[L181, S16]                 plusKeywords={plusKeywords}
-[L182, S16]                 researchAreas={researchAreas}
-[L183, S16]                 wosCategories={wosCategories}
-[L184, S16]                 isExpanded={isAbstractExpanded}
-[L185, S16]                 onExpandAbstract={toggleAbstractExpanded}
-[L186, S16]                 onOpenAbstractModal={() =>
-[L187, S18]                   handleExpandDrawer('abstract', [abstract], 'Full Abstract')
-[L188, S16]                 }
-[L189, S16]                 onHoverInfo={handleHoverInfo}
-[L190, S14]               />
-[L191, S14]               <OverviewRightColumn
-[L192, S16]                 affiliations={affiliations}
-[L193, S16]                 authorsDetailsCount={authorsDetailsCount}
-[L194, S16]                 authorEmail={authorEmail}
-[L195, S16]                 orcidCount={orcidCount}
-[L196, S16]                 researcherIdCount={researcherIdCount}
-[L197, S16]                 fundingText={fundingText}
-[L198, S16]                 onHoverInfo={handleHoverInfo}
-[L199, S16]                 onCopy={handleCopy}
-[L200, S16]                 onExpandDrawer={(drawerType) => {
-[L201, S18]                   if (drawerType === 'authors') {
-[L202, S20]                     handleExpandDrawer('authors', authorsDetail, 'Authors Details');
-[L203, S18]                   } else if (drawerType === 'funding') {
-[L204, S20]                     const fundingData =
-[L205, S22]                       fundingList && fundingList.length > 0
-[L206, S24]                         ? fundingList
-[L207, S24]                         : fundingText
-[L208, S24]                         ? [fundingText]
-[L209, S24]                         : [];
-[L210, S20]                     handleExpandDrawer(
-[L211, S22]                       'funding',
-[L212, S22]                       fundingData,
-[L213, S22]                       'Funding Acknowledgments'
-[L214, S20]                     );
-[L215, S18]                   } else {
-[L216, S20]                     handleExpandDrawer(drawerType);
-[L217, S18]                   }
-[L218, S16]                 }}
-[L219, S14]               />
-[L220, S12]             </div>
-[L221, S0] 
-[L222, S12]             <MetricsFooterCards
-[L223, S14]               type={type}
-[L224, S14]               language={language}
-[L225, S14]               issn={issn}
-[L226, S14]               month={month}
-[L227, S14]               articleNumber={articleNumber}
-[L228, S14]               pages={pages}
-[L229, S14]               publisher={publisher}
-[L230, S14]               address={address}
-[L231, S14]               timesCited={timesCited}
-[L232, S14]               oaStatus={oaStatus}
-[L233, S14]               onHoverInfo={handleHoverInfo}
-[L234, S12]             />
-[L235, S0] 
-[L236, S12]             {referencesList && referencesList.length > 0 && (
-[L237, S14]               <div
-[L238, S16]                 style={{
-[L239, S18]                   border: '1px solid #1e293b',
-[L240, S18]                   borderRadius: '8px',
-[L241, S18]                   padding: '16px',
-[L242, S18]                   backgroundColor: '#131d31',
-[L243, S18]                   display: 'flex',
-[L244, S18]                   alignItems: 'center',
-[L245, S18]                   justifyContent: 'space-between',
-[L246, S18]                   marginTop: '8px',
-[L247, S16]                 }}
-[L248, S14]               >
-[L249, S16]                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-[L250, S18]                   <svg
-[L251, S20]                     style={{ width: '20px', height: '20px', color: '#94a3b8' }}
-[L252, S20]                     fill="none"
-[L253, S20]                     viewBox="0 0 24 24"
-[L254, S20]                     stroke="currentColor"
-[L255, S18]                   >
-[L256, S20]                     <path
-[L257, S22]                       strokeLinecap="round"
-[L258, S22]                       strokeLinejoin="round"
-[L259, S22]                       strokeWidth={2}
-[L260, S22]                       d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-[L261, S20]                     />
-[L262, S18]                   </svg>
-[L263, S18]                   <div>
-[L264, S20]                     <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#f1f5f9' }}>
-[L265, S22]                       Cited References
-[L266, S20]                     </h4>
-[L267, S20]                     <span style={{ fontSize: '12px', color: '#64748b' }}>
-[L268, S22]                       {referencesList.length} references
-[L269, S20]                     </span>
-[L270, S18]                   </div>
-[L271, S16]                 </div>
-[L272, S16]                 <button
-[L273, S18]                   onClick={() =>
-[L274, S20]                     handleExpandDrawer(
-[L275, S22]                       'references',
-[L276, S22]                       referencesList,
-[L277, S22]                       'Cited References'
-[L278, S20]                     )
-[L279, S18]                   }
-[L280, S18]                   style={{
-[L281, S20]                     background: 'none',
-[L282, S20]                     border: 'none',
-[L283, S20]                     color: '#60a5fa',
-[L284, S20]                     cursor: 'pointer',
-[L285, S20]                     fontSize: '13px',
-[L286, S20]                     fontWeight: '500',
-[L287, S18]                   }}
-[L288, S16]                 >
-[L289, S18]                   View all references &rarr;
-[L290, S16]                 </button>
-[L291, S14]               </div>
-[L292, S12]             )}
-[L293, S10]           </div>
-[L294, S8]         )}
-[L295, S0] 
-[L296, S8]         {activeTab === 'Metadata' && (
-[L297, S10]           <div className="p-6 text-gray-400 text-sm italic border border-gray-800 rounded-lg bg-gray-900/30">
-[L298, S12]             Raw metadata attributes and database verification panel.
-[L299, S10]           </div>
-[L300, S8]         )}
-[L301, S0] 
-[L302, S8]         {activeTab === 'Authors & Institutions' && (
-[L303, S10]           <div className="p-6 text-gray-400 text-sm italic border border-gray-800 rounded-lg bg-gray-900/30">
-[L304, S12]             {authorsDetailsCount > 0
-[L305, S14]               ? `${authorsDetailsCount} mapped author records with verified institutional affiliations.`
-[L306, S14]               : 'No detailed author records available.'}
-[L307, S10]           </div>
-[L308, S8]         )}
-[L309, S0] 
-[L310, S8]         {activeTab === 'References' && (
-[L311, S10]           <div className="p-6 text-gray-400 text-sm italic border border-gray-800 rounded-lg bg-gray-900/30">
-[L312, S12]             {referencesList && referencesList.length > 0
-[L313, S14]               ? `${referencesList.length} cited references catalogued.`
-[L314, S14]               : 'No cited references available.'}
-[L315, S10]           </div>
-[L316, S8]         )}
-[L317, S0] 
-[L318, S8]         {/* Slide-out Drawer */}
-[L319, S8]         <ReferenceDrawer
-[L320, S10]           isOpen={drawerState.isOpen}
-[L321, S10]           onClose={closeDrawer}
-[L322, S10]           title={drawerState.title}
-[L323, S10]           type={drawerState.type}
-[L324, S10]           data={drawerState.data}
-[L325, S8]         />
-[L326, S6]       </div>
-[L327, S4]     </ModalTemplate>
-[L328, S2]   );
-[L329, S0] }
-[L330, S0] 
-[L331, S0] ReferenceDetailsModal.propTypes = {
-[L332, S2]   isOpen: PropTypes.bool.isRequired,
-[L333, S2]   onClose: PropTypes.func.isRequired,
-[L334, S2]   article: PropTypes.object,
-[L335, S0] };
-
-
-// --- frontend/src/components/references/OverviewRightColumn.jsx ---
-
-[L001, S0] import React from 'react';
-[L002, S0] import PropTypes from 'prop-types';
-[L003, S0] 
-[L004, S0] const RightPanelBox = ({ title, icon, onHoverInfo, infoKey, onClick, children, copyAction }) => (
-[L005, S2]   <div 
-[L006, S4]     style={{
-[L007, S6]       backgroundColor: '#0C1427',
-[L008, S6]       border: '1px solid #18243c',
-[L009, S6]       borderRadius: '8px',
-[L010, S6]       padding: '14px 16px',
-[L011, S6]       display: 'flex',
-[L012, S6]       alignItems: 'center',
-[L013, S6]       justifyContent: 'space-between',
-[L014, S6]       cursor: onClick ? 'pointer' : 'default',
-[L015, S6]       boxSizing: 'border-box',
-[L016, S4]     }}
-[L017, S4]     onClick={onClick}
-[L018, S4]     role={onClick ? 'button' : 'region'}
-[L019, S4]     aria-label={onClick ? `Open ${title.toLowerCase()} list` : undefined}
-[L020, S2]   >
-[L021, S4]     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, overflow: 'hidden' }}>
-[L022, S6]       <div style={{ marginTop: '2px', flexShrink: 0 }}>{icon}</div>
-[L023, S6]       <div style={{ flex: 1, overflow: 'hidden' }}>
-[L024, S8]         <h3 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: '600', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-[L025, S10]           {title}
-[L026, S10]           {onHoverInfo && (
-[L027, S12]             <button 
-[L028, S14]               onMouseEnter={(e) => {
-[L029, S16]                 if(e.stopPropagation) e.stopPropagation();
-[L030, S16]                 onHoverInfo(infoKey, e);
-[L031, S14]               }}
-[L032, S14]               onMouseLeave={(e) => {
-[L033, S16]                 if(e.stopPropagation) e.stopPropagation();
-[L034, S16]                 onHoverInfo(null, null);
-[L035, S14]               }}
-[L036, S14]               onClick={(e) => e.stopPropagation()}
-[L037, S14]               style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
-[L038, S14]               aria-label={`info-${infoKey}`}
-[L039, S12]             >
-[L040, S14]               <svg width="14" height="14" style={{ width: '14px', height: '14px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L041, S16]                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-[L042, S14]               </svg>
-[L043, S12]             </button>
-[L044, S10]           )}
-[L045, S8]         </h3>
-[L046, S8]         <div style={{ fontSize: '13px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-[L047, S10]           {children || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>None provided</span>}
-[L048, S8]         </div>
-[L049, S6]       </div>
-[L050, S4]     </div>
-[L051, S4]     
-[L052, S4]     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '12px' }}>
-[L053, S6]       {copyAction && children && (
-[L054, S8]         <button
-[L055, S10]           onClick={(e) => {
-[L056, S12]             e.stopPropagation();
-[L057, S12]             copyAction(children);
-[L058, S10]           }}
-[L059, S10]           style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
-[L060, S10]           aria-label="copy email"
-[L061, S8]         >
-[L062, S10]           <svg width="16" height="16" style={{ width: '16px', height: '16px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L063, S12]             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-[L064, S10]           </svg>
-[L065, S8]         </button>
-[L066, S6]       )}
-[L067, S6]       <svg
-[L068, S8]         width="14"
-[L069, S8]         height="14"
-[L070, S8]         style={{ width: '14px', height: '14px', flexShrink: 0, color: '#475569' }}
-[L071, S8]         fill="none"
-[L072, S8]         viewBox="0 0 24 24"
-[L073, S8]         stroke="currentColor"
-[L074, S6]       >
-[L075, S8]         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-[L076, S6]       </svg>
-[L077, S4]     </div>
-[L078, S2]   </div>
-[L079, S0] );
-[L080, S0] 
-[L081, S0] RightPanelBox.propTypes = {
-[L082, S2]   title: PropTypes.string.isRequired,
-[L083, S2]   icon: PropTypes.node.isRequired,
-[L084, S2]   onHoverInfo: PropTypes.func,
-[L085, S2]   infoKey: PropTypes.string,
-[L086, S2]   onClick: PropTypes.func,
-[L087, S2]   children: PropTypes.node,
-[L088, S2]   copyAction: PropTypes.func,
-[L089, S0] };
-[L090, S0] 
-[L091, S0] export default function OverviewRightColumn({
-[L092, S2]   affiliations,
-[L093, S2]   authorsDetailsCount,
-[L094, S2]   authorEmail,
-[L095, S2]   orcidCount,
-[L096, S2]   researcherIdCount,
-[L097, S2]   fundingText,
-[L098, S2]   onHoverInfo,
-[L099, S2]   onCopy,
-[L100, S2]   onExpandDrawer,
-[L101, S0] }) {
-[L102, S2]   const icons = {
-[L103, S4]     building: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
-[L104, S4]     users: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
-[L105, S4]     mail: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
-[L106, S4]     badge: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z" /></svg>,
-[L107, S4]     globe: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-[L108, S4]     cash: <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-[L109, S2]   };
-[L110, S0] 
-[L111, S2]   return (
-[L112, S4]     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-[L113, S6]       <RightPanelBox 
-[L114, S8]         title="Affiliations" 
-[L115, S8]         icon={icons.building} 
-[L116, S8]         onHoverInfo={onHoverInfo} 
-[L117, S8]         infoKey="affiliations"
-[L118, S8]         onClick={authorsDetailsCount > 0 ? () => onExpandDrawer('authors') : null}
-[L119, S6]       >
-[L120, S8]         {affiliations}
-[L121, S6]       </RightPanelBox>
-[L122, S0] 
-[L123, S6]       <RightPanelBox 
-[L124, S8]         title="Authors Details" 
-[L125, S8]         icon={icons.users} 
-[L126, S8]         onHoverInfo={onHoverInfo} 
-[L127, S8]         infoKey="authors"
-[L128, S8]         onClick={authorsDetailsCount > 0 ? () => onExpandDrawer('authors') : null}
-[L129, S6]       >
-[L130, S8]         {authorsDetailsCount ? `${authorsDetailsCount} authors (see full list)` : null}
-[L131, S6]       </RightPanelBox>
-[L132, S0] 
-[L133, S6]       <RightPanelBox 
-[L134, S8]         title="Author Email" 
-[L135, S8]         icon={icons.mail} 
-[L136, S8]         onHoverInfo={onHoverInfo} 
-[L137, S8]         infoKey="email"
-[L138, S8]         copyAction={onCopy}
-[L139, S6]       >
-[L140, S8]         {authorEmail}
-[L141, S6]       </RightPanelBox>
-[L142, S0] 
-[L143, S6]       <RightPanelBox 
-[L144, S8]         title="ORCID Numbers" 
-[L145, S8]         icon={icons.badge} 
-[L146, S8]         onHoverInfo={onHoverInfo} 
-[L147, S8]         infoKey="orcid"
-[L148, S8]         onClick={orcidCount > 0 ? () => onExpandDrawer('authors') : null}
-[L149, S6]       >
-[L150, S8]         {orcidCount ? `${orcidCount} ORCID IDs` : null}
-[L151, S6]       </RightPanelBox>
-[L152, S0] 
-[L153, S6]       <RightPanelBox 
-[L154, S8]         title="ResearcherID Numbers" 
-[L155, S8]         icon={icons.globe} 
-[L156, S8]         onHoverInfo={onHoverInfo} 
-[L157, S8]         infoKey="researcher-id"
-[L158, S8]         onClick={researcherIdCount > 0 ? () => onExpandDrawer('authors') : null}
-[L159, S6]       >
-[L160, S8]         {researcherIdCount ? `${researcherIdCount} Researcher IDs` : null}
-[L161, S6]       </RightPanelBox>
-[L162, S0] 
-[L163, S6]       <RightPanelBox 
-[L164, S8]         title="Funding" 
-[L165, S8]         icon={icons.cash} 
-[L166, S8]         onHoverInfo={onHoverInfo} 
-[L167, S8]         infoKey="funding"
-[L168, S8]         onClick={fundingText ? () => onExpandDrawer('funding') : null}
-[L169, S6]       >
-[L170, S8]         {fundingText}
-[L171, S6]       </RightPanelBox>
-[L172, S4]     </div>
-[L173, S2]   );
-[L174, S0] }
-[L175, S0] 
-[L176, S0] OverviewRightColumn.propTypes = {
-[L177, S2]   affiliations: PropTypes.string,
-[L178, S2]   authorsDetailsCount: PropTypes.number,
-[L179, S2]   authorEmail: PropTypes.string,
-[L180, S2]   orcidCount: PropTypes.number,
-[L181, S2]   researcherIdCount: PropTypes.number,
-[L182, S2]   fundingText: PropTypes.string,
-[L183, S2]   onHoverInfo: PropTypes.func,
-[L184, S2]   onCopy: PropTypes.func,
-[L185, S2]   onExpandDrawer: PropTypes.func,
-[L186, S0] };
-
-
-// --- frontend/src/components/references/OverviewLeftColumn.jsx ---
-
-[L001, S0] import React from 'react';
-[L002, S0] import PropTypes from 'prop-types';
-[L003, S0] 
-[L004, S0] const SectionCard = ({ title, icon, onHoverInfo, infoKey, rightElement, children }) => (
-[L005, S2]   <div
-[L006, S4]     style={{
-[L007, S6]       backgroundColor: '#0C1427',
-[L008, S6]       border: '1px solid #18243c',
-[L009, S6]       borderRadius: '8px',
-[L010, S6]       padding: '16px',
-[L011, S6]       boxSizing: 'border-box',
-[L012, S4]     }}
-[L013, S2]   >
-[L014, S4]     <div
-[L015, S6]       style={{
-[L016, S8]         display: 'flex',
-[L017, S8]         alignItems: 'center',
-[L018, S8]         justifyContent: 'space-between',
-[L019, S8]         marginBottom: '12px',
-[L020, S6]       }}
-[L021, S4]     >
-[L022, S6]       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-[L023, S8]         {icon}
-[L024, S8]         <h3
-[L025, S10]           style={{
-[L026, S12]             margin: 0,
-[L027, S12]             fontSize: '14px',
-[L028, S12]             fontWeight: '600',
-[L029, S12]             color: '#f1f5f9',
-[L030, S12]             display: 'flex',
-[L031, S12]             alignItems: 'center',
-[L032, S12]             gap: '8px',
-[L033, S10]           }}
-[L034, S8]         >
-[L035, S10]           {title}
-[L036, S10]           {onHoverInfo && (
-[L037, S12]             <button 
-[L038, S14]               onMouseEnter={(e) => onHoverInfo(infoKey, e)}
-[L039, S14]               onMouseLeave={() => onHoverInfo(null, null)}
-[L040, S14]               style={{
-[L041, S16]                 background: 'none',
-[L042, S16]                 border: 'none',
-[L043, S16]                 color: '#64748b',
-[L044, S16]                 cursor: 'pointer',
-[L045, S16]                 padding: 0,
-[L046, S16]                 display: 'flex',
-[L047, S16]                 alignItems: 'center',
-[L048, S14]               }}
-[L049, S14]               aria-label={`info-${infoKey}`}
-[L050, S12]             >
-[L051, S14]               <svg 
-[L052, S16]                 width="14"
-[L053, S16]                 height="14"
-[L054, S16]                 style={{ width: '14px', height: '14px', flexShrink: 0 }}
-[L055, S16]                 fill="none" 
-[L056, S16]                 viewBox="0 0 24 24" 
-[L057, S16]                 stroke="currentColor"
-[L058, S14]               >
-[L059, S16]                 <path 
-[L060, S18]                   strokeLinecap="round" 
-[L061, S18]                   strokeLinejoin="round" 
-[L062, S18]                   strokeWidth={2} 
-[L063, S18]                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
-[L064, S16]                 />
-[L065, S14]               </svg>
-[L066, S12]             </button>
-[L067, S10]           )}
-[L068, S8]         </h3>
-[L069, S6]       </div>
-[L070, S6]       {rightElement || (
-[L071, S8]         <svg
-[L072, S10]           width="14"
-[L073, S10]           height="14"
-[L074, S10]           style={{ width: '14px', height: '14px', color: '#475569', flexShrink: 0 }}
-[L075, S10]           fill="none"
-[L076, S10]           viewBox="0 0 24 24"
-[L077, S10]           stroke="currentColor"
-[L078, S8]         >
-[L079, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-[L080, S8]         </svg>
-[L081, S6]       )}
-[L082, S4]     </div>
-[L083, S4]     <div style={{ fontSize: '13px', color: '#cbd5e1' }}>
-[L084, S6]       {children}
-[L085, S4]     </div>
-[L086, S2]   </div>
-[L087, S0] );
-[L088, S0] 
-[L089, S0] SectionCard.propTypes = {
-[L090, S2]   title: PropTypes.string.isRequired,
-[L091, S2]   icon: PropTypes.node,
-[L092, S2]   onHoverInfo: PropTypes.func,
-[L093, S2]   infoKey: PropTypes.string,
-[L094, S2]   children: PropTypes.node.isRequired,
-[L095, S0] };
-[L096, S0] 
-[L097, S0] export default function OverviewLeftColumn({
-[L098, S2]   abstract,
-[L099, S2]   authorKeywords,
-[L100, S2]   plusKeywords,
-[L101, S2]   researchAreas,
-[L102, S2]   wosCategories,
-[L103, S2]   isExpanded = false,
-[L104, S2]   onExpandAbstract,
-[L105, S2]   onOpenAbstractModal,
-[L106, S2]   onHoverInfo,
-[L107, S0] }) {
-[L108, S2]   const renderChips = (items) => {
-[L109, S4]     if (!items || items.length === 0) {
-[L110, S6]       return <span style={{ color: '#64748b', fontStyle: 'italic' }}>None provided</span>;
-[L111, S4]     }
-[L112, S4]     return (
-[L113, S6]       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-[L114, S8]         {items.map((item, idx) => (
-[L115, S10]           <span 
-[L116, S12]             key={idx}
-[L117, S12]             style={{
-[L118, S14]               backgroundColor: '#1e293b',
-[L119, S14]               border: '1px solid #334155',
-[L120, S14]               color: '#cbd5e1',
-[L121, S14]               padding: '3px 10px',
-[L122, S14]               borderRadius: '12px',
-[L123, S14]               fontSize: '12px',
-[L124, S14]               fontWeight: '500',
-[L125, S12]             }}
-[L126, S10]           >
-[L127, S12]             {item}
-[L128, S10]           </span>
-[L129, S8]         ))}
-[L130, S6]       </div>
-[L131, S4]     );
-[L132, S2]   };
-[L133, S0] 
-[L134, S2]   const renderBox = (text) => {
-[L135, S4]     if (!text) return <span style={{ color: '#64748b', fontStyle: 'italic' }}>None provided</span>;
-[L136, S4]     return (
-[L137, S6]       <div
-[L138, S8]         style={{
-[L139, S10]           backgroundColor: 'rgba(30, 41, 59, 0.4)',
-[L140, S10]           border: '1px solid #1e293b',
-[L141, S10]           borderRadius: '6px',
-[L142, S10]           padding: '10px',
-[L143, S10]           fontSize: '13px',
-[L144, S10]           color: '#cbd5e1',
-[L145, S10]           wordBreak: 'break-word',
-[L146, S8]         }}
-[L147, S6]       >
-[L148, S8]         {text}
-[L149, S6]       </div>
-[L150, S4]     );
-[L151, S2]   };
-[L152, S0] 
-[L153, S2]   const docIcon = (
-[L154, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L155, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-[L156, S4]     </svg>
-[L157, S2]   );
-[L158, S2]   
-[L159, S2]   const tagIcon = (
-[L160, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L161, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-[L162, S4]     </svg>
-[L163, S2]   );
-[L164, S0] 
-[L165, S2]   const linkIcon = (
-[L166, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L167, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-[L168, S4]     </svg>
-[L169, S2]   );
-[L170, S0] 
-[L171, S2]   const globeIcon = (
-[L172, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L173, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-[L174, S4]     </svg>
-[L175, S2]   );
-[L176, S0] 
-[L177, S2]   const filterIcon = (
-[L178, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L179, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-[L180, S4]     </svg>
-[L181, S2]   );
-[L182, S0] 
-[L183, S2]   const abstractRight = (
-[L184, S4]     <div
-[L185, S6]       onClick={onOpenAbstractModal || onExpandAbstract}
-[L186, S6]       style={{
-[L187, S8]         display: 'flex',
-[L188, S8]         alignItems: 'center',
-[L189, S8]         gap: '8px',
-[L190, S8]         cursor: 'pointer',
-[L191, S6]       }}
-[L192, S6]       title="Open full abstract dialog"
-[L193, S4]     >
-[L194, S6]       <svg
-[L195, S8]         width="15"
-[L196, S8]         height="15"
-[L197, S8]         style={{ width: '15px', height: '15px', color: '#38bdf8', flexShrink: 0 }}
-[L198, S8]         fill="none"
-[L199, S8]         viewBox="0 0 24 24"
-[L200, S8]         stroke="currentColor"
-[L201, S6]       >
-[L202, S8]         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-[L203, S8]         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-[L204, S6]       </svg>
-[L205, S6]       <svg
-[L206, S8]         width="14"
-[L207, S8]         height="14"
-[L208, S8]         style={{ width: '14px', height: '14px', color: '#475569', flexShrink: 0 }}
-[L209, S8]         fill="none"
-[L210, S8]         viewBox="0 0 24 24"
-[L211, S8]         stroke="currentColor"
-[L212, S6]       >
-[L213, S8]         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-[L214, S6]       </svg>
-[L215, S4]     </div>
-[L216, S2]   );
-[L217, S0] 
-[L218, S2]   return (
-[L219, S4]     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-[L220, S6]       <SectionCard 
-[L221, S8]         title="Abstract" 
-[L222, S8]         icon={docIcon} 
-[L223, S8]         onHoverInfo={onHoverInfo} 
-[L224, S8]         infoKey="abstract"
-[L225, S8]         rightElement={abstractRight}
-[L226, S6]       >
-[L227, S8]         <div style={{ position: 'relative' }}>
-[L228, S10]           <p
-[L229, S12]             style={{
-[L230, S14]               margin: 0,
-[L231, S14]               color: '#cbd5e1',
-[L232, S14]               lineHeight: '1.6',
-[L233, S14]               wordBreak: 'break-word',
-[L234, S14]               ...(isExpanded
-[L235, S16]                 ? { display: 'block', maxHeight: 'none' }
-[L236, S16]                 : {
-[L237, S20]                     display: '-webkit-box',
-[L238, S20]                     WebkitLineClamp: 4,
-[L239, S20]                     WebkitBoxOrient: 'vertical',
-[L240, S20]                     overflow: 'hidden',
-[L241, S18]                   }),
-[L242, S12]             }}
-[L243, S10]           >
-[L244, S12]             {abstract || 'No abstract available.'}
-[L245, S10]           </p>
-[L246, S10]           {abstract && abstract.length > 200 && (
-[L247, S12]             <button 
-[L248, S14]               onClick={onExpandAbstract}
-[L249, S14]               style={{
-[L250, S16]                 background: 'none',
-[L251, S16]                 border: 'none',
-[L252, S16]                 color: '#60a5fa',
-[L253, S16]                 cursor: 'pointer',
-[L254, S16]                 fontSize: '13px',
-[L255, S16]                 fontWeight: '500',
-[L256, S16]                 display: 'flex',
-[L257, S16]                 alignItems: 'center',
-[L258, S16]                 gap: '4px',
-[L259, S16]                 marginTop: '8px',
-[L260, S16]                 padding: 0,
-[L261, S14]               }}
-[L262, S12]             >
-[L263, S14]               {isExpanded ? 'Show less' : 'View full abstract'}
-[L264, S14]               <svg width="14" height="14" style={{ width: '14px', height: '14px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-[L265, S16]                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isExpanded ? "M19 9l-7 7-7-7" : "M17 8l4 4m0 0l-4 4m4-4H3"} />
-[L266, S14]               </svg>
-[L267, S12]             </button>
-[L268, S10]           )}
-[L269, S8]         </div>
-[L270, S6]       </SectionCard>
-[L271, S0] 
-[L272, S6]       <SectionCard 
-[L273, S8]         title="Keywords" 
-[L274, S8]         icon={tagIcon} 
-[L275, S8]         onHoverInfo={onHoverInfo} 
-[L276, S8]         infoKey="keywords"
-[L277, S6]       >
-[L278, S8]         {renderChips(authorKeywords)}
-[L279, S6]       </SectionCard>
-[L280, S0] 
-[L281, S6]       <SectionCard 
-[L282, S8]         title="Keywords-Plus" 
-[L283, S8]         icon={linkIcon} 
-[L284, S8]         onHoverInfo={onHoverInfo} 
-[L285, S8]         infoKey="keywords-plus"
-[L286, S6]       >
-[L287, S8]         {renderChips(plusKeywords)}
-[L288, S6]       </SectionCard>
-[L289, S0] 
-[L290, S6]       <SectionCard 
-[L291, S8]         title="Research Areas" 
-[L292, S8]         icon={globeIcon} 
-[L293, S8]         onHoverInfo={onHoverInfo} 
-[L294, S8]         infoKey="research-areas"
-[L295, S6]       >
-[L296, S8]         {renderBox(researchAreas)}
-[L297, S6]       </SectionCard>
-[L298, S0] 
-[L299, S6]       <SectionCard 
-[L300, S8]         title="Web of Science Categories" 
-[L301, S8]         icon={filterIcon} 
-[L302, S8]         onHoverInfo={onHoverInfo} 
-[L303, S8]         infoKey="wos-categories"
-[L304, S6]       >
-[L305, S8]         {renderBox(wosCategories)}
-[L306, S6]       </SectionCard>
-[L307, S4]     </div>
-[L308, S2]   );
-[L309, S0] }
-[L310, S0] 
-[L311, S0] OverviewLeftColumn.propTypes = {
-[L312, S2]   abstract: PropTypes.string,
-[L313, S2]   authorKeywords: PropTypes.arrayOf(PropTypes.string),
-[L314, S2]   plusKeywords: PropTypes.arrayOf(PropTypes.string),
-[L315, S2]   researchAreas: PropTypes.string,
-[L316, S2]   wosCategories: PropTypes.string,
-[L317, S2]   isExpanded: PropTypes.bool,
-[L318, S2]   onExpandAbstract: PropTypes.func,
-[L319, S2]   onOpenAbstractModal: PropTypes.func,
-[L320, S2]   onHoverInfo: PropTypes.func,
-[L321, S0] };
-
-
-// --- frontend/src/components/references/MetadataGrid.jsx ---
-
-[L001, S0] import React from 'react';
-[L002, S0] 
-[L003, S0] const styles = {
-[L004, S2]   container: {
-[L005, S4]     display: 'flex',
-[L006, S4]     flexWrap: 'wrap',
-[L007, S4]     gap: '8px',
-[L008, S4]     maxHeight: '440px',
-[L009, S4]     overflowY: 'auto',
-[L010, S4]     padding: '4px',
-[L011, S2]   },
-[L012, S2]   fieldChip: {
-[L013, S4]     backgroundColor: '#161b22',
-[L014, S4]     border: '1px solid #30363d',
-[L015, S4]     borderRadius: '6px',
-[L016, S4]     padding: '8px 12px',
-[L017, S4]     fontSize: '12px',
-[L018, S4]     color: '#c9d1d9',
-[L019, S4]     cursor: 'help',
-[L020, S4]     display: 'inline-flex',
-[L021, S4]     alignItems: 'center',
-[L022, S4]     gap: '6px',
-[L023, S4]     transition: 'all 0.15s ease',
-[L024, S4]     userSelect: 'none',
-[L025, S2]   },
-[L026, S2]   keyText: {
-[L027, S4]     fontWeight: '600',
-[L028, S4]     color: '#58a6ff',
-[L029, S2]   },
-[L030, S2]   hintText: {
-[L031, S4]     fontSize: '11px',
-[L032, S4]     color: '#8b949e',
-[L033, S2]   },
-[L034, S0] };
-[L035, S0] 
-[L036, S0] const EXCLUDED_KEYS = new Set([
-[L037, S2]   'id',
-[L038, S2]   'project_id',
-[L039, S2]   'created_at',
-[L040, S2]   'updated_at',
-[L041, S2]   'project_status',
-[L042, S2]   'project_added_at',
-[L043, S2]   'upload_datetime',
-[L044, S2]   'raw_data',
-[L045, S2]   'raw_bibtex',
-[L046, S0] ]);
-[L047, S0] 
-[L048, S0] function formatKey(key) {
-[L049, S2]   return key
-[L050, S4]     .replace(/[-_]/g, ' ')
-[L051, S4]     .replace(/\b\w/g, (c) => c.toUpperCase());
-[L052, S0] }
-[L053, S0] 
-[L054, S0] function parseBibtexFields(raw) {
-[L055, S2]   if (!raw || typeof raw !== 'string') return {};
-[L056, S2]   const fields = {};
-[L057, S2]   const bodyStart = raw.indexOf(',');
-[L058, S2]   if (bodyStart === -1) return {};
-[L059, S2]   const body = raw.slice(bodyStart + 1);
-[L060, S0] 
-[L061, S2]   let i = 0;
-[L062, S2]   const n = body.length;
-[L063, S2]   while (i < n) {
-[L064, S4]     while (i < n && /[\s,]/.test(body[i])) i++;
-[L065, S4]     if (i >= n || body[i] === '}') break;
-[L066, S0] 
-[L067, S4]     const keyStart = i;
-[L068, S4]     while (i < n && body[i] !== '=' && body[i] !== '}' && !/\s/.test(body[i])) {
-[L069, S6]       i++;
-[L070, S4]     }
-[L071, S4]     const key = body.slice(keyStart, i).trim();
-[L072, S4]     while (i < n && /[\s=]/.test(body[i])) i++;
-[L073, S4]     if (i >= n || body[i] === '}') break;
-[L074, S0] 
-[L075, S4]     let val = '';
-[L076, S4]     if (body[i] === '{') {
-[L077, S6]       i++;
-[L078, S6]       let depth = 1;
-[L079, S6]       const valStart = i;
-[L080, S6]       while (i < n && depth > 0) {
-[L081, S8]         if (body[i] === '{') depth++;
-[L082, S8]         else if (body[i] === '}') depth--;
-[L083, S8]         if (depth > 0) i++;
-[L084, S6]       }
-[L085, S6]       val = body.slice(valStart, i).trim();
-[L086, S6]       i++;
-[L087, S4]     } else if (body[i] === '"') {
-[L088, S6]       i++;
-[L089, S6]       const valStart = i;
-[L090, S6]       while (i < n && body[i] !== '"') {
-[L091, S8]         if (body[i] === '\\' && i + 1 < n) i++;
-[L092, S8]         i++;
-[L093, S6]       }
-[L094, S6]       val = body.slice(valStart, i).trim();
-[L095, S6]       i++;
-[L096, S4]     } else {
-[L097, S6]       const valStart = i;
-[L098, S6]       while (i < n && body[i] !== ',' && body[i] !== '}' && body[i] !== '\n') {
-[L099, S8]         i++;
-[L100, S6]       }
-[L101, S6]       val = body.slice(valStart, i).trim();
-[L102, S4]     }
-[L103, S0] 
-[L104, S4]     if (key && val) {
-[L105, S6]       fields[key] = val.replace(/\\_/g, '_').replace(/\s+/g, ' ');
-[L106, S4]     }
-[L107, S2]   }
-[L108, S2]   return fields;
-[L109, S0] }
-[L110, S0] 
-[L111, S0] export function MetadataGrid({ data, onHover, onMove, onLeave }) {
-[L112, S2]   if (!data) return null;
-[L113, S0] 
-[L114, S2]   const rawBibtex = data.raw_data || data.raw_bibtex || '';
-[L115, S2]   const bibtexFields = parseBibtexFields(rawBibtex);
-[L116, S2]   const combined = { ...bibtexFields, ...data };
+[L001, S0] import datetime
+[L002, S0] from typing import List, Optional
+[L003, S0] import re
+[L004, S0] import bibtexparser
+[L005, S0] from .schemas import ParsedReference
+[L006, S0] 
+[L007, S0] 
+[L008, S0] def _extract_bib_int(entry, key: str) -> Optional[int]:
+[L009, S4]     val = _extract_bib_field(entry, key)
+[L010, S4]     if val:
+[L011, S8]         match = re.search(r"\b(\d+)\b", str(val))
+[L012, S8]         if match:
+[L013, S12]             try:
+[L014, S16]                 return int(match.group(1))
+[L015, S12]             except ValueError:
+[L016, S16]                 return None
+[L017, S4]     return None
+[L018, S0] 
+[L019, S0] 
+[L020, S0] def _extract_bib_field(entry, key: str) -> Optional[str]:
+[L021, S4]     target_keys = {
+[L022, S8]         key.lower(),
+[L023, S8]         key.lower().replace("_", "-"),
+[L024, S8]         key.lower().replace("-", "_"),
+[L025, S4]     }
+[L026, S4]     if key.lower() == "journal":
+[L027, S8]         target_keys.update(
+[L028, S12]             {"journaltitle", "booktitle", "series", "journal-iso"}
+[L029, S8]         )
+[L030, S4]     elif key.lower() == "title":
+[L031, S8]         target_keys.update({"booktitle", "ti"})
+[L032, S4]     elif key.lower() == "year":
+[L033, S8]         target_keys.update({"date", "py"})
+[L034, S4]     elif key.lower() == "abstract":
+[L035, S8]         target_keys.update({"ab"})
+[L036, S4]     elif key.lower() == "publisher":
+[L037, S8]         target_keys.update({"pu"})
+[L038, S4]     elif key.lower() == "language":
+[L039, S8]         target_keys.update({"la"})
+[L040, S4]     elif key.lower() == "keywords":
+[L041, S8]         target_keys.update(
+[L042, S12]             {"keyword", "kw", "author_keywords", "author-keywords", "de"}
+[L043, S8]         )
+[L044, S4]     elif key.lower() == "research_areas":
+[L045, S8]         target_keys.update({"research-areas", "sc"})
+[L046, S4]     elif key.lower() == "web_of_science_categories":
+[L047, S8]         target_keys.update({"web-of-science-categories", "wc"})
+[L048, S4]     elif key.lower() == "funding_text":
+[L049, S8]         target_keys.update({"funding-text", "funding", "fx"})
+[L050, S4]     elif key.lower() == "journal_iso":
+[L051, S8]         target_keys.update({"journal-iso", "ji", "j9"})
+[L052, S4]     elif key.lower() == "oa_status":
+[L053, S8]         target_keys.update({"oa", "oa-status", "open_access"})
+[L054, S4]     elif key.lower() == "issn":
+[L055, S8]         target_keys.update({"sn", "eissn"})
+[L056, S4]     elif key.lower() == "volume":
+[L057, S8]         target_keys.update({"vl"})
+[L058, S4]     elif key.lower() == "issue":
+[L059, S8]         target_keys.update({"number", "is"})
+[L060, S4]     elif key.lower() == "pages":
+[L061, S8]         target_keys.update({"page", "bp", "ar"})
+[L062, S4]     elif key.lower() in ("times_cited", "times-cited"):
+[L063, S8]         target_keys.update({"tc", "times-cited", "times_cited"})
+[L064, S4]     elif key.lower() in ("cited_references_count", "cited-references-count"):
+[L065, S8]         target_keys.update(
+[L066, S12]             {"cited-references", "cited_references", "nr", "cr"}
+[L067, S8]         )
+[L068, S0] 
+[L069, S4]     val = None
+[L070, S4]     if isinstance(entry, dict):
+[L071, S8]         for k, v in entry.items():
+[L072, S12]             if str(k).lower() in target_keys:
+[L073, S16]                 val = v
+[L074, S16]                 break
+[L075, S4]     elif hasattr(entry, "fields_dict"):
+[L076, S8]         for k, v in entry.fields_dict.items():
+[L077, S12]             if str(k).lower() in target_keys:
+[L078, S16]                 val = getattr(v, "value", str(v))
+[L079, S16]                 break
+[L080, S4]     elif hasattr(entry, "fields"):
+[L081, S8]         for field in entry.fields:
+[L082, S12]             f_key = getattr(field, "key", None)
+[L083, S12]             if f_key and str(f_key).lower() in target_keys:
+[L084, S16]                 val = getattr(field, "value", str(field))
+[L085, S16]                 break
+[L086, S4]     elif hasattr(entry, key):
+[L087, S8]         val = getattr(entry, key)
+[L088, S4]     elif hasattr(entry, "get"):
+[L089, S8]         for tk in target_keys:
+[L090, S12]             try:
+[L091, S16]                 v = entry.get(tk) or entry.get(tk.capitalize())
+[L092, S16]                 if v is not None:
+[L093, S20]                     val = v
+[L094, S20]                     break
+[L095, S12]             except Exception:
+[L096, S16]                 pass
+[L097, S4]     else:
+[L098, S8]         val = None
+[L099, S0] 
+[L100, S4]     if val is not None:
+[L101, S8]         if hasattr(val, "value"):
+[L102, S12]             val = val.value
+[L103, S8]         cleaned = str(val).strip()
+[L104, S8]         while (cleaned.startswith("{") and cleaned.endswith("}")) or (
+[L105, S12]             cleaned.startswith('"') and cleaned.endswith('"')
+[L106, S8]         ):
+[L107, S12]             cleaned = cleaned[1:-1].strip()
+[L108, S8]         cleaned = re.sub(r"\s+", " ", cleaned)
+[L109, S8]         if key.lower() == "year":
+[L110, S12]             match = re.search(r"\b(19\d\d|20\d\d)\b", cleaned)
+[L111, S0] 
+[L112, S0] 
+[L113, S12]             return match.group(1) if match else (cleaned or None)
+[L114, S8]         return cleaned or None
+[L115, S4]     return None
+[L116, S0] 
 [L117, S0] 
-[L118, S2]   return (
-[L119, S4]     <div style={styles.container}>
-[L120, S6]       {Object.entries(combined).map(([key, value]) => {
-[L121, S8]         const lowerKey = key.toLowerCase();
-[L122, S8]         if (
-[L123, S10]           EXCLUDED_KEYS.has(lowerKey) ||
-[L124, S10]           value === null ||
-[L125, S10]           value === undefined ||
-[L126, S10]           value === ''
-[L127, S8]         ) {
-[L128, S10]           return null;
-[L129, S8]         }
+[L118, S0] def _parse_bibtex_entries(content: str) -> list:
+[L119, S4]     if hasattr(bibtexparser, "parse_string"):
+[L120, S8]         result = bibtexparser.parse_string(content)
+[L121, S8]         return list(getattr(result, "entries", getattr(result, "blocks", [])))
+[L122, S4]     if hasattr(bibtexparser, "loads"):
+[L123, S8]         result = bibtexparser.loads(content)
+[L124, S8]         return list(getattr(result, "entries", []))
+[L125, S4]     if hasattr(bibtexparser, "bparser"):
+[L126, S8]         parser = bibtexparser.bparser.BibTexParser()
+[L127, S8]         result = parser.parse(content)
+[L128, S8]         return list(getattr(result, "entries", []))
+[L129, S4]     return []
 [L130, S0] 
-[L131, S8]         const displayValue =
-[L132, S10]           typeof value === 'object'
-[L133, S12]             ? JSON.stringify(value, null, 2)
-[L134, S12]             : String(value);
-[L135, S8]         const formattedKey = formatKey(key);
-[L136, S0] 
-[L137, S8]         return (
-[L138, S10]           <div
-[L139, S12]             key={key}
-[L140, S12]             style={styles.fieldChip}
-[L141, S12]             onMouseEnter={(e) => onHover?.(formattedKey, displayValue, e)}
-[L142, S12]             onMouseMove={onMove}
-[L143, S12]             onMouseLeave={onLeave}
-[L144, S10]           >
-[L145, S12]             <span style={styles.keyText}>{formattedKey}</span>
-[L146, S12]             <span style={styles.hintText}>👁️</span>
-[L147, S10]           </div>
-[L148, S8]         );
-[L149, S6]       })}
-[L150, S4]     </div>
-[L151, S2]   );
-[L152, S0] }
+[L131, S0] 
+[L132, S0] def _clean_year(val: Optional[str]) -> Optional[str]:
+[L133, S4]     if not val:
+[L134, S8]         return None
+[L135, S4]     match = re.search(r"\b(19\d\d|20\d\d)\b", str(val))
+[L136, S4]     if match:
+[L137, S8]         return match.group(1)
+[L138, S4]     cleaned = re.sub(r"[^\d]", "", str(val))
+[L139, S4]     return cleaned[:4] if len(cleaned) >= 4 else (cleaned or None)
+[L140, S0] 
+[L141, S0] 
+[L142, S0] def _extract_ris_title(entry: dict) -> Optional[str]:
+[L143, S4]     return (
+[L144, S8]         entry.get("title")
+[L145, S8]         or entry.get("primary_title")
+[L146, S8]         or entry.get("TI")
+[L147, S8]         or entry.get("T1")
+[L148, S8]         or entry.get("CT")
+[L149, S8]         or None
+[L150, S4]     )
+[L151, S0] 
+[L152, S0] 
+[L153, S0] def _extract_ris_journal(entry: dict) -> Optional[str]:
+[L154, S4]     return (
+[L155, S8]         entry.get("journal_name")
+[L156, S8]         or entry.get("secondary_title")
+[L157, S8]         or entry.get("alternate_title1")
+[L158, S8]         or entry.get("alternate_title2")
+[L159, S8]         or entry.get("alternate_title3")
+[L160, S8]         or entry.get("source")
+[L161, S8]         or entry.get("SO")
+[L162, S8]         or entry.get("T2")
+[L163, S8]         or entry.get("JO")
+[L164, S8]         or entry.get("JF")
+[L165, S8]         or entry.get("JA")
+[L166, S8]         or entry.get("J2")
+[L167, S8]         or None
+[L168, S4]     )
+[L169, S0] 
+[L170, S0] 
+[L171, S0] def _extract_ris_authors(entry: dict) -> Optional[str]:
+[L172, S4]     authors = (
+[L173, S8]         entry.get("authors")
+[L174, S8]         or entry.get("primary_authors")
+[L175, S8]         or entry.get("AU")
+[L176, S8]         or entry.get("A1")
+[L177, S8]         or []
+[L178, S4]     )
+[L179, S4]     if isinstance(authors, list):
+[L180, S8]         clean_authors = [str(a).strip() for a in authors if str(a).strip()]
+[L181, S8]         return " and ".join(clean_authors) if clean_authors else None
+[L182, S4]     if isinstance(authors, str) and authors.strip():
+[L183, S8]         return authors.strip()
+[L184, S4]     return None
+[L185, S0] 
+[L186, S0] 
+[L187, S0] def _extract_ris_year(entry: dict) -> Optional[str]:
+[L188, S4]     raw_year = (
+[L189, S8]         entry.get("year")
+[L190, S8]         or entry.get("publication_year")
+[L191, S8]         or entry.get("PY")
+[L192, S8]         or entry.get("Y1")
+[L193, S8]         or entry.get("DA")
+[L194, S8]         or None
+[L195, S4]     )
+[L196, S4]     return _clean_year(raw_year)
+[L197, S0] 
+[L198, S0] 
+[L199, S0] def _extract_ris_doi(entry: dict) -> Optional[str]:
+[L200, S4]     doi = entry.get("doi") or entry.get("DO") or entry.get("DI") or None
+[L201, S4]     if doi:
+[L202, S8]         return (
+[L203, S12]             str(doi)
+[L204, S12]             .strip()
+[L205, S12]             .replace("https://doi.org/", "")
+[L206, S12]             .replace("http://doi.org/", "")
+[L207, S8]         )
+[L208, S4]     return None
+[L209, S0] 
+[L210, S0] 
+[L211, S0] def _parse_ris_fallback(content: str) -> list:
+[L212, S4]     entries = []
+[L213, S4]     current_entry = {}
+[L214, S4]     current_tag = None
+[L215, S0] 
+[L216, S4]     for line in content.splitlines():
+[L217, S8]         line = line.strip()
+[L218, S8]         if not line:
+[L219, S12]             continue
+[L220, S8]         match = re.match(r"^([A-Z0-9]{2})\s*-\s*(.*)$", line)
+[L221, S8]         if match:
+[L222, S12]             tag, val = match.group(1), match.group(2).strip()
+[L223, S12]             current_tag = tag
+[L224, S12]             if tag == "TY":
+[L225, S16]                 if current_entry and (
+[L226, S20]                     current_entry.get("TI")
+[L227, S20]                     or current_entry.get("title")
+[L228, S20]                     or current_entry.get("AU")
+[L229, S16]                 ):
+[L230, S20]                     entries.append(current_entry)
+[L231, S16]                 current_entry = {"TY": val, "authors": []}
+[L232, S12]             elif tag == "ER":
+[L233, S16]                 if current_entry:
+[L234, S20]                     entries.append(current_entry)
+[L235, S20]                     current_entry = {}
+[L236, S12]             elif tag in ("AU", "A1"):
+[L237, S16]                 if "authors" not in current_entry:
+[L238, S20]                     current_entry["authors"] = []
+[L239, S16]                 current_entry["authors"].append(val)
+[L240, S12]             else:
+[L241, S16]                 current_entry[tag] = val
+[L242, S8]         elif current_tag and current_entry:
+[L243, S12]             if current_tag not in ("AU", "A1") and current_tag in current_entry:
+[L244, S16]                 current_entry[current_tag] += " " + line
+[L245, S0] 
+[L246, S4]     if current_entry and (
+[L247, S8]         current_entry.get("TI")
+[L248, S8]         or current_entry.get("title")
+[L249, S8]         or current_entry.get("AU")
+[L250, S4]     ):
+[L251, S8]         entries.append(current_entry)
+[L252, S0] 
+[L253, S4]     return entries
+[L254, S0] 
+[L255, S0] 
+[L256, S0] def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
+[L257, S4]     if ext.lower() != ".bib":
+[L258, S8]         raise ValueError(f"Unsupported extension: {ext}")
+[L259, S8]         
+[L260, S4]     now = datetime.datetime.now(datetime.timezone.utc)
+[L261, S4]     try:
+[L262, S8]         entries = _parse_bibtex_entries(content)
+[L263, S4]     except Exception:
+[L264, S8]         entries = []
+[L265, S8]         
+[L266, S4]     if not entries:
+[L267, S8]         raise ValueError("No se encontraron items válidos en el archivo .bib")
+[L268, S8]         
+[L269, S4]     return [
+[L270, S8]         ParsedReference(
+[L271, S12]             author=_extract_bib_field(entry, "author"),
+[L272, S12]             year=_extract_bib_field(entry, "year"),
+[L273, S12]             title=_extract_bib_field(entry, "title"),
+[L274, S12]             journal=_extract_bib_field(entry, "journal"),
+[L275, S12]             doi=_extract_bib_field(entry, "doi"),
+[L276, S12]             abstract=_extract_bib_field(entry, "abstract"),
+[L277, S12]             publisher=_extract_bib_field(entry, "publisher"),
+[L278, S12]             language=_extract_bib_field(entry, "language"),
+[L279, S12]             keywords=_extract_bib_field(entry, "keywords"),
+[L280, S12]             research_areas=_extract_bib_field(entry, "research_areas"),
+[L281, S12]             web_of_science_categories=_extract_bib_field(
+[L282, S16]                 entry, "web_of_science_categories"
+[L283, S12]             ),
+[L284, S12]             funding_text=_extract_bib_field(entry, "funding_text"),
+[L285, S12]             journal_iso=_extract_bib_field(entry, "journal_iso"),
+[L286, S12]             oa_status=_extract_bib_field(entry, "oa_status"),
+[L287, S12]             issn=_extract_bib_field(entry, "issn"),
+[L288, S12]             volume=_extract_bib_field(entry, "volume"),
+[L289, S12]             issue=_extract_bib_field(entry, "issue"),
+[L290, S12]             pages=_extract_bib_field(entry, "pages"),
+[L291, S12]             times_cited=_extract_bib_int(entry, "times_cited"),
+[L292, S12]             cited_references_count=_extract_bib_int(
+[L293, S16]                 entry, "cited_references_count"
+[L294, S12]             ),
+[L295, S12]             upload_datetime=now,
+[L296, S8]         )
+[L297, S8]         for entry in entries
+[L298, S4]     ]
+[L299, S0] 
+[L300, S0] 
+[L301, S0] def _deprecated_parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
+[L302, S4]     parsed_refs: List[ParsedReference] = []
+[L303, S4]     now = datetime.datetime.now(datetime.timezone.utc)
+[L304, S4]     
+[L305, S4]     if ext.lower() == ".ris":
+[L306, S8]         entries = []
+[L307, S8]         try:
+[L308, S12]             entries = rispy.loads(content, skip_unknown_tags=True)
+[L309, S8]         except Exception:
+[L310, S12]             entries = []
+[L311, S0] 
+[L312, S8]         fallback_entries = _parse_ris_fallback(content)
+[L313, S8]         if len(fallback_entries) > len(entries):
+[L314, S12]             entries = fallback_entries
+[L315, S0] 
+[L316, S8]         for entry in entries:
+[L317, S12]             authors = entry.get("authors", [])
+[L318, S12]             author_str = " and ".join(authors) if isinstance(authors, list) else authors
+[L319, S12]             
+[L320, S12]             parsed_refs.append(
+[L321, S16]                 ParsedReference(
+[L322, S20]                     author=_extract_ris_authors(entry),
+[L323, S20]                     year=_extract_ris_year(entry),
+[L324, S20]                     title=_extract_ris_title(entry),
+[L325, S20]                     journal=_extract_ris_journal(entry),
+[L326, S20]                     doi=_extract_ris_doi(entry),
+[L327, S20]                     upload_datetime=now,
+[L328, S16]                 )
+[L329, S12]             )
+[L330, S12]             
+[L331, S4]     elif ext.lower() == ".bib":
+[L332, S8]         try:
+[L333, S12]             entries = _parse_bibtex_entries(content)
+[L334, S8]         except Exception:
+[L335, S12]             entries = []
+[L336, S12]             
+[L337, S8]         for entry in entries:
+[L338, S12]             parsed_refs.append(
+[L339, S16]                 ParsedReference(
+[L340, S20]                     author=_extract_bib_field(entry, "author"),
+[L341, S20]                     year=_extract_bib_field(entry, "year"),
+[L342, S20]                     title=_extract_bib_field(entry, "title"),
+[L343, S20]                     journal=_extract_bib_field(entry, "journal"),
+[L344, S20]                     doi=_extract_bib_field(entry, "doi"),
+[L345, S20]                     upload_datetime=now,
+[L346, S16]                 )
+[L347, S12]             )
+[L348, S4]     else:
+[L349, S8]         raise ValueError(f"Unsupported extension: {ext}")
+[L350, S8]         
+[L351, S4]     return parsed_refs
+
+
+// --- frontend/src/hooks/useReferenceDetails.js ---
+
+[L001, S0] import { useState, useMemo, useCallback } from 'react';
+[L002, S0] 
+[L003, S0] export default function useReferenceDetails(article = null) {
+[L004, S2]   const [activeTab, setActiveTab] = useState('Overview');
+[L005, S2]   const [drawerState, setDrawerState] = useState({
+[L006, S4]     isOpen: false,
+[L007, S4]     type: 'references',
+[L008, S4]     title: '',
+[L009, S4]     data: [],
+[L010, S2]   });
+[L011, S2]   const [hoverInfo, setHoverInfo] = useState(null);
+[L012, S2]   const [copiedText, setCopiedText] = useState(null);
+[L013, S2]   const [isAbstractExpanded, setIsAbstractExpanded] = useState(false);
+[L014, S0] 
+[L015, S2]   const handleTabChange = useCallback((tab) => {
+[L016, S4]     setActiveTab(tab);
+[L017, S2]   }, []);
+[L018, S0] 
+[L019, S2]   const openDrawer = useCallback(
+[L020, S4]     (type, data = null, title = '') => {
+[L021, S6]       let resolvedData = data;
+[L022, S6]       let resolvedTitle = title;
+[L023, S0] 
+[L024, S6]       if (!resolvedData && article) {
+[L025, S8]         if (type === 'authors') {
+[L026, S10]           resolvedData = article.authors_detail || [];
+[L027, S10]           resolvedTitle = resolvedTitle || 'Authors Details';
+[L028, S8]         } else if (type === 'references') {
+[L029, S10]           resolvedData = article.references_list || [];
+[L030, S10]           resolvedTitle = resolvedTitle || 'Cited References';
+[L031, S8]         } else if (type === 'funding') {
+[L032, S10]           const hasList =
+[L033, S12]             article.funding_list && article.funding_list.length > 0;
+[L034, S10]           resolvedData = hasList
+[L035, S12]             ? article.funding_list
+[L036, S12]             : article.funding_text
+[L037, S12]             ? [article.funding_text]
+[L038, S12]             : [];
+[L039, S10]           resolvedTitle = resolvedTitle || 'Funding Acknowledgments';
+[L040, S8]         } else if (type === 'abstract') {
+[L041, S10]           resolvedData = article.abstract ? [article.abstract] : [];
+[L042, S10]           resolvedTitle = resolvedTitle || 'Full Abstract';
+[L043, S8]         }
+[L044, S6]       }
+[L045, S0] 
+[L046, S6]       setDrawerState({
+[L047, S8]         isOpen: true,
+[L048, S8]         type: type || 'references',
+[L049, S8]         title: resolvedTitle || 'Details',
+[L050, S8]         data: resolvedData || [],
+[L051, S6]       });
+[L052, S4]     },
+[L053, S4]     [article]
+[L054, S2]   );
+[L055, S0] 
+[L056, S2]   const handleExpandDrawer = useCallback(
+[L057, S4]     (type, customData, customTitle) => {
+[L058, S6]       openDrawer(type, customData, customTitle);
+[L059, S4]     },
+[L060, S4]     [openDrawer]
+[L061, S2]   );
+[L062, S0] 
+[L063, S2]   const closeDrawer = useCallback(() => {
+[L064, S4]     setDrawerState((prev) => ({
+[L065, S6]       ...prev,
+[L066, S6]       isOpen: false,
+[L067, S4]     }));
+[L068, S2]   }, []);
+[L069, S0] 
+[L070, S2]   const handleHoverInfo = useCallback((key, event) => {
+[L071, S4]     if (!key) {
+[L072, S6]       setHoverInfo(null);
+[L073, S6]       return;
+[L074, S4]     }
+[L075, S4]     setHoverInfo({
+[L076, S6]       key,
+[L077, S6]       rect: event?.currentTarget?.getBoundingClientRect?.() || null,
+[L078, S4]     });
+[L079, S2]   }, []);
+[L080, S0] 
+[L081, S2]   const handleCopy = useCallback(async (text) => {
+[L082, S4]     if (!text) return;
+[L083, S4]     try {
+[L084, S6]       if (
+[L085, S8]         typeof navigator !== 'undefined' &&
+[L086, S8]         navigator.clipboard &&
+[L087, S8]         navigator.clipboard.writeText
+[L088, S6]       ) {
+[L089, S8]         await navigator.clipboard.writeText(text);
+[L090, S6]       }
+[L091, S6]       setCopiedText(text);
+[L092, S6]       setTimeout(() => setCopiedText(null), 2500);
+[L093, S4]     } catch {
+[L094, S6]       // Fallback or silent error handling
+[L095, S4]     }
+[L096, S2]   }, []);
+[L097, S0] 
+[L098, S2]   const toggleAbstractExpanded = useCallback(() => {
+[L099, S4]     setIsAbstractExpanded((prev) => !prev);
+[L100, S2]   }, []);
+[L101, S0] 
+[L102, S2]   const formattedData = useMemo(() => {
+[L103, S4]     if (!article) {
+[L104, S6]       return {
+[L105, S8]         title: '',
+[L106, S8]         authors: '',
+[L107, S8]         year: '',
+[L108, S8]         journal: '',
+[L109, S8]         volume: '',
+[L110, S8]         issue: '',
+[L111, S8]         pages: '',
+[L112, S8]         doi: '',
+[L113, S8]         abstract: '',
+[L114, S8]         authorKeywords: [],
+[L115, S8]         plusKeywords: [],
+[L116, S8]         researchAreas: '',
+[L117, S8]         wosCategories: '',
+[L118, S8]         affiliations: '',
+[L119, S8]         authorsDetailsCount: 0,
+[L120, S8]         authorEmail: '',
+[L121, S8]         orcidCount: 0,
+[L122, S8]         researcherIdCount: 0,
+[L123, S8]         fundingText: '',
+[L124, S8]         type: 'Article',
+[L125, S8]         language: 'English',
+[L126, S8]         issn: '',
+[L127, S8]         month: '',
+[L128, S8]         articleNumber: '',
+[L129, S8]         publisher: '',
+[L130, S8]         address: '',
+[L131, S8]         timesCited: null,
+[L132, S8]         oaStatus: '',
+[L133, S8]         referencesList: [],
+[L134, S8]         authorsDetail: [],
+[L135, S8]         fundingList: [],
+[L136, S6]       };
+[L137, S4]     }
+[L138, S0] 
+[L139, S4]     const keywords = Array.isArray(article.keywords) ? article.keywords : [];
+[L140, S4]     const authorKeywords = keywords
+[L141, S6]       .filter((k) => k && k.type === 'author')
+[L142, S6]       .map((k) => k.name || k)
+[L143, S6]       .filter(Boolean);
+[L144, S0] 
+[L145, S4]     const plusKeywords = keywords
+[L146, S6]       .filter((k) => k && k.type === 'plus')
+[L147, S6]       .map((k) => k.name || k)
+[L148, S6]       .filter(Boolean);
+[L149, S0] 
+[L150, S4]     const authorsDetail = Array.isArray(article.authors_detail)
+[L151, S6]       ? article.authors_detail
+[L152, S6]       : [];
+[L153, S0] 
+[L154, S4]     const corrAuthor = authorsDetail.find(
+[L155, S6]       (a) => a && a.is_corresponding && a.email
+[L156, S4]     );
+[L157, S4]     const firstAuthorWithEmail = authorsDetail.find((a) => a && a.email);
+[L158, S4]     const authorEmail =
+[L159, S6]       corrAuthor?.email || firstAuthorWithEmail?.email || '';
+[L160, S0] 
+[L161, S4]     const orcidCount = authorsDetail.filter((a) => a && a.orcid).length;
+[L162, S4]     const researcherIdCount = authorsDetail.filter(
+[L163, S6]       (a) => a && a.researcher_id
+[L164, S4]     ).length;
+[L165, S0] 
+[L166, S4]     const affiliationsSet = new Set(
+[L167, S6]       authorsDetail.map((a) => a && a.affiliation).filter(Boolean)
+[L168, S4]     );
+[L169, S4]     const affiliations = Array.from(affiliationsSet).join('; ');
+[L170, S0] 
+[L171, S4]     return {
+[L172, S6]       title: article.title || '',
+[L173, S6]       authors: article.author || '',
+[L174, S6]       year: article.year ? String(article.year) : '',
+[L175, S6]       journal: article.journal || '',
+[L176, S6]       volume: article.volume ? String(article.volume) : '',
+[L177, S6]       issue: article.issue ? String(article.issue) : '',
+[L178, S6]       pages: article.pages || '',
+[L179, S6]       doi: article.doi || '',
+[L180, S6]       abstract: article.abstract || '',
+[L181, S6]       authorKeywords,
+[L182, S6]       plusKeywords,
+[L183, S6]       researchAreas: article.research_areas || '',
+[L184, S6]       wosCategories: article.web_of_science_categories || '',
+[L185, S6]       affiliations,
+[L186, S6]       authorsDetailsCount: authorsDetail.length,
+[L187, S6]       authorEmail,
+[L188, S6]       orcidCount,
+[L189, S6]       researcherIdCount,
+[L190, S6]       fundingText: article.funding_text || '',
+[L191, S6]       type: 'Article',
+[L192, S6]       language: article.language || 'English',
+[L193, S6]       issn: article.issn || '',
+[L194, S6]       month: article.month || '',
+[L195, S6]       articleNumber: article.pages || '',
+[L196, S6]       publisher: article.publisher || '',
+[L197, S6]       address: article.address || '',
+[L198, S6]       timesCited:
+[L199, S8]         typeof article.times_cited === 'number' ? article.times_cited : null,
+[L200, S6]       oaStatus: article.oa_status || '',
+[L201, S6]       referencesList: Array.isArray(article.references_list)
+[L202, S8]         ? article.references_list
+[L203, S8]         : [],
+[L204, S6]       authorsDetail,
+[L205, S6]       fundingList: Array.isArray(article.funding_list)
+[L206, S8]         ? article.funding_list
+[L207, S8]         : [],
+[L208, S4]     };
+[L209, S2]   }, [article]);
+[L210, S0] 
+[L211, S2]   return {
+[L212, S4]     activeTab,
+[L213, S4]     setActiveTab,
+[L214, S4]     handleTabChange,
+[L215, S4]     drawerState,
+[L216, S4]     openDrawer,
+[L217, S4]     handleExpandDrawer,
+[L218, S4]     closeDrawer,
+[L219, S4]     hoverInfo,
+[L220, S4]     handleHoverInfo,
+[L221, S4]     copiedText,
+[L222, S4]     handleCopy,
+[L223, S4]     isAbstractExpanded,
+[L224, S4]     toggleAbstractExpanded,
+[L225, S4]     ...formattedData,
+[L226, S2]   };
+[L227, S0] }
+
+
+// --- backend/src/database/models/core.py ---
+
+[L001, S0] """Core relational database models for projects and articles."""
+[L002, S0] from datetime import datetime, timezone
+[L003, S0] 
+[L004, S0] from sqlalchemy import (
+[L005, S4]     Column,
+[L006, S4]     DateTime,
+[L007, S4]     ForeignKey,
+[L008, S4]     Integer,
+[L009, S4]     String,
+[L010, S4]     Text,
+[L011, S4]     UniqueConstraint,
+[L012, S0] )
+[L013, S0] from sqlalchemy.orm import relationship
+[L014, S0] 
+[L015, S0] from ..session import Base
+[L016, S0] 
+[L017, S0] 
+[L018, S0] class Project(Base):
+[L019, S4]     """Represents a research project containing bibliographies."""
+[L020, S0] 
+[L021, S4]     __tablename__ = "projects"
+[L022, S0] 
+[L023, S4]     id = Column(
+[L024, S8]         Integer,
+[L025, S8]         primary_key=True,
+[L026, S8]         autoincrement=True,
+[L027, S8]         comment="Primary key integer identifier",
+[L028, S4]     )
+[L029, S4]     name = Column(
+[L030, S8]         String(255),
+[L031, S8]         nullable=False,
+[L032, S8]         comment="Project display and reference name",
+[L033, S4]     )
+[L034, S4]     description = Column(
+[L035, S8]         Text,
+[L036, S8]         nullable=True,
+[L037, S8]         comment="Detailed description of the project",
+[L038, S4]     )
+[L039, S4]     hashed_password = Column(
+[L040, S8]         String(255),
+[L041, S8]         nullable=True,
+[L042, S8]         comment="Bcrypt hashed project password",
+[L043, S4]     )
+[L044, S4]     created_at = Column(
+[L045, S8]         DateTime,
+[L046, S8]         default=lambda: datetime.now(timezone.utc),
+[L047, S8]         nullable=False,
+[L048, S8]         comment="UTC timestamp when the project was created",
+[L049, S4]     )
+[L050, S4]     updated_at = Column(
+[L051, S8]         DateTime,
+[L052, S8]         default=lambda: datetime.now(timezone.utc),
+[L053, S8]         onupdate=lambda: datetime.now(timezone.utc),
+[L054, S8]         nullable=False,
+[L055, S8]         comment="UTC timestamp when the project was last updated",
+[L056, S4]     )
+[L057, S0] 
+[L058, S4]     project_articles = relationship(
+[L059, S8]         "ProjectArticle",
+[L060, S8]         back_populates="project",
+[L061, S8]         cascade="all, delete-orphan",
+[L062, S4]     )
+[L063, S4]     articles = relationship(
+[L064, S8]         "Article",
+[L065, S8]         secondary="project_articles",
+[L066, S8]         back_populates="projects",
+[L067, S8]         viewonly=True,
+[L068, S4]     )
+[L069, S4]     downloads = relationship(
+[L070, S8]         "Download",
+[L071, S8]         back_populates="project",
+[L072, S8]         cascade="all, delete-orphan",
+[L073, S4]     )
+[L074, S0] 
+[L075, S0] 
+[L076, S0] class Article(Base):
+[L077, S4]     """Represents an academic publication with bibliographic data."""
+[L078, S0] 
+[L079, S4]     __tablename__ = "articles"
+[L080, S0] 
+[L081, S4]     id = Column(
+[L082, S8]         Integer,
+[L083, S8]         primary_key=True,
+[L084, S8]         autoincrement=True,
+[L085, S8]         comment="Primary key integer identifier",
+[L086, S4]     )
+[L087, S4]     doi = Column(
+[L088, S8]         String(255),
+[L089, S8]         unique=True,
+[L090, S8]         index=True,
+[L091, S8]         nullable=True,
+[L092, S8]         comment="Normalized DOI unique key",
+[L093, S4]     )
+[L094, S4]     title = Column(
+[L095, S8]         Text,
+[L096, S8]         nullable=False,
+[L097, S8]         comment="Full title of the article or publication",
+[L098, S4]     )
+[L099, S4]     journal = Column(
+[L100, S8]         String(255),
+[L101, S8]         nullable=True,
+[L102, S8]         comment="Journal or venue publishing the article",
+[L103, S4]     )
+[L104, S4]     year = Column(
+[L105, S8]         Integer,
+[L106, S8]         nullable=True,
+[L107, S8]         comment="Publication calendar year",
+[L108, S4]     )
+[L109, S4]     volume = Column(
+[L110, S8]         String(50),
+[L111, S8]         nullable=True,
+[L112, S8]         comment="Journal publication volume",
+[L113, S4]     )
+[L114, S4]     issue = Column(
+[L115, S8]         String(50),
+[L116, S8]         nullable=True,
+[L117, S8]         comment="Journal publication issue",
+[L118, S4]     )
+[L119, S4]     pages = Column(
+[L120, S8]         String(50),
+[L121, S8]         nullable=True,
+[L122, S8]         comment="Article page range or article number",
+[L123, S4]     )
+[L124, S4]     abstract = Column(
+[L125, S8]         Text,
+[L126, S8]         nullable=True,
+[L127, S8]         comment="Full text abstract of the article",
+[L128, S4]     )
+[L129, S4]     publisher = Column(
+[L130, S8]         String(255),
+[L131, S8]         nullable=True,
+[L132, S8]         comment="Publisher or imprint name of the article",
+[L133, S4]     )
+[L134, S4]     language = Column(
+[L135, S8]         String(50),
+[L136, S8]         nullable=True,
+[L137, S8]         comment="Primary language of the publication",
+[L138, S4]     )
+[L139, S4]     research_areas = Column(
+[L140, S8]         Text,
+[L141, S8]         nullable=True,
+[L142, S8]         comment="Research areas or Web of Science categories",
+[L143, S4]     )
+[L144, S4]     web_of_science_categories = Column(
+[L145, S8]         Text,
+[L146, S8]         nullable=True,
+[L147, S8]         comment="Specific Web of Science categorical metadata",
+[L148, S4]     )
+[L149, S4]     funding_text = Column(
+[L150, S8]         Text,
+[L151, S8]         nullable=True,
+[L152, S8]         comment="Funding acknowledgment text or grant information",
+[L153, S4]     )
+[L154, S4]     journal_iso = Column(
+[L155, S8]         String(255),
+[L156, S8]         nullable=True,
+[L157, S8]         comment="ISO abbreviation of the journal name",
+[L158, S4]     )
+[L159, S4]     oa_status = Column(
+[L160, S8]         String(50),
+[L161, S8]         nullable=True,
+[L162, S8]         comment="Open Access status indicator",
+[L163, S4]     )
+[L164, S4]     issn = Column(
+[L165, S8]         String(50),
+[L166, S8]         nullable=True,
+[L167, S8]         comment="International Standard Serial Number",
+[L168, S4]     )
+[L169, S4]     times_cited = Column(
+[L170, S8]         Integer,
+[L171, S8]         nullable=True,
+[L172, S8]         comment="Number of times the article has been cited globally",
+[L173, S4]     )
+[L174, S4]     cited_references_count = Column(
+[L175, S8]         Integer,
+[L176, S8]         nullable=True,
+[L177, S8]         comment="Number of references cited by this article",
+[L178, S4]     )
+[L179, S4]     raw_data = Column(
+[L180, S8]         Text,
+[L181, S8]         nullable=True,
+[L182, S8]         comment="Raw bibliographic payload (e.g. BibTeX or RIS)",
+[L183, S4]     )
+[L184, S4]     created_at = Column(
+[L185, S8]         DateTime,
+[L186, S8]         default=lambda: datetime.now(timezone.utc),
+[L187, S8]         nullable=False,
+[L188, S8]         comment="UTC timestamp when article was ingested",
+[L189, S4]     )
+[L190, S4]     updated_at = Column(
+[L191, S8]         DateTime,
+[L192, S8]         default=lambda: datetime.now(timezone.utc),
+[L193, S8]         onupdate=lambda: datetime.now(timezone.utc),
+[L194, S8]         nullable=False,
+[L195, S8]         comment="UTC timestamp when article record was updated",
+[L196, S4]     )
+[L197, S0] 
+[L198, S4]     project_articles = relationship(
+[L199, S8]         "ProjectArticle",
+[L200, S8]         back_populates="article",
+[L201, S8]         cascade="all, delete-orphan",
+[L202, S4]     )
+[L203, S4]     projects = relationship(
+[L204, S8]         "Project",
+[L205, S8]         secondary="project_articles",
+[L206, S8]         back_populates="articles",
+[L207, S8]         viewonly=True,
+[L208, S4]     )
+[L209, S4]     author_articles = relationship(
+[L210, S8]         "AuthorArticle",
+[L211, S8]         back_populates="article",
+[L212, S8]         cascade="all, delete-orphan",
+[L213, S4]     )
+[L214, S4]     authors = relationship(
+[L215, S8]         "Author",
+[L216, S8]         secondary="author_articles",
+[L217, S8]         back_populates="articles",
+[L218, S8]         viewonly=True,
+[L219, S4]     )
+[L220, S4]     keyword_articles = relationship(
+[L221, S8]         "KeywordArticle",
+[L222, S8]         back_populates="article",
+[L223, S8]         cascade="all, delete-orphan",
+[L224, S4]     )
+[L225, S4]     keywords = relationship(
+[L226, S8]         "Keyword",
+[L227, S8]         secondary="keyword_articles",
+[L228, S8]         back_populates="articles",
+[L229, S8]         viewonly=True,
+[L230, S4]     )
+[L231, S4]     references = relationship(
+[L232, S8]         "Reference",
+[L233, S8]         back_populates="article",
+[L234, S8]         cascade="all, delete-orphan",
+[L235, S4]     )
+[L236, S4]     funding = relationship(
+[L237, S8]         "Funding",
+[L238, S8]         back_populates="article",
+[L239, S8]         cascade="all, delete-orphan",
+[L240, S4]     )
+[L241, S4]     downloads = relationship(
+[L242, S8]         "Download",
+[L243, S8]         back_populates="article",
+[L244, S8]         cascade="all, delete-orphan",
+[L245, S4]     )
+[L246, S0] 
+[L247, S0] 
+[L248, S0] class ProjectArticle(Base):
+[L249, S4]     """Junction model connecting projects to articles."""
+[L250, S0] 
+[L251, S4]     __tablename__ = "project_articles"
+[L252, S4]     __table_args__ = (
+[L253, S8]         UniqueConstraint(
+[L254, S12]             "project_id",
+[L255, S12]             "article_id",
+[L256, S12]             name="uq_project_article",
+[L257, S8]         ),
+[L258, S4]     )
+[L259, S0] 
+[L260, S4]     id = Column(
+[L261, S8]         Integer,
+[L262, S8]         primary_key=True,
+[L263, S8]         autoincrement=True,
+[L264, S8]         comment="Primary key junction identifier",
+[L265, S4]     )
+[L266, S4]     project_id = Column(
+[L267, S8]         Integer,
+[L268, S8]         ForeignKey("projects.id", ondelete="CASCADE"),
+[L269, S8]         nullable=False,
+[L270, S8]         comment="Foreign key linking to projects.id",
+[L271, S4]     )
+[L272, S4]     article_id = Column(
+[L273, S8]         Integer,
+[L274, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L275, S8]         nullable=False,
+[L276, S8]         comment="Foreign key linking to articles.id",
+[L277, S4]     )
+[L278, S4]     status = Column(
+[L279, S8]         String(50),
+[L280, S8]         default="pending",
+[L281, S8]         nullable=False,
+[L282, S8]         comment="Processing or download status of the article in the project",
+[L283, S4]     )
+[L284, S4]     added_at = Column(
+[L285, S8]         DateTime,
+[L286, S8]         default=lambda: datetime.now(timezone.utc),
+[L287, S8]         nullable=False,
+[L288, S8]         comment="UTC timestamp when article was associated with project",
+[L289, S4]     )
+[L290, S0] 
+[L291, S4]     project = relationship("Project", back_populates="project_articles")
+[L292, S4]     article = relationship("Article", back_populates="project_articles")
