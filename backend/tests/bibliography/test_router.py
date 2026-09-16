@@ -316,3 +316,46 @@ def test_batch_download_local_endpoint_client():
         
         args, _ = mock_exec.call_args
         assert args[0] == ["10.1000/182"]
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+def test_get_project_references_endpoint():
+    from backend.src.bibliography.router import get_db
+
+    mock_db = MagicMock()
+    app.dependency_overrides[get_db] = lambda: mock_db
+    try:
+        mock_proj = MagicMock()
+        mock_proj.id = 1
+
+        mock_link = MagicMock()
+        mock_link.article_id = 10
+
+        mock_art = MagicMock()
+        mock_art.id = 10
+        mock_art.title = "Test Paper"
+        mock_art.year = 2024
+        mock_art.journal = "Test Journal"
+        mock_art.doi = "10.1000/1"
+
+        def query_side_effect(model):
+            m = MagicMock()
+            if "ProjectArticle" in str(model):
+                m.filter.return_value.all.return_value = [mock_link]
+            elif "Article" in str(model):
+                m.filter.return_value.all.return_value = [mock_art]
+            elif "Project" in str(model):
+                m.filter.return_value.first.return_value = mock_proj
+            return m
+
+        mock_db.query.side_effect = query_side_effect
+
+        response = client.get(
+            "/api/bibliography/references?project_code=TEST"
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["title"] == "Test Paper"
+    finally:
+        app.dependency_overrides.pop(get_db, None)

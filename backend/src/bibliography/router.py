@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import datetime, timezone
 from typing import List
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -17,7 +18,22 @@ from .injection_service import inject_references_to_db
 
 try:
     from ..database.session import get_db
+    from ..database.models.core import Article, Project, ProjectArticle
 except (ImportError, ValueError):
+    try:
+        from src.database.session import get_db
+        from src.database.models.core import (
+            Article,
+            Project,
+            ProjectArticle,
+        )
+    except ImportError:
+        from backend.src.database.session import get_db
+        from backend.src.database.models.core import (
+            Article,
+            Project,
+            ProjectArticle,
+        )
     try:
         from src.database.session import get_db
     except ImportError:
@@ -41,7 +57,10 @@ async def _process_upload(file: UploadFile) -> List[ParsedReference]:
     
     try:
         content_bytes = await file.read()
-        content_str = content_bytes.decode("utf-8")
+        try:
+            content_str = content_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            content_str = content_bytes.decode("latin-1")
         refs = parse_bibliography_content(content_str, ext)
         return refs
     except ValueError as ve:
@@ -101,6 +120,40 @@ if HAS_MULTIPART:
         db: Session = Depends(get_db),
     ):
         return await _process_inject(file, project_code, db)
+
+    @router.get("/references", response_model=List[ParsedReference])
+    def get_project_references(
+        project_code: str,
+        db: Session = Depends(get_db),
+    ):
+        project = (
+            db.query(Project).filter(Project.name == project_code).first()
+        )
+        if not project:
+            return []
+        links = (
+            db.query(ProjectArticle)
+            .filter(ProjectArticle.project_id == project.id)
+            .all()
+        )
+        article_ids = [link.article_id for link in links]
+        if not article_ids:
+            return []
+        articles = (
+            db.query(Article).filter(Article.id.in_(article_ids)).all()
+        )
+        now = datetime.now(timezone.utc)
+        return [
+            ParsedReference(
+                author=getattr(a, "author", None),
+                year=str(a.year) if a.year is not None else None,
+                title=a.title,
+                journal=a.journal,
+                doi=a.doi,
+                upload_datetime=now,
+            )
+            for a in articles
+        ]
 else:
     async def upload_bibliography(file: UploadFile):
         return await _process_upload(file)

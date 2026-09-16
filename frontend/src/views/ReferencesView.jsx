@@ -139,21 +139,29 @@ export function ReferencesView() {
     resetStatus,
   } = useReferencesUpload();
 
-  const handleUploadSuccess = (files, parsedRefs) => {
-    if (Array.isArray(parsedRefs) && parsedRefs.length > 0) {
-      setTableData((prev) => [...parsedRefs, ...prev]);
+  const fetchProjectReferences = React.useCallback(async (code) => {
+    if (!code || !code.trim()) {
+      setTableData([]);
       return;
     }
-    const fileArray = Array.isArray(files) ? files : [files];
-    const newEntries = fileArray.map((f) => ({
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: f.name.replace(/\.[^/.]+$/, ''),
-      author: 'File: ' + f.name,
-      year: new Date().getFullYear(),
-      journal: projectCode || 'Project',
-    }));
-    setTableData((prev) => [...newEntries, ...prev]);
-  };
+    try {
+      const res = await fetch(
+        `/api/bibliography/references?project_code=${encodeURIComponent(code.trim())}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setTableData(data);
+      }
+    } catch {
+      // Ignorado si falla la red
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (projectCode) {
+      fetchProjectReferences(projectCode);
+    }
+  }, [projectCode, fetchProjectReferences]);
 
   return (
     <div style={styles.container}>
@@ -191,7 +199,9 @@ export function ReferencesView() {
         setProjectCode={setProjectCode}
         uploadAndInject={async (files) => {
           const parsed = await uploadAndInject(files);
-          handleUploadSuccess(files, parsed);
+          if (parsed) {
+            fetchProjectReferences(projectCode);
+          }
         }}
         isLoading={isLoading}
         isSuccess={isSuccess}

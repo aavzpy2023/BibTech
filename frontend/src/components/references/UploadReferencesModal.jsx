@@ -146,7 +146,7 @@ export function UploadReferencesModal({
       isOpen={isOpen}
       onClose={onClose}
       title="New References Ingestion"
-      description="Enter the project code and select .ris or .bib files to persist in the database."
+      description="Enter the project code and select .bib files to persist in the database."
     >
     <div style={styles.formGroup}>
       <label htmlFor="modal-project-code" style={styles.label}>

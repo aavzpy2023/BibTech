@@ -17,7 +17,8 @@ services:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=postgresql://user:password@db:5432/dbname
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   frontend:
     container_name: bibtech-frontend
@@ -48,6 +49,10 @@ services:
       - POSTGRES_DB=dbname
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d dbname"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
 volumes:
   postgres_data:

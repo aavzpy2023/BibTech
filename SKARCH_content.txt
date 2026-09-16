@@ -1,239 +1,58 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-15 21:00:48
+Date: 2026-09-15 21:12:20
 AST Mode: True
 Line Numbers: False
-Modules: useReferencesUpload.js, useReferencesUpload.test.js
+Modules: main.py, nginx.conf
 Processed Files: 2
 ===========================
 
 
 
-// --- frontend/src/hooks/useReferencesUpload.js ---
+// --- backend/main.py ---
 
-import { useState, useCallback } from 'react';
+from fastapi import FastAPI
+import sys
+from backend.src.bibliography.router import router as bibliography_router
 
-export function useReferencesUpload() {
-  const [projectCode, setProjectCode] = useState(() => {
-    try {
-      return localStorage.getItem('last_project_code') || '';
-    } catch {
-      return '';
+app = FastAPI()
+
+app.include_router(bibliography_router, prefix="/api/bibliography", tags=["bibliography"])
+
+@app.get("/api/requirements")
+def get_requirements():
+    return {
+        "python_version": sys.version.split()[0],
+        "framework": "FastAPI 0.110.0",
+        "database": "POSTGRES (Versión: 16)",
+        "proxy": "Nginx (Puerto 80)" if True else "Directo (Puerto 5173/8000)",
+        "status": "¡Entorno moderno con pyproject.toml listo! 🚀"
     }
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [error, setError] = useState(null);
-  const [insertedCount, setInsertedCount] = useState(null);
 
-  const uploadAndInject = useCallback(
-    async (filesInput) => {
-      if (!projectCode || !projectCode.trim()) {
-        setError('El código de proyecto es requerido');
-        setIsSuccess(false);
-        return;
-      }
 
-      if (!filesInput || (Array.isArray(filesInput) && filesInput.length === 0)) {
-        setError('Debe seleccionar un archivo bibliográfico válido');
-        setIsSuccess(false);
-        return;
-      }
-      
-      const files = Array.isArray(filesInput) ? filesInput : [filesInput];
 
-      setIsLoading(true);
-      setError(null);
-      setIsSuccess(false);
+// --- nginx/nginx.conf ---
 
-      try {
-        let totalInserted = 0;
-        const allParsed = [];
-
-        for (const file of files) {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('project_code', projectCode.trim());
-
-          const response = await fetch('/api/bibliography/inject', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errPayload = await response.json().catch(() => ({}));
-          throw new Error(
-            errPayload.detail || 'Error al inyectar referencias'
-          );
-        }
-
-        const data = await response.json();
-        totalInserted += (data.inserted ?? 0);
-
-        try {
-          const uploadForm = new FormData();
-          uploadForm.append('file', file);
-          const parseRes = await fetch('/api/bibliography/upload', {
-            method: 'POST',
-            body: uploadForm,
-          });
-          if (parseRes.ok) {
-            const parsed = await parseRes.json();
-            if (Array.isArray(parsed)) allParsed.push(...parsed);
-          }
-        } catch {}
-        }
-
-        try {
-          localStorage.setItem('last_project_code', projectCode.trim());
-        } catch {}
-        setIsSuccess(true);
-        setInsertedCount(totalInserted);
-        return allParsed;
-      } catch (err) {
-        setError(err.message || 'Error inesperado durante la carga');
-        setIsSuccess(false);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [projectCode]
-  );
-
-  const resetStatus = useCallback(() => {
-    setIsSuccess(false);
-    setError(null);
-  }, []);
-
-  return {
-    projectCode,
-    setProjectCode,
-    isLoading,
-    isSuccess,
-    error,
-    insertedCount,
-    uploadAndInject,
-    resetStatus,
-  };
+server {
+    listen 80;
+    server_name localhost;
+    location /api {
+        proxy_pass http://backend:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 86400s;
+    }
+    location / {
+        proxy_pass http://frontend:5173;
+        proxy_set_header Host $host;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
 }
 
-export default useReferencesUpload;
-
-
-// --- frontend/src/hooks/useReferencesUpload.test.js ---
-
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import { useReferencesUpload } from './useReferencesUpload';
-
-describe('useReferencesUpload', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    localStorage.clear();
-  });
-
-  it('should initialize projectCode from localStorage if present', () => {
-    localStorage.setItem('last_project_code', 'DEFAULT-PROJ');
-    const { result } = renderHook(() => useReferencesUpload());
-    expect(result.current.projectCode).toBe('DEFAULT-PROJ');
-  });
-
-  it('should upload and inject multiple files sequentially (FIFO)', async () => {
-    const mockFile = new File(['fake ris content'], 'test.ris', {
-      type: 'text/plain',
-    });
-    const mockFile2 = new File(['fake bib'], 'test2.bib', { type: 'text/plain' });
-
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: 'Success', inserted: 5 }),
-    });
-
-    const { result } = renderHook(() => useReferencesUpload());
-
-    act(() => {
-      result.current.setProjectCode('TEST');
-    });
-
-    await act(async () => {
-      await result.current.uploadAndInject([mockFile, mockFile2]);
-    });
-
-    expect(global.fetch).toHaveBeenCalledTimes(4); // 2 files * 2 requests
-    const [url, options] = global.fetch.mock.calls[0];
-    expect(url).toBe('/api/bibliography/inject');
-    expect(options.method).toBe('POST');
-    expect(options.body).toBeInstanceOf(FormData);
-    expect(options.body.get('file')).toBe(mockFile);
-    expect(options.body.get('project_code')).toBe('TEST');
-    expect(result.current.isSuccess).toBe(true);
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBeNull();
-    expect(result.current.insertedCount).toBe(10); // 2 files * 5
-    expect(localStorage.getItem('last_project_code')).toBe('TEST');
-  });
-
-  it('should abort and set error if project code is missing', async () =>>
-    const mockFile = new File(['content'], 'test.ris', {
-      type: 'text/plain',
-    });
-    global.fetch = vi.fn();
-
-    const { result } = renderHook(() => useReferencesUpload());
-
-    await act(async () => {
-      await result.current.uploadAndInject(mockFile);
-    });
-
-    expect(global.fetch).not.toHaveBeenCalled();
-    expect(result.current.isSuccess).toBe(false);
-    expect(result.current.error).toBe(
-      'El código de proyecto es requerido'
-    );
-  });
-
-  it('should abort and set error if file is missing', async () => {
-    global.fetch = vi.fn();
-
-    const { result } = renderHook(() => useReferencesUpload());
-
-    act(() => {
-      result.current.setProjectCode('TEST');
-    });
-
-    await act(async () => {
-      await result.current.uploadAndInject(null);
-    });
-
-    expect(global.fetch).not.toHaveBeenCalled();
-    expect(result.current.isSuccess).toBe(false);
-    expect(result.current.error).toBe(
-      'Debe seleccionar un archivo bibliográfico válido'
-    );
-  });
-
-  it('should handle API error gracefully', async () => {
-    const mockFile = new File(['bad content'], 'test.txt', {
-      type: 'text/plain',
-    });
-
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      json: async () => ({ detail: 'Unsupported file extension' }),
-    });
-
-    const { result } = renderHook(() => useReferencesUpload());
-
-    act(() => {
-      result.current.setProjectCode('TEST');
-    });
-
-    await act(async () => {
-      await result.current.uploadAndInject(mockFile);
-    });
-
-    expect(result.current.isSuccess).toBe(false);
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBe('Unsupported file extension');
-  });
-});
