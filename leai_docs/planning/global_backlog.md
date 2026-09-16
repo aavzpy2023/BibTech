@@ -70,7 +70,7 @@
 
 ## EPIC 14: REFERENCES TABLE RESIZING & COUNT FIX
 - [x] Story 13.0: Roadmap & Planning Initialization
-- [ ] [REQ-040] Synchronize and Clarify Imported vs. Displayed References Count
+- [x] [REQ-040] Synchronize and Clarify Imported vs. Displayed References Count
 - [x] [REQ-041] Resizable Table Columns (State Fractality & View Wiring)
 
 ## Active Roadmaps

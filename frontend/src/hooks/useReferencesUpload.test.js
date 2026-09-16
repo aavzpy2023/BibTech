@@ -126,4 +126,29 @@ describe('useReferencesUpload', () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBe('Error de conexión a la base de datos');
   });
+
+  it('should upload and track both parsedCount and insertedCount', async () => {
+    const mockFile = new File(['fake bib'], 'test1.bib', { type: 'text/plain' });
+
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url.includes('/inject')) {
+        return Promise.resolve({ ok: true, json: async () => ({ inserted: 2 }) });
+      }
+      if (url.includes('/upload')) {
+        return Promise.resolve({ ok: true, json: async () => ([1, 2, 3, 4, 5]) });
+      }
+      return Promise.reject(new Error('not mocked'));
+    });
+
+    const { result } = renderHook(() => useReferencesUpload());
+    act(() => { result.current.setProjectCode('TEST'); });
+
+    await act(async () => {
+      await result.current.uploadAndInject([mockFile]);
+    });
+
+    expect(result.current.isSuccess).toBe(true);
+    expect(result.current.insertedCount).toBe(2);
+    expect(result.current.parsedCount).toBe(5);
+  });
 });

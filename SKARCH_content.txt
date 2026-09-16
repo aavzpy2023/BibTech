@@ -1,48 +1,142 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-16 09:40:06
+Date: 2026-09-16 09:42:05
 AST Mode: True
 Line Numbers: False
-Modules: ReferencesDataTable.test.jsx
+Modules: useReferencesUpload.test.js
 Processed Files: 1
 ===========================
 
 
 
-// --- frontend/src/components/references/ReferencesDataTable.test.jsx ---
+// --- frontend/src/hooks/useReferencesUpload.test.js ---
 
-import React from 'react';
-import { render, screen, act } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import { ReferencesDataTable } from './ReferencesDataTable';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useReferencesUpload } from './useReferencesUpload';
 
-describe('ReferencesDataTable Dumb View State Wiring', () => {
-  it('renders search, paginates dynamically, and updates DOM rows', () => {
-    // Arrange: Create 20 mock objects (pageSize is hardcoded to 13)
-    const mockData = Array.from({ length: 20 }, (_, i) => ({
-      id: i,
-      title: `Reference ${i + 1}`,
-      author: `Author ${i + 1}`,
-      year: '2026',
-      journal: 'Science'
-    }));
+describe('useReferencesUpload', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
 
-    render(<ReferencesDataTable data={mockData} />);
+  it('should initialize projectCode from localStorage if present', () => {
+    localStorage.setItem('last_project_code', 'DEFAULT-PROJ');
+    const { result } = renderHook(() => useReferencesUpload());
+    expect(result.current.projectCode).toBe('DEFAULT-PROJ');
+  });
 
-    // Assert 1: Initial page state shows strictly 13 data rows (+1 header)
-    const initialRows = screen.getAllByRole('row');
-    expect(initialRows).toHaveLength(14); // 13 + 1
-    expect(screen.getByText(/Page 1 of 2/i)).toBeDefined();
+  it('should upload and inject multiple files sequentially (FIFO)', async () => {
+    const mockFile = new File(['fake bib content'], 'test1.bib', {
+      type: 'text/plain',
+    });
+    const mockFile2 = new File(['fake bib'], 'test2.bib', { type: 'text/plain' });
 
-    // Act: Click 'Next' to trigger state mutation via useReferencesTable
-    const nextBtn = screen.getByText('Next');
-    act(() => {
-      nextBtn.click();
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: 'Success', inserted: 5 }),
     });
 
-    // Assert 2: Second page strictly shows 7 remaining rows (+1 header)
-    const nextRows = screen.getAllByRole('row');
-    expect(nextRows).toHaveLength(8); // 7 + 1
-    expect(screen.getByText(/Page 2 of 2/i)).toBeDefined();
+    const { result } = renderHook(() => useReferencesUpload());
+
+    act(() => {
+      result.current.setProjectCode('TEST');
+    });
+
+    await act(async () => {
+      await result.current.uploadAndInject([mockFile, mockFile2]);
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(4); // 2 files * 2 requests
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toBe('/api/bibliography/inject');
+    expect(options.method).toBe('POST');
+    expect(options.body).toBeInstanceOf(FormData);
+    expect(options.body.get('file')).toBe(mockFile);
+    expect(options.body.get('project_code')).toBe('TEST');
+    expect(result.current.isSuccess).toBe(true);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBeNull();
+    expect(result.current.insertedCount).toBe(10); // 2 files * 5
+    expect(localStorage.getItem('last_project_code')).toBe('TEST');
+  });
+
+  it('should abort and set error if project code is missing', async () => {
+    const mockFile = new File(['content'], 'test.bib', {
+      type: 'text/plain',
+    });
+    global.fetch = vi.fn();
+
+    const { result } = renderHook(() => useReferencesUpload());
+
+    await act(async () => {
+      await result.current.uploadAndInject(mockFile);
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.error).toBe(
+      'El código de proyecto es requerido'
+    );
+  });
+
+  it('should abort and set error if file is missing', async () => {
+    global.fetch = vi.fn();
+
+    const { result } = renderHook(() => useReferencesUpload());
+
+    act(() => {
+      result.current.setProjectCode('TEST');
+    });
+
+    await act(async () => {
+      await result.current.uploadAndInject(null);
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.error).toBe(
+      'Debe seleccionar un archivo bibliográfico válido'
+    );
+  });
+
+  it('should handle frontend validation error for non .bib files', async () => {
+    const mockFile = new File(['content'], 'test.ris');
+    global.fetch = vi.fn();
+    
+    const { result } = renderHook(() => useReferencesUpload());
+    act(() => { result.current.setProjectCode('TEST'); });
+    
+    await act(async () => { await result.current.uploadAndInject(mockFile); });
+    
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.error).toBe('Solo se permiten archivos .bib');
+  });
+
+  it('should handle API error gracefully', async () => {
+    const mockFile = new File(['bad content'], 'test.bib', {
+      type: 'text/plain',
+    });
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ detail: 'Error de conexión a la base de datos' }),
+    });
+
+    const { result } = renderHook(() => useReferencesUpload());
+
+    act(() => {
+      result.current.setProjectCode('TEST');
+    });
+
+    await act(async () => {
+      await result.current.uploadAndInject(mockFile);
+    });
+
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.error).toBe('Error de conexión a la base de datos');
   });
 });

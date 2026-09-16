@@ -136,6 +136,7 @@ export function UploadReferencesModal({
   isSuccess,
   error,
   insertedCount,
+  parsedCount,
 }) {
   if (!isOpen) return null;
 
@@ -178,9 +179,11 @@ export function UploadReferencesModal({
     {isSuccess && (
       <div style={styles.successBox}>
         <p style={styles.successTitle}>Ingestion completed!</p>
+        <p style={{ margin: '0 0 6px 0', fontSize: '13px' }}>
+          Parsed <strong>{parsedCount}</strong> references from file.
+        </p>
         <p style={{ margin: 0, fontSize: '13px' }}>
-          Inserted <strong>{insertedCount}</strong> articles into
-          project <strong>{projectCode}</strong>.
+          Inserted <strong>{insertedCount}</strong> new references into project <strong>{projectCode}</strong>.
         </p>
           </div>
         )}

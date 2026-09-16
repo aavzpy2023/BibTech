@@ -12,6 +12,7 @@ export function useReferencesUpload() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [insertedCount, setInsertedCount] = useState(null);
+  const [parsedCount, setParsedCount] = useState(null);
 
   const uploadAndInject = useCallback(
     async (filesInput) => {
@@ -83,6 +84,7 @@ export function useReferencesUpload() {
         } catch {}
         setIsSuccess(true);
         setInsertedCount(totalInserted);
+        setParsedCount(allParsed.length);
         return allParsed;
       } catch (err) {
         setError(err.message || 'Error inesperado durante la carga');
@@ -106,6 +108,7 @@ export function useReferencesUpload() {
     isSuccess,
     error,
     insertedCount,
+    parsedCount,
     uploadAndInject,
     resetStatus,
   };

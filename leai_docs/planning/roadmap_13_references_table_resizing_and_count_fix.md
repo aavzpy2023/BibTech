@@ -13,7 +13,8 @@ Story Context Radius: {"leai_docs/planning/global_backlog.md": ["*"]}
 Layered Technical Breakdown:
 [ID-13.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Append "EPIC 14: REFERENCES TABLE RESIZING & COUNT FIX", its [REQ-040], [REQ-041] list, and the Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_13_references_table_resizing_and_count_fix.md]. Type: Task.
 
-- [ ] Story 13.1: Synchronize and Clarify Imported vs. Displayed References Count | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 13.1: Synchronize and Clarify Imported vs. Displayed References Count | [MoSCoW: MUST] | [Complexity: EASY]
+> Files touched: useReferencesUpload.js, UploadReferencesModal.jsx
 Story Context Radius: {"frontend/src/hooks/useReferencesUpload.js": [""], "frontend/src/components/references/UploadReferencesModal.jsx": [""], "leai_docs/planning/roadmap_13_references_table_resizing_and_count_fix.md": [""], "leai_docs/planning/global_backlog.md": [""]}
 Layered Technical Breakdown (FLASH-COMPATIBLE ALGORITHMS):
 [ID-13.1.1] [TESTING/TDE]: [1. Arrange: Mock fetch to return successful injection (inserted: 2) and successful upload/parse (array length: 5). 2. Act: Render useReferencesUpload hook and call uploadAndInject. 3. Assert: Verify insertedCount is 2 and parsedCount is 5]. Type: Task.
