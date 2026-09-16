@@ -7,6 +7,103 @@ def _normalize_name(name: str) -> str:
     return re.sub(r"[^a-zA-Z]", "", name).lower()
 
 
+def parse_wos_countries(entry: dict) -> List[str]:
+    """Extracts unique countries from the affiliation field."""
+    def get_val(*keys):
+        for k, v in entry.items():
+            if str(k).lower() in keys:
+                val = getattr(v, "value", v)
+                if hasattr(val, "value"):
+                    val = val.value
+                s = str(val).strip()
+                while (s.startswith("{") and s.endswith("}")) or (
+                    s.startswith('"') and s.endswith('"')
+                ):
+                    s = s[1:-1].strip()
+                return s
+        return ""
+
+    affil_raw = get_val("affiliation")
+    if not affil_raw:
+        return []
+        
+    countries = set()
+    lines = [
+        line.strip() 
+        for line in re.split(r"\.\s+(?=[A-Z\[])|\n|;", affil_raw) 
+        if line.strip()
+    ]
+    
+    for line in lines:
+        line_clean = re.sub(r"^\[.*?\]\s*", "", line).strip()
+        if not line_clean:
+            continue
+        parts = [p.strip() for p in line_clean.split(",")]
+        if parts:
+            last_part = parts[-1].rstrip(".")
+            country = re.sub(r"[0-9\-]", "", last_part).strip()
+            if "USA" in country.upper():
+                country = "USA"
+            elif "CHINA" in country.upper():
+                country = "China"
+            elif "UK" in country.upper() or "ENGLAND" in country.upper():
+                country = "UK"
+            if country:
+                countries.add(country)
+                
+    return sorted(list(countries))
+
+
+def parse_wos_cited_references(entry: dict) -> List[Dict[str, str]]:
+    """Parses cited references into structured dicts (author, year, source)."""
+    def get_val(*keys):
+        for k, v in entry.items():
+            if str(k).lower() in keys:
+                val = getattr(v, "value", v)
+                if hasattr(val, "value"):
+                    val = val.value
+                s = str(val).strip()
+                while (s.startswith("{") and s.endswith("}")) or (
+                    s.startswith('"') and s.endswith('"')
+                ):
+                    s = s[1:-1].strip()
+                return s
+        return ""
+
+    cr_raw = get_val("cited-references", "cited_references")
+    if not cr_raw:
+        return []
+
+    parsed_crs = []
+    cr_list = [cr.strip() for cr in re.split(r";|\n", cr_raw) if cr.strip()]
+    
+    for cr in cr_list:
+        parts = [p.strip() for p in cr.split(",")]
+        if not parts:
+            continue
+            
+        author = parts[0] if len(parts) > 0 else ""
+        year = ""
+        source = ""
+        
+        if len(parts) > 1:
+            if re.match(r"^\d{4}$", parts[1]):
+                year = parts[1]
+                source = ", ".join(parts[2:]) if len(parts) > 2 else ""
+            else:
+                source = ", ".join(parts[1:])
+                
+        parsed_crs.append({
+            "author": author,
+            "year": year,
+            "source": source,
+            "raw": cr
+        })
+        
+    unique_crs = {cr["raw"]: cr for cr in parsed_crs}
+    return list(unique_crs.values())
+
+
 def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
     """
     Parses chaotic WOS identity fields (ORCID, ResearcherID, Affiliation) 

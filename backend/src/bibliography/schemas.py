@@ -97,4 +97,6 @@ class ParsedReference(BaseModel):
     cited_references_count: Optional[int] = None
     raw_data: Optional[str] = None
     authors_detail: Optional[List[Dict[str, Any]]] = None
+    countries: Optional[List[str]] = None
+    cited_references: Optional[List[Dict[str, str]]] = None
     upload_datetime: datetime

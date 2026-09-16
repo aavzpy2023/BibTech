@@ -95,7 +95,7 @@
 ## EPIC 18: BIBLIOMETRIC DATA WAREHOUSE & ADVANCED SCIENTOMETRICS
 - [x] Story 18.0: Roadmap & Planning Initialization
 - [x] [REQ-052] Database Schema Expansion (Countries, Journals, Cited References)
-- [ ] [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
+- [x] [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
 - [ ] [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
 - [ ] [REQ-055] Alembic Migration Generation & Schema Upgrade
 

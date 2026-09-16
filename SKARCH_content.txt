@@ -1,0 +1,64 @@
+=== SK-CONTEXT MANIFEST ===
+Intent: SKARCH
+Date: 2026-09-16 18:30:20
+AST Mode: True
+Line Numbers: False
+Modules: parser_service.py
+Processed Files: 1
+===========================
+
+
+
+// --- backend/src/bibliography/parser_service.py ---
+
+import datetime
+from typing import List, Optional
+import re
+import bibtexparser
+from .schemas import ParsedReference
+from .wos_parser import parse_wos_authors_detail, parse_wos_countries, parse_wos_cited_references
+
+def _extract_bib_int(entry, key: str) -> Optional[int]:
+    """..."""
+
+def _extract_bib_field(entry, key: str) -> Optional[str]:
+    """..."""
+
+def _parse_bibtex_entries(content: str) -> list:
+    """..."""
+
+def _clean_year(val: Optional[str]) -> Optional[str]:
+    """..."""
+
+def _extract_ris_title(entry: dict) -> Optional[str]:
+    """..."""
+
+def _extract_ris_journal(entry: dict) -> Optional[str]:
+    """..."""
+
+def _extract_ris_authors(entry: dict) -> Optional[str]:
+    """..."""
+
+def _extract_ris_year(entry: dict) -> Optional[str]:
+    """..."""
+
+def _extract_ris_doi(entry: dict) -> Optional[str]:
+    """..."""
+
+def _parse_ris_fallback(content: str) -> list:
+    """..."""
+
+def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
+    if ext.lower() != '.bib':
+        raise ValueError(f'Unsupported extension: {ext}')
+    now = datetime.datetime.now(datetime.timezone.utc)
+    try:
+        entries = _parse_bibtex_entries(content)
+    except Exception:
+        entries = []
+    if not entries:
+        raise ValueError('No se encontraron items válidos en el archivo .bib')
+    return [ParsedReference(author=_extract_bib_field(entry, 'author'), year=_extract_bib_field(entry, 'year'), title=_extract_bib_field(entry, 'title'), journal=_extract_bib_field(entry, 'journal'), doi=_extract_bib_field(entry, 'doi'), abstract=_extract_bib_field(entry, 'abstract'), publisher=_extract_bib_field(entry, 'publisher'), language=_extract_bib_field(entry, 'language'), keywords=_extract_bib_field(entry, 'keywords'), keywords_plus=_extract_bib_field(entry, 'keywords_plus'), research_areas=_extract_bib_field(entry, 'research_areas'), web_of_science_categories=_extract_bib_field(entry, 'web_of_science_categories'), funding_text=_extract_bib_field(entry, 'funding_text'), journal_iso=_extract_bib_field(entry, 'journal_iso'), oa_status=_extract_bib_field(entry, 'oa_status'), issn=_extract_bib_field(entry, 'issn'), volume=_extract_bib_field(entry, 'volume'), issue=_extract_bib_field(entry, 'issue'), pages=_extract_bib_field(entry, 'pages'), times_cited=_extract_bib_int(entry, 'times_cited'), cited_references_count=_extract_bib_int(entry, 'cited_references_count'), authors_detail=parse_wos_authors_detail(entry if isinstance(entry, dict) else getattr(entry, 'fields_dict', {})), upload_datetime=now) for entry in entries]
+
+def _deprecated_parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
+    """..."""

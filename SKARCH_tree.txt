@@ -35,6 +35,8 @@
 │   │   │   │   ├── useHoverReveal.test.js
 │   │   │   │   ├── useQueueState.js
 │   │   │   │   ├── useQueueState.test.js
+│   │   │   │   ├── useReferenceDetails.js
+│   │   │   │   ├── useReferenceDetails.test.js
 │   │   │   │   ├── useReferencesTable.js
 │   │   │   │   ├── useReferencesTable.test.js
 │   │   │   │   ├── useReferencesUpload.js
@@ -47,6 +49,9 @@
 │   │   │   │   ├── Modal.jsx
 │   │   │   │   ├── Modal.test.jsx
 │   │   │   │   ├── ReferenceTable.jsx
+│   │   │   │   ├── common/
+│   │   │   │   │   ├── ModalTemplate.jsx
+│   │   │   │   │   ├── ModalTemplate.test.jsx
 │   │   │   │   ├── load/
 │   │   │   │   │   ├── BatchComponents.test.jsx
 │   │   │   │   │   ├── BatchConfig.jsx
@@ -56,7 +61,18 @@
 │   │   │   │   ├── references/
 │   │   │   │   │   ├── HoverPopover.jsx
 │   │   │   │   │   ├── MetadataGrid.jsx
+│   │   │   │   │   ├── MetricsFooterCards.jsx
+│   │   │   │   │   ├── OverviewLeftColumn.jsx
+│   │   │   │   │   ├── OverviewLeftColumn.test.jsx
+│   │   │   │   │   ├── OverviewRightColumn.jsx
+│   │   │   │   │   ├── OverviewRightColumn.test.jsx
+│   │   │   │   │   ├── ReferenceDetailsModal.jsx
+│   │   │   │   │   ├── ReferenceDrawer.jsx
+│   │   │   │   │   ├── ReferenceDrawer.test.jsx
+│   │   │   │   │   ├── ReferenceHeroBlock.jsx
+│   │   │   │   │   ├── ReferenceHeroBlock.test.jsx
 │   │   │   │   │   ├── ReferencesDataTable.jsx
+│   │   │   │   │   ├── ReferencesDataTable.test.jsx
 │   │   │   │   │   ├── UploadReferencesModal.jsx
 │   ├── backend/
 │   │   ├── Dockerfile
@@ -88,6 +104,7 @@
 │   │   │   │   ├── resolver_service.py
 │   │   │   │   ├── router.py
 │   │   │   │   ├── schemas.py
+│   │   │   │   ├── wos_parser.py
 │   │   │   │   ├── zip_service.py
 │   │   │   ├── bibtech_backend.egg-info/
 │   │   │   │   ├── SOURCES.txt
@@ -141,6 +158,8 @@
 │   │   │   ├── roadmap_13_references_table_resizing_and_count_fix.md
 │   │   │   ├── roadmap_15_bibliographic_metadata_and_bulk_injection.md
 │   │   │   ├── roadmap_16_metadata_hover_reveal.md
+│   │   │   ├── roadmap_17_reference_details_modal.md
+│   │   │   ├── roadmap_18_bibliometric_data_warehouse.md
 │   │   │   ├── roadmap_1_bibliography_ingestion.md
 │   │   │   ├── roadmap_2_batch_load.md
 │   │   │   ├── roadmap_3_batch_download_execution.md

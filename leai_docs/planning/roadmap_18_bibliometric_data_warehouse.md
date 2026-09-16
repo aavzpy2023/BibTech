@@ -18,9 +18,9 @@ To support advanced bibliometric network analysis (Co-citation, Bibliographic Co
 ## [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
 - **Goal**: Refactor `wos_parser.py` and `parser_service.py` to cleanly extract the new dimensions.
 - **Tasks**:
-  - [ ] Implement a country extractor algorithm from the `Affiliations` raw string (e.g., regex isolating the last segment of the comma-separated address).
-  - [ ] Implement a cited references (CR) parser to split the semicolon-separated strings into individual unique reference identifiers (Author, Year, Source).
-  - [ ] Ensure `schemas.py` (`ParsedReference`) supports the newly extracted data arrays.
+  - [x] Implement a country extractor algorithm from the `Affiliations` raw string (e.g., regex isolating the last segment of the comma-separated address).
+  - [x] Implement a cited references (CR) parser to split the semicolon-separated strings into individual unique reference identifiers (Author, Year, Source).
+  - [x] Ensure `schemas.py` (`ParsedReference`) supports the newly extracted data arrays.
 
 ## [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
 - **Goal**: Update `injection_service.py` to bulk-insert the new relational entities safely and performantly.

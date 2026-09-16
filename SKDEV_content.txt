@@ -1,135 +1,12 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 18:21:10
+Date: 2026-09-16 18:33:08
 AST Mode: False
 Line Numbers: True
-Modules: global_backlog.md, roadmap_18_bibliometric_data_warehouse.md
-Processed Files: 2
+Modules: roadmap_18_bibliometric_data_warehouse.md
+Processed Files: 1
 ===========================
 
-
-
-// --- leai_docs/planning/global_backlog.md ---
-
-[L001, S0] # Global Backlog
-[L002, S0] 
-[L003, S0] ## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
-[L004, S0] - [x] Story 1.0: Roadmap &amp; Planning Initialization
-[L005, S0] - [x] Story 1.1: Project Dependencies &amp; Context Genesis
-[L006, S0] 
-[L007, S0] ## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
-[L008, S0] - [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
-[L009, S0] - [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
-[L010, S0] - [x] [REQ-003] Bibliography Data Display &amp; Table View
-[L011, S0] 
-[L012, S0] ## EPIC 3: BATCH LOAD INTERFACE
-[L013, S0] - [x] [REQ-004] Frontend Routing &amp; Main Layout
-[L014, S0] - [x] [REQ-005] Load View - State Fractality (Custom Hook)
-[L015, S0] - [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
-[L016, S0] - [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
-[L017, S0] 
-[L018, S0] ## EPIC 4: BATCH DOWNLOAD EXECUTION
-[L019, S0] - [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
-[L020, S0] - [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
-[L021, S0] - [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
-[L022, S0] - [x] [REQ-011] Frontend SSE Hook State Integration
-[L023, S0] 
-[L024, S0] ## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
-[L025, S0] - [x] [REQ-012] Load View Validation &amp; Label Updates
-[L026, S0] - [x] [REQ-013] Queue View State &amp; UI Assembly
-[L027, S0] - [x] [REQ-014] Backend ZIP Service &amp; Download Action
-[L028, S0] 
-[L029, S0] ## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
-[L030, S0] - [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
-[L031, S0] - [x] [REQ-016] Identity Domain Models &amp; Keywords
-[L032, S0] - [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
-[L033, S0] 
-[L034, S0] ## EPIC 7: REFERENCES DATABASE INGESTION
-[L035, S0] - [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
-[L036, S0] - [x] [REQ-019] References Data Table View
-[L037, S0] - [x] [REQ-020] Frontend Injection State Hook
-[L038, S0] - [x] [REQ-021] References View Routing &amp; Assembly
-[L039, S0] 
-[L040, S0] ## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
-[L041, S0] - [x] [REQ-022] Multiple File Upload Logic (FIFO Queue)
-[L042, S0] - [x] [REQ-023] References Tab Translation to English
-[L043, S0] - [x] [REQ-024] UI Standardization (Width & Headers)
-[L044, S0] 
-[L045, S0] ## EPIC 9: LOCAL FILE BATCH DOWNLOAD
-[L046, S0] - [x] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
-[L047, S0] - [x] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
-[L048, S0] 
-[L049, S0] ## EPIC 10: INSTITUTIONAL IP DIRECT RESOLVER
-[L050, S0] - [x] [REQ-027] Institutional Direct PDF URL Extractor (Landing Page Metadata)
-[L051, S0] - [x] [REQ-028] Cascading Resolver Fallback Chain Integration
-[L052, S0] 
-[L053, S0] ## EPIC 11: COOKIE AUTHENTICATION PASSTHROUGH
-[L054, S0] - [x] [REQ-029] Frontend UI State Fractality & Dumb View Wiring (Cookies)
-[L055, S0] - [x] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
-[L056, S0] - [x] [REQ-031] CLI Argument Cookie Support (Script OCP)
-[L057, S0] 
-[L058, S0] ## EPIC 12: REFERENCES UI REFINEMENT & BACKEND BUGFIX
-[L059, S0] - [x] [REQ-032] Backend Typing Bugfix (Micro-Surgery)
-[L060, S0] - [x] [REQ-033] UploadReferencesModal Dark Mode Compliance
-[L061, S0] - [x] [REQ-034] References Table Pagination & Search State (State Fractality)
-[L062, S0] - [x] [REQ-035] References Table Dumb View Wiring
-[L063, S0] 
-[L064, S0] ## EPIC 13: BIB ONLY INGESTION & INJECTION RESILIENCE
-[L065, S0] - [x] Story 12.0: Roadmap & Planning Initialization
-[L066, S0] - [x] [REQ-036] Backend Router Boundary Marshal (.bib Restriction)
-[L067, S0] - [x] [REQ-038] Backend Parser Core Logic (.bib Extraction)
-[L068, S0] - [x] [REQ-039] Backend Injection DB Resilience
-[L069, S0] - [x] [REQ-037] Frontend Hook State Fractality (.bib Validation)
-[L070, S0] 
-[L071, S0] ## EPIC 14: REFERENCES TABLE RESIZING & COUNT FIX
-[L072, S0] - [x] Story 13.0: Roadmap & Planning Initialization
-[L073, S0] - [x] [REQ-040] Synchronize and Clarify Imported vs. Displayed References Count
-[L074, S0] - [x] [REQ-041] Resizable Table Columns (State Fractality & View Wiring)
-[L075, S0] 
-[L076, S0] ## EPIC 15: BIBLIOGRAPHIC METADATA EXPANSION & BULK INJECTION
-[L077, S0] - [x] Story 15.0: Roadmap & Planning Initialization
-[L078, S0] - [x] [REQ-042] Frontend UI Dumb View Wiring (Text Standardization)
-[L079, S0] - [x] [REQ-043] Database Schema Expansion & State Preservation
-[L080, S0] - [x] [REQ-044] Boundary Marshal Schema & Parser Core Logic
-[L081, S0] - [x] [REQ-045] Bulk Injection Refactoring (Performance & Concurrency)
-[L082, S0] 
-[L083, S0] ## EPIC 16: METADATA HOVER-REVEAL UI
-[L084, S0] - [x] Story 16.0: Roadmap & Planning Initialization
-[L085, S0] - [x] [REQ-046] Metadata Hover-Reveal UI (Grid & Popover)
-[L086, S0] 
-[L087, S0] ## EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE
-[L088, S0] - [x] Story 17.0: Roadmap & Planning Initialization
-[L089, S0] - [x] [REQ-047] Backend Reference Serialization Audit & Boundary Marshal
-[L090, S0] - [x] [REQ-048] Reusable Base Modal Architecture (ModalTemplate) Dumb View
-[L091, S0] - [x] [REQ-049] Reference Details - Hero Ribbon Dumb View
-[L092, S0] - [x] [REQ-050] Overview Tab - Left & Right Columns & Metrics Dumb Views
-[L093, S0] - [x] [REQ-051] Secondary Deep-Dive Drawer Dumb View & Hook State Fractality
-[L094, S0] 
-[L095, S0] ## EPIC 18: BIBLIOMETRIC DATA WAREHOUSE & ADVANCED SCIENTOMETRICS
-[L096, S0] - [x] Story 18.0: Roadmap & Planning Initialization
-[L097, S0] - [ ] [REQ-052] Database Schema Expansion (Countries, Journals, Cited References)
-[L098, S0] - [ ] [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
-[L099, S0] - [ ] [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
-[L100, S0] - [ ] [REQ-055] Alembic Migration Generation & Schema Upgrade
-[L101, S0] 
-[L102, S0] ## Active Roadmaps
-[L103, S0] - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
-[L104, S0] - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
-[L105, S0] - [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
-[L106, S0] - [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
-[L107, S0] - [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
-[L108, S0] - [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
-[L109, S0] - [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
-[L110, S0] - [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
-[L111, S0] - [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
-[L112, S0] - [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
-[L113, S0] - [Roadmap 11: References UI Refinement & Backend Bugfix](roadmap_11_references_ui_and_bugfixes.md)
-[L114, S0] - [Roadmap 12: Bib Only Ingestion & Injection Resilience](roadmap_12_bib_only_and_injection_fix.md)
-[L115, S0] - [Roadmap 13: References Table Resizing & Count Fix](roadmap_13_references_table_resizing_and_count_fix.md)
-[L116, S0] - [Roadmap 15: Bibliographic Metadata & Bulk Injection](roadmap_15_bibliographic_metadata_and_bulk_injection.md)
-[L117, S0] - [Roadmap 16: Metadata Hover-Reveal UI](roadmap_16_metadata_hover_reveal.md)
-[L118, S0] - [Roadmap 17: Reference Details Modal](roadmap_17_reference_details_modal.md)
-[L119, S0] - [Roadmap 18: Bibliometric Data Warehouse](roadmap_18_bibliometric_data_warehouse.md)
 
 
 // --- leai_docs/planning/roadmap_18_bibliometric_data_warehouse.md ---
@@ -146,9 +23,9 @@ Processed Files: 2
 [L010, S0] ## [REQ-052] Database Schema Expansion (Countries, Journals, Cited References)
 [L011, S0] - **Goal**: Add new SQL models to support the bibliometric dimensions.
 [L012, S0] - **Tasks**:
-[L013, S2]   - [ ] Add `Country` and `ArticleCountry` mapping to handle geographical collaboration networks.
-[L014, S2]   - [ ] Add `CitedReference` and `ArticleCitation` mapping to handle co-citation and bibliographic coupling networks.
-[L015, S2]   - [ ] Add `Journal` model and prepare transition for core `Article` journal string.
+[L013, S2]   - [x] Add `Country` and `ArticleCountry` mapping to handle geographical collaboration networks.
+[L014, S2]   - [x] Add `CitedReference` and `ArticleCitation` mapping to handle co-citation and bibliographic coupling networks.
+[L015, S2]   - [x] Add `Journal` model and prepare transition for core `Article` journal string.
 [L016, S0] - **Validations**: Ensure SQLAlchemy models possess correct ForeignKeys, unique constraints, and indices for graph traversal performance.
 [L017, S0] 
 [L018, S0] ## [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
