@@ -68,6 +68,11 @@
 - [x] [REQ-039] Backend Injection DB Resilience
 - [x] [REQ-037] Frontend Hook State Fractality (.bib Validation)
 
+## EPIC 14: REFERENCES TABLE RESIZING & COUNT FIX
+- [x] Story 13.0: Roadmap & Planning Initialization
+- [ ] [REQ-040] Synchronize and Clarify Imported vs. Displayed References Count
+- [ ] [REQ-041] Resizable Table Columns (State Fractality & View Wiring)
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
@@ -81,3 +86,4 @@
 - [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
 - [Roadmap 11: References UI Refinement & Backend Bugfix](roadmap_11_references_ui_and_bugfixes.md)
 - [Roadmap 12: Bib Only Ingestion & Injection Resilience](roadmap_12_bib_only_and_injection_fix.md)
+- [Roadmap 13: References Table Resizing & Count Fix](roadmap_13_references_table_resizing_and_count_fix.md)
