@@ -5,16 +5,66 @@ import bibtexparser
 from .schemas import ParsedReference
 
 
+def _extract_bib_int(entry, key: str) -> Optional[int]:
+    val = _extract_bib_field(entry, key)
+    if val:
+        match = re.search(r"\b(\d+)\b", str(val))
+        if match:
+            try:
+                return int(match.group(1))
+            except ValueError:
+                return None
+    return None
+
+
 def _extract_bib_field(entry, key: str) -> Optional[str]:
-    target_keys = {key.lower()}
+    target_keys = {
+        key.lower(),
+        key.lower().replace("_", "-"),
+        key.lower().replace("-", "_"),
+    }
     if key.lower() == "journal":
         target_keys.update(
             {"journaltitle", "booktitle", "series", "journal-iso"}
         )
     elif key.lower() == "title":
-        target_keys.update({"booktitle"})
+        target_keys.update({"booktitle", "ti"})
     elif key.lower() == "year":
         target_keys.update({"date", "py"})
+    elif key.lower() == "abstract":
+        target_keys.update({"ab"})
+    elif key.lower() == "publisher":
+        target_keys.update({"pu"})
+    elif key.lower() == "language":
+        target_keys.update({"la"})
+    elif key.lower() == "keywords":
+        target_keys.update(
+            {"keyword", "kw", "author_keywords", "author-keywords", "de"}
+        )
+    elif key.lower() == "research_areas":
+        target_keys.update({"research-areas", "sc"})
+    elif key.lower() == "web_of_science_categories":
+        target_keys.update({"web-of-science-categories", "wc"})
+    elif key.lower() == "funding_text":
+        target_keys.update({"funding-text", "funding", "fx"})
+    elif key.lower() == "journal_iso":
+        target_keys.update({"journal-iso", "ji", "j9"})
+    elif key.lower() == "oa_status":
+        target_keys.update({"oa", "oa-status", "open_access"})
+    elif key.lower() == "issn":
+        target_keys.update({"sn", "eissn"})
+    elif key.lower() == "volume":
+        target_keys.update({"vl"})
+    elif key.lower() == "issue":
+        target_keys.update({"number", "is"})
+    elif key.lower() == "pages":
+        target_keys.update({"page", "bp", "ar"})
+    elif key.lower() in ("times_cited", "times-cited"):
+        target_keys.update({"tc", "times-cited", "times_cited"})
+    elif key.lower() in ("cited_references_count", "cited-references-count"):
+        target_keys.update(
+            {"cited-references", "cited_references", "nr", "cr"}
+        )
 
     val = None
     if isinstance(entry, dict):
@@ -223,6 +273,25 @@ def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
             title=_extract_bib_field(entry, "title"),
             journal=_extract_bib_field(entry, "journal"),
             doi=_extract_bib_field(entry, "doi"),
+            abstract=_extract_bib_field(entry, "abstract"),
+            publisher=_extract_bib_field(entry, "publisher"),
+            language=_extract_bib_field(entry, "language"),
+            keywords=_extract_bib_field(entry, "keywords"),
+            research_areas=_extract_bib_field(entry, "research_areas"),
+            web_of_science_categories=_extract_bib_field(
+                entry, "web_of_science_categories"
+            ),
+            funding_text=_extract_bib_field(entry, "funding_text"),
+            journal_iso=_extract_bib_field(entry, "journal_iso"),
+            oa_status=_extract_bib_field(entry, "oa_status"),
+            issn=_extract_bib_field(entry, "issn"),
+            volume=_extract_bib_field(entry, "volume"),
+            issue=_extract_bib_field(entry, "issue"),
+            pages=_extract_bib_field(entry, "pages"),
+            times_cited=_extract_bib_int(entry, "times_cited"),
+            cited_references_count=_extract_bib_int(
+                entry, "cited_references_count"
+            ),
             upload_datetime=now,
         )
         for entry in entries

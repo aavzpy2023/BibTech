@@ -114,3 +114,49 @@ def _deprecated_test_parse_wos_ris_multiple_papers_with_varied_tags():
     assert refs[2].title == "Third Paper Title"
     assert refs[2].journal == "Physical Review B"
     assert refs[2].year == "2023"
+
+
+def test_parse_bib_content_extended_metadata():
+    bib_content = (
+        "@article{vinajera2026,\n"
+        "  author = {Vinajera, Andrey},\n"
+        "  title = {Deep Learning in Bibliometrics},\n"
+        "  journal = {Scientometrics},\n"
+        "  year = {2026},\n"
+        "  doi = {10.1007/s11192-026-0001-x},\n"
+        "  abstract = {A comprehensive analysis of bibliometric graphs.},\n"
+        "  publisher = {Springer},\n"
+        "  language = {English},\n"
+        "  keywords = {deep learning; transformers; bibliometrics},\n"
+        "  research_areas = {Computer Science},\n"
+        "  web_of_science_categories = {Computer Science, AI},\n"
+        "  funding_text = {National Science Foundation Grant 12345},\n"
+        "  journal_iso = {Scientometrics},\n"
+        "  oa_status = {Gold},\n"
+        "  issn = {0138-9130},\n"
+        "  volume = {130},\n"
+        "  number = {2},\n"
+        "  pages = {101-125},\n"
+        "  times_cited = {42},\n"
+        "  cited_references_count = {18}\n"
+        "}"
+    )
+    refs = parse_bibliography_content(bib_content, ".bib")
+    assert len(refs) == 1
+    ref = refs[0]
+    assert ref.title == "Deep Learning in Bibliometrics"
+    assert ref.abstract == "A comprehensive analysis of bibliometric graphs."
+    assert ref.publisher == "Springer"
+    assert ref.language == "English"
+    assert ref.keywords == "deep learning; transformers; bibliometrics"
+    assert ref.research_areas == "Computer Science"
+    assert ref.web_of_science_categories == "Computer Science, AI"
+    assert ref.funding_text == "National Science Foundation Grant 12345"
+    assert ref.journal_iso == "Scientometrics"
+    assert ref.oa_status == "Gold"
+    assert ref.issn == "0138-9130"
+    assert ref.volume == "130"
+    assert ref.issue == "2"
+    assert ref.pages == "101-125"
+    assert ref.times_cited == 42
+    assert ref.cited_references_count == 18

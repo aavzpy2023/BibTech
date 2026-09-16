@@ -41,13 +41,14 @@ complexity_aggregate: "HARD"
   - [ID-15.3.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md and check - [x] for Story 15.3. 2. Append > Files touched: [list of modified/read files] under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-044]]. Type: Task.
   > Files touched: backend/src/bibliography/schemas.py, backend/tests/bibliography/test_schemas.py, leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md, leai_docs/planning/global_backlog.md
 
-- [ ] Story 15.4: Parser Core Logic (Micro-Surgery) | [MoSCoW: MUST] | [Complexity: MEDIUM]
+- [x] Story 15.4: Parser Core Logic (Micro-Surgery) | [MoSCoW: MUST] | [Complexity: MEDIUM]
   Business Requirement: Update the parser service to extract the new metadata fields from .bib files and map them to the Boundary Marshal. (<-- REQ-044)
   Story Context Radius: {"backend/src/bibliography/parser_service.py": ["*"], "backend/src/bibliography/schemas.py": ["ParsedReference"]}
   Layered Technical Breakdown:
   - [ID-15.4.1] [TESTING/TDE]: [1. Arrange: Mock a .bib string containing fields like Abstract, Publisher, Keywords, DOI, and Times-Cited. 2. Act: Call parse_bibliography_content. 3. Assert: Verify the returned ParsedReference objects contain the correctly mapped extended fields]. Type: Task.
   - [ID-15.4.2] [CORE/LOGIC]: [1. Open backend/src/bibliography/parser_service.py. 2. Update _parse_bibtex_entries to extract keys like abstract, publisher, keywords, doi, issn, times-cited using _extract_bib_field. 3. Map these extracted values to the new ParsedReference fields during instantiation]. Type: Task.
   - [ID-15.4.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md and check - [x] for Story 15.4. 2. Append > Files touched: [list of modified/read files] under the story. 3. Open leai_docs/planning/global_backlog.md and check - [x] for [REQ-044]]. Type: Task.
+  > Files touched: backend/src/bibliography/parser_service.py, backend/tests/bibliography/test_parser.py, leai_docs/planning/roadmap_15_bibliographic_metadata_and_bulk_injection.md, leai_docs/planning/global_backlog.md
 
 - [ ] Story 15.5: Bulk Injection Refactoring (Performance & Concurrency) | [MoSCoW: MUST] | [Complexity: HARD]
   Business Requirement: Refactor the injection service to use bulk inserts instead of 1-by-1 insertion to drastically improve performance and prevent DB locking. (<-- REQ-045)
