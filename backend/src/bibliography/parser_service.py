@@ -3,6 +3,7 @@ from typing import List, Optional
 import re
 import bibtexparser
 from .schemas import ParsedReference
+from .wos_parser import parse_wos_authors_detail
 
 
 def _extract_bib_int(entry, key: str) -> Optional[int]:
@@ -291,6 +292,9 @@ def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
             times_cited=_extract_bib_int(entry, "times_cited"),
             cited_references_count=_extract_bib_int(
                 entry, "cited_references_count"
+            ),
+            authors_detail=parse_wos_authors_detail(
+                entry if isinstance(entry, dict) else getattr(entry, "fields_dict", {})
             ),
             upload_datetime=now,
         )
