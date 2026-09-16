@@ -42,6 +42,10 @@ def _extract_bib_field(entry, key: str) -> Optional[str]:
         target_keys.update(
             {"keyword", "kw", "author_keywords", "author-keywords", "de"}
         )
+    elif key.lower() == "keywords_plus":
+        target_keys.update(
+            {"keywords-plus", "keywords_plus", "keywordsplus", "id"}
+        )
     elif key.lower() == "research_areas":
         target_keys.update({"research-areas", "sc"})
     elif key.lower() == "web_of_science_categories":
@@ -278,6 +282,7 @@ def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
             publisher=_extract_bib_field(entry, "publisher"),
             language=_extract_bib_field(entry, "language"),
             keywords=_extract_bib_field(entry, "keywords"),
+            keywords_plus=_extract_bib_field(entry, "keywords_plus"),
             research_areas=_extract_bib_field(entry, "research_areas"),
             web_of_science_categories=_extract_bib_field(
                 entry, "web_of_science_categories"

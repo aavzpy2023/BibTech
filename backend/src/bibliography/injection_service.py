@@ -7,7 +7,13 @@ from sqlalchemy.exc import OperationalError
 try:
     from .schemas import ParsedReference
     from ..database.models.core import Article, Project, ProjectArticle
-    from ..database.models.identity import Author, AuthorArticle
+    from ..database.models.identity import (
+        Author,
+        AuthorArticle,
+        Affiliation,
+        Keyword,
+        KeywordArticle,
+    )
 except (ImportError, ValueError):
     from backend.src.bibliography.schemas import ParsedReference
     from backend.src.database.models.core import (
@@ -18,6 +24,9 @@ except (ImportError, ValueError):
     from backend.src.database.models.identity import (
         Author,
         AuthorArticle,
+        Affiliation,
+        Keyword,
+        KeywordArticle,
     )
     from backend.src.bibliography.schemas import ParsedReference
     from backend.src.database.models.core import (
@@ -190,16 +199,70 @@ def _bulk_inject_references(
         )
         db.execute(stmt_pa)
 
+    # 1. Bulk inject affiliations from authors_detail
+    all_affil_strings = set()
+    for ref in refs:
+        if getattr(ref, "authors_detail", None):
+            for ad in ref.authors_detail:
+                aff = ad.get("affiliation")
+                if aff and str(aff).strip():
+                    all_affil_strings.add(str(aff).strip()[:255])
+
+    existing_affils = {}
+    if all_affil_strings:
+        for aff in (
+            db.query(Affiliation)
+            .filter(Affiliation.institution.in_(all_affil_strings))
+            .all()
+        ):
+            existing_affils[aff.institution] = aff.id
+        
+        new_affils = [
+            {"institution": inst}
+            for inst in all_affil_strings
+            if inst not in existing_affils
+        ]
+        if new_affils:
+            stmt_aff = _get_insert_stmt(Affiliation, db).values(new_affils)
+            db.execute(stmt_aff)
+            for aff in (
+                db.query(Affiliation)
+                .filter(Affiliation.institution.in_(all_affil_strings))
+                .all()
+            ):
+                existing_affils[aff.institution] = aff.id
+
+    # 2. Extract author metadata map (ORCID, email, affiliation_id)
+    author_info_map = {}
     all_authors_raw = set()
     for ref in refs:
-        if ref.author:
-            for a_name in re.split(
-                r"\s+and\s+", str(ref.author), flags=re.I
-            ):
+        if getattr(ref, "authors_detail", None):
+            for ad in ref.authors_detail:
+                name = (ad.get("name") or "").strip()[:255]
+                if name:
+                    all_authors_raw.add(name)
+                    aff_str = (ad.get("affiliation") or "").strip()[:255]
+                    aff_id = existing_affils.get(aff_str)
+                    author_info_map[name] = {
+                        "name": name,
+                        "orcid": (ad.get("orcid") or "")[:50] or None,
+                        "email": (ad.get("email") or "")[:255] or None,
+                        "affiliation_id": aff_id,
+                    }
+        elif ref.author:
+            for a_name in re.split(r"\s+and\s+", str(ref.author), flags=re.I):
                 clean = a_name.strip()[:255]
                 if clean:
                     all_authors_raw.add(clean)
+                    if clean not in author_info_map:
+                        author_info_map[clean] = {
+                            "name": clean,
+                            "orcid": None,
+                            "email": None,
+                            "affiliation_id": None,
+                        }
 
+    # 3. Bulk inject authors
     if all_authors_raw:
         existing_authors = {
             auth.name: auth
@@ -208,7 +271,7 @@ def _bulk_inject_references(
             .all()
         }
         new_authors = [
-            {"name": name}
+            author_info_map.get(name, {"name": name})
             for name in all_authors_raw
             if name not in existing_authors
         ]
@@ -222,6 +285,7 @@ def _bulk_inject_references(
                 .all()
             }
 
+        # 4. Link authors to articles with corresponding flag
         author_articles_data = []
         seen_auth_links = set()
         for ref in refs:
@@ -230,15 +294,27 @@ def _bulk_inject_references(
             art = existing_by_doi.get(doi_val) if doi_val else None
             if not art:
                 art = existing_by_title.get(title_val)
-            if not art or not ref.author:
+            if not art:
                 continue
 
-            auth_list = [
-                a.strip()[:255]
-                for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
-                if a.strip()
-            ]
-            for idx, a_name in enumerate(auth_list):
+            author_items = []
+            if getattr(ref, "authors_detail", None):
+                author_items = [
+                    (
+                        (ad.get("name") or "").strip()[:255],
+                        bool(ad.get("is_corresponding", False)),
+                    )
+                    for ad in ref.authors_detail
+                    if (ad.get("name") or "").strip()
+                ]
+            elif ref.author:
+                author_items = [
+                    (a.strip()[:255], False)
+                    for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
+                    if a.strip()
+                ]
+
+            for idx, (a_name, is_corr) in enumerate(author_items):
                 auth_obj = existing_authors.get(a_name)
                 if (
                     auth_obj
@@ -249,7 +325,7 @@ def _bulk_inject_references(
                             "author_id": auth_obj.id,
                             "article_id": art.id,
                             "author_order": idx + 1,
-                            "is_corresponding": False,
+                            "is_corresponding": is_corr,
                         }
                     )
                     seen_auth_links.add((auth_obj.id, art.id))
@@ -259,6 +335,76 @@ def _bulk_inject_references(
                 author_articles_data
             )
             db.execute(stmt_aa)
+
+    # 5. Bulk inject keywords (Author Keywords and Keywords-Plus)
+    all_keywords_to_process = set()
+    for ref in refs:
+        if ref.keywords:
+            for kw in str(ref.keywords).split(";"):
+                k_clean = kw.strip()[:255]
+                if k_clean:
+                    all_keywords_to_process.add((k_clean, "author"))
+        if getattr(ref, "keywords_plus", None):
+            for kw in str(ref.keywords_plus).split(";"):
+                k_clean = kw.strip()[:255]
+                if k_clean:
+                    all_keywords_to_process.add((k_clean, "plus"))
+
+    if all_keywords_to_process:
+        kw_names = {k[0] for k in all_keywords_to_process}
+        existing_kws = {
+            (k.name, k.type): k.id
+            for k in db.query(Keyword).filter(Keyword.name.in_(kw_names)).all()
+        }
+        new_kws = [
+            {"name": name, "type": k_type}
+            for name, k_type in all_keywords_to_process
+            if (name, k_type) not in existing_kws
+        ]
+        if new_kws:
+            stmt_kw = _get_insert_stmt(Keyword, db).values(new_kws)
+            db.execute(stmt_kw)
+            existing_kws = {
+                (k.name, k.type): k.id
+                for k in db.query(Keyword).filter(Keyword.name.in_(kw_names)).all()
+            }
+
+        keyword_articles_data = []
+        seen_kw_links = set()
+        for ref in refs:
+            doi_val = (ref.doi or "").strip() or None
+            title_val = (ref.title or "").strip() or "Untitled"
+            art = existing_by_doi.get(doi_val) if doi_val else None
+            if not art:
+                art = existing_by_title.get(title_val)
+            if not art:
+                continue
+
+            ref_kws = []
+            if ref.keywords:
+                for kw in str(ref.keywords).split(";"):
+                    k_clean = kw.strip()[:255]
+                    if k_clean:
+                        ref_kws.append((k_clean, "author"))
+            if getattr(ref, "keywords_plus", None):
+                for kw in str(ref.keywords_plus).split(";"):
+                    k_clean = kw.strip()[:255]
+                    if k_clean:
+                        ref_kws.append((k_clean, "plus"))
+
+            for k_tuple in ref_kws:
+                kw_id = existing_kws.get(k_tuple)
+                if kw_id and (kw_id, art.id) not in seen_kw_links:
+                    keyword_articles_data.append(
+                        {"keyword_id": kw_id, "article_id": art.id}
+                    )
+                    seen_kw_links.add((kw_id, art.id))
+
+        if keyword_articles_data:
+            stmt_ka = _get_insert_stmt(KeywordArticle, db).values(
+                keyword_articles_data
+            )
+            db.execute(stmt_ka)
 
     db.commit()
     return len(linked_article_ids)

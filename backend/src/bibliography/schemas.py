@@ -83,6 +83,7 @@ class ParsedReference(BaseModel):
     publisher: Optional[str] = None
     language: Optional[str] = None
     keywords: Optional[str] = None
+    keywords_plus: Optional[str] = None
     research_areas: Optional[str] = None
     web_of_science_categories: Optional[str] = None
     funding_text: Optional[str] = None
