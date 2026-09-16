@@ -1,12 +1,49 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-16 09:47:18
+Date: 2026-09-16 10:00:15
 AST Mode: True
 Line Numbers: False
-Modules: ReferencesDataTable.jsx, useTableResize.js, useTableResize.test.js
-Processed Files: 3
+Modules: schemas.py, core.py, ReferencesDataTable.jsx, ReferencesDataTable.test.jsx
+Processed Files: 4
 ===========================
 
+
+
+// --- backend/src/bibliography/schemas.py ---
+
+from datetime import datetime
+from typing import Optional, List, Dict, Any, AsyncGenerator
+from pydantic import BaseModel, ConfigDict, Field
+
+class ZipDownloadRequest(BaseModel):
+    """..."""
+
+class BatchDownloadRequest(BaseModel):
+    """..."""
+
+class LocalBatchDownloadRequest(BaseModel):
+    """..."""
+
+class ParsedReference(BaseModel):
+    """..."""
+
+
+// --- backend/src/database/models/core.py ---
+
+"""Core relational database models for projects and articles."""
+from datetime import datetime, timezone
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy.orm import relationship
+from ..session import Base
+
+class Project(Base):
+    """..."""
+
+class Article(Base):
+    """..."""
+
+class ProjectArticle(Base):
+    """..."""
 
 
 // --- frontend/src/components/references/ReferencesDataTable.jsx ---
@@ -14,16 +51,7 @@ Processed Files: 3
 import React, { useState } from 'react';
 import { useReferencesTable } from '../../hooks/useReferencesTable';
 import { useTableResize } from '../../hooks/useTableResize';
-
-function formatShortAuthor(authorStr) {
-  if (!authorStr || authorStr === 'N/A') return 'N/A';
-  const first = authorStr.trim().split(/\s+and\s+|;\s*/i)[0].trim();
-  if (!first) return 'N/A';
-  const surname = first.includes(',')
-    ? first.split(',')[0].trim()
-    : (first.split(/\s+/).pop() || first);
-  return `${surname} ...`;
-}
+import Modal from '../Modal';
 
 const styles = {
   controls: {
@@ -78,6 +106,7 @@ const styles = {
   th: {
     backgroundColor: '#161b22',
     borderBottom: '1px solid #30363d',
+    borderRight: '1px solid #30363d',
     padding: '10px 14px',
     fontWeight: '600',
     color: '#f0f6fc',
@@ -90,9 +119,30 @@ const styles = {
     cursor: 'pointer',
     transition: 'background-color 0.15s ease',
   },
+  selectedTr: {
+    backgroundColor: '#1c2128',
+    outline: '1px solid #388bfd',
+  },
+  detailsBtn: {
+    padding: '8px 14px',
+    backgroundColor: '#21262d',
+    color: '#f0f6fc',
+    border: '1px solid #30363d',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s ease',
+  },
+  detailsBtnDisabled: {
+    opacity: 0.45,
+    cursor: 'not-allowed',
+  },
   td: {
     padding: '10px 14px',
     color: '#f0f6fc',
+    borderRight: '1px solid #30363d',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -127,8 +177,8 @@ const styles = {
 };
 
 export function ReferencesDataTable({ data = [] }) {
-  const [hoveredRow, setHoveredRow] = useState(null);
-  const [coords, setCoords] = useState({ x: 0, y: 0 });
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const {
     searchQuery,
@@ -151,25 +201,29 @@ export function ReferencesDataTable({ data = [] }) {
     );
   }
 
-  const handleMouseMove = (e, row) => {
-    setHoveredRow(row);
-    setCoords({ x: e.clientX + 16, y: e.clientY + 16 });
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredRow(null);
-  };
-
   return (
     <div style={styles.container}>
       <div style={styles.controls}>
-        <input
-          type="text"
-          placeholder="Search by title or author..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={styles.searchInput}
-        />
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="Search by title or author..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={styles.searchInput}
+          />
+          <button
+            type="button"
+            style={{
+              ...styles.detailsBtn,
+              ...(!selectedRow ? styles.detailsBtnDisabled : {}),
+            }}
+            disabled={!selectedRow}
+            onClick={() => setIsDetailsOpen(true)}
+          >
+            View Details
+          </button>
+        </div>
         <span style={{ fontSize: '13px', color: '#8b949e' }}>
           Total References: {data.length}
         </span>
@@ -220,18 +274,28 @@ export function ReferencesDataTable({ data = [] }) {
           </tr>
         </thead>
         <tbody>
-          {paginatedData.map((row, index) => (
-            <tr
-              key={row.id || index}
-              style={styles.tr}
-              onMouseMove={(e) => handleMouseMove(e, row)}
-              onMouseLeave={handleMouseLeave}
-            >
+          {paginatedData.map((row, index) => {
+            const isSelected = selectedRow?.id != null
+              ? selectedRow.id === row.id
+              : selectedRow === row;
+            return (
+              <tr
+                key={row.id || index}
+                style={{
+                  ...styles.tr,
+                  ...(isSelected ? styles.selectedTr : {}),
+                }}
+                onClick={() => setSelectedRow(row)}
+                onDoubleClick={() => {
+                  setSelectedRow(row);
+                  setIsDetailsOpen(true);
+                }}
+              >
               <td style={styles.td} title={row.title || 'N/A'}>
                 {row.title || 'N/A'}
               </td>
               <td style={styles.td} title={row.author || 'N/A'}>
-                {formatShortAuthor(row.author)}
+                {row.author || 'N/A'}
               </td>
               <td style={styles.td} title={String(row.year || 'N/A')}>
                 {row.year || 'N/A'}
@@ -240,7 +304,8 @@ export function ReferencesDataTable({ data = [] }) {
                 {row.journal || 'N/A'}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
 
@@ -266,39 +331,109 @@ export function ReferencesDataTable({ data = [] }) {
         </div>
       )}
 
-      {hoveredRow && (
-        <div
-          style={{
-            ...styles.popover,
-            top: `${coords.y}px`,
-            left: `${coords.x}px`,
-          }}
-        >
-          <div style={{ fontWeight: '600', color: '#58a6ff', marginBottom: '6px' }}>
-            {hoveredRow.title || 'Untitled'}
-          </div>
-          <div style={{ marginBottom: '6px', lineHeight: '1.4' }}>
-            <span style={{ color: '#8b949e', fontWeight: '500' }}>Authors: </span>
-            <span style={{ color: '#f0f6fc' }}>{hoveredRow.author || 'N/A'}</span>
-          </div>
-          <div style={{ display: 'flex', gap: '16px', marginBottom: '4px' }}>
+      <Modal
+        isOpen={isDetailsOpen && !!selectedRow}
+        onClose={() => setIsDetailsOpen(false)}
+        title="Reference Details"
+      >
+        {selectedRow && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
-              <span style={{ color: '#8b949e' }}>Year: </span>
-              <span style={{ color: '#f0f6fc' }}>{hoveredRow.year || 'N/A'}</span>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: '#8b949e',
+                  marginBottom: '4px',
+                }}
+              >
+                Title
+              </div>
+              <div
+                style={{
+                  fontSize: '14px',
+                  color: '#f0f6fc',
+                  fontWeight: '500',
+                  lineHeight: '1.4',
+                }}
+              >
+                {selectedRow.title || 'N/A'}
+              </div>
             </div>
             <div>
-              <span style={{ color: '#8b949e' }}>Journal: </span>
-              <span style={{ color: '#f0f6fc' }}>{hoveredRow.journal || 'N/A'}</span>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: '#8b949e',
+                  marginBottom: '4px',
+                }}
+              >
+                Authors
+              </div>
+              <div
+                style={{
+                  fontSize: '13px',
+                  color: '#c9d1d9',
+                  lineHeight: '1.4',
+                }}
+              >
+                {selectedRow.author || 'N/A'}
+              </div>
             </div>
+            <div style={{ display: 'flex', gap: '24px' }}>
+              <div>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#8b949e',
+                    marginBottom: '4px',
+                  }}
+                >
+                  Year
+                </div>
+                <div style={{ fontSize: '13px', color: '#c9d1d9' }}>
+                  {selectedRow.year || 'N/A'}
+                </div>
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#8b949e',
+                    marginBottom: '4px',
+                  }}
+                >
+                  Journal
+                </div>
+                <div style={{ fontSize: '13px', color: '#c9d1d9' }}>
+                  {selectedRow.journal || 'N/A'}
+                </div>
+              </div>
+            </div>
+            {selectedRow.doi && (
+              <div>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#8b949e',
+                    marginBottom: '4px',
+                  }}
+                >
+                  DOI
+                </div>
+                <div
+                  style={{
+                    fontSize: '13px',
+                    color: '#58a6ff',
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  {selectedRow.doi}
+                </div>
+              </div>
+            )}
           </div>
-          {hoveredRow.doi && (
-            <div>
-              <span style={{ color: '#8b949e' }}>DOI: </span>
-              <span style={{ color: '#79c0ff' }}>{hoveredRow.doi}</span>
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }
@@ -306,146 +441,86 @@ export function ReferencesDataTable({ data = [] }) {
 export default ReferencesDataTable;
 
 
-// --- frontend/src/hooks/useTableResize.js ---
 
-import { useState, useEffect, useCallback } from 'react';
+// --- frontend/src/components/references/ReferencesDataTable.test.jsx ---
 
-export function useTableResize() {
-  const [colWidths, setColWidths] = useState({
-    title: 45,
-    author: 20,
-    year: 10,
-    journal: 25,
-  });
+import React from 'react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { ReferencesDataTable } from './ReferencesDataTable';
 
-  const [isResizing, setIsResizing] = useState(null);
-
-  const handleMouseDown = useCallback((e, colName) => {
-    // Prevenimos la selección de texto u otros comportamientos default al arrastrar
-    if (e.preventDefault) e.preventDefault();
-    
-    setIsResizing({
-      colName,
-      startX: e.clientX,
-      startWidth: colWidths[colName],
-    });
-  }, [colWidths]);
-
-  const handleMouseMove = useCallback((e) => {
-    if (!isResizing) return;
-
-    const { colName, startX, startWidth } = isResizing;
-    const deltaX = e.clientX - startX;
-    
-    // Calculamos el desplazamiento como porcentaje del ancho de la ventana
-    const containerWidth = window.innerWidth;
-    const deltaPct = (deltaX / containerWidth) * 100;
-    
-    let newWidth = startWidth + deltaPct;
-    
-    // Constraint mínimo absoluto de 5%
-    if (newWidth < 5) newWidth = 5;
-
-    setColWidths((prev) => ({
-      ...prev,
-      [colName]: newWidth,
+describe('ReferencesDataTable Dumb View State Wiring', () => {
+  it('renders search, paginates dynamically, and updates DOM rows', () => {
+    // Arrange: Create 20 mock objects (pageSize is hardcoded to 13)
+    const mockData = Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      title: `Reference ${i + 1}`,
+      author: `Author ${i + 1}`,
+      year: '2026',
+      journal: 'Science'
     }));
-  }, [isResizing]);
 
-  const handleMouseUp = useCallback(() => {
-    setIsResizing(null);
-  }, []);
+    render(<ReferencesDataTable data={mockData} />);
 
-  useEffect(() => {
-    if (isResizing) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing, handleMouseMove, handleMouseUp]);
+    // Assert 1: Initial page state shows strictly 13 data rows (+1 header)
+    const initialRows = screen.getAllByRole('row');
+    expect(initialRows).toHaveLength(14); // 13 + 1
+    expect(screen.getByText(/Page 1 of 2/i)).toBeDefined();
 
-  return {
-    colWidths,
-    handleMouseDown,
-  };
-}
-
-export default useTableResize;
-
-
-// --- frontend/src/hooks/useTableResize.test.js ---
-
-import { renderHook, act } from '@testing-library/react';
-import { useTableResize } from './useTableResize';
-
-describe('useTableResize', () => {
-  beforeEach(() => {
-    // Definimos el innerWidth del window a 1000px para que el cálculo
-    // del porcentaje de desplazamiento (deltaPct) sea predecible: 
-    // 10px de movimiento = 1%
-    Object.defineProperty(window, 'innerWidth', {
-      writable: true,
-      configurable: true,
-      value: 1000,
+    // Act: Click 'Next' to trigger state mutation via useReferencesTable
+    const nextBtn = screen.getByText('Next');
+    act(() => {
+      nextBtn.click();
     });
+
+    // Assert 2: Second page strictly shows 7 remaining rows (+1 header)
+    const nextRows = screen.getAllByRole('row');
+    expect(nextRows).toHaveLength(8); // 7 + 1
+    expect(screen.getByText(/Page 2 of 2/i)).toBeDefined();
   });
 
-  it('initializes with default column widths', () => {
-    const { result } = renderHook(() => useTableResize());
+  it('renders resizable column headers via useTableResize', () => {
+    const mockData = [{ id: 1, title: 'T', author: 'A', year: '26', journal: 'J' }];
+    const { container } = render(<ReferencesDataTable data={mockData} />);
     
-    expect(result.current.colWidths).toEqual({
-      title: 45,
-      author: 20,
-      year: 10,
-      journal: 25,
-    });
+    const headers = screen.getAllByRole('columnheader');
+    expect(headers).toHaveLength(4);
+    
+    expect(headers[0].style.width).toBe('45%');
+    expect(headers[1].style.width).toBe('20%');
+    expect(headers[2].style.width).toBe('10%');
+    expect(headers[3].style.width).toBe('25%');
+
+    const resizeHandlers = container.querySelectorAll('div[style*="col-resize"]');
+    expect(resizeHandlers).toHaveLength(4);
   });
 
-  it('updates width on mouse move when resizing is active', () => {
-    const { result } = renderHook(() => useTableResize());
+  it('selects a row on click and opens details modal with complete metadata', () => {
+    const mockData = [
+      {
+        id: 101,
+        title: 'Quantum Computing Deep Dive',
+        author: 'Alice Smith and Bob Jones',
+        year: '2025',
+        journal: 'Nature Physics',
+        doi: '10.1038/s41567-025-001',
+      },
+    ];
 
-    act(() => {
-      // Simulamos mousedown en la columna 'title'
-      result.current.handleMouseDown({ clientX: 100, preventDefault: vi.fn() }, 'title');
-    });
+    render(<ReferencesDataTable data={mockData} />);
 
-    act(() => {
-      // Simulamos movimiento de 100px a la derecha (equivalente a 10%)
-      // title: 45 + 10 = 55%
-      const moveEvent = new MouseEvent('mousemove', { clientX: 200 });
-      window.dispatchEvent(moveEvent);
-    });
+    const detailsBtn = screen.getByRole('button', { name: /view details/i });
+    expect(detailsBtn.disabled).toBe(true);
 
-    expect(result.current.colWidths.title).toBe(55);
+    const rowCell = screen.getByText('Quantum Computing Deep Dive');
+    fireEvent.click(rowCell);
 
-    act(() => {
-      // Finalizamos el arrastre
-      const upEvent = new MouseEvent('mouseup');
-      window.dispatchEvent(upEvent);
-    });
-  });
+    expect(detailsBtn.disabled).toBe(false);
 
-  it('respects minimum width constraints of 5%', () => {
-    const { result } = renderHook(() => useTableResize());
+    fireEvent.click(detailsBtn);
 
-    act(() => {
-      result.current.handleMouseDown({ clientX: 500, preventDefault: vi.fn() }, 'year');
-    });
-
-    act(() => {
-      // Movimiento extremo a la izquierda de 400px = -40%
-      // year inicial es 10%. 10 - 40 = -30%, debe limitarse a 5%
-      const moveEvent = new MouseEvent('mousemove', { clientX: 100 });
-      window.dispatchEvent(moveEvent);
-    });
-
-    expect(result.current.colWidths.year).toBe(5);
-
-    act(() => {
-      window.dispatchEvent(new MouseEvent('mouseup'));
-    });
+    expect(screen.getByText('Reference Details')).toBeDefined();
+    expect(screen.getByText('Alice Smith and Bob Jones')).toBeDefined();
+    expect(screen.getByText('10.1038/s41567-025-001')).toBeDefined();
   });
 });

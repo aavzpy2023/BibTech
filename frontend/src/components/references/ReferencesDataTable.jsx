@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { useReferencesTable } from '../../hooks/useReferencesTable';
 import { useTableResize } from '../../hooks/useTableResize';
+import Modal from '../Modal';
+
+function getDoiUrl(doi) {
+  if (!doi) return '';
+  const clean = String(doi).trim();
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    return clean;
+  }
+  return `https://doi.org/${clean.replace(/^doi:\s*/i, '')}`;
+}
 
 const styles = {
   controls: {
@@ -68,6 +78,63 @@ const styles = {
     cursor: 'pointer',
     transition: 'background-color 0.15s ease',
   },
+  selectedTr: {
+    backgroundColor: '#1c2128',
+    outline: '1px solid #388bfd',
+  },
+  detailsBtn: {
+    padding: '8px 14px',
+    backgroundColor: '#21262d',
+    color: '#f0f6fc',
+    border: '1px solid #30363d',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s ease',
+  },
+  detailsBtnDisabled: {
+    opacity: 0.45,
+    cursor: 'not-allowed',
+  },
+  modalGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gap: '14px',
+  },
+  modalFieldGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+  },
+  modalLabel: {
+    fontSize: '12px',
+    color: '#8b949e',
+    fontWeight: '500',
+  },
+  modalValue: {
+    fontSize: '13px',
+    color: '#c9d1d9',
+    lineHeight: '1.4',
+  },
+  doiLink: {
+    color: '#58a6ff',
+    textDecoration: 'none',
+    wordBreak: 'break-all',
+  },
+  abstractBox: {
+    backgroundColor: '#0d1117',
+    border: '1px solid #30363d',
+    borderRadius: '6px',
+    padding: '10px 12px',
+    fontSize: '13px',
+    color: '#c9d1d9',
+    lineHeight: '1.5',
+    maxHeight: '160px',
+    overflowY: 'auto',
+    whiteSpace: 'pre-wrap',
+  },
   td: {
     padding: '10px 14px',
     color: '#f0f6fc',
@@ -106,8 +173,8 @@ const styles = {
 };
 
 export function ReferencesDataTable({ data = [] }) {
-  const [hoveredRow, setHoveredRow] = useState(null);
-  const [coords, setCoords] = useState({ x: 0, y: 0 });
+  const [selectedRow, setSelectedRow] = useState(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const {
     searchQuery,
@@ -130,25 +197,29 @@ export function ReferencesDataTable({ data = [] }) {
     );
   }
 
-  const handleMouseMove = (e, row) => {
-    setHoveredRow(row);
-    setCoords({ x: e.clientX + 16, y: e.clientY + 16 });
-  };
-
-  const handleMouseLeave = () => {
-    setHoveredRow(null);
-  };
-
   return (
     <div style={styles.container}>
       <div style={styles.controls}>
-        <input
-          type="text"
-          placeholder="Search by title or author..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={styles.searchInput}
-        />
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="Search by title or author..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={styles.searchInput}
+          />
+          <button
+            type="button"
+            style={{
+              ...styles.detailsBtn,
+              ...(!selectedRow ? styles.detailsBtnDisabled : {}),
+            }}
+            disabled={!selectedRow}
+            onClick={() => setIsDetailsOpen(true)}
+          >
+            View Details
+          </button>
+        </div>
         <span style={{ fontSize: '13px', color: '#8b949e' }}>
           Total References: {data.length}
         </span>
@@ -199,13 +270,23 @@ export function ReferencesDataTable({ data = [] }) {
           </tr>
         </thead>
         <tbody>
-          {paginatedData.map((row, index) => (
-            <tr
-              key={row.id || index}
-              style={styles.tr}
-              onMouseMove={(e) => handleMouseMove(e, row)}
-              onMouseLeave={handleMouseLeave}
-            >
+          {paginatedData.map((row, index) => {
+            const isSelected = selectedRow?.id != null
+              ? selectedRow.id === row.id
+              : selectedRow === row;
+            return (
+              <tr
+                key={row.id || index}
+                style={{
+                  ...styles.tr,
+                  ...(isSelected ? styles.selectedTr : {}),
+                }}
+                onClick={() => setSelectedRow(row)}
+                onDoubleClick={() => {
+                  setSelectedRow(row);
+                  setIsDetailsOpen(true);
+                }}
+              >
               <td style={styles.td} title={row.title || 'N/A'}>
                 {row.title || 'N/A'}
               </td>
@@ -219,7 +300,8 @@ export function ReferencesDataTable({ data = [] }) {
                 {row.journal || 'N/A'}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
 
@@ -245,39 +327,179 @@ export function ReferencesDataTable({ data = [] }) {
         </div>
       )}
 
-      {hoveredRow && (
-        <div
-          style={{
-            ...styles.popover,
-            top: `${coords.y}px`,
-            left: `${coords.x}px`,
-          }}
-        >
-          <div style={{ fontWeight: '600', color: '#58a6ff', marginBottom: '6px' }}>
-            {hoveredRow.title || 'Untitled'}
-          </div>
-          <div style={{ marginBottom: '6px', lineHeight: '1.4' }}>
-            <span style={{ color: '#8b949e', fontWeight: '500' }}>Authors: </span>
-            <span style={{ color: '#f0f6fc' }}>{hoveredRow.author || 'N/A'}</span>
-          </div>
-          <div style={{ display: 'flex', gap: '16px', marginBottom: '4px' }}>
-            <div>
-              <span style={{ color: '#8b949e' }}>Year: </span>
-              <span style={{ color: '#f0f6fc' }}>{hoveredRow.year || 'N/A'}</span>
+      <Modal
+        isOpen={isDetailsOpen && !!selectedRow}
+        onClose={() => setIsDetailsOpen(false)}
+        title="Reference Details"
+        maxWidth="600px"
+      >
+        {selectedRow && (() => {
+          const knownKeys = new Set([
+            'id', 'title', 'author', 'year', 'journal', 'booktitle',
+            'volume', 'issue', 'number', 'pages', 'publisher', 'doi',
+            'url', 'abstract', 'keywords', 'project_id', 'created_at',
+            'updated_at', 'raw_bibtex'
+          ]);
+
+          const extraEntries = Object.entries(selectedRow).filter(
+            ([key, val]) => (
+              !knownKeys.has(key) &&
+              val !== null &&
+              val !== undefined &&
+              val !== ''
+            )
+          );
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={styles.modalFieldGroup}>
+                <div style={styles.modalLabel}>Title</div>
+                <div
+                  style={{
+                    ...styles.modalValue,
+                    color: '#f0f6fc',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                  }}
+                >
+                  {selectedRow.title || 'N/A'}
+                </div>
+              </div>
+
+              <div style={styles.modalFieldGroup}>
+                <div style={styles.modalLabel}>Authors</div>
+                <div style={styles.modalValue}>
+                  {selectedRow.author || 'N/A'}
+                </div>
+              </div>
+
+              <div style={styles.modalGrid}>
+                <div style={styles.modalFieldGroup}>
+                  <div style={styles.modalLabel}>Year</div>
+                  <div style={styles.modalValue}>
+                    {selectedRow.year || 'N/A'}
+                  </div>
+                </div>
+
+                <div style={styles.modalFieldGroup}>
+                  <div style={styles.modalLabel}>Journal / Source</div>
+                  <div style={styles.modalValue}>
+                    {selectedRow.journal || selectedRow.booktitle || 'N/A'}
+                  </div>
+                </div>
+
+                {selectedRow.volume && (
+                  <div style={styles.modalFieldGroup}>
+                    <div style={styles.modalLabel}>Volume</div>
+                    <div style={styles.modalValue}>{selectedRow.volume}</div>
+                  </div>
+                )}
+
+                {(selectedRow.issue || selectedRow.number) && (
+                  <div style={styles.modalFieldGroup}>
+                    <div style={styles.modalLabel}>Issue / Number</div>
+                    <div style={styles.modalValue}>
+                      {selectedRow.issue || selectedRow.number}
+                    </div>
+                  </div>
+                )}
+
+                {selectedRow.pages && (
+                  <div style={styles.modalFieldGroup}>
+                    <div style={styles.modalLabel}>Pages</div>
+                    <div style={styles.modalValue}>{selectedRow.pages}</div>
+                  </div>
+                )}
+
+                {selectedRow.publisher && (
+                  <div style={styles.modalFieldGroup}>
+                    <div style={styles.modalLabel}>Publisher</div>
+                    <div style={styles.modalValue}>{selectedRow.publisher}</div>
+                  </div>
+                )}
+              </div>
+
+              {selectedRow.doi && (
+                <div style={styles.modalFieldGroup}>
+                  <div style={styles.modalLabel}>DOI (Digital Object Identifier)</div>
+                  <div>
+                    <a
+                      href={getDoiUrl(selectedRow.doi)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={styles.doiLink}
+                    >
+                      {selectedRow.doi} ↗
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.url && selectedRow.url !== selectedRow.doi && (
+                <div style={styles.modalFieldGroup}>
+                  <div style={styles.modalLabel}>External URL</div>
+                  <div>
+                    <a
+                      href={selectedRow.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={styles.doiLink}
+                    >
+                      {selectedRow.url} ↗
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.keywords && (
+                <div style={styles.modalFieldGroup}>
+                  <div style={styles.modalLabel}>Keywords</div>
+                  <div style={styles.modalValue}>
+                    {Array.isArray(selectedRow.keywords)
+                      ? selectedRow.keywords.join(', ')
+                      : String(selectedRow.keywords)}
+                  </div>
+                </div>
+              )}
+
+              {selectedRow.abstract && (
+                <div style={styles.modalFieldGroup}>
+                  <div style={styles.modalLabel}>Abstract</div>
+                  <div style={styles.abstractBox}>
+                    {selectedRow.abstract}
+                  </div>
+                </div>
+              )}
+
+              {extraEntries.length > 0 && (
+                <div style={{ marginTop: '6px' }}>
+                  <div
+                    style={{
+                      ...styles.modalLabel,
+                      fontWeight: '600',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    Additional Metadata
+                  </div>
+                  <div style={styles.modalGrid}>
+                    {extraEntries.map(([key, val]) => (
+                      <div key={key} style={styles.modalFieldGroup}>
+                        <div style={styles.modalLabel}>{key}</div>
+                        <div style={styles.modalValue}>
+                          {typeof val === 'object'
+                            ? JSON.stringify(val)
+                            : String(val)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            <div>
-              <span style={{ color: '#8b949e' }}>Journal: </span>
-              <span style={{ color: '#f0f6fc' }}>{hoveredRow.journal || 'N/A'}</span>
-            </div>
-          </div>
-          {hoveredRow.doi && (
-            <div>
-              <span style={{ color: '#8b949e' }}>DOI: </span>
-              <span style={{ color: '#79c0ff' }}>{hoveredRow.doi}</span>
-            </div>
-          )}
-        </div>
-      )}
+          );
+        })()}
+      </Modal>
     </div>
   );
 }

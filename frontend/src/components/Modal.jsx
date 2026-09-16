@@ -54,12 +54,24 @@ const styles = {
   },
 };
 
-export function Modal({ isOpen, onClose, title, description, titleColor = '#f0f6fc', children }) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  description,
+  titleColor = '#f0f6fc',
+  maxWidth = '450px',
+  children,
+}) {
   if (!isOpen) return null;
 
   return (
     <div style={styles.overlay} onClick={onClose} data-testid="modal-overlay">
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()} data-testid="modal-content">
+      <div
+        style={{ ...styles.modal, maxWidth }}
+        onClick={(e) => e.stopPropagation()}
+        data-testid="modal-content"
+      >
         <div style={styles.header}>
           <h3 style={{ ...styles.title, color: titleColor }}>{title}</h3>
           <button style={styles.closeBtn} onClick={onClose} aria-label="Close">✕</button>
