@@ -262,6 +262,120 @@ def _parse_ris_fallback(content: str) -> list:
     return entries
 
 
+def _parse_bib_authors_detail(entry) -> List[dict]:
+    src = {}
+    if isinstance(entry, dict):
+        src = entry
+    elif hasattr(entry, "fields_dict"):
+        src = {k: getattr(v, "value", str(v)) for k, v in entry.fields_dict.items()}
+    elif hasattr(entry, "fields"):
+        src = {getattr(f, "key", ""): getattr(f, "value", "") for f in entry.fields}
+
+    norm_entry = {str(k).lower(): v for k, v in src.items()}
+    
+    if "affiliation" not in norm_entry and "affiliations" in norm_entry:
+        norm_entry["affiliation"] = norm_entry["affiliations"]
+    if "author-email" not in norm_entry and "email" in norm_entry:
+        norm_entry["author-email"] = norm_entry["email"]
+    if "orcid-numbers" not in norm_entry and "orcid" in norm_entry:
+        norm_entry["orcid-numbers"] = norm_entry["orcid"]
+
+    details = parse_wos_authors_detail(norm_entry)
+    
+    affil_raw = _extract_bib_field(norm_entry, "affiliation")
+    email_raw = _extract_bib_field(norm_entry, "email") or _extract_bib_field(norm_entry, "author-email")
+    orcid_raw = _extract_bib_field(norm_entry, "orcid") or _extract_bib_field(norm_entry, "orcid-numbers")
+
+    if details:
+        if affil_raw and all(not d.get("affiliation") for d in details):
+            affils = [a.strip() for a in str(affil_raw).replace("\n", " ").split(";") if a.strip()]
+            if len(affils) == len(details):
+                for idx, d in enumerate(details):
+                    d["affiliation"] = affils[idx]
+            else:
+                for d in details:
+                    d["affiliation"] = affils[0] if len(affils) == 1 else " ; ".join(affils)
+                    
+        for d in details:
+            if d.get("affiliation") and not d.get("country"):
+                ext_parts = [p.strip() for p in d["affiliation"].split(",")]
+                if ext_parts:
+                    c_clean = re.sub(r"[0-9\-]", "", ext_parts[-1].rstrip(".")).strip()
+                    if "USA" in c_clean.upper():
+                        d["country"] = "USA"
+                    elif "CHINA" in c_clean.upper():
+                        d["country"] = "China"
+                    elif "UK" in c_clean.upper() or "ENGLAND" in c_clean.upper():
+                        d["country"] = "UK"
+                    elif c_clean:
+                        d["country"] = c_clean
+                        
+                    dept_kws = re.compile(
+                        r"\b(Dept|Department|Sch|School|Fac|Faculty|Lab|Laboratory|Ctr|Center|Centre|Div|Division)\b", 
+                        re.IGNORECASE
+                    )
+                    for p in ext_parts:
+                        if dept_kws.search(p):
+                            d["department"] = p
+                            break
+
+        if email_raw and all(not d.get("email") for d in details):
+            emails = [e.strip() for e in str(email_raw).split(",") if e.strip()]
+            if len(emails) == len(details):
+                for idx, d in enumerate(details):
+                    d["email"] = emails[idx]
+            elif emails:
+                corr = [d for d in details if d.get("is_corresponding")]
+                if corr:
+                    corr[0]["email"] = emails[0]
+                else:
+                    details[0]["email"] = emails[0]
+
+        if orcid_raw and all(not d.get("orcid") for d in details):
+            orcids = re.findall(r"([0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X])", str(orcid_raw), flags=re.IGNORECASE)
+            if len(orcids) == len(details):
+                for idx, d in enumerate(details):
+                    d["orcid"] = orcids[idx].upper()
+            elif len(orcids) == 1:
+                details[0]["orcid"] = orcids[0].upper()
+                
+    return details
+
+
+def _parse_bib_countries(entry) -> List[str]:
+    src = {}
+    if isinstance(entry, dict):
+        src = entry
+    elif hasattr(entry, "fields_dict"):
+        src = {k: getattr(v, "value", str(v)) for k, v in entry.fields_dict.items()}
+    elif hasattr(entry, "fields"):
+        src = {getattr(f, "key", ""): getattr(f, "value", "") for f in entry.fields}
+    
+    norm_entry = {str(k).lower(): v for k, v in src.items()}
+    if "affiliation" not in norm_entry and "affiliations" in norm_entry:
+        norm_entry["affiliation"] = norm_entry["affiliations"]
+        
+    c = parse_wos_countries(norm_entry)
+    if not c:
+        affil_raw = _extract_bib_field(norm_entry, "affiliation")
+        if affil_raw:
+            c_set = set()
+            for line in re.split(r";|\n", str(affil_raw)):
+                ext_parts = [p.strip() for p in line.split(",")]
+                if ext_parts:
+                    c_clean = re.sub(r"[0-9\-]", "", ext_parts[-1].rstrip(".")).strip()
+                    if "USA" in c_clean.upper():
+                        c_set.add("USA")
+                    elif "CHINA" in c_clean.upper():
+                        c_set.add("China")
+                    elif "UK" in c_clean.upper() or "ENGLAND" in c_clean.upper():
+                        c_set.add("UK")
+                    elif c_clean:
+                        c_set.add(c_clean)
+            c = sorted(list(c_set))
+    return c
+
+
 def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
     if ext.lower() != ".bib":
         raise ValueError(f"Unsupported extension: {ext}")
@@ -302,10 +416,10 @@ def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
             cited_references_count=_extract_bib_int(
                 entry, "cited_references_count"
             ),
-            authors_detail=parse_wos_authors_detail(
+            authors_detail=_parse_bib_authors_detail(
                 entry if isinstance(entry, dict) else getattr(entry, "fields_dict", {})
             ),
-            countries=parse_wos_countries(
+            countries=_parse_bib_countries(
                 entry if isinstance(entry, dict) else getattr(entry, "fields_dict", {})
             ),
             cited_references=parse_wos_cited_references(

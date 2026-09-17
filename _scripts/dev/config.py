@@ -32,7 +32,7 @@ GLOBAL_TESTS = [
 MODULE_DEFINITIONS = {
     "Project context": ["skills/project_context.md"],
     "Tests": ["backend/tests", "pytest.ini"],
-    "DB": ["backend/src/database/models/"]
+    "DB": ["backend/src/database/models/", "backend/alembic/versions"]
     
 }
 

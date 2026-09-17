@@ -1,257 +1,12 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 21:37:14
+Date: 2026-09-17 20:55:26
 AST Mode: False
 Line Numbers: True
-Modules: wos_parser.py, parser_service.py
+Modules: parser_service.py, identity.py
 Processed Files: 2
 ===========================
 
-
-
-// --- backend/src/bibliography/wos_parser.py ---
-
-[L001, S0] import re
-[L002, S0] from typing import List, Dict, Any
-[L003, S0] 
-[L004, S0] 
-[L005, S0] def _normalize_name(name: str) -> str:
-[L006, S4]     """Normalize names for fuzzy matching by removing non-alpha chars."""
-[L007, S4]     return re.sub(r"[^a-zA-Z]", "", name).lower()
-[L008, S0] 
-[L009, S0] 
-[L010, S0] def parse_wos_countries(entry: dict) -> List[str]:
-[L011, S4]     """Extracts unique countries from the affiliation field."""
-[L012, S4]     def get_val(*keys):
-[L013, S8]         for k, v in entry.items():
-[L014, S12]             if str(k).lower() in keys:
-[L015, S16]                 val = getattr(v, "value", v)
-[L016, S16]                 if hasattr(val, "value"):
-[L017, S20]                     val = val.value
-[L018, S16]                 s = str(val).strip()
-[L019, S16]                 while (s.startswith("{") and s.endswith("}")) or (
-[L020, S20]                     s.startswith('"') and s.endswith('"')
-[L021, S16]                 ):
-[L022, S20]                     s = s[1:-1].strip()
-[L023, S16]                 return s
-[L024, S8]         return ""
-[L025, S0] 
-[L026, S4]     affil_raw = get_val("affiliation")
-[L027, S4]     if not affil_raw:
-[L028, S8]         return []
-[L029, S8]         
-[L030, S4]     countries = set()
-[L031, S4]     lines = [
-[L032, S8]         line.strip() 
-[L033, S8]         for line in re.split(r"\.\s+(?=[A-Z\[])|\n", affil_raw) 
-[L034, S8]         if line.strip()
-[L035, S4]     ]
-[L036, S4]     
-[L037, S4]     for line in lines:
-[L038, S8]         line_clean = re.sub(r"^\[.*?\]\s*", "", line).strip()
-[L039, S8]         if not line_clean:
-[L040, S12]             continue
-[L041, S8]         parts = [p.strip() for p in line_clean.split(",")]
-[L042, S8]         if parts:
-[L043, S12]             last_part = parts[-1].rstrip(".")
-[L044, S12]             country = re.sub(r"[0-9\-]", "", last_part).strip()
-[L045, S12]             if "USA" in country.upper():
-[L046, S16]                 country = "USA"
-[L047, S12]             elif "CHINA" in country.upper():
-[L048, S16]                 country = "China"
-[L049, S12]             elif "UK" in country.upper() or "ENGLAND" in country.upper():
-[L050, S16]                 country = "UK"
-[L051, S12]             if country:
-[L052, S16]                 countries.add(country)
-[L053, S16]                 
-[L054, S4]     return sorted(list(countries))
-[L055, S0] 
-[L056, S0] 
-[L057, S0] def parse_wos_cited_references(entry: dict) -> List[Dict[str, str]]:
-[L058, S4]     """Parses cited references into structured dicts (author, year, source)."""
-[L059, S4]     def get_val(*keys):
-[L060, S8]         for k, v in entry.items():
-[L061, S12]             if str(k).lower() in keys:
-[L062, S16]                 val = getattr(v, "value", v)
-[L063, S16]                 if hasattr(val, "value"):
-[L064, S20]                     val = val.value
-[L065, S16]                 s = str(val).strip()
-[L066, S16]                 while (s.startswith("{") and s.endswith("}")) or (
-[L067, S20]                     s.startswith('"') and s.endswith('"')
-[L068, S16]                 ):
-[L069, S20]                     s = s[1:-1].strip()
-[L070, S16]                 return s
-[L071, S8]         return ""
-[L072, S0] 
-[L073, S4]     cr_raw = get_val("cited-references", "cited_references")
-[L074, S4]     if not cr_raw:
-[L075, S8]         return []
-[L076, S0] 
-[L077, S4]     parsed_crs = []
-[L078, S4]     cr_list = [cr.strip() for cr in re.split(r";|\n", cr_raw) if cr.strip()]
-[L079, S4]     
-[L080, S4]     for cr in cr_list:
-[L081, S8]         parts = [p.strip() for p in cr.split(",")]
-[L082, S8]         if not parts:
-[L083, S12]             continue
-[L084, S12]             
-[L085, S8]         author = parts[0] if len(parts) > 0 else ""
-[L086, S8]         year = ""
-[L087, S8]         source = ""
-[L088, S8]         
-[L089, S8]         if len(parts) > 1:
-[L090, S12]             if re.match(r"^\d{4}$", parts[1]):
-[L091, S16]                 year = parts[1]
-[L092, S16]                 source = ", ".join(parts[2:]) if len(parts) > 2 else ""
-[L093, S12]             else:
-[L094, S16]                 source = ", ".join(parts[1:])
-[L095, S16]                 
-[L096, S8]         doi = ""
-[L097, S8]         doi_match = re.search(r"(10\.\d{4,9}/[-._;()/:a-zA-Z0-9]+)", source)
-[L098, S8]         if doi_match:
-[L099, S12]             doi = doi_match.group(1).rstrip(".]}")
-[L100, S16]                 
-[L101, S8]         parsed_crs.append({
-[L102, S12]             "author": author,
-[L103, S12]             "year": year,
-[L104, S12]             "source": source,
-[L105, S12]             "doi": doi,
-[L106, S12]             "raw": cr
-[L107, S8]         })
-[L108, S8]         
-[L109, S4]     unique_crs = {cr["raw"]: cr for cr in parsed_crs}
-[L110, S4]     return list(unique_crs.values())
-[L111, S0] 
-[L112, S0] 
-[L113, S0] def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
-[L114, S4]     """
-[L115, S4]     Parses chaotic WOS identity fields (ORCID, ResearcherID, Affiliation) 
-[L116, S4]     and cross-references them to build a structured list of authors.
-[L117, S4]     """
-[L118, S4]     kw_pattern = re.compile(
-[L119, S8]         r"\b(Univ|University|Inst|Institute|Sch|School|Dept|Department|Ctr|Center|Centre|"
-[L120, S8]         r"Fac|Faculty|Lab|Laboratory|Hosp|Hospital|Coll|College|Academy|Corp|Corporation|"
-[L121, S8]         r"Inc|Ltd|GmbH|LLC|Ministry|Div|Division|Agency|Natl|National|Hlth|Health|Biol|Biology|"
-[L122, S8]         r"Chem|Chemistry|Phys|Physics|Med|Medicine|Medical|Engn|Engineering|Tech|Technology|"
-[L123, S8]         r"Sci|Science|Sciences|Stat|Statistics|Observ|Observatory|Polytech|Polytechnic|Foundation)\b", 
-[L124, S8]         re.IGNORECASE
-[L125, S4]     )
-[L126, S0] 
-[L127, S4]     def get_val(*keys):
-[L128, S8]         for k, v in entry.items():
-[L129, S12]             if str(k).lower() in keys:
-[L130, S16]                 val = getattr(v, "value", v)
-[L131, S16]                 if hasattr(val, "value"):
-[L132, S20]                     val = val.value
-[L133, S16]                 s = str(val).strip()
-[L134, S16]                 while (s.startswith("{") and s.endswith("}")) or (
-[L135, S20]                     s.startswith('"') and s.endswith('"')
-[L136, S16]                 ):
-[L137, S20]                     s = s[1:-1].strip()
-[L138, S16]                 return s
-[L139, S8]         return ""
-[L140, S0] 
-[L141, S4]     raw_authors = get_val("author")
-[L142, S4]     if not raw_authors:
-[L143, S8]         return []
-[L144, S0] 
-[L145, S4]     author_names = [
-[L146, S8]         a.strip() for a in re.split(r"\s+and\s+", raw_authors) if a.strip()
-[L147, S4]     ]
-[L148, S4]     
-[L149, S4]     details = []
-[L150, S4]     for name in author_names:
-[L151, S8]         details.append({
-[L152, S12]             "name": name,
-[L153, S12]             "email": None,
-[L154, S12]             "orcid": None,
-[L155, S12]             "researcher_id": None,
-[L156, S12]             "affiliation": None,
-[L157, S12]             "is_corresponding": False
-[L158, S8]         })
-[L159, S0] 
-[L160, S4]     # 1. Process ORCID
-[L161, S4]     orcid_raw = get_val("orcid-numbers", "orcid_numbers")
-[L162, S4]     for line in orcid_raw.replace(";", "\n").split("\n"):
-[L163, S8]         if "/" in line:
-[L164, S12]             n_part, i_part = line.rsplit("/", 1)
-[L165, S12]             n_norm = _normalize_name(n_part)
-[L166, S12]             for d in details:
-[L167, S16]                 d_norm = _normalize_name(d["name"])
-[L168, S16]                 if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
-[L169, S20]                     d["orcid"] = i_part.strip()
-[L170, S0] 
-[L171, S4]     # 2. Process ResearcherID
-[L172, S4]     rid_raw = get_val("researcherid-numbers", "researcherid")
-[L173, S4]     for line in rid_raw.replace(";", "\n").split("\n"):
-[L174, S8]         if "/" in line:
-[L175, S12]             n_part, i_part = line.rsplit("/", 1)
-[L176, S12]             n_norm = _normalize_name(n_part)
-[L177, S12]             for d in details:
-[L178, S16]                 d_norm = _normalize_name(d["name"])
-[L179, S16]                 if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
-[L180, S20]                     d["researcher_id"] = i_part.strip()
-[L181, S0] 
-[L182, S4]     # 3. Process Affiliations & Corresponding Author
-[L183, S4]     affil_raw = get_val("affiliation")
-[L184, S4]     affil_raw = affil_raw.replace("\n", " ")
-[L185, S4]     lines = [
-[L186, S8]         line.strip() 
-[L187, S8]         for line in re.split(r"\.\s+(?=[A-Z\[])", affil_raw) 
-[L188, S8]         if line.strip()
-[L189, S4]     ]
-[L190, S4]     
-[L191, S4]     for line in lines:
-[L192, S8]         is_corr = "(Corresponding Author)" in line or "(corresponding author)" in line.lower()
-[L193, S8]         line_clean = re.sub(r"\(\s*Corresponding\s*Author\s*\)", "", line, flags=re.I).strip()
-[L194, S8]         
-[L195, S8]         matched_authors = []
-[L196, S8]         for d in details:
-[L197, S12]             last_name = d["name"].split(",")[0].strip()
-[L198, S12]             if last_name and last_name.lower() in line_clean.lower():
-[L199, S16]                 matched_authors.append(d)
-[L200, S16]                 if is_corr:
-[L201, S20]                     d["is_corresponding"] = True
-[L202, S8]         
-[L203, S8]         bracket_match = re.match(r"^\[(.*?)\]\s*(.*)", line_clean)
-[L204, S8]         if bracket_match:
-[L205, S12]             inst_part = bracket_match.group(2).strip()
-[L206, S8]         else:
-[L207, S12]             inst_part = line_clean
-[L208, S12]             
-[L209, S12]             if ";" in inst_part:
-[L210, S16]                 segments = [s.strip() for s in inst_part.split(";")]
-[L211, S16]                 for i, seg in enumerate(segments):
-[L212, S20]                     if kw_pattern.search(seg):
-[L213, S24]                         inst_part = "; ".join(segments[i:]).strip()
-[L214, S24]                         break
-[L215, S12]             
-[L216, S12]             subparts = [p.strip() for p in inst_part.split(",")]
-[L217, S12]             if len(subparts) >= 2:
-[L218, S16]                 if not kw_pattern.search(subparts[0]) and kw_pattern.search(subparts[1]):
-[L219, S20]                     inst_part = ", ".join(subparts[1:]).strip()
-[L220, S16]                 elif len(subparts) >= 3 and not kw_pattern.search(subparts[0]) and not kw_pattern.search(subparts[1]):
-[L221, S20]                     inst_part = ", ".join(subparts[2:]).strip()
-[L222, S20]                     
-[L223, S8]         for d in matched_authors:
-[L224, S12]             if not d["affiliation"]:
-[L225, S16]                 d["affiliation"] = inst_part
-[L226, S0] 
-[L227, S4]     # 4. Process Emails (Attach to corresponding, or first author)
-[L228, S4]     email_raw = get_val("author-email", "author_email")
-[L229, S4]     emails = [e.strip() for e in email_raw.split(",") if e.strip()]
-[L230, S4]     
-[L231, S4]     corr_authors = [d for d in details if d["is_corresponding"]]
-[L232, S4]     if not corr_authors and details:
-[L233, S8]         corr_authors = [details[0]]
-[L234, S8]         
-[L235, S4]     for idx, email in enumerate(emails):
-[L236, S8]         if idx < len(corr_authors):
-[L237, S12]             corr_authors[idx]["email"] = email
-[L238, S8]         elif idx < len(details):
-[L239, S12]             details[idx]["email"] = email
-[L240, S0] 
-[L241, S4]     return details
 
 
 // --- backend/src/bibliography/parser_service.py ---
@@ -626,3 +381,243 @@ Processed Files: 2
 [L368, S8]         raise ValueError(f"Unsupported extension: {ext}")
 [L369, S8]         
 [L370, S4]     return parsed_refs
+
+
+// --- backend/src/database/models/identity.py ---
+
+[L001, S0] """Identity domain models for affiliations, authors, and article authorship."""
+[L002, S0] from datetime import datetime, timezone
+[L003, S0] 
+[L004, S0] from sqlalchemy import (
+[L005, S4]     Boolean,
+[L006, S4]     Column,
+[L007, S4]     DateTime,
+[L008, S4]     ForeignKey,
+[L009, S4]     Integer,
+[L010, S4]     String,
+[L011, S4]     UniqueConstraint,
+[L012, S0] )
+[L013, S0] from sqlalchemy.orm import relationship
+[L014, S0] 
+[L015, S0] from ..session import Base
+[L016, S0] 
+[L017, S0] 
+[L018, S0] class Affiliation(Base):
+[L019, S4]     """Represents an academic institution or research organization."""
+[L020, S0] 
+[L021, S4]     __tablename__ = "affiliations"
+[L022, S0] 
+[L023, S4]     id = Column(
+[L024, S8]         Integer,
+[L025, S8]         primary_key=True,
+[L026, S8]         autoincrement=True,
+[L027, S8]         comment="Primary key identifier for affiliation",
+[L028, S4]     )
+[L029, S4]     institution = Column(
+[L030, S8]         String(255),
+[L031, S8]         nullable=False,
+[L032, S8]         comment="Institution or organization name",
+[L033, S4]     )
+[L034, S4]     department = Column(
+[L035, S8]         String(255),
+[L036, S8]         nullable=True,
+[L037, S8]         comment="Academic department or laboratory division",
+[L038, S4]     )
+[L039, S4]     country = Column(
+[L040, S8]         String(100),
+[L041, S8]         nullable=True,
+[L042, S8]         comment="Country location of the institution",
+[L043, S4]     )
+[L044, S4]     created_at = Column(
+[L045, S8]         DateTime,
+[L046, S8]         default=lambda: datetime.now(timezone.utc),
+[L047, S8]         nullable=False,
+[L048, S8]         comment="UTC timestamp when affiliation was created",
+[L049, S4]     )
+[L050, S0] 
+[L051, S4]     authors = relationship("Author", back_populates="affiliation")
+[L052, S0] 
+[L053, S0] 
+[L054, S0] class Author(Base):
+[L055, S4]     """Represents a researcher or publication contributor."""
+[L056, S0] 
+[L057, S4]     __tablename__ = "authors"
+[L058, S0] 
+[L059, S4]     id = Column(
+[L060, S8]         Integer,
+[L061, S8]         primary_key=True,
+[L062, S8]         autoincrement=True,
+[L063, S8]         comment="Primary key identifier for author",
+[L064, S4]     )
+[L065, S4]     name = Column(
+[L066, S8]         String(255),
+[L067, S8]         nullable=False,
+[L068, S8]         comment="Full name of the author or researcher",
+[L069, S4]     )
+[L070, S4]     orcid = Column(
+[L071, S8]         String(50),
+[L072, S8]         nullable=True,
+[L073, S8]         index=True,
+[L074, S8]         comment="Author's ORCID identifier",
+[L075, S4]     )
+[L076, S4]     email = Column(
+[L077, S8]         String(255),
+[L078, S8]         nullable=True,
+[L079, S8]         comment="Contact email address for the author",
+[L080, S4]     )
+[L081, S4]     affiliation_id = Column(
+[L082, S8]         Integer,
+[L083, S8]         ForeignKey("affiliations.id", ondelete="SET NULL"),
+[L084, S8]         nullable=True,
+[L085, S8]         comment="Foreign key linking to affiliations.id",
+[L086, S4]     )
+[L087, S4]     created_at = Column(
+[L088, S8]         DateTime,
+[L089, S8]         default=lambda: datetime.now(timezone.utc),
+[L090, S8]         nullable=False,
+[L091, S8]         comment="UTC timestamp when author record was created",
+[L092, S4]     )
+[L093, S0] 
+[L094, S4]     affiliation = relationship("Affiliation", back_populates="authors")
+[L095, S4]     author_articles = relationship(
+[L096, S8]         "AuthorArticle",
+[L097, S8]         back_populates="author",
+[L098, S8]         cascade="all, delete-orphan",
+[L099, S4]     )
+[L100, S4]     articles = relationship(
+[L101, S8]         "Article",
+[L102, S8]         secondary="author_articles",
+[L103, S8]         back_populates="authors",
+[L104, S8]         viewonly=True,
+[L105, S4]     )
+[L106, S0] 
+[L107, S0] 
+[L108, S0] class AuthorArticle(Base):
+[L109, S4]     """Junction model connecting authors to articles with authorship metadata."""
+[L110, S0] 
+[L111, S4]     __tablename__ = "author_articles"
+[L112, S4]     __table_args__ = (
+[L113, S8]         UniqueConstraint(
+[L114, S12]             "author_id",
+[L115, S12]             "article_id",
+[L116, S12]             name="uq_author_article",
+[L117, S8]         ),
+[L118, S4]     )
+[L119, S0] 
+[L120, S4]     id = Column(
+[L121, S8]         Integer,
+[L122, S8]         primary_key=True,
+[L123, S8]         autoincrement=True,
+[L124, S8]         comment="Primary key junction identifier",
+[L125, S4]     )
+[L126, S4]     author_id = Column(
+[L127, S8]         Integer,
+[L128, S8]         ForeignKey("authors.id", ondelete="CASCADE"),
+[L129, S8]         nullable=False,
+[L130, S8]         comment="Foreign key linking to authors.id",
+[L131, S4]     )
+[L132, S4]     article_id = Column(
+[L133, S8]         Integer,
+[L134, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L135, S8]         nullable=False,
+[L136, S8]         comment="Foreign key linking to articles.id",
+[L137, S4]     )
+[L138, S4]     author_order = Column(
+[L139, S8]         Integer,
+[L140, S8]         default=1,
+[L141, S8]         nullable=False,
+[L142, S8]         comment="Order of authorship in the publication (1-based)",
+[L143, S4]     )
+[L144, S4]     is_corresponding = Column(
+[L145, S8]         Boolean,
+[L146, S8]         default=False,
+[L147, S8]         nullable=False,
+[L148, S8]         comment="Flag indicating if this author is the corresponding author",
+[L149, S4]     )
+[L150, S0] 
+[L151, S4]     author = relationship("Author", back_populates="author_articles")
+[L152, S4]     article = relationship("Article", back_populates="author_articles")
+[L153, S0] 
+[L154, S0] 
+[L155, S0] class Keyword(Base):
+[L156, S4]     """Represents a descriptive keyword, MeSH term, or topical tag."""
+[L157, S0] 
+[L158, S4]     __tablename__ = "keywords"
+[L159, S0] 
+[L160, S4]     id = Column(
+[L161, S8]         Integer,
+[L162, S8]         primary_key=True,
+[L163, S8]         autoincrement=True,
+[L164, S8]         comment="Primary key identifier for keyword",
+[L165, S4]     )
+[L166, S4]     name = Column(
+[L167, S8]         String(255),
+[L168, S8]         nullable=False,
+[L169, S8]         index=True,
+[L170, S8]         comment="Normalized keyword or term string",
+[L171, S4]     )
+[L172, S4]     type = Column(
+[L173, S8]         String(50),
+[L174, S8]         default="author",
+[L175, S8]         nullable=False,
+[L176, S8]         comment="Classification type of keyword (e.g. author, mesh, index)",
+[L177, S4]     )
+[L178, S4]     created_at = Column(
+[L179, S8]         DateTime,
+[L180, S8]         default=lambda: datetime.now(timezone.utc),
+[L181, S8]         nullable=False,
+[L182, S8]         comment="UTC timestamp when keyword was registered",
+[L183, S4]     )
+[L184, S0] 
+[L185, S4]     keyword_articles = relationship(
+[L186, S8]         "KeywordArticle",
+[L187, S8]         back_populates="keyword",
+[L188, S8]         cascade="all, delete-orphan",
+[L189, S4]     )
+[L190, S4]     articles = relationship(
+[L191, S8]         "Article",
+[L192, S8]         secondary="keyword_articles",
+[L193, S8]         back_populates="keywords",
+[L194, S8]         viewonly=True,
+[L195, S4]     )
+[L196, S0] 
+[L197, S0] 
+[L198, S0] class KeywordArticle(Base):
+[L199, S4]     """Junction model connecting keywords to articles."""
+[L200, S0] 
+[L201, S4]     __tablename__ = "keyword_articles"
+[L202, S4]     __table_args__ = (
+[L203, S8]         UniqueConstraint(
+[L204, S12]             "keyword_id",
+[L205, S12]             "article_id",
+[L206, S12]             name="uq_keyword_article",
+[L207, S8]         ),
+[L208, S4]     )
+[L209, S0] 
+[L210, S4]     id = Column(
+[L211, S8]         Integer,
+[L212, S8]         primary_key=True,
+[L213, S8]         autoincrement=True,
+[L214, S8]         comment="Primary key junction identifier",
+[L215, S4]     )
+[L216, S4]     keyword_id = Column(
+[L217, S8]         Integer,
+[L218, S8]         ForeignKey("keywords.id", ondelete="CASCADE"),
+[L219, S8]         nullable=False,
+[L220, S8]         comment="Foreign key linking to keywords.id",
+[L221, S4]     )
+[L222, S4]     article_id = Column(
+[L223, S8]         Integer,
+[L224, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L225, S8]         nullable=False,
+[L226, S8]         comment="Foreign key linking to articles.id",
+[L227, S4]     )
+[L228, S4]     created_at = Column(
+[L229, S8]         DateTime,
+[L230, S8]         default=lambda: datetime.now(timezone.utc),
+[L231, S8]         nullable=False,
+[L232, S8]         comment="UTC timestamp when keyword was linked to article",
+[L233, S4]     )
+[L234, S0] 
+[L235, S4]     keyword = relationship("Keyword", back_populates="keyword_articles")
+[L236, S4]     article = relationship("Article", back_populates="keyword_articles")

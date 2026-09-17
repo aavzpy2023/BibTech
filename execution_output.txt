@@ -1,7 +1,8 @@
 === PATCH OPERATIONS APPLIED ===
-- [Skipped] CREATE -> frontend/src/hooks/useHoverReveal.test.js
-- [Successful] CREATE -> frontend/src/hooks/useHoverReveal.js
-- [Successful] EDIT -> leai_docs/planning/roadmap_16_metadata_hover_reveal.md
+- [Successful] EDIT -> backend/src/bibliography/wos_parser.py
+- [Successful] EDIT -> backend/src/bibliography/wos_parser.py
+- [Successful] EDIT -> backend/src/bibliography/injection_service.py
+- [Successful] EDIT -> backend/src/bibliography/injection_service.py
 
 === VALIDATION COMMAND OUTPUT (PART 7) ===
 Pruebas omitidas o sin comandos bash ejecutados (# N/A).
