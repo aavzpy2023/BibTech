@@ -154,6 +154,8 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
             "orcid": None,
             "researcher_id": None,
             "affiliation": None,
+            "department": None,
+            "country": None,
             "is_corresponding": False
         })
 
@@ -244,9 +246,33 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
                 elif len(subparts) >= 3 and not kw_pattern.search(subparts[0]) and not kw_pattern.search(subparts[1]):
                     inst_part = ", ".join(subparts[2:]).strip()
                     
+        dept_val = None
+        country_val = None
+        ext_parts = [p.strip() for p in line_clean.split(",")]
+        if ext_parts:
+            c_clean = re.sub(r"[0-9\-]", "", ext_parts[-1].rstrip(".")).strip()
+            if "USA" in c_clean.upper():
+                country_val = "USA"
+            elif "CHINA" in c_clean.upper():
+                country_val = "China"
+            elif "UK" in c_clean.upper() or "ENGLAND" in c_clean.upper():
+                country_val = "UK"
+            elif c_clean:
+                country_val = c_clean
+            dept_kws = re.compile(
+                r"\b(Dept|Department|Sch|School|Fac|Faculty|Lab|Laboratory|"
+                r"Ctr|Center|Centre|Div|Division)\b", re.IGNORECASE
+            )
+            for p in ext_parts:
+                if dept_kws.search(p):
+                    dept_val = p
+                    break
+
         for d in matched_authors:
             if not d["affiliation"]:
                 d["affiliation"] = inst_part
+                d["department"] = dept_val
+                d["country"] = country_val
 
     # 4. Process Emails (Attach to corresponding, or first author)
     email_raw = get_val("author-email", "author_email")

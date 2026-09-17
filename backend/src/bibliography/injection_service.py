@@ -240,26 +240,32 @@ def _bulk_inject_references(
         db.execute(stmt_pa)
 
     # 1. Bulk inject affiliations from authors_detail
-    all_affil_strings = set()
+    all_affils_map = {}
     for ref in refs:
         if getattr(ref, "authors_detail", None):
             for ad in ref.authors_detail:
                 aff = ad.get("affiliation")
                 if aff and str(aff).strip():
-                    all_affil_strings.add(str(aff).strip()[:255])
+                    inst_str = str(aff).strip()[:255]
+                    if inst_str not in all_affils_map:
+                        all_affils_map[inst_str] = {
+                            "institution": inst_str,
+                            "department": (ad.get("department") or "")[:255] or None,
+                            "country": (ad.get("country") or "")[:100] or None,
+                        }
 
     existing_affils = {}
-    if all_affil_strings:
+    if all_affils_map:
         for aff in (
             db.query(Affiliation)
-            .filter(Affiliation.institution.in_(all_affil_strings))
+            .filter(Affiliation.institution.in_(list(all_affils_map.keys())))
             .all()
         ):
             existing_affils[aff.institution] = aff.id
         
         new_affils = [
-            {"institution": inst}
-            for inst in all_affil_strings
+            all_affils_map[inst]
+            for inst in all_affils_map.keys()
             if inst not in existing_affils
         ]
         if new_affils:
@@ -267,7 +273,7 @@ def _bulk_inject_references(
             db.execute(stmt_aff)
             for aff in (
                 db.query(Affiliation)
-                .filter(Affiliation.institution.in_(all_affil_strings))
+                .filter(Affiliation.institution.in_(list(all_affils_map.keys())))
                 .all()
             ):
                 existing_affils[aff.institution] = aff.id
