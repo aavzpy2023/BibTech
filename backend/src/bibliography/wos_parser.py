@@ -157,27 +157,51 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
             "is_corresponding": False
         })
 
+    def match_author(d_name: str, n_name: str) -> bool:
+        d_norm = _normalize_name(d_name)
+        n_norm = _normalize_name(n_name)
+        if not d_norm or not n_norm:
+            return False
+        if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
+            return True
+        d_parts = [p.strip() for p in d_name.split(",")]
+        n_parts = [p.strip() for p in n_name.split(",")]
+        if len(d_parts) > 0 and len(n_parts) > 0:
+            d_last = _normalize_name(d_parts[0])
+            n_last = _normalize_name(n_parts[0])
+            if d_last and d_last == n_last:
+                if len(d_parts) > 1 and len(n_parts) > 1:
+                    d_first = _normalize_name(d_parts[1])
+                    n_first = _normalize_name(n_parts[1])
+                    if d_first and n_first and d_first[0] == n_first[0]:
+                        return True
+                else:
+                    return True
+        return False
+
     # 1. Process ORCID
     orcid_raw = get_val("orcid-numbers", "orcid_numbers")
-    for line in orcid_raw.replace(";", "\n").split("\n"):
-        if "/" in line:
-            n_part, i_part = line.rsplit("/", 1)
-            n_norm = _normalize_name(n_part)
-            for d in details:
-                d_norm = _normalize_name(d["name"])
-                if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
-                    d["orcid"] = i_part.strip()
+    for match in re.finditer(
+        r"([^/]+?)/([0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X])", 
+        orcid_raw, 
+        flags=re.IGNORECASE
+    ):
+        n_part = re.sub(r"^[\s;,]+", "", match.group(1)).strip()
+        i_part = match.group(2).upper()
+        for d in details:
+            if match_author(d["name"], n_part):
+                d["orcid"] = i_part
+                break
 
     # 2. Process ResearcherID
     rid_raw = get_val("researcherid-numbers", "researcherid")
     for line in rid_raw.replace(";", "\n").split("\n"):
         if "/" in line:
             n_part, i_part = line.rsplit("/", 1)
-            n_norm = _normalize_name(n_part)
             for d in details:
-                d_norm = _normalize_name(d["name"])
-                if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
+                if match_author(d["name"], n_part):
                     d["researcher_id"] = i_part.strip()
+                    break
 
     # 3. Process Affiliations & Corresponding Author
     affil_raw = get_val("affiliation")

@@ -1,337 +1,12 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-16 19:03:41
+Date: 2026-09-16 21:37:14
 AST Mode: False
 Line Numbers: True
-Modules: useReferenceDetails.js, wos_parser.py
+Modules: wos_parser.py, parser_service.py
 Processed Files: 2
 ===========================
 
-
-
-// --- frontend/src/hooks/useReferenceDetails.js ---
-
-[L001, S0] import { useState, useMemo, useCallback } from 'react';
-[L002, S0] 
-[L003, S0] function parseBibtexFields(raw) {
-[L004, S4]     if (!raw || typeof raw !== 'string') return {};
-[L005, S4]     const fields = {};
-[L006, S4]     const bodyStart = raw.indexOf(',');
-[L007, S4]     if (bodyStart === -1) return {};
-[L008, S4]     const body = raw.slice(bodyStart + 1);
-[L009, S0] 
-[L010, S4]     let i = 0;
-[L011, S4]     const n = body.length;
-[L012, S4]     while (i < n) {
-[L013, S8]         while (i < n && /[\s,]/.test(body[i])) i++;
-[L014, S8]         if (i >= n || body[i] === '}') break;
-[L015, S0] 
-[L016, S8]         const keyStart = i;
-[L017, S8]         while (i < n && body[i] !== '=' && body[i] !== '}' && !/\s/.test(body[i])) {
-[L018, S12]             i++;
-[L019, S8]         }
-[L020, S8]         const key = body.slice(keyStart, i).trim().toLowerCase();
-[L021, S8]         while (i < n && /[\s=]/.test(body[i])) i++;
-[L022, S8]         if (i >= n || body[i] === '}') break;
-[L023, S0] 
-[L024, S8]         let val = '';
-[L025, S8]         if (body[i] === '{') {
-[L026, S12]             i++;
-[L027, S12]             let depth = 1;
-[L028, S12]             const valStart = i;
-[L029, S12]             while (i < n && depth > 0) {
-[L030, S16]                 if (body[i] === '{') depth++;
-[L031, S16]                 else if (body[i] === '}') depth--;
-[L032, S16]                 if (depth > 0) i++;
-[L033, S12]             }
-[L034, S12]             val = body.slice(valStart, i).trim();
-[L035, S12]             i++;
-[L036, S8]         } else if (body[i] === '"') {
-[L037, S12]             i++;
-[L038, S12]             const valStart = i;
-[L039, S12]             while (i < n && body[i] !== '"') {
-[L040, S16]                 if (body[i] === '\\' && i + 1 < n) i++;
-[L041, S16]                 i++;
-[L042, S12]             }
-[L043, S12]             val = body.slice(valStart, i).trim();
-[L044, S12]             i++;
-[L045, S8]         } else {
-[L046, S12]             const valStart = i;
-[L047, S12]             while (i < n && body[i] !== ',' && body[i] !== '}' && body[i] !== '\n') {
-[L048, S16]                 i++;
-[L049, S12]             }
-[L050, S12]             val = body.slice(valStart, i).trim();
-[L051, S8]         }
-[L052, S0] 
-[L053, S8]         if (key && val) {
-[L054, S12]             fields[key] = val.replace(/\\_/g, '_').replace(/\s+/g, ' ');
-[L055, S8]         }
-[L056, S4]     }
-[L057, S4]     return fields;
-[L058, S0] }
-[L059, S0] 
-[L060, S0] export default function useReferenceDetails(article = null) {
-[L061, S2]   const [activeTab, setActiveTab] = useState('Overview');
-[L062, S2]   const [drawerState, setDrawerState] = useState({
-[L063, S4]     isOpen: false,
-[L064, S4]     type: 'references',
-[L065, S4]     title: '',
-[L066, S4]     data: [],
-[L067, S2]   });
-[L068, S2]   const [hoverInfo, setHoverInfo] = useState(null);
-[L069, S2]   const [copiedText, setCopiedText] = useState(null);
-[L070, S2]   const [isAbstractExpanded, setIsAbstractExpanded] = useState(false);
-[L071, S0] 
-[L072, S2]   const handleTabChange = useCallback((tab) => {
-[L073, S4]     setActiveTab(tab);
-[L074, S2]   }, []);
-[L075, S0] 
-[L076, S2]   const openDrawer = useCallback(
-[L077, S4]     (type, data = null, title = '') => {
-[L078, S6]       let resolvedData = data;
-[L079, S6]       let resolvedTitle = title;
-[L080, S0] 
-[L081, S6]       if (!resolvedData && article) {
-[L082, S8]         if (type === 'authors') {
-[L083, S10]           resolvedData = article.authors_detail || [];
-[L084, S10]           resolvedTitle = resolvedTitle || 'Authors Details';
-[L085, S8]         } else if (type === 'references') {
-[L086, S10]           resolvedData = article.references_list || [];
-[L087, S10]           resolvedTitle = resolvedTitle || 'Cited References';
-[L088, S8]         } else if (type === 'funding') {
-[L089, S10]           const hasList =
-[L090, S12]             article.funding_list && article.funding_list.length > 0;
-[L091, S10]           resolvedData = hasList
-[L092, S12]             ? article.funding_list
-[L093, S12]             : article.funding_text
-[L094, S12]             ? [article.funding_text]
-[L095, S12]             : [];
-[L096, S10]           resolvedTitle = resolvedTitle || 'Funding Acknowledgments';
-[L097, S8]         } else if (type === 'abstract') {
-[L098, S10]           resolvedData = article.abstract ? [article.abstract] : [];
-[L099, S10]           resolvedTitle = resolvedTitle || 'Full Abstract';
-[L100, S8]         } else if (type === 'affiliations') {
-[L101, S10]           resolvedData = article.affiliations ? [article.affiliations] : [];
-[L102, S10]           resolvedTitle = resolvedTitle || 'Affiliations';
-[L103, S8]         }
-[L104, S6]       }
-[L105, S0] 
-[L106, S6]       setDrawerState({
-[L107, S8]         isOpen: true,
-[L108, S8]         type: type || 'references',
-[L109, S8]         title: resolvedTitle || 'Details',
-[L110, S8]         data: resolvedData || [],
-[L111, S6]       });
-[L112, S4]     },
-[L113, S4]     [article]
-[L114, S2]   );
-[L115, S0] 
-[L116, S2]   const handleExpandDrawer = useCallback(
-[L117, S4]     (type, customData, customTitle) => {
-[L118, S6]       openDrawer(type, customData, customTitle);
-[L119, S4]     },
-[L120, S4]     [openDrawer]
-[L121, S2]   );
-[L122, S0] 
-[L123, S2]   const closeDrawer = useCallback(() => {
-[L124, S4]     setDrawerState((prev) => ({
-[L125, S6]       ...prev,
-[L126, S6]       isOpen: false,
-[L127, S4]     }));
-[L128, S2]   }, []);
-[L129, S0] 
-[L130, S2]   const handleHoverInfo = useCallback((key, event) => {
-[L131, S4]     if (!key) {
-[L132, S6]       setHoverInfo(null);
-[L133, S6]       return;
-[L134, S4]     }
-[L135, S4]     setHoverInfo({
-[L136, S6]       key,
-[L137, S6]       rect: event?.currentTarget?.getBoundingClientRect?.() || null,
-[L138, S4]     });
-[L139, S2]   }, []);
-[L140, S0] 
-[L141, S2]   const handleCopy = useCallback(async (text) => {
-[L142, S4]     if (!text) return;
-[L143, S4]     try {
-[L144, S6]       if (
-[L145, S8]         typeof navigator !== 'undefined' &&
-[L146, S8]         navigator.clipboard &&
-[L147, S8]         navigator.clipboard.writeText
-[L148, S6]       ) {
-[L149, S8]         await navigator.clipboard.writeText(text);
-[L150, S6]       }
-[L151, S6]       setCopiedText(text);
-[L152, S6]       setTimeout(() => setCopiedText(null), 2500);
-[L153, S4]     } catch {
-[L154, S6]       // Fallback or silent error handling
-[L155, S4]     }
-[L156, S2]   }, []);
-[L157, S0] 
-[L158, S2]   const toggleAbstractExpanded = useCallback(() => {
-[L159, S4]     setIsAbstractExpanded((prev) => !prev);
-[L160, S2]   }, []);
-[L161, S0] 
-[L162, S2]   const formattedData = useMemo(() => {
-[L163, S4]     if (!article) {
-[L164, S6]       return {
-[L165, S8]         title: '',
-[L166, S8]         authors: '',
-[L167, S8]         year: '',
-[L168, S8]         journal: '',
-[L169, S8]         volume: '',
-[L170, S8]         issue: '',
-[L171, S8]         pages: '',
-[L172, S8]         doi: '',
-[L173, S8]         abstract: '',
-[L174, S8]         authorKeywords: [],
-[L175, S8]         plusKeywords: [],
-[L176, S8]         researchAreas: '',
-[L177, S8]         wosCategories: '',
-[L178, S8]         affiliations: '',
-[L179, S8]         authorsDetailsCount: 0,
-[L180, S8]         authorEmail: '',
-[L181, S8]         orcidCount: 0,
-[L182, S8]         researcherIdCount: 0,
-[L183, S8]         fundingText: '',
-[L184, S8]         type: 'Article',
-[L185, S8]         language: 'English',
-[L186, S8]         issn: '',
-[L187, S8]         month: '',
-[L188, S8]         articleNumber: '',
-[L189, S8]         publisher: '',
-[L190, S8]         address: '',
-[L191, S8]         timesCited: null,
-[L192, S8]         oaStatus: '',
-[L193, S8]         referencesList: [],
-[L194, S8]         authorsDetail: [],
-[L195, S8]         fundingList: [],
-[L196, S6]       };
-[L197, S4]     }
-[L198, S0] 
-[L199, S4]     const parsedBib = parseBibtexFields(article.raw_data || article.raw_bibtex || '');
-[L200, S0] 
-[L201, S4]     const keywords = Array.isArray(article.keywords) ? article.keywords : [];
-[L202, S4]     let authorKeywords = keywords
-[L203, S6]       .filter((k) => k && k.type === 'author')
-[L204, S6]       .map((k) => k.name || k)
-[L205, S6]       .filter(Boolean);
-[L206, S0] 
-[L207, S4]     let plusKeywords = keywords
-[L208, S6]       .filter((k) => k && k.type === 'plus')
-[L209, S6]       .map((k) => k.name || k)
-[L210, S6]       .filter(Boolean);
-[L211, S0] 
-[L212, S4]     if (authorKeywords.length === 0 && parsedBib['keywords']) {
-[L213, S8]         authorKeywords = parsedBib['keywords'].split(';').map((k) => k.trim()).filter(Boolean);
-[L214, S4]     }
-[L215, S4]     if (plusKeywords.length === 0 && parsedBib['keywords-plus']) {
-[L216, S8]         plusKeywords = parsedBib['keywords-plus'].split(';').map((k) => k.trim()).filter(Boolean);
-[L217, S4]     }
-[L218, S0] 
-[L219, S4]     const authorsDetail = Array.isArray(article.authors_detail)
-[L220, S6]       ? article.authors_detail
-[L221, S6]       : [];
-[L222, S0] 
-[L223, S4]     const corrAuthor = authorsDetail.find(
-[L224, S6]       (a) => a && a.is_corresponding && a.email
-[L225, S4]     );
-[L226, S4]     const firstAuthorWithEmail = authorsDetail.find((a) => a && a.email);
-[L227, S4]     let authorEmail =
-[L228, S6]       corrAuthor?.email || firstAuthorWithEmail?.email || parsedBib['author-email'] || '';
-[L229, S0] 
-[L230, S4]     let orcidCount = authorsDetail.filter((a) => a && a.orcid).length;
-[L231, S4]     if (orcidCount === 0 && parsedBib['orcid-numbers']) {
-[L232, S8]         orcidCount = parsedBib['orcid-numbers'].split('/').length - 1;
-[L233, S4]     }
-[L234, S0] 
-[L235, S4]     let researcherIdCount = authorsDetail.filter(
-[L236, S6]       (a) => a && a.researcher_id
-[L237, S4]     ).length;
-[L238, S4]     if (researcherIdCount === 0 && parsedBib['researcherid-numbers']) {
-[L239, S8]         researcherIdCount = parsedBib['researcherid-numbers'].split('/').length - 1;
-[L240, S4]     }
-[L241, S0] 
-[L242, S4]     const affiliationsSet = new Set(
-[L243, S6]       authorsDetail
-[L244, S8]         .map((a) => a && a.affiliation)
-[L245, S8]         .filter((aff) => typeof aff === 'string' && aff.trim() !== '')
-[L246, S4]     );
-[L247, S4]     let affiliations = Array.from(affiliationsSet).join('; ');
-[L248, S4]     
-[L249, S4]     if (!affiliations) {
-[L250, S6]       const rawAffil = parsedBib['affiliation'] || parsedBib['affiliations'] || '';
-[L251, S6]       if (typeof rawAffil === 'string' && rawAffil.includes('=')) {
-[L252, S8]         // Fallback for extremely chaotic WOS Affiliation fields that contain authors in the raw text
-[L253, S8]         const matched = rawAffil.match(/\[.*?\]\s*([^.]+)/g);
-[L254, S8]         if (matched) {
-[L255, S10]           const cleaned = matched.map((m) => m.replace(/\[.*?\]\s*/, '').trim());
-[L256, S10]           affiliations = Array.from(new Set(cleaned)).join('; ');
-[L257, S8]         } else {
-[L258, S10]           affiliations = rawAffil;
-[L259, S8]         }
-[L260, S6]       } else {
-[L261, S8]         affiliations = rawAffil;
-[L262, S6]       }
-[L263, S4]     }
-[L264, S0] 
-[L265, S4]     return {
-[L266, S6]       title: article.title || '',
-[L267, S6]       authors: article.author || '',
-[L268, S6]       year: article.year ? String(article.year) : '',
-[L269, S6]       journal: article.journal || '',
-[L270, S6]       volume: article.volume ? String(article.volume) : '',
-[L271, S6]       issue: article.issue ? String(article.issue) : '',
-[L272, S6]       pages: article.pages || '',
-[L273, S6]       doi: article.doi || '',
-[L274, S6]       abstract: article.abstract || '',
-[L275, S6]       authorKeywords,
-[L276, S6]       plusKeywords,
-[L277, S6]       researchAreas: article.research_areas || '',
-[L278, S6]       wosCategories: article.web_of_science_categories || '',
-[L279, S6]       affiliations,
-[L280, S6]       authorsDetailsCount: authorsDetail.length,
-[L281, S6]       authorEmail,
-[L282, S6]       orcidCount,
-[L283, S6]       researcherIdCount,
-[L284, S6]       fundingText: article.funding_text || '',
-[L285, S6]       type: 'Article',
-[L286, S6]       language: article.language || 'English',
-[L287, S6]       issn: article.issn || '',
-[L288, S6]       month: article.month || '',
-[L289, S6]       articleNumber: article.pages || '',
-[L290, S6]       publisher: article.publisher || '',
-[L291, S6]       address: article.address || '',
-[L292, S6]       timesCited:
-[L293, S8]         typeof article.times_cited === 'number' ? article.times_cited : null,
-[L294, S6]       oaStatus: article.oa_status || '',
-[L295, S6]       referencesList: Array.isArray(article.references_list)
-[L296, S8]         ? article.references_list
-[L297, S8]         : [],
-[L298, S6]       authorsDetail,
-[L299, S6]       fundingList: Array.isArray(article.funding_list)
-[L300, S8]         ? article.funding_list
-[L301, S8]         : [],
-[L302, S4]     };
-[L303, S2]   }, [article]);
-[L304, S0] 
-[L305, S2]   return {
-[L306, S4]     activeTab,
-[L307, S4]     setActiveTab,
-[L308, S4]     handleTabChange,
-[L309, S4]     drawerState,
-[L310, S4]     openDrawer,
-[L311, S4]     handleExpandDrawer,
-[L312, S4]     closeDrawer,
-[L313, S4]     hoverInfo,
-[L314, S4]     handleHoverInfo,
-[L315, S4]     copiedText,
-[L316, S4]     handleCopy,
-[L317, S4]     isAbstractExpanded,
-[L318, S4]     toggleAbstractExpanded,
-[L319, S4]     ...formattedData,
-[L320, S2]   };
-[L321, S0] }
 
 
 // --- backend/src/bibliography/wos_parser.py ---
@@ -453,101 +128,501 @@ Processed Files: 2
 [L115, S4]     Parses chaotic WOS identity fields (ORCID, ResearcherID, Affiliation) 
 [L116, S4]     and cross-references them to build a structured list of authors.
 [L117, S4]     """
-[L118, S4]     def get_val(*keys):
-[L119, S8]         for k, v in entry.items():
-[L120, S12]             if str(k).lower() in keys:
-[L121, S16]                 val = getattr(v, "value", v)
-[L122, S16]                 if hasattr(val, "value"):
-[L123, S20]                     val = val.value
-[L124, S16]                 s = str(val).strip()
-[L125, S16]                 while (s.startswith("{") and s.endswith("}")) or (
-[L126, S20]                     s.startswith('"') and s.endswith('"')
-[L127, S16]                 ):
-[L128, S20]                     s = s[1:-1].strip()
-[L129, S16]                 return s
-[L130, S8]         return ""
-[L131, S0] 
-[L132, S4]     raw_authors = get_val("author")
-[L133, S4]     if not raw_authors:
-[L134, S8]         return []
-[L135, S0] 
-[L136, S4]     author_names = [
-[L137, S8]         a.strip() for a in re.split(r"\s+and\s+", raw_authors) if a.strip()
-[L138, S4]     ]
-[L139, S4]     
-[L140, S4]     details = []
-[L141, S4]     for name in author_names:
-[L142, S8]         details.append({
-[L143, S12]             "name": name,
-[L144, S12]             "email": None,
-[L145, S12]             "orcid": None,
-[L146, S12]             "researcher_id": None,
-[L147, S12]             "affiliation": None,
-[L148, S12]             "is_corresponding": False
-[L149, S8]         })
+[L118, S4]     kw_pattern = re.compile(
+[L119, S8]         r"\b(Univ|University|Inst|Institute|Sch|School|Dept|Department|Ctr|Center|Centre|"
+[L120, S8]         r"Fac|Faculty|Lab|Laboratory|Hosp|Hospital|Coll|College|Academy|Corp|Corporation|"
+[L121, S8]         r"Inc|Ltd|GmbH|LLC|Ministry|Div|Division|Agency|Natl|National|Hlth|Health|Biol|Biology|"
+[L122, S8]         r"Chem|Chemistry|Phys|Physics|Med|Medicine|Medical|Engn|Engineering|Tech|Technology|"
+[L123, S8]         r"Sci|Science|Sciences|Stat|Statistics|Observ|Observatory|Polytech|Polytechnic|Foundation)\b", 
+[L124, S8]         re.IGNORECASE
+[L125, S4]     )
+[L126, S0] 
+[L127, S4]     def get_val(*keys):
+[L128, S8]         for k, v in entry.items():
+[L129, S12]             if str(k).lower() in keys:
+[L130, S16]                 val = getattr(v, "value", v)
+[L131, S16]                 if hasattr(val, "value"):
+[L132, S20]                     val = val.value
+[L133, S16]                 s = str(val).strip()
+[L134, S16]                 while (s.startswith("{") and s.endswith("}")) or (
+[L135, S20]                     s.startswith('"') and s.endswith('"')
+[L136, S16]                 ):
+[L137, S20]                     s = s[1:-1].strip()
+[L138, S16]                 return s
+[L139, S8]         return ""
+[L140, S0] 
+[L141, S4]     raw_authors = get_val("author")
+[L142, S4]     if not raw_authors:
+[L143, S8]         return []
+[L144, S0] 
+[L145, S4]     author_names = [
+[L146, S8]         a.strip() for a in re.split(r"\s+and\s+", raw_authors) if a.strip()
+[L147, S4]     ]
+[L148, S4]     
+[L149, S4]     details = []
+[L150, S4]     for name in author_names:
+[L151, S8]         details.append({
+[L152, S12]             "name": name,
+[L153, S12]             "email": None,
+[L154, S12]             "orcid": None,
+[L155, S12]             "researcher_id": None,
+[L156, S12]             "affiliation": None,
+[L157, S12]             "is_corresponding": False
+[L158, S8]         })
+[L159, S0] 
+[L160, S4]     # 1. Process ORCID
+[L161, S4]     orcid_raw = get_val("orcid-numbers", "orcid_numbers")
+[L162, S4]     for line in orcid_raw.replace(";", "\n").split("\n"):
+[L163, S8]         if "/" in line:
+[L164, S12]             n_part, i_part = line.rsplit("/", 1)
+[L165, S12]             n_norm = _normalize_name(n_part)
+[L166, S12]             for d in details:
+[L167, S16]                 d_norm = _normalize_name(d["name"])
+[L168, S16]                 if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
+[L169, S20]                     d["orcid"] = i_part.strip()
+[L170, S0] 
+[L171, S4]     # 2. Process ResearcherID
+[L172, S4]     rid_raw = get_val("researcherid-numbers", "researcherid")
+[L173, S4]     for line in rid_raw.replace(";", "\n").split("\n"):
+[L174, S8]         if "/" in line:
+[L175, S12]             n_part, i_part = line.rsplit("/", 1)
+[L176, S12]             n_norm = _normalize_name(n_part)
+[L177, S12]             for d in details:
+[L178, S16]                 d_norm = _normalize_name(d["name"])
+[L179, S16]                 if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
+[L180, S20]                     d["researcher_id"] = i_part.strip()
+[L181, S0] 
+[L182, S4]     # 3. Process Affiliations & Corresponding Author
+[L183, S4]     affil_raw = get_val("affiliation")
+[L184, S4]     affil_raw = affil_raw.replace("\n", " ")
+[L185, S4]     lines = [
+[L186, S8]         line.strip() 
+[L187, S8]         for line in re.split(r"\.\s+(?=[A-Z\[])", affil_raw) 
+[L188, S8]         if line.strip()
+[L189, S4]     ]
+[L190, S4]     
+[L191, S4]     for line in lines:
+[L192, S8]         is_corr = "(Corresponding Author)" in line or "(corresponding author)" in line.lower()
+[L193, S8]         line_clean = re.sub(r"\(\s*Corresponding\s*Author\s*\)", "", line, flags=re.I).strip()
+[L194, S8]         
+[L195, S8]         matched_authors = []
+[L196, S8]         for d in details:
+[L197, S12]             last_name = d["name"].split(",")[0].strip()
+[L198, S12]             if last_name and last_name.lower() in line_clean.lower():
+[L199, S16]                 matched_authors.append(d)
+[L200, S16]                 if is_corr:
+[L201, S20]                     d["is_corresponding"] = True
+[L202, S8]         
+[L203, S8]         bracket_match = re.match(r"^\[(.*?)\]\s*(.*)", line_clean)
+[L204, S8]         if bracket_match:
+[L205, S12]             inst_part = bracket_match.group(2).strip()
+[L206, S8]         else:
+[L207, S12]             inst_part = line_clean
+[L208, S12]             
+[L209, S12]             if ";" in inst_part:
+[L210, S16]                 segments = [s.strip() for s in inst_part.split(";")]
+[L211, S16]                 for i, seg in enumerate(segments):
+[L212, S20]                     if kw_pattern.search(seg):
+[L213, S24]                         inst_part = "; ".join(segments[i:]).strip()
+[L214, S24]                         break
+[L215, S12]             
+[L216, S12]             subparts = [p.strip() for p in inst_part.split(",")]
+[L217, S12]             if len(subparts) >= 2:
+[L218, S16]                 if not kw_pattern.search(subparts[0]) and kw_pattern.search(subparts[1]):
+[L219, S20]                     inst_part = ", ".join(subparts[1:]).strip()
+[L220, S16]                 elif len(subparts) >= 3 and not kw_pattern.search(subparts[0]) and not kw_pattern.search(subparts[1]):
+[L221, S20]                     inst_part = ", ".join(subparts[2:]).strip()
+[L222, S20]                     
+[L223, S8]         for d in matched_authors:
+[L224, S12]             if not d["affiliation"]:
+[L225, S16]                 d["affiliation"] = inst_part
+[L226, S0] 
+[L227, S4]     # 4. Process Emails (Attach to corresponding, or first author)
+[L228, S4]     email_raw = get_val("author-email", "author_email")
+[L229, S4]     emails = [e.strip() for e in email_raw.split(",") if e.strip()]
+[L230, S4]     
+[L231, S4]     corr_authors = [d for d in details if d["is_corresponding"]]
+[L232, S4]     if not corr_authors and details:
+[L233, S8]         corr_authors = [details[0]]
+[L234, S8]         
+[L235, S4]     for idx, email in enumerate(emails):
+[L236, S8]         if idx < len(corr_authors):
+[L237, S12]             corr_authors[idx]["email"] = email
+[L238, S8]         elif idx < len(details):
+[L239, S12]             details[idx]["email"] = email
+[L240, S0] 
+[L241, S4]     return details
+
+
+// --- backend/src/bibliography/parser_service.py ---
+
+[L001, S0] import datetime
+[L002, S0] from typing import List, Optional
+[L003, S0] import re
+[L004, S0] import bibtexparser
+[L005, S0] from .schemas import ParsedReference
+[L006, S0] from .wos_parser import (
+[L007, S4]     parse_wos_authors_detail,
+[L008, S4]     parse_wos_countries,
+[L009, S4]     parse_wos_cited_references,
+[L010, S0] )
+[L011, S0] 
+[L012, S0] 
+[L013, S0] def _extract_bib_int(entry, key: str) -> Optional[int]:
+[L014, S4]     val = _extract_bib_field(entry, key)
+[L015, S4]     if val:
+[L016, S8]         match = re.search(r"\b(\d+)\b", str(val))
+[L017, S8]         if match:
+[L018, S12]             try:
+[L019, S16]                 return int(match.group(1))
+[L020, S12]             except ValueError:
+[L021, S16]                 return None
+[L022, S4]     return None
+[L023, S0] 
+[L024, S0] 
+[L025, S0] def _extract_bib_field(entry, key: str) -> Optional[str]:
+[L026, S4]     target_keys = {
+[L027, S8]         key.lower(),
+[L028, S8]         key.lower().replace("_", "-"),
+[L029, S8]         key.lower().replace("-", "_"),
+[L030, S4]     }
+[L031, S4]     if key.lower() == "journal":
+[L032, S8]         target_keys.update(
+[L033, S12]             {"journaltitle", "booktitle", "series", "journal-iso"}
+[L034, S8]         )
+[L035, S4]     elif key.lower() == "title":
+[L036, S8]         target_keys.update({"booktitle", "ti"})
+[L037, S4]     elif key.lower() == "year":
+[L038, S8]         target_keys.update({"date", "py"})
+[L039, S4]     elif key.lower() == "abstract":
+[L040, S8]         target_keys.update({"ab"})
+[L041, S4]     elif key.lower() == "publisher":
+[L042, S8]         target_keys.update({"pu"})
+[L043, S4]     elif key.lower() == "language":
+[L044, S8]         target_keys.update({"la"})
+[L045, S4]     elif key.lower() == "keywords":
+[L046, S8]         target_keys.update(
+[L047, S12]             {"keyword", "kw", "author_keywords", "author-keywords", "de"}
+[L048, S8]         )
+[L049, S4]     elif key.lower() == "keywords_plus":
+[L050, S8]         target_keys.update(
+[L051, S12]             {"keywords-plus", "keywords_plus", "keywordsplus", "id"}
+[L052, S8]         )
+[L053, S4]     elif key.lower() == "research_areas":
+[L054, S8]         target_keys.update({"research-areas", "sc"})
+[L055, S4]     elif key.lower() == "web_of_science_categories":
+[L056, S8]         target_keys.update({"web-of-science-categories", "wc"})
+[L057, S4]     elif key.lower() == "funding_text":
+[L058, S8]         target_keys.update({"funding-text", "funding", "fx"})
+[L059, S4]     elif key.lower() == "journal_iso":
+[L060, S8]         target_keys.update({"journal-iso", "ji", "j9"})
+[L061, S4]     elif key.lower() == "oa_status":
+[L062, S8]         target_keys.update({"oa", "oa-status", "open_access"})
+[L063, S4]     elif key.lower() == "issn":
+[L064, S8]         target_keys.update({"sn", "eissn"})
+[L065, S4]     elif key.lower() == "volume":
+[L066, S8]         target_keys.update({"vl"})
+[L067, S4]     elif key.lower() == "issue":
+[L068, S8]         target_keys.update({"number", "is"})
+[L069, S4]     elif key.lower() == "pages":
+[L070, S8]         target_keys.update({"page", "bp", "ar"})
+[L071, S4]     elif key.lower() in ("times_cited", "times-cited"):
+[L072, S8]         target_keys.update({"tc", "times-cited", "times_cited"})
+[L073, S4]     elif key.lower() in ("cited_references_count", "cited-references-count"):
+[L074, S8]         target_keys.update(
+[L075, S12]             {"number-of-cited-references", "nr", "cr"}
+[L076, S8]         )
+[L077, S0] 
+[L078, S4]     val = None
+[L079, S4]     if isinstance(entry, dict):
+[L080, S8]         for k, v in entry.items():
+[L081, S12]             if str(k).lower() in target_keys:
+[L082, S16]                 val = v
+[L083, S16]                 break
+[L084, S4]     elif hasattr(entry, "fields_dict"):
+[L085, S8]         for k, v in entry.fields_dict.items():
+[L086, S12]             if str(k).lower() in target_keys:
+[L087, S16]                 val = getattr(v, "value", str(v))
+[L088, S16]                 break
+[L089, S4]     elif hasattr(entry, "fields"):
+[L090, S8]         for field in entry.fields:
+[L091, S12]             f_key = getattr(field, "key", None)
+[L092, S12]             if f_key and str(f_key).lower() in target_keys:
+[L093, S16]                 val = getattr(field, "value", str(field))
+[L094, S16]                 break
+[L095, S4]     elif hasattr(entry, key):
+[L096, S8]         val = getattr(entry, key)
+[L097, S4]     elif hasattr(entry, "get"):
+[L098, S8]         for tk in target_keys:
+[L099, S12]             try:
+[L100, S16]                 v = entry.get(tk) or entry.get(tk.capitalize())
+[L101, S16]                 if v is not None:
+[L102, S20]                     val = v
+[L103, S20]                     break
+[L104, S12]             except Exception:
+[L105, S16]                 pass
+[L106, S4]     else:
+[L107, S8]         val = None
+[L108, S0] 
+[L109, S4]     if val is not None:
+[L110, S8]         if hasattr(val, "value"):
+[L111, S12]             val = val.value
+[L112, S8]         cleaned = str(val).strip()
+[L113, S8]         while (cleaned.startswith("{") and cleaned.endswith("}")) or (
+[L114, S12]             cleaned.startswith('"') and cleaned.endswith('"')
+[L115, S8]         ):
+[L116, S12]             cleaned = cleaned[1:-1].strip()
+[L117, S8]         cleaned = re.sub(r"\s+", " ", cleaned)
+[L118, S8]         if key.lower() == "year":
+[L119, S12]             match = re.search(r"\b(19\d\d|20\d\d)\b", cleaned)
+[L120, S0] 
+[L121, S0] 
+[L122, S12]             return match.group(1) if match else (cleaned or None)
+[L123, S8]         return cleaned or None
+[L124, S4]     return None
+[L125, S0] 
+[L126, S0] 
+[L127, S0] def _parse_bibtex_entries(content: str) -> list:
+[L128, S4]     if hasattr(bibtexparser, "parse_string"):
+[L129, S8]         result = bibtexparser.parse_string(content)
+[L130, S8]         return list(getattr(result, "entries", getattr(result, "blocks", [])))
+[L131, S4]     if hasattr(bibtexparser, "loads"):
+[L132, S8]         result = bibtexparser.loads(content)
+[L133, S8]         return list(getattr(result, "entries", []))
+[L134, S4]     if hasattr(bibtexparser, "bparser"):
+[L135, S8]         parser = bibtexparser.bparser.BibTexParser()
+[L136, S8]         result = parser.parse(content)
+[L137, S8]         return list(getattr(result, "entries", []))
+[L138, S4]     return []
+[L139, S0] 
+[L140, S0] 
+[L141, S0] def _clean_year(val: Optional[str]) -> Optional[str]:
+[L142, S4]     if not val:
+[L143, S8]         return None
+[L144, S4]     match = re.search(r"\b(19\d\d|20\d\d)\b", str(val))
+[L145, S4]     if match:
+[L146, S8]         return match.group(1)
+[L147, S4]     cleaned = re.sub(r"[^\d]", "", str(val))
+[L148, S4]     return cleaned[:4] if len(cleaned) >= 4 else (cleaned or None)
+[L149, S0] 
 [L150, S0] 
-[L151, S4]     # 1. Process ORCID
-[L152, S4]     orcid_raw = get_val("orcid-numbers", "orcid_numbers")
-[L153, S4]     for line in orcid_raw.replace(";", "\n").split("\n"):
-[L154, S8]         if "/" in line:
-[L155, S12]             n_part, i_part = line.rsplit("/", 1)
-[L156, S12]             n_norm = _normalize_name(n_part)
-[L157, S12]             for d in details:
-[L158, S16]                 d_norm = _normalize_name(d["name"])
-[L159, S16]                 if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
-[L160, S20]                     d["orcid"] = i_part.strip()
+[L151, S0] def _extract_ris_title(entry: dict) -> Optional[str]:
+[L152, S4]     return (
+[L153, S8]         entry.get("title")
+[L154, S8]         or entry.get("primary_title")
+[L155, S8]         or entry.get("TI")
+[L156, S8]         or entry.get("T1")
+[L157, S8]         or entry.get("CT")
+[L158, S8]         or None
+[L159, S4]     )
+[L160, S0] 
 [L161, S0] 
-[L162, S4]     # 2. Process ResearcherID
-[L163, S4]     rid_raw = get_val("researcherid-numbers", "researcherid")
-[L164, S4]     for line in rid_raw.replace(";", "\n").split("\n"):
-[L165, S8]         if "/" in line:
-[L166, S12]             n_part, i_part = line.rsplit("/", 1)
-[L167, S12]             n_norm = _normalize_name(n_part)
-[L168, S12]             for d in details:
-[L169, S16]                 d_norm = _normalize_name(d["name"])
-[L170, S16]                 if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
-[L171, S20]                     d["researcher_id"] = i_part.strip()
-[L172, S0] 
-[L173, S4]     # 3. Process Affiliations & Corresponding Author
-[L174, S4]     affil_raw = get_val("affiliation")
-[L175, S4]     affil_raw = affil_raw.replace("\n", " ")
-[L176, S4]     lines = [
-[L177, S8]         line.strip() 
-[L178, S8]         for line in re.split(r"\.\s+(?=[A-Z\[])", affil_raw) 
-[L179, S8]         if line.strip()
-[L180, S4]     ]
-[L181, S4]     
-[L182, S4]     for line in lines:
-[L183, S8]         is_corr = "(Corresponding Author)" in line or "(corresponding author)" in line.lower()
-[L184, S8]         line_clean = re.sub(r"\(\s*Corresponding\s*Author\s*\)", "", line, flags=re.I).strip()
-[L185, S8]         
-[L186, S8]         matched_authors = []
-[L187, S8]         for d in details:
-[L188, S12]             last_name = d["name"].split(",")[0].strip()
-[L189, S12]             if last_name and last_name.lower() in line_clean.lower():
-[L190, S16]                 matched_authors.append(d)
-[L191, S16]                 if is_corr:
-[L192, S20]                     d["is_corresponding"] = True
-[L193, S8]         
-[L194, S8]         bracket_match = re.match(r"^\[(.*?)\]\s*(.*)", line_clean)
-[L195, S8]         inst_part = bracket_match.group(2) if bracket_match else line_clean
-[L196, S8]         
-[L197, S8]         for d in matched_authors:
-[L198, S12]             if not d["affiliation"]:
-[L199, S16]                 d["affiliation"] = inst_part
-[L200, S0] 
-[L201, S4]     # 4. Process Emails (Attach to corresponding, or first author)
-[L202, S4]     email_raw = get_val("author-email", "author_email")
-[L203, S4]     emails = [e.strip() for e in email_raw.split(",") if e.strip()]
-[L204, S4]     
-[L205, S4]     corr_authors = [d for d in details if d["is_corresponding"]]
-[L206, S4]     if not corr_authors and details:
-[L207, S8]         corr_authors = [details[0]]
-[L208, S8]         
-[L209, S4]     for idx, email in enumerate(emails):
-[L210, S8]         if idx < len(corr_authors):
-[L211, S12]             corr_authors[idx]["email"] = email
-[L212, S8]         elif idx < len(details):
-[L213, S12]             details[idx]["email"] = email
-[L214, S0] 
-[L215, S4]     return details
+[L162, S0] def _extract_ris_journal(entry: dict) -> Optional[str]:
+[L163, S4]     return (
+[L164, S8]         entry.get("journal_name")
+[L165, S8]         or entry.get("secondary_title")
+[L166, S8]         or entry.get("alternate_title1")
+[L167, S8]         or entry.get("alternate_title2")
+[L168, S8]         or entry.get("alternate_title3")
+[L169, S8]         or entry.get("source")
+[L170, S8]         or entry.get("SO")
+[L171, S8]         or entry.get("T2")
+[L172, S8]         or entry.get("JO")
+[L173, S8]         or entry.get("JF")
+[L174, S8]         or entry.get("JA")
+[L175, S8]         or entry.get("J2")
+[L176, S8]         or None
+[L177, S4]     )
+[L178, S0] 
+[L179, S0] 
+[L180, S0] def _extract_ris_authors(entry: dict) -> Optional[str]:
+[L181, S4]     authors = (
+[L182, S8]         entry.get("authors")
+[L183, S8]         or entry.get("primary_authors")
+[L184, S8]         or entry.get("AU")
+[L185, S8]         or entry.get("A1")
+[L186, S8]         or []
+[L187, S4]     )
+[L188, S4]     if isinstance(authors, list):
+[L189, S8]         clean_authors = [str(a).strip() for a in authors if str(a).strip()]
+[L190, S8]         return " and ".join(clean_authors) if clean_authors else None
+[L191, S4]     if isinstance(authors, str) and authors.strip():
+[L192, S8]         return authors.strip()
+[L193, S4]     return None
+[L194, S0] 
+[L195, S0] 
+[L196, S0] def _extract_ris_year(entry: dict) -> Optional[str]:
+[L197, S4]     raw_year = (
+[L198, S8]         entry.get("year")
+[L199, S8]         or entry.get("publication_year")
+[L200, S8]         or entry.get("PY")
+[L201, S8]         or entry.get("Y1")
+[L202, S8]         or entry.get("DA")
+[L203, S8]         or None
+[L204, S4]     )
+[L205, S4]     return _clean_year(raw_year)
+[L206, S0] 
+[L207, S0] 
+[L208, S0] def _extract_ris_doi(entry: dict) -> Optional[str]:
+[L209, S4]     doi = entry.get("doi") or entry.get("DO") or entry.get("DI") or None
+[L210, S4]     if doi:
+[L211, S8]         return (
+[L212, S12]             str(doi)
+[L213, S12]             .strip()
+[L214, S12]             .replace("https://doi.org/", "")
+[L215, S12]             .replace("http://doi.org/", "")
+[L216, S8]         )
+[L217, S4]     return None
+[L218, S0] 
+[L219, S0] 
+[L220, S0] def _parse_ris_fallback(content: str) -> list:
+[L221, S4]     entries = []
+[L222, S4]     current_entry = {}
+[L223, S4]     current_tag = None
+[L224, S0] 
+[L225, S4]     for line in content.splitlines():
+[L226, S8]         line = line.strip()
+[L227, S8]         if not line:
+[L228, S12]             continue
+[L229, S8]         match = re.match(r"^([A-Z0-9]{2})\s*-\s*(.*)$", line)
+[L230, S8]         if match:
+[L231, S12]             tag, val = match.group(1), match.group(2).strip()
+[L232, S12]             current_tag = tag
+[L233, S12]             if tag == "TY":
+[L234, S16]                 if current_entry and (
+[L235, S20]                     current_entry.get("TI")
+[L236, S20]                     or current_entry.get("title")
+[L237, S20]                     or current_entry.get("AU")
+[L238, S16]                 ):
+[L239, S20]                     entries.append(current_entry)
+[L240, S16]                 current_entry = {"TY": val, "authors": []}
+[L241, S12]             elif tag == "ER":
+[L242, S16]                 if current_entry:
+[L243, S20]                     entries.append(current_entry)
+[L244, S20]                     current_entry = {}
+[L245, S12]             elif tag in ("AU", "A1"):
+[L246, S16]                 if "authors" not in current_entry:
+[L247, S20]                     current_entry["authors"] = []
+[L248, S16]                 current_entry["authors"].append(val)
+[L249, S12]             else:
+[L250, S16]                 current_entry[tag] = val
+[L251, S8]         elif current_tag and current_entry:
+[L252, S12]             if current_tag not in ("AU", "A1") and current_tag in current_entry:
+[L253, S16]                 current_entry[current_tag] += " " + line
+[L254, S0] 
+[L255, S4]     if current_entry and (
+[L256, S8]         current_entry.get("TI")
+[L257, S8]         or current_entry.get("title")
+[L258, S8]         or current_entry.get("AU")
+[L259, S4]     ):
+[L260, S8]         entries.append(current_entry)
+[L261, S0] 
+[L262, S4]     return entries
+[L263, S0] 
+[L264, S0] 
+[L265, S0] def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
+[L266, S4]     if ext.lower() != ".bib":
+[L267, S8]         raise ValueError(f"Unsupported extension: {ext}")
+[L268, S8]         
+[L269, S4]     now = datetime.datetime.now(datetime.timezone.utc)
+[L270, S4]     try:
+[L271, S8]         entries = _parse_bibtex_entries(content)
+[L272, S4]     except Exception:
+[L273, S8]         entries = []
+[L274, S8]         
+[L275, S4]     if not entries:
+[L276, S8]         raise ValueError("No se encontraron items válidos en el archivo .bib")
+[L277, S8]         
+[L278, S4]     return [
+[L279, S8]         ParsedReference(
+[L280, S12]             author=_extract_bib_field(entry, "author"),
+[L281, S12]             year=_extract_bib_field(entry, "year"),
+[L282, S12]             title=_extract_bib_field(entry, "title"),
+[L283, S12]             journal=_extract_bib_field(entry, "journal"),
+[L284, S12]             doi=_extract_bib_field(entry, "doi"),
+[L285, S12]             abstract=_extract_bib_field(entry, "abstract"),
+[L286, S12]             publisher=_extract_bib_field(entry, "publisher"),
+[L287, S12]             language=_extract_bib_field(entry, "language"),
+[L288, S12]             keywords=_extract_bib_field(entry, "keywords"),
+[L289, S12]             keywords_plus=_extract_bib_field(entry, "keywords_plus"),
+[L290, S12]             research_areas=_extract_bib_field(entry, "research_areas"),
+[L291, S12]             web_of_science_categories=_extract_bib_field(
+[L292, S16]                 entry, "web_of_science_categories"
+[L293, S12]             ),
+[L294, S12]             funding_text=_extract_bib_field(entry, "funding_text"),
+[L295, S12]             journal_iso=_extract_bib_field(entry, "journal_iso"),
+[L296, S12]             oa_status=_extract_bib_field(entry, "oa_status"),
+[L297, S12]             issn=_extract_bib_field(entry, "issn"),
+[L298, S12]             volume=_extract_bib_field(entry, "volume"),
+[L299, S12]             issue=_extract_bib_field(entry, "issue"),
+[L300, S12]             pages=_extract_bib_field(entry, "pages"),
+[L301, S12]             times_cited=_extract_bib_int(entry, "times_cited"),
+[L302, S12]             cited_references_count=_extract_bib_int(
+[L303, S16]                 entry, "cited_references_count"
+[L304, S12]             ),
+[L305, S12]             authors_detail=parse_wos_authors_detail(
+[L306, S16]                 entry if isinstance(entry, dict) else getattr(entry, "fields_dict", {})
+[L307, S12]             ),
+[L308, S12]             countries=parse_wos_countries(
+[L309, S16]                 entry if isinstance(entry, dict) else getattr(entry, "fields_dict", {})
+[L310, S12]             ),
+[L311, S12]             cited_references=parse_wos_cited_references(
+[L312, S16]                 entry if isinstance(entry, dict) else getattr(entry, "fields_dict", {})
+[L313, S12]             ),
+[L314, S12]             upload_datetime=now,
+[L315, S8]         )
+[L316, S8]         for entry in entries
+[L317, S4]     ]
+[L318, S0] 
+[L319, S0] 
+[L320, S0] def _deprecated_parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
+[L321, S4]     parsed_refs: List[ParsedReference] = []
+[L322, S4]     now = datetime.datetime.now(datetime.timezone.utc)
+[L323, S4]     
+[L324, S4]     if ext.lower() == ".ris":
+[L325, S8]         entries = []
+[L326, S8]         try:
+[L327, S12]             entries = rispy.loads(content, skip_unknown_tags=True)
+[L328, S8]         except Exception:
+[L329, S12]             entries = []
+[L330, S0] 
+[L331, S8]         fallback_entries = _parse_ris_fallback(content)
+[L332, S8]         if len(fallback_entries) > len(entries):
+[L333, S12]             entries = fallback_entries
+[L334, S0] 
+[L335, S8]         for entry in entries:
+[L336, S12]             authors = entry.get("authors", [])
+[L337, S12]             author_str = " and ".join(authors) if isinstance(authors, list) else authors
+[L338, S12]             
+[L339, S12]             parsed_refs.append(
+[L340, S16]                 ParsedReference(
+[L341, S20]                     author=_extract_ris_authors(entry),
+[L342, S20]                     year=_extract_ris_year(entry),
+[L343, S20]                     title=_extract_ris_title(entry),
+[L344, S20]                     journal=_extract_ris_journal(entry),
+[L345, S20]                     doi=_extract_ris_doi(entry),
+[L346, S20]                     upload_datetime=now,
+[L347, S16]                 )
+[L348, S12]             )
+[L349, S12]             
+[L350, S4]     elif ext.lower() == ".bib":
+[L351, S8]         try:
+[L352, S12]             entries = _parse_bibtex_entries(content)
+[L353, S8]         except Exception:
+[L354, S12]             entries = []
+[L355, S12]             
+[L356, S8]         for entry in entries:
+[L357, S12]             parsed_refs.append(
+[L358, S16]                 ParsedReference(
+[L359, S20]                     author=_extract_bib_field(entry, "author"),
+[L360, S20]                     year=_extract_bib_field(entry, "year"),
+[L361, S20]                     title=_extract_bib_field(entry, "title"),
+[L362, S20]                     journal=_extract_bib_field(entry, "journal"),
+[L363, S20]                     doi=_extract_bib_field(entry, "doi"),
+[L364, S20]                     upload_datetime=now,
+[L365, S16]                 )
+[L366, S12]             )
+[L367, S4]     else:
+[L368, S8]         raise ValueError(f"Unsupported extension: {ext}")
+[L369, S8]         
+[L370, S4]     return parsed_refs
