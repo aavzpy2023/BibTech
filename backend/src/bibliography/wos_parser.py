@@ -142,8 +142,10 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
     if not raw_authors:
         return []
 
+    raw_authors = re.sub(r"\s+", " ", raw_authors)
+
     author_names = [
-        a.strip() for a in re.split(r"\s+and\s+", raw_authors) if a.strip()
+        a.strip() for a in re.split(r"\s+and\s+", raw_authors, flags=re.IGNORECASE) if a.strip()
     ]
     
     details = []
@@ -276,7 +278,10 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
 
     # 4. Process Emails (Attach to corresponding, or first author)
     email_raw = get_val("author-email", "author_email")
-    emails = [e.strip() for e in email_raw.split(",") if e.strip()]
+    emails = re.findall(
+        r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", 
+        str(email_raw)
+    )
     
     corr_authors = [d for d in details if d["is_corresponding"]]
     if not corr_authors and details:

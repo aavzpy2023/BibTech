@@ -334,7 +334,10 @@ def _parse_bib_authors_detail(entry) -> List[dict]:
                             break
 
         if email_raw and all(not d.get("email") for d in details):
-            emails = [e.strip() for e in str(email_raw).split(",") if e.strip()]
+            emails = re.findall(
+                r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", 
+                str(email_raw)
+            )
             if len(emails) == len(details):
                 for idx, d in enumerate(details):
                     d["email"] = emails[idx]
