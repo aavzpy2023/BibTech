@@ -14,7 +14,10 @@ from .schemas import (
 from .parser_service import parse_bibliography_content
 from .download_service import execute_batch_download
 from .zip_service import create_zip_from_pdfs
-from .injection_service import inject_references_to_db
+from .injection_service import (
+    inject_references_to_db,
+    backfill_funding_from_articles,
+)
 
 try:
     from ..database.session import get_db
@@ -153,6 +156,23 @@ if HAS_MULTIPART:
         articles = (
             db.query(Article).filter(Article.id.in_(article_ids)).all()
         )
+
+        # Transparent Auto-Backfill: If articles have funding_text but no funding records
+        has_text = any(
+            bool(getattr(a, "funding_text", None) and str(a.funding_text).strip())
+            for a in articles
+        )
+        has_records = any(
+            bool(_safe_list(getattr(a, "funding", None)))
+            for a in articles
+        )
+        if has_text and not has_records:
+            try:
+                backfill_funding_from_articles(db)
+                for a in articles:
+                    db.refresh(a)
+            except Exception:
+                pass
 
         def _to_str(val):
             return str(val) if isinstance(val, (str, int, float)) else None
@@ -351,6 +371,16 @@ else:
         db: Session,
     ):
         return await _process_inject(file, project_code, db)
+
+
+@router.post("/backfill-funding")
+def trigger_backfill_funding(db: Session = Depends(get_db)):
+    """API endpoint to trigger parsing of funding_text into the funding table."""
+    count = backfill_funding_from_articles(db)
+    return {
+        "message": f"Successfully parsed and stored {count} funding records",
+        "inserted": count,
+    }
 
 
 @router.post("/batch-download")

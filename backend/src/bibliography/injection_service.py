@@ -6,6 +6,7 @@ from sqlalchemy.exc import OperationalError
 
 try:
     from .schemas import ParsedReference
+    from .wos_parser import parse_funding_text
     from ..database.models.core import (
         Article,
         Project,
@@ -23,8 +24,10 @@ try:
         Keyword,
         KeywordArticle,
     )
+    from ..database.models.tracking import Funding
 except (ImportError, ValueError):
     from backend.src.bibliography.schemas import ParsedReference
+    from backend.src.bibliography.wos_parser import parse_funding_text
     from backend.src.database.models.core import (
         Article,
         Project,
@@ -42,12 +45,7 @@ except (ImportError, ValueError):
         Keyword,
         KeywordArticle,
     )
-    from backend.src.bibliography.schemas import ParsedReference
-    from backend.src.database.models.core import (
-        Article,
-        Project,
-        ProjectArticle,
-    )
+    from backend.src.database.models.tracking import Funding
 
 
 def _get_insert_stmt(table_or_model, db: Session):
@@ -609,8 +607,86 @@ def _bulk_inject_references(
             stmt_acr = _get_insert_stmt(ArticleCitation, db).values(article_citations_data)
             db.execute(stmt_acr)
 
+    # 8. Bulk inject Funding
+    funding_data = []
+    for ref in refs:
+        doi_val = (ref.doi or "").strip() or None
+        title_val = (ref.title or "").strip() or "Untitled"
+        art = existing_by_doi.get(doi_val) if doi_val else None
+        if not art:
+            art = existing_by_title.get(title_val)
+        if not art:
+            continue
+
+        f_text = getattr(ref, "funding_text", None)
+        if f_text and str(f_text).strip():
+            parsed_funds = parse_funding_text(str(f_text))
+            for pf in parsed_funds:
+                funding_data.append({
+                    "article_id": art.id,
+                    "agency": pf["agency"][:255],
+                    "grant_number": (
+                        pf["grant_number"][:100]
+                        if pf["grant_number"]
+                        else None
+                    ),
+                    "country": (
+                        pf["country"][:100]
+                        if pf["country"]
+                        else None
+                    ),
+                })
+
+    if funding_data:
+        stmt_fund = _get_insert_stmt(Funding, db).values(funding_data)
+        db.execute(stmt_fund)
+
     db.commit()
     return len(linked_article_ids)
+
+
+def backfill_funding_from_articles(db: Session) -> int:
+    """Parses funding_text from existing articles and populates funding table."""
+    articles = (
+        db.query(Article)
+        .filter(Article.funding_text.isnot(None), Article.funding_text != "")
+        .all()
+    )
+    if not articles:
+        return 0
+
+    existing_keys = set(
+        (f.article_id, f.agency.lower(), (f.grant_number or "").lower())
+        for f in db.query(Funding).all()
+    )
+
+    new_fundings = []
+    for art in articles:
+        parsed = parse_funding_text(art.funding_text)
+        for pf in parsed:
+            key = (art.id, pf["agency"].lower(), (pf["grant_number"] or "").lower())
+            if key not in existing_keys:
+                existing_keys.add(key)
+                new_fundings.append({
+                    "article_id": art.id,
+                    "agency": pf["agency"][:255],
+                    "grant_number": (
+                        pf["grant_number"][:100]
+                        if pf["grant_number"]
+                        else None
+                    ),
+                    "country": (
+                        pf["country"][:100]
+                        if pf["country"]
+                        else None
+                    ),
+                })
+
+    if new_fundings:
+        stmt = _get_insert_stmt(Funding, db).values(new_fundings)
+        db.execute(stmt)
+        db.commit()
+    return len(new_fundings)
 
 
 def inject_references_to_db(

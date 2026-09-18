@@ -330,3 +330,155 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
             details[idx]["email"] = email
 
     return details
+
+
+def parse_funding_text(text: str) -> List[Dict[str, Optional[str]]]:
+    """
+    Parses unstructured funding acknowledgment text into structured grants.
+    Extracts agency name, grant or award identification number, and country.
+    """
+    if not text or not str(text).strip():
+        return []
+
+    clean = re.sub(r"\s+", " ", str(text).strip())
+
+    preambles = [
+        r"^this (work|research|study|project|paper) (was|is) (supported|funded|aided) by (the )?",
+        r"^supported by (the )?",
+        r"^funded by (the )?",
+        r"^we (thank|acknowledge) (the )?",
+        r"^financial support (from|by) (the )?",
+    ]
+    trimmed = clean
+    for p in preambles:
+        trimmed = re.sub(p, "", trimmed, flags=re.IGNORECASE).strip()
+
+    raw_segments = [
+        s.strip()
+        for s in re.split(r";|\.\s+(?=[A-Z\[])", trimmed)
+        if s.strip()
+    ]
+    if not raw_segments:
+        raw_segments = [trimmed]
+
+    known_countries = [
+        "USA", "United States", "China", "UK", "United Kingdom", "England",
+        "Germany", "France", "Japan", "Canada", "Australia", "Spain", "Italy",
+        "Brazil", "India", "South Korea", "Korea", "Netherlands", "Switzerland",
+        "Sweden", "Poland", "Belgium", "Austria", "Malaysia", "Singapore",
+        "Mexico", "Chile", "Argentina", "Colombia", "Portugal", "Norway",
+        "Denmark", "Finland", "Taiwan", "Saudi Arabia"
+    ]
+    country_pat = re.compile(
+        r"\b(" + "|".join(re.escape(c) for c in known_countries) + r")\b",
+        re.IGNORECASE,
+    )
+    grant_prefix_pat = re.compile(
+        r"(?:grant|award|contract|project|agreement|number|no\.?|#)\s*[:#]?\s*",
+        re.IGNORECASE,
+    )
+
+    results: List[Dict[str, Optional[str]]] = []
+
+    for seg in raw_segments:
+        seg_clean = seg.rstrip(".").strip()
+        if not seg_clean or len(seg_clean) < 3:
+            continue
+
+        detected_country = None
+        c_matches = country_pat.findall(seg_clean)
+        if c_matches:
+            detected_country = c_matches[-1]
+
+        bracket_matches = list(re.finditer(r"[\(\[](.*?)[\)\]]", seg_clean))
+
+        if bracket_matches:
+            first_m = bracket_matches[0]
+            agency = seg_clean[: first_m.start()].strip()
+            agency = re.sub(
+                r",?\s*(under|through|via|with|by)\s*$",
+                "",
+                agency,
+                flags=re.IGNORECASE,
+            ).strip(", -:")
+
+            for bm in bracket_matches:
+                inside = bm.group(1).strip()
+                inside_clean = grant_prefix_pat.sub("", inside).strip()
+                grants = [
+                    g.strip()
+                    for g in re.split(r"[,;]\s*", inside_clean)
+                    if g.strip()
+                ]
+                for g in grants:
+                    if len(g) > 2 and not g.lower().startswith("http"):
+                        if re.match(r"^[A-Z]{2,6}$", g) and not re.search(r"\d", g):
+                            if agency:
+                                agency = f"{agency} ({g})"
+                            continue
+                        results.append({
+                            "agency": (agency or seg_clean)[:255],
+                            "grant_number": g[:100],
+                            "country": (
+                                detected_country[:100]
+                                if detected_country
+                                else None
+                            ),
+                        })
+
+            if not any(r.get("agency") == agency[:255] for r in results) and agency:
+                results.append({
+                    "agency": agency[:255],
+                    "grant_number": None,
+                    "country": (
+                        detected_country[:100]
+                        if detected_country
+                        else None
+                    ),
+                })
+        else:
+            g_match = re.search(
+                r"(?:grant|award|contract|no\.?)\s*[:#]?\s*([A-Z0-9\/\-_]+)",
+                seg_clean,
+                re.IGNORECASE,
+            )
+            grant_code = g_match.group(1) if g_match else None
+            agency = seg_clean
+            if g_match:
+                agency = seg_clean[: g_match.start()].strip()
+                agency = re.sub(
+                    r",?\s*(under|through|via|with|by)\s*$",
+                    "",
+                    agency,
+                    flags=re.IGNORECASE,
+                ).strip()
+
+            agency = agency.strip(", -:")
+            if detected_country and agency.lower().endswith(detected_country.lower()):
+                agency = re.sub(
+                    r",?\s*" + re.escape(detected_country) + r"$",
+                    "",
+                    agency,
+                    flags=re.IGNORECASE,
+                ).strip()
+
+            if len(agency) >= 3:
+                results.append({
+                    "agency": agency[:255],
+                    "grant_number": grant_code[:100] if grant_code else None,
+                    "country": (
+                        detected_country[:100]
+                        if detected_country
+                        else None
+                    ),
+                })
+
+    unique_results: List[Dict[str, Optional[str]]] = []
+    seen = set()
+    for r in results:
+        key = (r["agency"].lower(), (r["grant_number"] or "").lower())
+        if key not in seen and len(r["agency"]) >= 3:
+            seen.add(key)
+            unique_results.append(r)
+
+    return unique_results
