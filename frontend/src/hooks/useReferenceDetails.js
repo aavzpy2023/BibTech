@@ -269,7 +269,7 @@ export default function useReferenceDetails(article = null) {
         }
       }
 
-      let clean = lastBlock.replace(/^\[.*?\]\s*/, '').trim();
+      let clean = lastBlock.replace(/^\[.*?\]\s*/, '').trim().replace(/\.+$/, '');
       const subparts = clean.split(',').map((p) => p.trim());
 
       if (subparts.length >= 2) {

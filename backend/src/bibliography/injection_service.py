@@ -246,7 +246,7 @@ def _bulk_inject_references(
             for ad in ref.authors_detail:
                 aff = ad.get("affiliation")
                 if aff and str(aff).strip():
-                    inst_str = str(aff).strip()[:255]
+                    inst_str = str(aff).strip().rstrip(".")[:255]
                     if inst_str not in all_affils_map:
                         all_affils_map[inst_str] = {
                             "institution": inst_str,
@@ -287,7 +287,7 @@ def _bulk_inject_references(
                 name = (ad.get("name") or "").strip()[:255]
                 if name:
                     all_authors_raw.add(name)
-                    aff_str = (ad.get("affiliation") or "").strip()[:255]
+                    aff_str = (ad.get("affiliation") or "").strip().rstrip(".")[:255]
                     aff_id = existing_affils.get(aff_str)
                     author_info_map[name] = {
                         "name": name,

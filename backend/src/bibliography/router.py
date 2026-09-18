@@ -190,14 +190,21 @@ if HAS_MULTIPART:
                     aff = getattr(auth, "affiliation", None)
                     aff_str = None
                     if aff and not _is_mock(aff):
-                        parts = [
-                            getattr(aff, "institution", None),
-                            getattr(aff, "department", None),
-                            getattr(aff, "country", None),
-                        ]
-                        aff_str = ", ".join(
-                            [p for p in parts if p and isinstance(p, str)]
-                        )
+                        inst = getattr(aff, "institution", None)
+                        dept = getattr(aff, "department", None)
+                        country = getattr(aff, "country", None)
+                        parts = []
+                        if inst and isinstance(inst, str):
+                            parts.append(inst.strip().rstrip("."))
+                        if dept and isinstance(dept, str):
+                            dept_clean = dept.strip().rstrip(".")
+                            if not inst or dept_clean.lower() not in inst.lower():
+                                parts.append(dept_clean)
+                        if country and isinstance(country, str):
+                            c_clean = country.strip().rstrip(".")
+                            if not inst or c_clean.lower() not in inst.lower():
+                                parts.append(c_clean)
+                        aff_str = ", ".join(parts) if parts else None
                     authors_detail.append({
                         "name": getattr(auth, "name", "N/A"),
                         "orcid": getattr(auth, "orcid", None),
