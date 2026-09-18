@@ -454,7 +454,16 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
         )}
 
         {activeTab === 'References' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              maxHeight: '440px',
+              overflowY: 'auto',
+              paddingRight: '6px',
+            }}
+          >
             {referencesList && referencesList.length > 0 ? (
               referencesList.map((refItem, idx) => (
                 <div
