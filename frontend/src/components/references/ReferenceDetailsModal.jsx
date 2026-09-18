@@ -4,7 +4,6 @@ import ModalTemplate from '../common/ModalTemplate';
 import ReferenceHeroBlock from './ReferenceHeroBlock';
 import OverviewLeftColumn from './OverviewLeftColumn';
 import OverviewRightColumn from './OverviewRightColumn';
-import MetricsFooterCards from './MetricsFooterCards';
 import ReferenceDrawer from './ReferenceDrawer';
 import useReferenceDetails from '../../hooks/useReferenceDetails';
 
@@ -276,67 +275,78 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
         )}
 
         {activeTab === 'Metadata' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div
-              style={{
-                backgroundColor: '#0C1427',
-                border: '1px solid #18243c',
-                borderRadius: '8px',
-                padding: '16px 18px',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-                gap: '16px',
-              }}
-            >
-              <div>
+          <div
+            style={{
+              backgroundColor: '#0C1427',
+              border: '1px solid #18243c',
+              borderRadius: '8px',
+              padding: '20px 24px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '16px 24px',
+              boxSizing: 'border-box',
+            }}
+          >
+            {[
+              { label: 'DOI', val: doi },
+              { label: 'Journal', val: journal },
+              { label: 'Journal ISO', val: article?.journal_iso },
+              { label: 'Publisher', val: publisher },
+              { label: 'Publisher Address', val: address },
+              { label: 'ISSN / EISSN', val: issn },
+              { label: 'Language', val: language },
+              { label: 'Document Type', val: type },
+              { label: 'Month', val: month },
+              { label: 'Article Number', val: articleNumber },
+              { label: 'Pages', val: pages },
+              { label: 'Open Access (OA)', val: oaStatus },
+              {
+                label: 'Times Cited',
+                val: timesCited != null ? String(timesCited) : null,
+              },
+              { label: 'Research Areas', val: researchAreas },
+              { label: 'Web of Science Categories', val: wosCategories },
+              {
+                label: 'Database ID',
+                val: article?.id ? String(article.id) : null,
+              },
+              { label: 'Project Status', val: article?.project_status },
+              { label: 'Created At', val: article?.created_at },
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  minWidth: 0,
+                  overflow: 'hidden',
+                }}
+              >
                 <span
                   style={{
                     fontSize: '11px',
                     color: '#64748b',
                     textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
                     fontWeight: '600',
-                    display: 'block',
-                    marginBottom: '4px',
                   }}
                 >
-                  Research Areas
+                  {item.label}
                 </span>
-                <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: '1.5' }}>
-                  {researchAreas || '—'}
-                </div>
-              </div>
-              <div>
                 <span
                   style={{
-                    fontSize: '11px',
-                    color: '#64748b',
-                    textTransform: 'uppercase',
-                    fontWeight: '600',
-                    display: 'block',
-                    marginBottom: '4px',
+                    fontSize: '13px',
+                    color: '#e2e8f0',
+                    fontWeight: '500',
+                    lineHeight: '1.5',
+                    wordBreak: 'break-word',
                   }}
                 >
-                  Web of Science Categories
+                  {item.val || '—'}
                 </span>
-                <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: '1.5' }}>
-                  {wosCategories || '—'}
-                </div>
               </div>
-            </div>
-
-            <MetricsFooterCards
-              type={type}
-              language={language}
-              issn={issn}
-              month={month}
-              articleNumber={articleNumber}
-              pages={pages}
-              publisher={publisher}
-              address={address}
-              timesCited={timesCited}
-              oaStatus={oaStatus}
-              onHoverInfo={handleHoverInfo}
-            />
+            ))}
           </div>
         )}
 
