@@ -268,11 +268,6 @@ class Article(Base):
         back_populates="articles",
         viewonly=True,
     )
-    references = relationship(
-        "Reference",
-        back_populates="article",
-        cascade="all, delete-orphan",
-    )
     funding = relationship(
         "Funding",
         back_populates="article",

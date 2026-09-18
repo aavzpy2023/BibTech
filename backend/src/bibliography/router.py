@@ -251,8 +251,6 @@ if HAS_MULTIPART:
             ]
 
             cr_items = _safe_list(getattr(a, "cited_references", None))
-            if not cr_items:
-                cr_items = _safe_list(getattr(a, "references", None))
 
             references_list = [
                 {

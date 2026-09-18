@@ -95,6 +95,7 @@
 │   │   │   │   ├── 005_add_article_metadata.py
 │   │   │   │   ├── 006_add_bibliometric_snowflake_schema.py
 │   │   │   │   ├── 007_add_source_database_dimension.py
+│   │   │   │   ├── 008_deprecate_legacy_references_table.py
 │   │   ├── src/
 │   │   │   ├── __init__.py
 │   │   │   ├── bibliography/

@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.database.models.core import Article, Project
-from src.database.models.tracking import Download, Funding, Reference
+from src.database.models.tracking import Download, Funding
 from src.database.session import Base
 
 
@@ -39,13 +39,6 @@ class TestTrackingModels(unittest.TestCase):
         self.session.add_all([article, project])
         self.session.commit()
 
-        ref = Reference(
-            article_id=article.id,
-            raw_citation="Einstein, Podolsky, Rosen (1935)",
-            doi="10.1103/PhysRev.47.777",
-            title="Can Quantum-Mechanical Description of Physical Reality...",
-            year=1935,
-        )
         funding = Funding(
             article_id=article.id,
             agency="National Science Foundation",
@@ -60,16 +53,12 @@ class TestTrackingModels(unittest.TestCase):
             file_size_bytes=1048576,
             status="completed",
         )
-        self.session.add_all([ref, funding, download])
+        self.session.add_all([funding, download])
         self.session.commit()
 
         # Query and verify article traversal
         queried_article = (
             self.session.query(Article).filter_by(doi="10.1000/182").one()
-        )
-        self.assertEqual(len(queried_article.references), 1)
-        self.assertEqual(
-            queried_article.references[0].doi, "10.1103/PhysRev.47.777"
         )
         self.assertEqual(len(queried_article.funding), 1)
         self.assertEqual(
@@ -97,7 +86,7 @@ class TestTrackingModels(unittest.TestCase):
 
     def test_semantic_comments_present_on_all_tracking_columns(self) -> None:
         """Enforce Semantic Primacy: every column must contain a comment."""
-        models = [Reference, Funding, Download]
+        models = [Funding, Download]
         for model in models:
             for col in model.__table__.columns:
                 self.assertIsNotNone(

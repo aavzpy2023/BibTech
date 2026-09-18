@@ -1,410 +1,172 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-18 17:44:19
+Date: 2026-09-18 18:58:05
 AST Mode: False
 Line Numbers: True
-Modules: router.py
+Modules: tracking.py
 Processed Files: 1
 ===========================
 
 
 
-// --- backend/src/bibliography/router.py ---
+// --- backend/src/database/models/tracking.py ---
 
-[L001, S0] import os
-[L002, S0] import re
-[L003, S0] from datetime import datetime, timezone
-[L004, S0] from typing import List, Dict, Any
-[L005, S0] from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-[L006, S0] from fastapi.responses import StreamingResponse
-[L007, S0] from sqlalchemy.orm import Session
-[L008, S0] from .schemas import (
-[L009, S4]     ParsedReference,
-[L010, S4]     BatchDownloadRequest,
-[L011, S4]     ZipDownloadRequest,
-[L012, S4]     LocalBatchDownloadRequest,
-[L013, S0] )
-[L014, S0] from .parser_service import parse_bibliography_content
-[L015, S0] from .download_service import execute_batch_download
-[L016, S0] from .zip_service import create_zip_from_pdfs
-[L017, S0] from .injection_service import inject_references_to_db
-[L018, S0] 
-[L019, S0] try:
-[L020, S4]     from ..database.session import get_db
-[L021, S4]     from ..database.models.core import Article, Project, ProjectArticle
-[L022, S0] except (ImportError, ValueError):
-[L023, S4]     try:
-[L024, S8]         from src.database.session import get_db
-[L025, S8]         from src.database.models.core import (
-[L026, S12]             Article,
-[L027, S12]             Project,
-[L028, S12]             ProjectArticle,
-[L029, S8]         )
-[L030, S4]     except ImportError:
-[L031, S8]         from backend.src.database.session import get_db
-[L032, S8]         from backend.src.database.models.core import (
-[L033, S12]             Article,
-[L034, S12]             Project,
-[L035, S12]             ProjectArticle,
-[L036, S8]         )
-[L037, S4]     try:
-[L038, S8]         from src.database.session import get_db
-[L039, S4]     except ImportError:
-[L040, S8]         from backend.src.database.session import get_db
-[L041, S0] 
-[L042, S0] router = APIRouter()
-[L043, S0] 
-[L044, S0] try:
-[L045, S4]     import multipart
-[L046, S4]     HAS_MULTIPART = True
-[L047, S0] except ImportError:
-[L048, S4]     HAS_MULTIPART = False
-[L049, S0] 
-[L050, S0] async def _process_upload(file: UploadFile) -> List[ParsedReference]:
-[L051, S4]     if not file.filename:
-[L052, S8]         raise HTTPException(status_code=400, detail="No file provided")
-[L053, S4]     
-[L054, S4]     _, ext = os.path.splitext(file.filename)
-[L055, S4]     if ext.lower() not in [".bib"]:
-[L056, S8]         raise HTTPException(status_code=400, detail="Unsupported file extension")
-[L057, S4]     
-[L058, S4]     try:
-[L059, S8]         content_bytes = await file.read()
-[L060, S8]         try:
-[L061, S12]             content_str = content_bytes.decode("utf-8")
-[L062, S8]         except UnicodeDecodeError:
-[L063, S12]             content_str = content_bytes.decode("latin-1")
-[L064, S8]         refs = parse_bibliography_content(content_str, ext)
-[L065, S8]         return refs
-[L066, S4]     except ValueError as ve:
-[L067, S8]         raise HTTPException(status_code=400, detail=str(ve))
-[L068, S4]     except Exception as e:
-[L069, S8]         raise HTTPException(
-[L070, S12]             status_code=500,
-[L071, S12]             detail="Internal server error during parsing"
-[L072, S8]         )
-[L073, S0] 
-[L074, S0] 
-[L075, S0] async def _process_inject(
-[L076, S4]     file: UploadFile, project_code: str, db: Session
-[L077, S0] ) -> dict:
-[L078, S4]     if not file.filename:
-[L079, S8]         raise HTTPException(status_code=400, detail="No file provided")
-[L080, S0] 
-[L081, S4]     _, ext = os.path.splitext(file.filename)
-[L082, S4]     if ext.lower() not in [".bib"]:
-[L083, S8]         raise HTTPException(
-[L084, S12]             status_code=400, detail="Unsupported file extension"
-[L085, S8]         )
-[L086, S0] 
-[L087, S4]     try:
-[L088, S8]         content_bytes = await file.read()
-[L089, S8]         content_str = content_bytes.decode("utf-8")
-[L090, S8]         refs = parse_bibliography_content(content_str, ext)
-[L091, S8]         try:
-[L092, S12]             inserted = inject_references_to_db(db, refs, project_code)
-[L093, S8]         except RuntimeError:
-[L094, S12]             raise HTTPException(
-[L095, S16]                 status_code=503,
-[L096, S16]                 detail="Error de conexión a la base de datos. Intente nuevamente."
-[L097, S12]             )
-[L098, S8]         return {"message": "Success", "inserted": inserted}
-[L099, S4]     except HTTPException:
-[L100, S8]         raise
-[L101, S4]     except ValueError as ve:
-[L102, S8]         raise HTTPException(status_code=400, detail=str(ve))
-[L103, S4]     except Exception as exc:
-[L104, S8]         import traceback
-[L105, S8]         traceback.print_exc()
-[L106, S8]         raise HTTPException(
-[L107, S12]             status_code=500,
-[L108, S12]             detail=f"Internal server error during injection: {str(exc)}",
-[L109, S8]         )
-[L110, S0] 
-[L111, S0] if HAS_MULTIPART:
-[L112, S4]     @router.post("/upload", response_model=List[ParsedReference])
-[L113, S4]     async def upload_bibliography(file: UploadFile = File(...)):
-[L114, S8]         return await _process_upload(file)
-[L115, S0] 
-[L116, S4]     @router.post("/inject")
-[L117, S4]     async def inject_bibliography(
-[L118, S8]         file: UploadFile = File(...),
-[L119, S8]         project_code: str = Form(...),
-[L120, S8]         db: Session = Depends(get_db),
-[L121, S4]     ):
-[L122, S8]         return await _process_inject(file, project_code, db)
-[L123, S0] 
-[L124, S4]     @router.get("/references", response_model=List[Dict[str, Any]])
-[L125, S4]     def get_project_references(
-[L126, S8]         project_code: str,
-[L127, S8]         db: Session = Depends(get_db),
-[L128, S4]     ):
-[L129, S8]         project = (
-[L130, S12]             db.query(Project).filter(Project.name == project_code).first()
-[L131, S8]         )
-[L132, S8]         if not project:
-[L133, S12]             return []
-[L134, S8]         links = (
-[L135, S12]             db.query(ProjectArticle)
-[L136, S12]             .filter(ProjectArticle.project_id == project.id)
-[L137, S12]             .all()
-[L138, S8]         )
-[L139, S8]         if not links:
-[L140, S12]             return []
-[L141, S0] 
-[L142, S8]         status_map = {
-[L143, S12]             link.article_id: {
-[L144, S16]                 "status": link.status,
-[L145, S16]                 "added_at": (
-[L146, S20]                     link.added_at.isoformat() if link.added_at else None
-[L147, S16]                 ),
-[L148, S12]             }
-[L149, S12]             for link in links
-[L150, S8]         }
-[L151, S0] 
-[L152, S8]         article_ids = list(status_map.keys())
-[L153, S8]         articles = (
-[L154, S12]             db.query(Article).filter(Article.id.in_(article_ids)).all()
-[L155, S8]         )
-[L156, S0] 
-[L157, S8]         def _to_str(val):
-[L158, S12]             return str(val) if isinstance(val, (str, int, float)) else None
-[L159, S0] 
-[L160, S8]         def _is_mock(val):
-[L161, S12]             return hasattr(val, "_mock_return_value") or hasattr(
-[L162, S16]                 val, "_mock_name"
-[L163, S12]             )
-[L164, S0] 
-[L165, S8]         def _to_int(val):
-[L166, S12]             if val is not None and not _is_mock(val):
-[L167, S16]                 try:
-[L168, S20]                     return int(val)
-[L169, S16]                 except (ValueError, TypeError):
-[L170, S20]                     pass
-[L171, S12]             return None
-[L172, S0] 
-[L173, S8]         def _safe_list(val):
-[L174, S12]             if val is None or _is_mock(val):
-[L175, S16]                 return []
-[L176, S12]             if isinstance(val, (list, tuple, set)):
-[L177, S16]                 return [x for x in val if not _is_mock(x)]
-[L178, S12]             return []
-[L179, S0] 
-[L180, S8]         now_iso = datetime.now(timezone.utc).isoformat()
-[L181, S8]         result = []
-[L182, S8]         for a in articles:
-[L183, S12]             authors_detail = []
-[L184, S12]             for aa in sorted(
-[L185, S16]                 _safe_list(getattr(a, "author_articles", None)),
-[L186, S16]                 key=lambda x: getattr(x, "author_order", 1) or 1,
-[L187, S12]             ):
-[L188, S16]                 auth = getattr(aa, "author", None)
-[L189, S16]                 if auth and not _is_mock(auth):
-[L190, S20]                     aff = getattr(auth, "affiliation", None)
-[L191, S20]                     aff_str = None
-[L192, S20]                     if aff and not _is_mock(aff):
-[L193, S24]                         inst = getattr(aff, "institution", None)
-[L194, S24]                         dept = getattr(aff, "department", None)
-[L195, S24]                         country = getattr(aff, "country", None)
-[L196, S24]                         parts = []
-[L197, S24]                         if inst and isinstance(inst, str):
-[L198, S28]                             parts.append(inst.strip().rstrip("."))
-[L199, S24]                         if dept and isinstance(dept, str):
-[L200, S28]                             dept_clean = dept.strip().rstrip(".")
-[L201, S28]                             if not inst or dept_clean.lower() not in inst.lower():
-[L202, S32]                                 parts.append(dept_clean)
-[L203, S24]                         if country and isinstance(country, str):
-[L204, S28]                             c_clean = country.strip().rstrip(".")
-[L205, S28]                             if not inst or c_clean.lower() not in inst.lower():
-[L206, S32]                                 parts.append(c_clean)
-[L207, S24]                         aff_str = ", ".join(parts) if parts else None
-[L208, S20]                     authors_detail.append({
-[L209, S24]                         "name": getattr(auth, "name", "N/A"),
-[L210, S24]                         "orcid": getattr(auth, "orcid", None),
-[L211, S24]                         "email": getattr(auth, "email", None),
-[L212, S24]                         "author_order": getattr(aa, "author_order", 1),
-[L213, S24]                         "is_corresponding": bool(
-[L214, S28]                             getattr(aa, "is_corresponding", False)
-[L215, S24]                         ),
-[L216, S24]                         "affiliation": aff_str,
-[L217, S20]                     })
-[L218, S0] 
-[L219, S12]             author_val = _to_str(getattr(a, "author", None))
-[L220, S12]             if authors_detail:
-[L221, S16]                 author_str = " and ".join(
-[L222, S20]                     [ad["name"] for ad in authors_detail]
-[L223, S16]                 )
-[L224, S12]             elif author_val:
-[L225, S16]                 author_str = author_val
-[L226, S12]             elif getattr(a, "authors", None) and not _is_mock(a.authors):
-[L227, S16]                 names = [
-[L228, S20]                     getattr(x, "name", str(x))
-[L229, S20]                     for x in _safe_list(a.authors)
-[L230, S20]                     if getattr(x, "name", str(x)) and not _is_mock(x)
-[L231, S16]                 ]
-[L232, S16]                 author_str = " and ".join(names) if names else "N/A"
-[L233, S12]             elif getattr(a, "raw_data", None):
-[L234, S16]                 author_str = str(a.raw_data)[:100]
-[L235, S12]             else:
-[L236, S16]                 author_str = "N/A"
-[L237, S0] 
-[L238, S12]             keywords_list = [
-[L239, S16]                 {
-[L240, S20]                     "name": getattr(k, "name", ""),
-[L241, S20]                     "type": getattr(k, "type", "author"),
-[L242, S16]                 }
-[L243, S16]                 for k in _safe_list(getattr(a, "keywords", None))
-[L244, S12]             ]
-[L245, S0] 
-[L246, S12]             references_list = [
-[L247, S16]                 {
-[L248, S20]                     "id": getattr(r, "id", None),
-[L249, S20]                     "title": getattr(r, "title", None),
-[L250, S20]                     "doi": getattr(r, "doi", None),
-[L251, S20]                     "year": getattr(r, "year", None),
-[L252, S20]                     "raw_citation": getattr(r, "raw_citation", None),
-[L253, S16]                 }
-[L254, S16]                 for r in _safe_list(getattr(a, "references", None))
-[L255, S12]             ]
-[L256, S0] 
-[L257, S12]             funding_list = [
-[L258, S16]                 {
-[L259, S20]                     "id": getattr(f, "id", None),
-[L260, S20]                     "agency": getattr(f, "agency", None),
-[L261, S20]                     "grant_number": getattr(f, "grant_number", None),
-[L262, S20]                     "country": getattr(f, "country", None),
-[L263, S16]                 }
-[L264, S16]                 for f in _safe_list(getattr(a, "funding", None))
-[L265, S12]             ]
-[L266, S0] 
-[L267, S12]             downloads_list = [
-[L268, S16]                 {
-[L269, S20]                     "id": getattr(d, "id", None),
-[L270, S20]                     "source": getattr(d, "source", None),
-[L271, S20]                     "status": getattr(d, "status", None),
-[L272, S20]                     "file_path": getattr(d, "file_path", None),
-[L273, S20]                     "file_size_bytes": getattr(d, "file_size_bytes", None),
-[L274, S20]                     "downloaded_at": (
-[L275, S24]                         d.downloaded_at.isoformat()
-[L276, S24]                         if getattr(d, "downloaded_at", None)
-[L277, S24]                         and not _is_mock(d.downloaded_at)
-[L278, S24]                         else None
-[L279, S20]                     ),
-[L280, S16]                 }
-[L281, S16]                 for d in _safe_list(getattr(a, "downloads", None))
-[L282, S12]             ]
-[L283, S0] 
-[L284, S12]             p_info = status_map.get(a.id, {})
-[L285, S0] 
-[L286, S12]             result.append({
-[L287, S16]                 "id": a.id,
-[L288, S16]                 "title": _to_str(getattr(a, "title", None)) or "Untitled",
-[L289, S16]                 "author": author_str,
-[L290, S16]                 "year": _to_str(getattr(a, "year", None)),
-[L291, S16]                 "journal": _to_str(getattr(a, "journal", None)),
-[L292, S16]                 "doi": _to_str(getattr(a, "doi", None)),
-[L293, S16]                 "volume": _to_str(getattr(a, "volume", None)),
-[L294, S16]                 "issue": _to_str(getattr(a, "issue", None)),
-[L295, S16]                 "pages": _to_str(getattr(a, "pages", None)),
-[L296, S16]                 "abstract": _to_str(getattr(a, "abstract", None)),
-[L297, S16]                 "publisher": _to_str(getattr(a, "publisher", None)),
-[L298, S16]                 "language": _to_str(getattr(a, "language", None)),
-[L299, S16]                 "research_areas": _to_str(getattr(a, "research_areas", None)),
-[L300, S16]                 "web_of_science_categories": _to_str(getattr(a, "web_of_science_categories", None)),
-[L301, S16]                 "funding_text": _to_str(getattr(a, "funding_text", None)),
-[L302, S16]                 "journal_iso": _to_str(getattr(a, "journal_iso", None)),
-[L303, S16]                 "oa_status": _to_str(getattr(a, "oa_status", None)),
-[L304, S16]                 "issn": _to_str(getattr(a, "issn", None)),
-[L305, S16]                 "times_cited": _to_int(getattr(a, "times_cited", None)),
-[L306, S16]                 "cited_references_count": _to_int(getattr(a, "cited_references_count", None)),
-[L307, S16]                 "raw_data": _to_str(getattr(a, "raw_data", None)),
-[L308, S16]                 "created_at": (
-[L309, S20]                     a.created_at.isoformat()
-[L310, S20]                     if getattr(a, "created_at", None)
-[L311, S20]                     else None
-[L312, S16]                 ),
-[L313, S16]                 "updated_at": (
-[L314, S20]                     a.updated_at.isoformat()
-[L315, S20]                     if getattr(a, "updated_at", None)
-[L316, S20]                     else None
-[L317, S16]                 ),
-[L318, S16]                 "project_status": p_info.get("status", "pending"),
-[L319, S16]                 "project_added_at": p_info.get("added_at"),
-[L320, S16]                 "upload_datetime": now_iso,
-[L321, S16]                 "authors_detail": authors_detail,
-[L322, S16]                 "keywords": keywords_list,
-[L323, S16]                 "references_list": references_list,
-[L324, S16]                 "funding_list": funding_list,
-[L325, S16]                 "downloads_list": downloads_list,
-[L326, S12]             })
-[L327, S8]         return result
-[L328, S0] else:
-[L329, S4]     async def upload_bibliography(file: UploadFile):
-[L330, S8]         return await _process_upload(file)
-[L331, S0] 
-[L332, S4]     async def inject_bibliography(
-[L333, S8]         file: UploadFile,
-[L334, S8]         project_code: str,
-[L335, S8]         db: Session,
-[L336, S4]     ):
-[L337, S8]         return await _process_inject(file, project_code, db)
-[L338, S0] 
-[L339, S0] 
-[L340, S0] @router.post("/batch-download")
-[L341, S0] async def batch_download(request: BatchDownloadRequest):
-[L342, S4]     async def sse_generator():
-[L343, S8]         async for event in execute_batch_download(
-[L344, S12]             request.dois,
-[L345, S12]             request.destination,
-[L346, S12]             request.email,
-[L347, S12]             request.delay,
-[L348, S12]             request.cookies,
-[L349, S8]         ):
-[L350, S12]             yield f"data: {event}\n\n"
-[L351, S0] 
-[L352, S4]     return StreamingResponse(
-[L353, S8]         sse_generator(),
-[L354, S8]         media_type="text/event-stream"
-[L355, S4]     )
-[L356, S0] 
-[L357, S0] 
-[L358, S0] @router.post("/batch-download-local")
-[L359, S0] async def batch_download_local(request: LocalBatchDownloadRequest):
-[L360, S4]     try:
-[L361, S8]         with open(request.file_path, "r", encoding="utf-8") as f:
-[L362, S12]             content = f.read()
-[L363, S4]     except Exception as e:
-[L364, S8]         raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
-[L365, S4]     
-[L366, S4]     _, ext = os.path.splitext(request.file_path)
-[L367, S4]     try:
-[L368, S8]         refs = parse_bibliography_content(content, ext)
-[L369, S8]         dois = list(set(ref.doi for ref in refs if ref.doi))
-[L370, S4]     except Exception as e:
-[L371, S8]         raise HTTPException(status_code=400, detail=f"Parse error: {str(e)}")
-[L372, S0] 
-[L373, S4]     async def sse_generator():
-[L374, S8]         async for event in execute_batch_download(
-[L375, S12]             dois,
-[L376, S12]             request.destination,
-[L377, S12]             request.email,
-[L378, S12]             request.delay,
-[L379, S12]             request.cookies,
-[L380, S8]         ):
-[L381, S12]             yield f"data: {event}\n\n"
-[L382, S0] 
-[L383, S4]     return StreamingResponse(sse_generator(), media_type="text/event-stream")
-[L384, S0] 
-[L385, S0] 
-[L386, S0] @router.post("/download-zip")
-[L387, S0] async def download_zip(request: ZipDownloadRequest):
-[L388, S4]     zip_io = create_zip_from_pdfs(request.batch_name, request.dois)
-[L389, S4]     return StreamingResponse(
-[L390, S8]         zip_io,
-[L391, S8]         media_type="application/zip",
-[L392, S8]         headers={
-[L393, S12]             "Content-Disposition": (
-[L394, S16]                 f"attachment; filename={request.batch_name}.zip"
-[L395, S12]             )
-[L396, S8]         },
-[L397, S4]     )
+[L001, S0] """Extended tracking models for citations, funding, and paper downloads."""
+[L002, S0] from datetime import datetime, timezone
+[L003, S0] 
+[L004, S0] from sqlalchemy import (
+[L005, S4]     Column,
+[L006, S4]     DateTime,
+[L007, S4]     ForeignKey,
+[L008, S4]     Integer,
+[L009, S4]     String,
+[L010, S4]     Text,
+[L011, S0] )
+[L012, S0] from sqlalchemy.orm import relationship
+[L013, S0] 
+[L014, S0] from ..session import Base
+[L015, S0] 
+[L016, S0] 
+[L017, S0] class Reference(Base):
+[L018, S4]     """Represents a citation or reference cited by an article."""
+[L019, S0] 
+[L020, S4]     __tablename__ = "references"
+[L021, S0] 
+[L022, S4]     id = Column(
+[L023, S8]         Integer,
+[L024, S8]         primary_key=True,
+[L025, S8]         autoincrement=True,
+[L026, S8]         comment="Primary key identifier for reference",
+[L027, S4]     )
+[L028, S4]     article_id = Column(
+[L029, S8]         Integer,
+[L030, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L031, S8]         nullable=False,
+[L032, S8]         comment="Foreign key linking to the referencing article",
+[L033, S4]     )
+[L034, S4]     raw_citation = Column(
+[L035, S8]         Text,
+[L036, S8]         nullable=False,
+[L037, S8]         comment="Full text or formatted citation string of the reference",
+[L038, S4]     )
+[L039, S4]     doi = Column(
+[L040, S8]         String(255),
+[L041, S8]         nullable=True,
+[L042, S8]         index=True,
+[L043, S8]         comment="Extracted or resolved DOI for cited reference",
+[L044, S4]     )
+[L045, S4]     title = Column(
+[L046, S8]         Text,
+[L047, S8]         nullable=True,
+[L048, S8]         comment="Title of the cited reference",
+[L049, S4]     )
+[L050, S4]     year = Column(
+[L051, S8]         Integer,
+[L052, S8]         nullable=True,
+[L053, S8]         comment="Publication year of the cited reference",
+[L054, S4]     )
+[L055, S4]     created_at = Column(
+[L056, S8]         DateTime,
+[L057, S8]         default=lambda: datetime.now(timezone.utc),
+[L058, S8]         nullable=False,
+[L059, S8]         comment="UTC timestamp when reference was extracted",
+[L060, S4]     )
+[L061, S0] 
+[L062, S4]     article = relationship("Article", back_populates="references")
+[L063, S0] 
+[L064, S0] 
+[L065, S0] class Funding(Base):
+[L066, S4]     """Represents financial support or grants supporting an article."""
+[L067, S0] 
+[L068, S4]     __tablename__ = "funding"
+[L069, S0] 
+[L070, S4]     id = Column(
+[L071, S8]         Integer,
+[L072, S8]         primary_key=True,
+[L073, S8]         autoincrement=True,
+[L074, S8]         comment="Primary key identifier for funding record",
+[L075, S4]     )
+[L076, S4]     article_id = Column(
+[L077, S8]         Integer,
+[L078, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L079, S8]         nullable=False,
+[L080, S8]         comment="Foreign key linking to funded article",
+[L081, S4]     )
+[L082, S4]     agency = Column(
+[L083, S8]         String(255),
+[L084, S8]         nullable=False,
+[L085, S8]         comment="Name of funding agency or institution",
+[L086, S4]     )
+[L087, S4]     grant_number = Column(
+[L088, S8]         String(100),
+[L089, S8]         nullable=True,
+[L090, S8]         comment="Specific grant or award identification number",
+[L091, S4]     )
+[L092, S4]     country = Column(
+[L093, S8]         String(100),
+[L094, S8]         nullable=True,
+[L095, S8]         comment="Country of funding organization",
+[L096, S4]     )
+[L097, S4]     created_at = Column(
+[L098, S8]         DateTime,
+[L099, S8]         default=lambda: datetime.now(timezone.utc),
+[L100, S8]         nullable=False,
+[L101, S8]         comment="UTC timestamp when funding record was created",
+[L102, S4]     )
+[L103, S0] 
+[L104, S4]     article = relationship("Article", back_populates="funding")
+[L105, S0] 
+[L106, S0] 
+[L107, S0] class Download(Base):
+[L108, S4]     """Represents a document acquisition event for an article in a project."""
+[L109, S0] 
+[L110, S4]     __tablename__ = "downloads"
+[L111, S0] 
+[L112, S4]     id = Column(
+[L113, S8]         Integer,
+[L114, S8]         primary_key=True,
+[L115, S8]         autoincrement=True,
+[L116, S8]         comment="Primary key identifier for download record",
+[L117, S4]     )
+[L118, S4]     article_id = Column(
+[L119, S8]         Integer,
+[L120, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L121, S8]         nullable=False,
+[L122, S8]         comment="Foreign key linking to downloaded article",
+[L123, S4]     )
+[L124, S4]     project_id = Column(
+[L125, S8]         Integer,
+[L126, S8]         ForeignKey("projects.id", ondelete="CASCADE"),
+[L127, S8]         nullable=False,
+[L128, S8]         comment="Foreign key linking to parent project",
+[L129, S4]     )
+[L130, S4]     source = Column(
+[L131, S8]         String(100),
+[L132, S8]         nullable=False,
+[L133, S8]         comment="Download source or resolver (e.g. unpaywall, openalex)",
+[L134, S4]     )
+[L135, S4]     file_path = Column(
+[L136, S8]         String(500),
+[L137, S8]         nullable=True,
+[L138, S8]         comment="Local or cloud storage path of downloaded PDF",
+[L139, S4]     )
+[L140, S4]     file_size_bytes = Column(
+[L141, S8]         Integer,
+[L142, S8]         nullable=True,
+[L143, S8]         comment="Size of downloaded file in bytes",
+[L144, S4]     )
+[L145, S4]     status = Column(
+[L146, S8]         String(50),
+[L147, S8]         default="completed",
+[L148, S8]         nullable=False,
+[L149, S8]         comment="Download status (e.g. completed, failed, in_progress)",
+[L150, S4]     )
+[L151, S4]     downloaded_at = Column(
+[L152, S8]         DateTime,
+[L153, S8]         default=lambda: datetime.now(timezone.utc),
+[L154, S8]         nullable=False,
+[L155, S8]         comment="UTC timestamp when download occurred",
+[L156, S4]     )
+[L157, S0] 
+[L158, S4]     article = relationship("Article", back_populates="downloads")
+[L159, S4]     project = relationship("Project", back_populates="downloads")
