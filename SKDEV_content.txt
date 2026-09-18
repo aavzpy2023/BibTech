@@ -1,435 +1,334 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-17 22:27:08
+Date: 2026-09-17 22:39:35
 AST Mode: False
 Line Numbers: True
-Modules: ModalTemplate.jsx, ReferenceDrawer.jsx
-Processed Files: 2
+Modules: OverviewLeftColumn.jsx
+Processed Files: 1
 ===========================
 
 
 
-// --- frontend/src/components/common/ModalTemplate.jsx ---
+// --- frontend/src/components/references/OverviewLeftColumn.jsx ---
 
 [L001, S0] import React from 'react';
 [L002, S0] import PropTypes from 'prop-types';
-[L003, S0] import { createPortal } from 'react-dom';
-[L004, S0] 
-[L005, S0] const styles = {
-[L006, S2]   overlay: {
-[L007, S4]     position: 'fixed',
-[L008, S4]     top: 0,
-[L009, S4]     left: 0,
-[L010, S4]     right: 0,
-[L011, S4]     bottom: 0,
-[L012, S4]     backgroundColor: 'rgba(10, 15, 30, 0.85)',
-[L013, S4]     backdropFilter: 'blur(6px)',
-[L014, S4]     WebkitBackdropFilter: 'blur(6px)',
-[L015, S4]     display: 'flex',
-[L016, S4]     alignItems: 'center',
-[L017, S4]     justifyContent: 'center',
-[L018, S4]     zIndex: 1000,
-[L019, S4]     padding: '16px',
-[L020, S4]     boxSizing: 'border-box',
-[L021, S2]   },
-[L022, S2]   modal: (maxWidth) => ({
-[L023, S4]     backgroundColor: '#0F172A',
-[L024, S4]     border: '1px solid #334155',
-[L025, S4]     borderRadius: '12px',
-[L026, S4]     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
-[L027, S4]     width: '100%',
-[L028, S4]     maxWidth: typeof maxWidth === 'string' && maxWidth.includes('px')
-[L029, S6]       ? maxWidth
-[L030, S6]       : '1180px',
-[L031, S4]     maxHeight: '90vh',
-[L032, S4]     display: 'flex',
-[L033, S4]     flexDirection: 'column',
-[L034, S4]     position: 'relative',
-[L035, S4]     overflow: 'hidden',
-[L036, S4]     color: '#f8fafc',
-[L037, S4]     fontFamily: 'system-ui, -apple-system, sans-serif',
-[L038, S4]     boxSizing: 'border-box',
-[L039, S2]   }),
-[L040, S2]   header: {
-[L041, S4]     display: 'flex',
-[L042, S4]     alignItems: 'center',
-[L043, S4]     justifyContent: 'space-between',
-[L044, S4]     padding: '16px 24px',
-[L045, S4]     borderBottom: '1px solid #1e293b',
-[L046, S4]     backgroundColor: '#0F172A',
-[L047, S2]   },
-[L048, S2]   headerContent: {
-[L049, S4]     fontSize: '18px',
-[L050, S4]     fontWeight: '600',
-[L051, S4]     color: '#f8fafc',
-[L052, S4]     display: 'flex',
-[L053, S4]     alignItems: 'center',
-[L054, S4]     gap: '12px',
-[L055, S2]   },
-[L056, S2]   closeBtn: {
-[L057, S4]     background: 'none',
-[L058, S4]     border: 'none',
-[L059, S4]     color: '#94a3b8',
-[L060, S4]     cursor: 'pointer',
-[L061, S4]     padding: '6px',
-[L062, S4]     borderRadius: '6px',
-[L063, S4]     display: 'flex',
-[L064, S4]     alignItems: 'center',
-[L065, S4]     justifyContent: 'center',
-[L066, S2]   },
-[L067, S2]   body: {
-[L068, S4]     flex: 1,
-[L069, S4]     overflowY: 'auto',
-[L070, S4]     padding: '24px',
-[L071, S4]     position: 'relative',
-[L072, S4]     boxSizing: 'border-box',
-[L073, S2]   },
-[L074, S2]   footer: {
-[L075, S4]     padding: '16px 24px',
-[L076, S4]     borderTop: '1px solid #1e293b',
-[L077, S4]     backgroundColor: 'rgba(15, 23, 42, 0.5)',
-[L078, S2]   },
-[L079, S0] };
-[L080, S0] 
-[L081, S0] export default function ModalTemplate({
-[L082, S2]   isOpen,
-[L083, S2]   onClose,
-[L084, S2]   header,
-[L085, S2]   footer,
-[L086, S2]   children,
-[L087, S2]   maxWidth = '1180px',
-[L088, S0] }) {
-[L089, S2]   if (!isOpen) return null;
-[L090, S0] 
-[L091, S2]   const modalContent = (
-[L092, S4]     <div
-[L093, S6]       style={styles.overlay}
-[L094, S6]       onClick={onClose}
-[L095, S6]       role="presentation"
-[L096, S4]     >
-[L097, S6]       <div
-[L098, S8]         style={styles.modal(maxWidth)}
-[L099, S8]         onClick={(e) => e.stopPropagation()}
-[L100, S8]         role="dialog"
-[L101, S8]         aria-modal="true"
-[L102, S6]       >
-[L103, S8]         <div style={styles.header}>
-[L104, S10]           <div style={styles.headerContent}>{header}</div>
-[L105, S10]           <button
-[L106, S12]             onClick={onClose}
-[L107, S12]             style={styles.closeBtn}
-[L108, S12]             aria-label="Close modal"
-[L109, S10]           >
-[L110, S12]             <svg
-[L111, S14]               style={{ width: '22px', height: '22px' }}
-[L112, S14]               fill="none"
-[L113, S14]               viewBox="0 0 24 24"
-[L114, S14]               stroke="currentColor"
-[L115, S12]             >
-[L116, S14]               <path
-[L117, S16]                 strokeLinecap="round"
-[L118, S16]                 strokeLinejoin="round"
-[L119, S16]                 strokeWidth={2}
-[L120, S16]                 d="M6 18L18 6M6 6l12 12"
-[L121, S14]               />
-[L122, S12]             </svg>
-[L123, S10]           </button>
-[L124, S8]         </div>
-[L125, S0] 
-[L126, S8]         <div style={styles.body}>{children}</div>
-[L127, S0] 
-[L128, S8]         {footer && <div style={styles.footer}>{footer}</div>}
-[L129, S6]       </div>
-[L130, S4]     </div>
-[L131, S2]   );
-[L132, S0] 
-[L133, S2]   return createPortal(modalContent, document.body);
-[L134, S0] }
-[L135, S0] 
-[L136, S0] ModalTemplate.propTypes = {
-[L137, S2]   isOpen: PropTypes.bool.isRequired,
-[L138, S2]   onClose: PropTypes.func.isRequired,
-[L139, S2]   header: PropTypes.node,
-[L140, S2]   footer: PropTypes.node,
-[L141, S2]   children: PropTypes.node.isRequired,
-[L142, S2]   maxWidth: PropTypes.string,
-[L143, S0] };
-
-
-// --- frontend/src/components/references/ReferenceDrawer.jsx ---
-
-[L001, S0] import React from 'react';
-[L002, S0] import PropTypes from 'prop-types';
-[L003, S0] import { createPortal } from 'react-dom';
-[L004, S0] 
-[L005, S0] const styles = {
-[L006, S2]   overlay: {
-[L007, S4]     position: 'fixed',
-[L008, S4]     top: 0,
-[L009, S4]     left: 0,
-[L010, S4]     right: 0,
-[L011, S4]     bottom: 0,
-[L012, S4]     backgroundColor: 'rgba(5, 10, 20, 0.75)',
-[L013, S4]     backdropFilter: 'blur(4px)',
-[L014, S4]     WebkitBackdropFilter: 'blur(4px)',
-[L015, S4]     display: 'flex',
-[L016, S4]     alignItems: 'center',
-[L017, S4]     justifyContent: 'center',
-[L018, S4]     zIndex: 1200,
-[L019, S4]     padding: '16px',
-[L020, S4]     boxSizing: 'border-box',
-[L021, S2]   },
-[L022, S2]   modal: {
-[L023, S4]     backgroundColor: '#0F172A',
-[L024, S4]     border: '1px solid #334155',
-[L025, S4]     borderRadius: '12px',
-[L026, S4]     boxShadow: '0 20px 40px rgba(0, 0, 0, 0.8)',
-[L027, S4]     width: '100%',
-[L028, S4]     maxWidth: '560px',
-[L029, S4]     maxHeight: '80vh',
-[L030, S4]     display: 'flex',
-[L031, S4]     flexDirection: 'column',
-[L032, S4]     overflow: 'hidden',
-[L033, S4]     color: '#f8fafc',
-[L034, S4]     fontFamily: 'system-ui, -apple-system, sans-serif',
-[L035, S4]     boxSizing: 'border-box',
-[L036, S2]   },
-[L037, S2]   header: {
-[L038, S4]     display: 'flex',
-[L039, S4]     alignItems: 'center',
-[L040, S4]     justifyContent: 'space-between',
-[L041, S4]     padding: '16px 20px',
-[L042, S4]     borderBottom: '1px solid #1e293b',
-[L043, S4]     backgroundColor: '#0F172A',
-[L044, S2]   },
-[L045, S2]   titleWrapper: {
-[L046, S4]     display: 'flex',
-[L047, S4]     alignItems: 'center',
-[L048, S4]     gap: '10px',
-[L049, S2]   },
-[L050, S2]   title: {
-[L051, S4]     margin: 0,
-[L052, S4]     fontSize: '16px',
-[L053, S4]     fontWeight: '600',
-[L054, S4]     color: '#f1f5f9',
-[L055, S2]   },
-[L056, S2]   badge: {
-[L057, S4]     padding: '2px 8px',
-[L058, S4]     fontSize: '12px',
-[L059, S4]     fontWeight: '500',
-[L060, S4]     backgroundColor: '#1e293b',
-[L061, S4]     color: '#94a3b8',
-[L062, S4]     borderRadius: '12px',
-[L063, S2]   },
-[L064, S2]   closeBtn: {
-[L065, S4]     background: 'none',
-[L066, S4]     border: 'none',
-[L067, S4]     color: '#94a3b8',
-[L068, S4]     cursor: 'pointer',
-[L069, S4]     padding: '4px',
-[L070, S4]     borderRadius: '6px',
-[L071, S4]     display: 'flex',
-[L072, S4]     alignItems: 'center',
-[L073, S4]     justifyContent: 'center',
-[L074, S2]   },
-[L075, S2]   body: {
-[L076, S4]     flex: 1,
-[L077, S4]     overflowY: 'auto',
-[L078, S4]     padding: '20px',
-[L079, S4]     display: 'flex',
-[L080, S4]     flexDirection: 'column',
-[L081, S4]     gap: '12px',
-[L082, S4]     boxSizing: 'border-box',
-[L083, S2]   },
-[L084, S2]   item: {
-[L085, S4]     padding: '14px',
-[L086, S4]     borderRadius: '8px',
-[L087, S4]     backgroundColor: '#131d31',
-[L088, S4]     border: '1px solid #1e293b',
-[L089, S4]     fontSize: '13px',
-[L090, S4]     boxSizing: 'border-box',
-[L091, S2]   },
-[L092, S2]   empty: {
-[L093, S4]     textAlign: 'center',
-[L094, S4]     padding: '36px 0',
-[L095, S4]     color: '#64748b',
-[L096, S4]     fontSize: '13px',
-[L097, S4]     fontStyle: 'italic',
-[L098, S2]   },
-[L099, S0] };
-[L100, S0] 
-[L101, S0] export default function ReferenceDrawer({
-[L102, S2]   isOpen,
-[L103, S2]   onClose,
-[L104, S2]   title,
-[L105, S2]   type = 'references',
-[L106, S2]   data = [],
+[L003, S0] 
+[L004, S0] const SectionCard = ({ title, icon, onHoverInfo, infoKey, rightElement, children }) => (
+[L005, S2]   <div
+[L006, S4]     style={{
+[L007, S6]       backgroundColor: '#0C1427',
+[L008, S6]       border: '1px solid #18243c',
+[L009, S6]       borderRadius: '8px',
+[L010, S6]       padding: '16px',
+[L011, S6]       boxSizing: 'border-box',
+[L012, S4]     }}
+[L013, S2]   >
+[L014, S4]     <div
+[L015, S6]       style={{
+[L016, S8]         display: 'flex',
+[L017, S8]         alignItems: 'center',
+[L018, S8]         justifyContent: 'space-between',
+[L019, S8]         marginBottom: '12px',
+[L020, S6]       }}
+[L021, S4]     >
+[L022, S6]       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+[L023, S8]         {icon}
+[L024, S8]         <h3
+[L025, S10]           style={{
+[L026, S12]             margin: 0,
+[L027, S12]             fontSize: '14px',
+[L028, S12]             fontWeight: '600',
+[L029, S12]             color: '#f1f5f9',
+[L030, S12]             display: 'flex',
+[L031, S12]             alignItems: 'center',
+[L032, S12]             gap: '8px',
+[L033, S10]           }}
+[L034, S8]         >
+[L035, S10]           {title}
+[L036, S10]           {onHoverInfo && (
+[L037, S12]             <button 
+[L038, S14]               onMouseEnter={(e) => onHoverInfo(infoKey, e)}
+[L039, S14]               onMouseLeave={() => onHoverInfo(null, null)}
+[L040, S14]               style={{
+[L041, S16]                 background: 'none',
+[L042, S16]                 border: 'none',
+[L043, S16]                 color: '#64748b',
+[L044, S16]                 cursor: 'pointer',
+[L045, S16]                 padding: 0,
+[L046, S16]                 display: 'flex',
+[L047, S16]                 alignItems: 'center',
+[L048, S14]               }}
+[L049, S14]               aria-label={`info-${infoKey}`}
+[L050, S12]             >
+[L051, S14]               <svg 
+[L052, S16]                 width="14"
+[L053, S16]                 height="14"
+[L054, S16]                 style={{ width: '14px', height: '14px', flexShrink: 0 }}
+[L055, S16]                 fill="none" 
+[L056, S16]                 viewBox="0 0 24 24" 
+[L057, S16]                 stroke="currentColor"
+[L058, S14]               >
+[L059, S16]                 <path 
+[L060, S18]                   strokeLinecap="round" 
+[L061, S18]                   strokeLinejoin="round" 
+[L062, S18]                   strokeWidth={2} 
+[L063, S18]                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+[L064, S16]                 />
+[L065, S14]               </svg>
+[L066, S12]             </button>
+[L067, S10]           )}
+[L068, S8]         </h3>
+[L069, S6]       </div>
+[L070, S6]       {rightElement || (
+[L071, S8]         <svg
+[L072, S10]           width="14"
+[L073, S10]           height="14"
+[L074, S10]           style={{ width: '14px', height: '14px', color: '#475569', flexShrink: 0 }}
+[L075, S10]           fill="none"
+[L076, S10]           viewBox="0 0 24 24"
+[L077, S10]           stroke="currentColor"
+[L078, S8]         >
+[L079, S10]           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+[L080, S8]         </svg>
+[L081, S6]       )}
+[L082, S4]     </div>
+[L083, S4]     <div style={{ fontSize: '13px', color: '#cbd5e1' }}>
+[L084, S6]       {children}
+[L085, S4]     </div>
+[L086, S2]   </div>
+[L087, S0] );
+[L088, S0] 
+[L089, S0] SectionCard.propTypes = {
+[L090, S2]   title: PropTypes.string.isRequired,
+[L091, S2]   icon: PropTypes.node,
+[L092, S2]   onHoverInfo: PropTypes.func,
+[L093, S2]   infoKey: PropTypes.string,
+[L094, S2]   children: PropTypes.node.isRequired,
+[L095, S0] };
+[L096, S0] 
+[L097, S0] export default function OverviewLeftColumn({
+[L098, S2]   abstract,
+[L099, S2]   authorKeywords,
+[L100, S2]   plusKeywords,
+[L101, S2]   researchAreas,
+[L102, S2]   wosCategories,
+[L103, S2]   isExpanded = false,
+[L104, S2]   onExpandAbstract,
+[L105, S2]   onOpenAbstractModal,
+[L106, S2]   onHoverInfo,
 [L107, S0] }) {
-[L108, S2]   if (!isOpen) return null;
-[L109, S0] 
-[L110, S2]   const content = (
-[L111, S4]     <div
-[L112, S6]       style={styles.overlay}
-[L113, S6]       onClick={onClose}
-[L114, S6]       role="presentation"
-[L115, S4]     >
-[L116, S6]       <div
-[L117, S8]         style={styles.modal}
-[L118, S8]         onClick={(e) => e.stopPropagation()}
-[L119, S8]         role="dialog"
-[L120, S8]         aria-modal="true"
-[L121, S8]         aria-label={title || 'Field Details'}
-[L122, S6]       >
-[L123, S8]         {/* Header */}
-[L124, S8]         <div style={styles.header}>
-[L125, S10]           <div style={styles.titleWrapper}>
-[L126, S12]             <h3 style={styles.title}>{title || 'Details'}</h3>
-[L127, S12]             {data && data.length > 0 && (
-[L128, S14]               <span style={styles.badge}>{data.length}</span>
-[L129, S12]             )}
-[L130, S10]           </div>
-[L131, S10]           <button
-[L132, S12]             onClick={onClose}
-[L133, S12]             style={styles.closeBtn}
-[L134, S12]             aria-label="Close modal"
-[L135, S10]           >
-[L136, S12]             <svg
-[L137, S14]               width="20"
-[L138, S14]               height="20"
-[L139, S14]               style={{ width: '20px', height: '20px', flexShrink: 0 }}
-[L140, S14]               fill="none"
-[L141, S14]               viewBox="0 0 24 24"
-[L142, S14]               stroke="currentColor"
-[L143, S12]             >
-[L144, S14]               <path
-[L145, S16]                 strokeLinecap="round"
-[L146, S16]                 strokeLinejoin="round"
-[L147, S16]                 strokeWidth={2}
-[L148, S16]                 d="M6 18L18 6M6 6l12 12"
-[L149, S14]               />
-[L150, S12]             </svg>
-[L151, S10]           </button>
-[L152, S8]         </div>
-[L153, S0] 
-[L154, S8]         {/* Content Body */}
-[L155, S8]         <div style={styles.body}>
-[L156, S10]           {!data || data.length === 0 ? (
-[L157, S12]             <div style={styles.empty}>No items available</div>
-[L158, S10]           ) : (
-[L159, S12]             data.map((item, index) => (
-[L160, S14]               <div
-[L161, S16]                 key={item.id || index}
-[L162, S16]                 data-testid="drawer-item"
-[L163, S16]                 style={styles.item}
-[L164, S14]               >
-[L165, S16]                 {type === 'references' && (
-[L166, S18]                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-[L167, S20]                     <div style={{ fontWeight: '500', color: '#e2e8f0', lineHeight: '1.4' }}>
-[L168, S22]                       {item.title || item.raw_citation || 'Untitled Reference'}
-[L169, S20]                     </div>
-[L170, S20]                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', color: '#94a3b8' }}>
-[L171, S22]                       {item.year && <span>Year: {item.year}</span>}
-[L172, S22]                       {item.doi && (
-[L173, S24]                         <span style={{ color: '#60a5fa', fontFamily: 'monospace' }}>
-[L174, S26]                           DOI: {item.doi}
-[L175, S24]                         </span>
-[L176, S22]                       )}
-[L177, S20]                     </div>
-[L178, S18]                   </div>
-[L179, S16]                 )}
-[L180, S0] 
-[L181, S16]                 {type === 'authors' && (
-[L182, S18]                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-[L183, S20]                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-[L184, S22]                       <span style={{ fontWeight: '600', color: '#e2e8f0' }}>
-[L185, S24]                         {item.name || 'Unknown Author'}
-[L186, S22]                       </span>
-[L187, S22]                       {item.is_corresponding && (
-[L188, S24]                         <span
-[L189, S26]                           style={{
-[L190, S28]                             padding: '2px 6px',
-[L191, S28]                             fontSize: '10px',
-[L192, S28]                             textTransform: 'uppercase',
-[L193, S28]                             fontWeight: '600',
-[L194, S28]                             backgroundColor: 'rgba(30, 58, 138, 0.4)',
-[L195, S28]                             color: '#60a5fa',
-[L196, S28]                             border: '1px solid rgba(59, 130, 246, 0.4)',
-[L197, S28]                             borderRadius: '4px',
-[L198, S26]                           }}
-[L199, S24]                         >
-[L200, S26]                           Corresponding
-[L201, S24]                         </span>
-[L202, S22]                       )}
-[L203, S20]                     </div>
-[L204, S20]                     {item.affiliation && (
-[L205, S22]                       <div style={{ fontSize: '12px', color: '#94a3b8' }}>
-[L206, S24]                         {item.affiliation}
-[L207, S22]                       </div>
-[L208, S20]                     )}
-[L209, S20]                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '2px', fontSize: '12px', color: '#64748b' }}>
-[L210, S22]                       {item.email && <span>Email: {item.email}</span>}
-[L211, S22]                       {item.orcid && <span>ORCID: {item.orcid}</span>}
-[L212, S20]                     </div>
-[L213, S18]                   </div>
-[L214, S16]                 )}
-[L215, S0] 
-[L216, S16]                 {type === 'funding' && (
-[L217, S18]                   typeof item === 'string' ? (
-[L218, S20]                     <div style={{ color: '#e2e8f0', lineHeight: '1.6', fontSize: '13px', whiteSpace: 'pre-wrap' }}>
-[L219, S22]                       {item}
-[L220, S20]                     </div>
-[L221, S18]                   ) : (
-[L222, S20]                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-[L223, S22]                       <div style={{ fontWeight: '600', color: '#e2e8f0' }}>
-[L224, S24]                         {item.agency || 'Funding Agency'}
-[L225, S22]                       </div>
-[L226, S22]                       {item.grant_number && (
-[L227, S24]                         <div style={{ fontSize: '12px', color: '#94a3b8' }}>
-[L228, S26]                           Grant: <span style={{ fontFamily: 'monospace', color: '#cbd5e1' }}>{item.grant_number}</span>
-[L229, S24]                         </div>
-[L230, S22]                       )}
-[L231, S22]                       {item.country && (
-[L232, S24]                         <div style={{ fontSize: '12px', color: '#64748b' }}>{item.country}</div>
-[L233, S22]                       )}
-[L234, S20]                     </div>
-[L235, S18]                   )
-[L236, S16]                 )}
-[L237, S0] 
-[L238, S16]                 {type === 'abstract' && (
-[L239, S18]                   <div style={{ color: '#e2e8f0', lineHeight: '1.7', fontSize: '13px', whiteSpace: 'pre-wrap' }}>
-[L240, S20]                     {typeof item === 'string' ? item : JSON.stringify(item)}
-[L241, S18]                   </div>
-[L242, S16]                 )}
-[L243, S0] 
-[L244, S16]                 {type !== 'references' &&
-[L245, S18]                   type !== 'authors' &&
-[L246, S18]                   type !== 'funding' && (
-[L247, S20]                     <div style={{ color: '#cbd5e1' }}>
-[L248, S22]                       {typeof item === 'string' ? item : JSON.stringify(item)}
-[L249, S20]                     </div>
-[L250, S18]                   )}
-[L251, S14]               </div>
-[L252, S12]             ))
-[L253, S10]           )}
-[L254, S8]         </div>
-[L255, S6]       </div>
-[L256, S4]     </div>
-[L257, S2]   );
-[L258, S0] 
-[L259, S2]   return createPortal(content, document.body);
-[L260, S0] }
-[L261, S0] 
-[L262, S0] ReferenceDrawer.propTypes = {
-[L263, S2]   isOpen: PropTypes.bool.isRequired,
-[L264, S2]   onClose: PropTypes.func.isRequired,
-[L265, S2]   title: PropTypes.string,
-[L266, S2]   type: PropTypes.oneOf([
-[L267, S4]     'references',
-[L268, S4]     'authors',
-[L269, S4]     'funding',
-[L270, S4]     'abstract',
-[L271, S4]     'affiliations',
-[L272, S4]     'generic',
-[L273, S2]   ]),
-[L274, S2]   data: PropTypes.array,
-[L275, S0] };
+[L108, S2]   const renderChips = (items) => {
+[L109, S4]     if (!items || items.length === 0) {
+[L110, S6]       return <span style={{ color: '#64748b', fontStyle: 'italic' }}>None provided</span>;
+[L111, S4]     }
+[L112, S4]     return (
+[L113, S6]       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+[L114, S8]         {items.map((item, idx) => (
+[L115, S10]           <span 
+[L116, S12]             key={idx}
+[L117, S12]             style={{
+[L118, S14]               backgroundColor: '#1e293b',
+[L119, S14]               border: '1px solid #334155',
+[L120, S14]               color: '#cbd5e1',
+[L121, S14]               padding: '3px 10px',
+[L122, S14]               borderRadius: '12px',
+[L123, S14]               fontSize: '12px',
+[L124, S14]               fontWeight: '500',
+[L125, S12]             }}
+[L126, S10]           >
+[L127, S12]             {item}
+[L128, S10]           </span>
+[L129, S8]         ))}
+[L130, S6]       </div>
+[L131, S4]     );
+[L132, S2]   };
+[L133, S0] 
+[L134, S2]   const renderBox = (text) => {
+[L135, S4]     if (!text) return <span style={{ color: '#64748b', fontStyle: 'italic' }}>None provided</span>;
+[L136, S4]     return (
+[L137, S6]       <div
+[L138, S8]         style={{
+[L139, S10]           backgroundColor: 'rgba(30, 41, 59, 0.4)',
+[L140, S10]           border: '1px solid #1e293b',
+[L141, S10]           borderRadius: '6px',
+[L142, S10]           padding: '10px',
+[L143, S10]           fontSize: '13px',
+[L144, S10]           color: '#cbd5e1',
+[L145, S10]           wordBreak: 'break-word',
+[L146, S8]         }}
+[L147, S6]       >
+[L148, S8]         {text}
+[L149, S6]       </div>
+[L150, S4]     );
+[L151, S2]   };
+[L152, S0] 
+[L153, S2]   const docIcon = (
+[L154, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L155, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+[L156, S4]     </svg>
+[L157, S2]   );
+[L158, S2]   
+[L159, S2]   const tagIcon = (
+[L160, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L161, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+[L162, S4]     </svg>
+[L163, S2]   );
+[L164, S0] 
+[L165, S2]   const linkIcon = (
+[L166, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L167, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+[L168, S4]     </svg>
+[L169, S2]   );
+[L170, S0] 
+[L171, S2]   const globeIcon = (
+[L172, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L173, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+[L174, S4]     </svg>
+[L175, S2]   );
+[L176, S0] 
+[L177, S2]   const filterIcon = (
+[L178, S4]     <svg width="18" height="18" style={{ width: '18px', height: '18px', flexShrink: 0, color: '#94a3b8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L179, S6]       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+[L180, S4]     </svg>
+[L181, S2]   );
+[L182, S0] 
+[L183, S2]   const abstractRight = (
+[L184, S4]     <div
+[L185, S6]       onClick={onOpenAbstractModal || onExpandAbstract}
+[L186, S6]       style={{
+[L187, S8]         display: 'flex',
+[L188, S8]         alignItems: 'center',
+[L189, S8]         gap: '8px',
+[L190, S8]         cursor: 'pointer',
+[L191, S6]       }}
+[L192, S6]       title="Open full abstract dialog"
+[L193, S4]     >
+[L194, S6]       <svg
+[L195, S8]         width="15"
+[L196, S8]         height="15"
+[L197, S8]         style={{ width: '15px', height: '15px', color: '#38bdf8', flexShrink: 0 }}
+[L198, S8]         fill="none"
+[L199, S8]         viewBox="0 0 24 24"
+[L200, S8]         stroke="currentColor"
+[L201, S6]       >
+[L202, S8]         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+[L203, S8]         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+[L204, S6]       </svg>
+[L205, S6]       <svg
+[L206, S8]         width="14"
+[L207, S8]         height="14"
+[L208, S8]         style={{ width: '14px', height: '14px', color: '#475569', flexShrink: 0 }}
+[L209, S8]         fill="none"
+[L210, S8]         viewBox="0 0 24 24"
+[L211, S8]         stroke="currentColor"
+[L212, S6]       >
+[L213, S8]         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+[L214, S6]       </svg>
+[L215, S4]     </div>
+[L216, S2]   );
+[L217, S0] 
+[L218, S2]   return (
+[L219, S4]     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+[L220, S6]       <SectionCard 
+[L221, S8]         title="Abstract" 
+[L222, S8]         icon={docIcon} 
+[L223, S8]         onHoverInfo={onHoverInfo} 
+[L224, S8]         infoKey="abstract"
+[L225, S8]         rightElement={abstractRight}
+[L226, S6]       >
+[L227, S8]         <div style={{ position: 'relative' }}>
+[L228, S10]           <p
+[L229, S12]             style={{
+[L230, S14]               margin: 0,
+[L231, S14]               color: '#cbd5e1',
+[L232, S14]               lineHeight: '1.6',
+[L233, S14]               wordBreak: 'break-word',
+[L234, S14]               ...(isExpanded
+[L235, S16]                 ? { display: 'block', maxHeight: 'none' }
+[L236, S16]                 : {
+[L237, S20]                     display: '-webkit-box',
+[L238, S20]                     WebkitLineClamp: 4,
+[L239, S20]                     WebkitBoxOrient: 'vertical',
+[L240, S20]                     overflow: 'hidden',
+[L241, S18]                   }),
+[L242, S12]             }}
+[L243, S10]           >
+[L244, S12]             {abstract || 'No abstract available.'}
+[L245, S10]           </p>
+[L246, S10]           {abstract && abstract.length > 200 && (
+[L247, S12]             <button 
+[L248, S14]               onClick={onExpandAbstract}
+[L249, S14]               style={{
+[L250, S16]                 background: 'none',
+[L251, S16]                 border: 'none',
+[L252, S16]                 color: '#60a5fa',
+[L253, S16]                 cursor: 'pointer',
+[L254, S16]                 fontSize: '13px',
+[L255, S16]                 fontWeight: '500',
+[L256, S16]                 display: 'flex',
+[L257, S16]                 alignItems: 'center',
+[L258, S16]                 gap: '4px',
+[L259, S16]                 marginTop: '8px',
+[L260, S16]                 padding: 0,
+[L261, S14]               }}
+[L262, S12]             >
+[L263, S14]               {isExpanded ? 'Show less' : 'View full abstract'}
+[L264, S14]               <svg width="14" height="14" style={{ width: '14px', height: '14px', flexShrink: 0 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+[L265, S16]                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isExpanded ? "M19 9l-7 7-7-7" : "M17 8l4 4m0 0l-4 4m4-4H3"} />
+[L266, S14]               </svg>
+[L267, S12]             </button>
+[L268, S10]           )}
+[L269, S8]         </div>
+[L270, S6]       </SectionCard>
+[L271, S0] 
+[L272, S6]       <SectionCard 
+[L273, S8]         title="Keywords" 
+[L274, S8]         icon={tagIcon} 
+[L275, S8]         onHoverInfo={onHoverInfo} 
+[L276, S8]         infoKey="keywords"
+[L277, S6]       >
+[L278, S8]         {renderChips(authorKeywords)}
+[L279, S6]       </SectionCard>
+[L280, S0] 
+[L281, S6]       <SectionCard 
+[L282, S8]         title="Keywords-Plus" 
+[L283, S8]         icon={linkIcon} 
+[L284, S8]         onHoverInfo={onHoverInfo} 
+[L285, S8]         infoKey="keywords-plus"
+[L286, S6]       >
+[L287, S8]         {renderChips(plusKeywords)}
+[L288, S6]       </SectionCard>
+[L289, S0] 
+[L290, S6]       <SectionCard 
+[L291, S8]         title="Research Areas" 
+[L292, S8]         icon={globeIcon} 
+[L293, S8]         onHoverInfo={onHoverInfo} 
+[L294, S8]         infoKey="research-areas"
+[L295, S6]       >
+[L296, S8]         {renderBox(researchAreas)}
+[L297, S6]       </SectionCard>
+[L298, S0] 
+[L299, S6]       <SectionCard 
+[L300, S8]         title="Web of Science Categories" 
+[L301, S8]         icon={filterIcon} 
+[L302, S8]         onHoverInfo={onHoverInfo} 
+[L303, S8]         infoKey="wos-categories"
+[L304, S6]       >
+[L305, S8]         {renderBox(wosCategories)}
+[L306, S6]       </SectionCard>
+[L307, S4]     </div>
+[L308, S2]   );
+[L309, S0] }
+[L310, S0] 
+[L311, S0] OverviewLeftColumn.propTypes = {
+[L312, S2]   abstract: PropTypes.string,
+[L313, S2]   authorKeywords: PropTypes.arrayOf(PropTypes.string),
+[L314, S2]   plusKeywords: PropTypes.arrayOf(PropTypes.string),
+[L315, S2]   researchAreas: PropTypes.string,
+[L316, S2]   wosCategories: PropTypes.string,
+[L317, S2]   isExpanded: PropTypes.bool,
+[L318, S2]   onExpandAbstract: PropTypes.func,
+[L319, S2]   onOpenAbstractModal: PropTypes.func,
+[L320, S2]   onHoverInfo: PropTypes.func,
+[L321, S0] };

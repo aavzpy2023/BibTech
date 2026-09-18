@@ -7,7 +7,7 @@ const SectionCard = ({ title, icon, onHoverInfo, infoKey, rightElement, children
       backgroundColor: '#0C1427',
       border: '1px solid #18243c',
       borderRadius: '8px',
-      padding: '16px',
+      padding: '14px 16px',
       boxSizing: 'border-box',
     }}
   >
@@ -132,16 +132,19 @@ export default function OverviewLeftColumn({
   };
 
   const renderBox = (text) => {
-    if (!text) return <span style={{ color: '#64748b', fontStyle: 'italic' }}>None provided</span>;
+    if (!text) {
+      return (
+        <span style={{ color: '#64748b', fontStyle: 'italic' }}>
+          None provided
+        </span>
+      );
+    }
     return (
       <div
         style={{
-          backgroundColor: 'rgba(30, 41, 59, 0.4)',
-          border: '1px solid #1e293b',
-          borderRadius: '6px',
-          padding: '10px',
           fontSize: '13px',
-          color: '#cbd5e1',
+          color: '#94a3b8',
+          lineHeight: '1.5',
           wordBreak: 'break-word',
         }}
       >
@@ -216,7 +219,7 @@ export default function OverviewLeftColumn({
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <SectionCard 
         title="Abstract" 
         icon={docIcon} 
@@ -229,13 +232,13 @@ export default function OverviewLeftColumn({
             style={{
               margin: 0,
               color: '#cbd5e1',
-              lineHeight: '1.6',
+              lineHeight: '1.5',
               wordBreak: 'break-word',
               ...(isExpanded
                 ? { display: 'block', maxHeight: 'none' }
                 : {
                     display: '-webkit-box',
-                    WebkitLineClamp: 4,
+                    WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
                   }),
