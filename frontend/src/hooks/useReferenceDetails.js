@@ -209,9 +209,15 @@ export default function useReferenceDetails(article = null) {
         };
         if (map[id]) return map[id];
       }
+
+      // Retro-compatibilidad estricta para artículos que no tienen raw_data
+      if (article?.web_of_science_categories || article?.research_areas) {
+        return 'Web of Science';
+      }
+
       if (!raw) return 'Unknown';
       const lower = raw.toLowerCase();
-      if (lower.includes('wos:') || lower.includes('web of science')) return 'Web of Science';
+      if (lower.includes('wos') || lower.includes('web of science') || lower.includes('clarivate')) return 'Web of Science';
       if (lower.includes('scopus')) return 'Scopus';
       if (lower.includes('pubmed') || lower.includes('pmid')) return 'PubMed';
       if (lower.includes('crossref')) return 'Crossref';

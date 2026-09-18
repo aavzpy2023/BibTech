@@ -66,12 +66,16 @@ def _get_insert_stmt(table_or_model, db: Session):
     return sqlite_insert(table_or_model).on_conflict_do_nothing()
 
 
-def _infer_source_db_id(raw_data: Optional[str]) -> Optional[int]:
-    """Infers the source database ID dynamically based on the raw payload."""
+def _infer_source_db_id(ref) -> Optional[int]:
+    """Infers the source database ID dynamically based on the raw payload and metadata."""
+    if getattr(ref, "web_of_science_categories", None) or getattr(ref, "research_areas", None):
+        return 1
+        
+    raw_data = getattr(ref, "raw_data", None)
     if not raw_data:
         return None
     raw = raw_data.lower()
-    if "wos:" in raw or "web of science" in raw or "ut = {wos:" in raw: return 1
+    if "wos" in raw or "web of science" in raw or "clarivate" in raw: return 1
     if "scopus" in raw: return 2
     if "pubmed" in raw or "pmid" in raw: return 3
     if "crossref" in raw: return 4
@@ -207,7 +211,7 @@ def _bulk_inject_references(
                 ref, "cited_references_count", None
             ),
             "raw_data": getattr(ref, "raw_data", None) or (str(ref.author) if ref.author else None),
-            "source_database_id": _infer_source_db_id(getattr(ref, "raw_data", None)),
+            "source_database_id": _infer_source_db_id(ref),
         }
     )
 
