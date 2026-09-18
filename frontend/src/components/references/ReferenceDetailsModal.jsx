@@ -371,7 +371,14 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
         )}
 
         {activeTab === 'Authors & Institutions' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+              gap: '12px',
+              alignContent: 'start',
+            }}
+          >
             {authorsDetail && authorsDetail.length > 0 ? (
               authorsDetail.map((author, idx) => (
                 <div
@@ -453,16 +460,17 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
                 </div>
               ))
             ) : (
-              <div
-                style={{
-                  padding: '40px',
-                  textAlign: 'center',
-                  color: '#64748b',
-                  fontStyle: 'italic',
-                }}
-              >
-                No detailed author records available.
-              </div>
+                  <div
+                    style={{
+                      padding: '40px',
+                      textAlign: 'center',
+                      color: '#64748b',
+                      fontStyle: 'italic',
+                      gridColumn: '1 / -1',
+                    }}
+                  >
+                    No detailed author records available.
+                  </div>
             )}
           </div>
         )}
