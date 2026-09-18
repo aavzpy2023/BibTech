@@ -104,7 +104,7 @@
 - [x] [REQ-057] Configuration Tree & Navigation Hook
 - [x] [REQ-058] Analysis Sidebar Pure Dumb View
 - [x] [REQ-059] Dynamic Content Renderer Dumb View
-- [ ] [REQ-056] View Wiring & Container Architecture
+- [x] [REQ-056] View Wiring & Container Architecture
 
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)

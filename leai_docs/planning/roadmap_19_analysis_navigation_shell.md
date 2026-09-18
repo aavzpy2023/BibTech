@@ -42,7 +42,8 @@ complexity_aggregate: "MEDIUM"
   - [ID-19.3.2] [UI/COMPONENT]: [1. Create frontend/src/components/analysis/AnalysisContent.jsx. 2. Accept prop activeTabId. 3. Implement a switch/map mechanism returning a simple flexbox <div> placeholder displaying the activeTabId string]. Type: Task.
   - [ID-19.3.3] [PLANNING/SYNC]: [1. Open roadmap_19_analysis_navigation_shell.md and check - [x] for Story 19.3. 2. Append > Files touched: .... 3. Check - [x] for REQ-059 in global_backlog.md]. Type: Task.
 
-- [ ] Story 19.4: View Wiring & Container Architecture | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-056)
+- [x] Story 19.4: View Wiring & Container Architecture | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-056)
+  > Files touched: `frontend/src/views/AnalysisView.test.jsx`, `frontend/src/views/AnalysisView.jsx`
   Business Requirement: Wire the state hook and the dumb components inside the main AnalysisView.
   Story Context Radius: {"frontend/src/views/AnalysisView.jsx": [""], "frontend/src/views/AnalysisView.test.jsx": [""], "frontend/src/hooks/useAnalysisNavigation.js": [""], "frontend/src/components/analysis/AnalysisSidebar.jsx": [""], "frontend/src/components/analysis/AnalysisContent.jsx": [""], "frontend/src/config/analysisMenuConfig.js": [""], "leai_docs/planning/roadmap_19_analysis_navigation_shell.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown:

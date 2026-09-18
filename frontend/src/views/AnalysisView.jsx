@@ -1,8 +1,17 @@
 import React from 'react';
+import AnalysisSidebar from '../components/analysis/AnalysisSidebar';
+import AnalysisContent from '../components/analysis/AnalysisContent';
+import useAnalysisNavigation from '../hooks/useAnalysisNavigation';
+import { ANALYSIS_MENU_CONFIG } from '../config/analysisMenuConfig';
 
 const styles = {
   container: {
-    padding: '0'
+    display: 'flex',
+    flexDirection: 'row',
+    height: '100%',
+    width: '100%',
+    overflow: 'hidden',
+    backgroundColor: '#0d1117'
   },
   title: {
     fontSize: '24px',
@@ -18,12 +27,23 @@ const styles = {
 };
 
 export function AnalysisView() {
+  const {
+    activeCategory,
+    activeTab,
+    setActiveCategory,
+    setActiveTab
+  } = useAnalysisNavigation();
+
   return (
     <div style={styles.container} data-testid="analysis-view">
-      <h2 style={styles.title}>Bibliographic Analysis</h2>
-      <p style={styles.subtitle}>
-        Analyze bibliographic metadata and downloaded publications.
-      </p>
+      <AnalysisSidebar
+        config={ANALYSIS_MENU_CONFIG}
+        activeCategory={activeCategory}
+        activeTab={activeTab}
+        onSelectCategory={setActiveCategory}
+        onSelectTab={setActiveTab}
+      />
+      <AnalysisContent activeTabId={activeTab} />
     </div>
   );
 }
