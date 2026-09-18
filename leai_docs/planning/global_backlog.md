@@ -99,6 +99,13 @@
 - [x] [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
 - [x] [REQ-055] Alembic Migration Generation & Schema Upgrade
 
+## EPIC 19: ANALYSIS NAVIGATION SHELL ARCHITECTURE
+- [x] Story 19.0: Roadmap & Planning Initialization
+- [ ] [REQ-057] Configuration Tree & Navigation Hook
+- [ ] [REQ-058] Analysis Sidebar Pure Dumb View
+- [ ] [REQ-059] Dynamic Content Renderer Dumb View
+- [ ] [REQ-056] View Wiring & Container Architecture
+
 ## Active Roadmaps
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
@@ -117,3 +124,4 @@
 - [Roadmap 16: Metadata Hover-Reveal UI](roadmap_16_metadata_hover_reveal.md)
 - [Roadmap 17: Reference Details Modal](roadmap_17_reference_details_modal.md)
 - [Roadmap 18: Bibliometric Data Warehouse](roadmap_18_bibliometric_data_warehouse.md)
+- [Roadmap 19: Analysis Navigation Shell](roadmap_19_analysis_navigation_shell.md)
