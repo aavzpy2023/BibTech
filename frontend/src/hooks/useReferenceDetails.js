@@ -196,7 +196,40 @@ export default function useReferenceDetails(article = null) {
       };
     }
 
-    const parsedBib = parseBibtexFields(article.raw_data || article.raw_bibtex || '');
+    const rawBib = article.raw_data || article.raw_bibtex || '';
+    const parsedBib = parseBibtexFields(rawBib);
+
+    const getSourceDatabase = (id, raw) => {
+      if (id) {
+        const map = {
+          1: 'Web of Science', 2: 'Scopus', 3: 'PubMed', 4: 'Crossref',
+          5: 'Google Scholar', 6: 'Embase', 7: 'CINAHL', 8: 'PsycINFO',
+          9: 'ERIC', 10: 'IEEE Xplore', 11: 'JSTOR', 12: 'Cochrane Library',
+          13: 'OpenAlex', 14: 'Semantic Scholar', 15: 'LILACS', 16: 'SciELO'
+        };
+        if (map[id]) return map[id];
+      }
+      if (!raw) return 'Unknown';
+      const lower = raw.toLowerCase();
+      if (lower.includes('wos:') || lower.includes('web of science')) return 'Web of Science';
+      if (lower.includes('scopus')) return 'Scopus';
+      if (lower.includes('pubmed') || lower.includes('pmid')) return 'PubMed';
+      if (lower.includes('crossref')) return 'Crossref';
+      if (lower.includes('scholar.google') || lower.includes('google scholar')) return 'Google Scholar';
+      if (lower.includes('embase')) return 'Embase';
+      if (lower.includes('cinahl')) return 'CINAHL';
+      if (lower.includes('psycinfo')) return 'PsycINFO';
+      if (lower.includes('eric')) return 'ERIC';
+      if (lower.includes('ieee')) return 'IEEE Xplore';
+      if (lower.includes('jstor')) return 'JSTOR';
+      if (lower.includes('cochrane')) return 'Cochrane Library';
+      if (lower.includes('openalex')) return 'OpenAlex';
+      if (lower.includes('semantic scholar')) return 'Semantic Scholar';
+      if (lower.includes('lilacs')) return 'LILACS';
+      if (lower.includes('scielo')) return 'SciELO';
+      return 'Unknown';
+    };
+    const sourceDatabase = getSourceDatabase(article.source_database_id, rawBib);
 
     const keywords = Array.isArray(article.keywords) ? article.keywords : [];
     let authorKeywords = keywords
@@ -336,6 +369,7 @@ export default function useReferenceDetails(article = null) {
       fundingList: Array.isArray(article.funding_list)
         ? article.funding_list
         : [],
+      sourceDatabase,
     };
   }, [article]);
 

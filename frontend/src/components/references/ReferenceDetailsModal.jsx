@@ -33,6 +33,7 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
     wosCategories,
     affiliations,
     authorsDetailsCount,
+    sourceDatabase,
     authorEmail,
     orcidCount,
     researcherIdCount,
@@ -306,10 +307,8 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
               },
               { label: 'Research Areas', val: researchAreas },
               { label: 'Web of Science Categories', val: wosCategories },
-              {
-                label: 'Database ID',
-                val: article?.id ? String(article.id) : null,
-              },
+              { label: 'Source Database', val: sourceDatabase },
+              { label: 'Internal DB ID', val: article?.id ? String(article.id) : null },
               { label: 'Project Status', val: article?.project_status },
               { label: 'Created At', val: article?.created_at },
             ].map((item, idx) => (

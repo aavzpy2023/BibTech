@@ -73,6 +73,34 @@ class Project(Base):
     )
 
 
+class SourceDatabase(Base):
+    """Dimensional table representing the original source database of the article."""
+
+    __tablename__ = "source_databases"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+        comment="Primary key",
+    )
+    name = Column(
+        String(100),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+    description = Column(
+        String(255),
+        nullable=True,
+    )
+
+    articles = relationship(
+        "Article",
+        back_populates="source_database",
+    )
+
+
 class Article(Base):
     """Represents an academic publication with bibliographic data."""
 
@@ -106,6 +134,12 @@ class Article(Base):
         ForeignKey("journals.id", ondelete="SET NULL"),
         nullable=True,
         comment="Foreign key linking to journals table for dimensional modeling",
+    )
+    source_database_id = Column(
+        Integer,
+        ForeignKey("source_databases.id", ondelete="SET NULL"),
+        nullable=True,
+        comment="Source database dimensional foreign key",
     )
     year = Column(
         Integer,
@@ -251,6 +285,10 @@ class Article(Base):
     )
     journal_entity = relationship(
         "Journal",
+        back_populates="articles",
+    )
+    source_database = relationship(
+        "SourceDatabase",
         back_populates="articles",
     )
     article_countries = relationship(

@@ -66,6 +66,30 @@ def _get_insert_stmt(table_or_model, db: Session):
     return sqlite_insert(table_or_model).on_conflict_do_nothing()
 
 
+def _infer_source_db_id(raw_data: Optional[str]) -> Optional[int]:
+    """Infers the source database ID dynamically based on the raw payload."""
+    if not raw_data:
+        return None
+    raw = raw_data.lower()
+    if "wos:" in raw or "web of science" in raw or "ut = {wos:" in raw: return 1
+    if "scopus" in raw: return 2
+    if "pubmed" in raw or "pmid" in raw: return 3
+    if "crossref" in raw: return 4
+    if "scholar.google" in raw or "google scholar" in raw: return 5
+    if "embase" in raw: return 6
+    if "cinahl" in raw: return 7
+    if "psycinfo" in raw: return 8
+    if "eric" in raw: return 9
+    if "ieee" in raw: return 10
+    if "jstor" in raw: return 11
+    if "cochrane" in raw: return 12
+    if "openalex" in raw: return 13
+    if "semantic scholar" in raw: return 14
+    if "lilacs" in raw: return 15
+    if "scielo" in raw: return 16
+    return None
+
+
 def _bulk_inject_references(
     db: Session, refs: List[ParsedReference], project_code: str
 ) -> int:
@@ -172,19 +196,20 @@ def _bulk_inject_references(
                     ref, "web_of_science_categories", None
                 ),
                 "funding_text": getattr(ref, "funding_text", None),
-                "journal_iso": getattr(ref, "journal_iso", None),
-                "oa_status": getattr(ref, "oa_status", None),
-                "issn": getattr(ref, "issn", None),
-                "volume": getattr(ref, "volume", None),
-                "issue": getattr(ref, "issue", None),
-                "pages": getattr(ref, "pages", None),
-                "times_cited": getattr(ref, "times_cited", None),
-                "cited_references_count": getattr(
-                    ref, "cited_references_count", None
-                ),
-                "raw_data": getattr(ref, "raw_data", None) or (str(ref.author) if ref.author else None),
-            }
-        )
+            "journal_iso": getattr(ref, "journal_iso", None),
+            "oa_status": getattr(ref, "oa_status", None),
+            "issn": getattr(ref, "issn", None),
+            "volume": getattr(ref, "volume", None),
+            "issue": getattr(ref, "issue", None),
+            "pages": getattr(ref, "pages", None),
+            "times_cited": getattr(ref, "times_cited", None),
+            "cited_references_count": getattr(
+                ref, "cited_references_count", None
+            ),
+            "raw_data": getattr(ref, "raw_data", None) or (str(ref.author) if ref.author else None),
+            "source_database_id": _infer_source_db_id(getattr(ref, "raw_data", None)),
+        }
+    )
 
     if new_articles_data:
         stmt = _get_insert_stmt(Article, db).values(new_articles_data)
