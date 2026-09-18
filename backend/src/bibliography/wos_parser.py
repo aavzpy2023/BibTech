@@ -25,21 +25,31 @@ def split_affiliation_blocks(raw_affil: str) -> List[str]:
         re.IGNORECASE,
     )
 
-    if ";" in text:
-        candidates = [s.strip().rstrip(".") for s in text.split(";") if s.strip()]
-        is_scopus = len(candidates) > 1 and all(
-            inst_kw.search(seg) or ("," in seg and len(seg.split(",")) >= 3)
-            for seg in candidates
-        )
-        if is_scopus:
-            return candidates
-
+    # 1. WoS check: Lines ending with a period followed by newline or next entity
+    # In WoS, each affiliation line terminates with a period (e.g. '..., India.\n   Author, ...')
     wos_candidates = [
         s.strip().rstrip(".")
-        for s in re.split(r"\.\s+(?=[A-Z\[])|\r?\n+", text)
+        for s in re.split(r"\.\s*\r?\n+\s*|\.\s+(?=[A-Z\[])", text)
         if s.strip()
     ]
-    return wos_candidates if wos_candidates else [text.rstrip(".")]
+    if len(wos_candidates) > 1:
+        return wos_candidates
+
+    # 2. Scopus check: Distinct institutions separated by ';'
+    if ";" in text:
+        scopus_candidates = [
+            s.strip().rstrip(".") for s in text.split(";") if s.strip()
+        ]
+        if len(scopus_candidates) > 1:
+            return scopus_candidates
+
+    newline_candidates = [
+        s.strip().rstrip(".") for s in text.splitlines() if s.strip()
+    ]
+    if len(newline_candidates) > 1:
+        return newline_candidates
+
+    return [text.rstrip(".")]
 
 
 def parse_wos_countries(entry: dict) -> List[str]:
