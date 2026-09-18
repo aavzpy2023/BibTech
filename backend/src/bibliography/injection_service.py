@@ -607,7 +607,20 @@ def _bulk_inject_references(
             stmt_acr = _get_insert_stmt(ArticleCitation, db).values(article_citations_data)
             db.execute(stmt_acr)
 
-    # 8. Bulk inject Funding
+    # 8. Bulk inject Funding with deduplication
+    existing_funding = set(
+        (
+            f.article_id,
+            (f.agency or "").strip().lower(),
+            (f.grant_number or "").strip().lower(),
+        )
+        for f in db.query(
+            Funding.article_id, Funding.agency, Funding.grant_number
+        )
+        .filter(Funding.article_id.in_(list(linked_article_ids)))
+        .all()
+    ) if linked_article_ids else set()
+
     funding_data = []
     for ref in refs:
         doi_val = (ref.doi or "").strip() or None
@@ -622,20 +635,27 @@ def _bulk_inject_references(
         if f_text and str(f_text).strip():
             parsed_funds = parse_funding_text(str(f_text))
             for pf in parsed_funds:
-                funding_data.append({
-                    "article_id": art.id,
-                    "agency": pf["agency"][:255],
-                    "grant_number": (
-                        pf["grant_number"][:100]
-                        if pf["grant_number"]
-                        else None
-                    ),
-                    "country": (
-                        pf["country"][:100]
-                        if pf["country"]
-                        else None
-                    ),
-                })
+                f_key = (
+                    art.id,
+                    pf["agency"].strip().lower(),
+                    (pf["grant_number"] or "").strip().lower(),
+                )
+                if f_key not in existing_funding:
+                    existing_funding.add(f_key)
+                    funding_data.append({
+                        "article_id": art.id,
+                        "agency": pf["agency"][:255],
+                        "grant_number": (
+                            pf["grant_number"][:100]
+                            if pf["grant_number"]
+                            else None
+                        ),
+                        "country": (
+                            pf["country"][:100]
+                            if pf["country"]
+                            else None
+                        ),
+                    })
 
     if funding_data:
         stmt_fund = _get_insert_stmt(Funding, db).values(funding_data)
@@ -687,6 +707,33 @@ def backfill_funding_from_articles(db: Session) -> int:
         db.execute(stmt)
         db.commit()
     return len(new_fundings)
+
+
+def clean_duplicate_fundings(db: Session) -> int:
+    """Removes duplicate rows in funding table keeping the lowest id."""
+    try:
+        all_funds = db.query(Funding).order_by(Funding.id.asc()).all()
+        seen = set()
+        to_delete = []
+        for f in all_funds:
+            key = (
+                f.article_id,
+                (f.agency or "").strip().lower(),
+                (f.grant_number or "").strip().lower(),
+            )
+            if key in seen:
+                to_delete.append(f.id)
+            else:
+                seen.add(key)
+        if to_delete:
+            db.query(Funding).filter(Funding.id.in_(to_delete)).delete(
+                synchronize_session=False
+            )
+            db.commit()
+        return len(to_delete)
+    except Exception:
+        db.rollback()
+        return 0
 
 
 def inject_references_to_db(

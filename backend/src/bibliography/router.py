@@ -17,6 +17,7 @@ from .zip_service import create_zip_from_pdfs
 from .injection_service import (
     inject_references_to_db,
     backfill_funding_from_articles,
+    clean_duplicate_fundings,
 )
 
 try:
@@ -180,25 +181,8 @@ if HAS_MULTIPART:
                 return [x for x in val if not _is_mock(x)]
             return []
 
-        # Auto-Backfill: If articles have funding_text but no funding records
-        has_text = any(
-            bool(
-                getattr(a, "funding_text", None)
-                and str(a.funding_text).strip()
-            )
-            for a in articles
-        )
-        has_records = any(
-            bool(_safe_list(getattr(a, "funding", None)))
-            for a in articles
-        )
-        if has_text and not has_records:
-            try:
-                backfill_funding_from_articles(db)
-                for a in articles:
-                    db.refresh(a)
-            except Exception:
-                pass
+        # Purge physical duplicates in database if any exist
+        clean_duplicate_fundings(db)
 
         now_iso = datetime.now(timezone.utc).isoformat()
         result = []
@@ -293,15 +277,21 @@ if HAS_MULTIPART:
                 for r in cr_items
             ]
 
-            funding_list = [
-                {
-                    "id": getattr(f, "id", None),
-                    "agency": getattr(f, "agency", None),
-                    "grant_number": getattr(f, "grant_number", None),
-                    "country": getattr(f, "country", None),
-                }
-                for f in _safe_list(getattr(a, "funding", None))
-            ]
+            seen_f_keys = set()
+            funding_list = []
+            for f in _safe_list(getattr(a, "funding", None)):
+                f_key = (
+                    (getattr(f, "agency", "") or "").strip().lower(),
+                    (getattr(f, "grant_number", "") or "").strip().lower(),
+                )
+                if f_key not in seen_f_keys:
+                    seen_f_keys.add(f_key)
+                    funding_list.append({
+                        "id": getattr(f, "id", None),
+                        "agency": getattr(f, "agency", None),
+                        "grant_number": getattr(f, "grant_number", None),
+                        "country": getattr(f, "country", None),
+                    })
 
             downloads_list = [
                 {
