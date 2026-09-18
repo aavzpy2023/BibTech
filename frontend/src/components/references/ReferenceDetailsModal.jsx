@@ -167,8 +167,9 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
         </div>
 
         {/* Tab Content Panels */}
-        {activeTab === 'Overview' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ minHeight: '520px' }}>
+          {activeTab === 'Overview' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div
               style={{
                 display: 'grid',
@@ -308,26 +309,229 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
         )}
 
         {activeTab === 'Metadata' && (
-          <div className="p-6 text-gray-400 text-sm italic border border-gray-800 rounded-lg bg-gray-900/30">
-            Raw metadata attributes and database verification panel.
+          <div
+            style={{
+              backgroundColor: '#0C1427',
+              border: '1px solid #18243c',
+              borderRadius: '8px',
+              padding: '20px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '16px 24px',
+            }}
+          >
+            {[
+              { label: 'DOI', val: doi },
+              { label: 'Journal', val: journal },
+              { label: 'Journal ISO', val: article?.journal_iso },
+              { label: 'Publisher', val: publisher },
+              { label: 'ISSN / EISSN', val: issn },
+              { label: 'Language', val: language },
+              { label: 'Document Type', val: type },
+              { label: 'OA Status', val: oaStatus },
+              {
+                label: 'Times Cited',
+                val: timesCited != null ? String(timesCited) : null,
+              },
+              { label: 'WoS Categories', val: wosCategories },
+              { label: 'Research Areas', val: researchAreas },
+              {
+                label: 'Database ID',
+                val: article?.id ? String(article.id) : null,
+              },
+              { label: 'Status', val: article?.project_status },
+              { label: 'Created At', val: article?.created_at },
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '11px',
+                    color: '#64748b',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    fontWeight: '600',
+                  }}
+                >
+                  {item.label}
+                </span>
+                <span
+                  style={{
+                    fontSize: '13px',
+                    color: '#e2e8f0',
+                    fontWeight: '500',
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  {item.val || '—'}
+                </span>
+              </div>
+            ))}
           </div>
         )}
 
         {activeTab === 'Authors & Institutions' && (
-          <div className="p-6 text-gray-400 text-sm italic border border-gray-800 rounded-lg bg-gray-900/30">
-            {authorsDetailsCount > 0
-              ? `${authorsDetailsCount} mapped author records with verified institutional affiliations.`
-              : 'No detailed author records available.'}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {authorsDetail && authorsDetail.length > 0 ? (
+              authorsDetail.map((author, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    padding: '14px 16px',
+                    borderRadius: '8px',
+                    backgroundColor: '#0C1427',
+                    border: '1px solid #18243c',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        color: '#f1f5f9',
+                      }}
+                    >
+                      {author.name || 'Unknown Author'}
+                    </span>
+                    {author.is_corresponding && (
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          fontSize: '10px',
+                          textTransform: 'uppercase',
+                          fontWeight: '600',
+                          backgroundColor: 'rgba(30, 58, 138, 0.4)',
+                          color: '#60a5fa',
+                          border: '1px solid rgba(59, 130, 246, 0.4)',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        Corresponding
+                      </span>
+                    )}
+                  </div>
+                  {author.affiliation && (
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color: '#94a3b8',
+                        lineHeight: '1.5',
+                      }}
+                    >
+                      {author.affiliation}
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '14px',
+                      fontSize: '12px',
+                      color: '#64748b',
+                    }}
+                  >
+                    {author.email && (
+                      <span style={{ color: '#38bdf8' }}>
+                        Email: {author.email}
+                      </span>
+                    )}
+                    {author.orcid && (
+                      <span style={{ color: '#a78bfa' }}>
+                        ORCID: {author.orcid}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div
+                style={{
+                  padding: '40px',
+                  textAlign: 'center',
+                  color: '#64748b',
+                  fontStyle: 'italic',
+                }}
+              >
+                No detailed author records available.
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'References' && (
-          <div className="p-6 text-gray-400 text-sm italic border border-gray-800 rounded-lg bg-gray-900/30">
-            {referencesList && referencesList.length > 0
-              ? `${referencesList.length} cited references catalogued.`
-              : 'No cited references available.'}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {referencesList && referencesList.length > 0 ? (
+              referencesList.map((refItem, idx) => (
+                <div
+                  key={refItem.id || idx}
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    backgroundColor: '#0C1427',
+                    border: '1px solid #18243c',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: '500',
+                      fontSize: '13px',
+                      color: '#e2e8f0',
+                      lineHeight: '1.4',
+                    }}
+                  >
+                    {refItem.title || refItem.raw_citation || 'Untitled Reference'}
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '14px',
+                      fontSize: '12px',
+                      color: '#94a3b8',
+                    }}
+                  >
+                    {refItem.year && <span>Year: {refItem.year}</span>}
+                    {refItem.doi && (
+                      <span style={{ color: '#60a5fa', fontFamily: 'monospace' }}>
+                        DOI: {refItem.doi}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div
+                style={{
+                  padding: '40px',
+                  textAlign: 'center',
+                  color: '#64748b',
+                  fontStyle: 'italic',
+                }}
+              >
+                No cited references catalogued.
+              </div>
+            )}
           </div>
         )}
+        </div>
 
         {/* Slide-out Drawer */}
         <ReferenceDrawer
