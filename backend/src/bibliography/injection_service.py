@@ -316,6 +316,17 @@ def _bulk_inject_references(
             .filter(Author.name.in_(all_authors_raw))
             .all()
         }
+        
+        for a_name, auth_obj in existing_authors.items():
+            new_data = author_info_map.get(a_name)
+            if new_data:
+                if not auth_obj.orcid and new_data.get("orcid"):
+                    auth_obj.orcid = new_data["orcid"]
+                if not auth_obj.email and new_data.get("email"):
+                    auth_obj.email = new_data["email"]
+                if not auth_obj.affiliation_id and new_data.get("affiliation_id"):
+                    auth_obj.affiliation_id = new_data["affiliation_id"]
+
         new_authors = [
             author_info_map.get(name, {"name": name})
             for name in all_authors_raw

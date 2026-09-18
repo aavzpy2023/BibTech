@@ -285,6 +285,20 @@ def _parse_bib_authors_detail(entry) -> List[dict]:
     affil_raw = _extract_bib_field(norm_entry, "affiliation")
     email_raw = _extract_bib_field(norm_entry, "email") or _extract_bib_field(norm_entry, "author-email")
     orcid_raw = _extract_bib_field(norm_entry, "orcid") or _extract_bib_field(norm_entry, "orcid-numbers")
+    corr_addr = _extract_bib_field(norm_entry, "correspondence_address") or _extract_bib_field(norm_entry, "correspondence-address")
+
+    if details and corr_addr:
+        if not email_raw:
+            corr_emails = re.findall(
+                r"email:\s*([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)", 
+                str(corr_addr), re.IGNORECASE
+            )
+            if corr_emails:
+                email_raw = ",".join(corr_emails)
+        for d in details:
+            last_name = d["name"].split(",")[0].strip()
+            if last_name and last_name.lower() in str(corr_addr).lower():
+                d["is_corresponding"] = True
 
     if details:
         if affil_raw and all(not d.get("affiliation") for d in details):
@@ -326,10 +340,10 @@ def _parse_bib_authors_detail(entry) -> List[dict]:
                     d["email"] = emails[idx]
             elif emails:
                 corr = [d for d in details if d.get("is_corresponding")]
-                if corr:
-                    corr[0]["email"] = emails[0]
-                else:
-                    details[0]["email"] = emails[0]
+                targets = corr if corr else details
+                for idx, e in enumerate(emails):
+                    if idx < len(targets):
+                        targets[idx]["email"] = e
 
         if orcid_raw and all(not d.get("orcid") for d in details):
             orcids = re.findall(r"([0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X])", str(orcid_raw), flags=re.IGNORECASE)
