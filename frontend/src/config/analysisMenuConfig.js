@@ -3,9 +3,9 @@ export const ANALYSIS_MENU_CONFIG = [
         id: 'overview',
         label: 'Overview',
         tabs: [
-            { id: 'general-kpis', label: 'KPIs generales' },
-            { id: 'publication-citation-evolution', label: 'Evolución de publicaciones y citas' },
-            { id: 'journal-distribution', label: 'Distribución por journals' },
+            { id: 'general-kpis', label: 'General KPIs' },
+            { id: 'publication-citation-evolution', label: 'Publication & Citation Evolution' },
+            { id: 'journal-distribution', label: 'Journal Distribution' },
             { id: 'research-snapshot', label: 'Research Snapshot' },
             { id: 'key-insights', label: 'Key Insights' }
         ]
