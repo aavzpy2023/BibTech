@@ -15,9 +15,10 @@ from .identity import (
     AuthorArticle,
     Keyword,
     KeywordArticle,
+from .tracking import (
+    Download,
+    Funding,
 )
-from .tracking import Download, Funding, Reference
-
 __all__ = [
     "Affiliation",
     "Article",
@@ -32,7 +33,6 @@ __all__ = [
     "KeywordArticle",
     "Project",
     "ProjectArticle",
-    "Reference",
     "Funding",
     "Download",
 ]
