@@ -7,6 +7,7 @@ from .wos_parser import (
     parse_wos_authors_detail,
     parse_wos_countries,
     parse_wos_cited_references,
+    split_affiliation_blocks,
 )
 
 
@@ -302,13 +303,20 @@ def _parse_bib_authors_detail(entry) -> List[dict]:
 
     if details:
         if affil_raw and all(not d.get("affiliation") for d in details):
-            affils = [a.strip() for a in str(affil_raw).replace("\n", " ").split(";") if a.strip()]
+            affils = split_affiliation_blocks(affil_raw)
             if len(affils) == len(details):
                 for idx, d in enumerate(details):
                     d["affiliation"] = affils[idx]
             else:
                 for d in details:
-                    d["affiliation"] = affils[0] if len(affils) == 1 else " ; ".join(affils)
+                    last_name = d["name"].split(",")[0].strip().lower()
+                    for aff_candidate in affils:
+                        if last_name and last_name in aff_candidate.lower():
+                            d["affiliation"] = aff_candidate
+                            break
+                unassigned = [d for d in details if not d.get("affiliation")]
+                for idx, d in enumerate(unassigned):
+                    d["affiliation"] = affils[min(idx, len(affils) - 1)]
                     
         for d in details:
             if d.get("affiliation") and not d.get("country"):
@@ -377,7 +385,7 @@ def _parse_bib_countries(entry) -> List[str]:
         affil_raw = _extract_bib_field(norm_entry, "affiliation")
         if affil_raw:
             c_set = set()
-            for line in re.split(r";|\n", str(affil_raw)):
+            for line in split_affiliation_blocks(affil_raw):
                 ext_parts = [p.strip() for p in line.split(",")]
                 if ext_parts:
                     c_clean = re.sub(r"[0-9\-]", "", ext_parts[-1].rstrip(".")).strip()

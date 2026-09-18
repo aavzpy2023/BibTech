@@ -7,6 +7,41 @@ def _normalize_name(name: str) -> str:
     return re.sub(r"[^a-zA-Z]", "", name).lower()
 
 
+def split_affiliation_blocks(raw_affil: str) -> List[str]:
+    """
+    Universally splits bibliographic affiliation blocks for both:
+    - Scopus: Institutions separated by ';' (e.g. 'Inst 1, Country; Inst 2, Country')
+    - WoS: Institutions separated by '.' followed by newline/next entity
+    Preserves author names separated by ';' inside WoS lines.
+    """
+    if not raw_affil or not str(raw_affil).strip():
+        return []
+
+    text = str(raw_affil).strip()
+    inst_kw = re.compile(
+        r"\b(Univ|University|Inst|Institute|Dept|Department|Fac|Faculty|"
+        r"Sch|School|Ctr|Center|Centre|Hospital|Coll|College|Lab|Laboratory|"
+        r"Academy|Campus|Ministry|Division|Div)\b",
+        re.IGNORECASE,
+    )
+
+    if ";" in text:
+        candidates = [s.strip().rstrip(".") for s in text.split(";") if s.strip()]
+        is_scopus = len(candidates) > 1 and all(
+            inst_kw.search(seg) or ("," in seg and len(seg.split(",")) >= 3)
+            for seg in candidates
+        )
+        if is_scopus:
+            return candidates
+
+    wos_candidates = [
+        s.strip().rstrip(".")
+        for s in re.split(r"\.\s+(?=[A-Z\[])|\r?\n+", text)
+        if s.strip()
+    ]
+    return wos_candidates if wos_candidates else [text.rstrip(".")]
+
+
 def parse_wos_countries(entry: dict) -> List[str]:
     """Extracts unique countries from the affiliation field."""
     def get_val(*keys):
@@ -23,16 +58,12 @@ def parse_wos_countries(entry: dict) -> List[str]:
                 return s
         return ""
 
-    affil_raw = get_val("affiliation")
+    affil_raw = get_val("affiliation", "affiliations")
     if not affil_raw:
         return []
         
     countries = set()
-    lines = [
-        line.strip() 
-        for line in re.split(r"\.\s+(?=[A-Z\[])|\n", affil_raw) 
-        if line.strip()
-    ]
+    lines = split_affiliation_blocks(affil_raw)
     
     for line in lines:
         line_clean = re.sub(r"^\[.*?\]\s*", "", line).strip()
@@ -208,13 +239,8 @@ def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
                     break
 
     # 3. Process Affiliations & Corresponding Author
-    affil_raw = get_val("affiliation")
-    affil_raw = affil_raw.replace("\n", " ")
-    lines = [
-        line.strip() 
-        for line in re.split(r"\.\s+(?=[A-Z\[])", affil_raw) 
-        if line.strip()
-    ]
+    affil_raw = get_val("affiliation", "affiliations")
+    lines = split_affiliation_blocks(affil_raw)
     
     for line in lines:
         is_corr = "(Corresponding Author)" in line or "(corresponding author)" in line.lower()
