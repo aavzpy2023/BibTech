@@ -189,8 +189,9 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
                 }
                 onHoverInfo={handleHoverInfo}
               />
-              <OverviewRightColumn
-                affiliations={affiliations}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <OverviewRightColumn
+                  affiliations={affiliations}
                 authorsDetailsCount={authorsDetailsCount}
                 authorEmail={authorEmail}
                 orcidCount={orcidCount}
@@ -230,9 +231,7 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
                   }
                 }}
               />
-            </div>
-
-            <MetricsFooterCards
+              <MetricsFooterCards
               type={type}
               language={language}
               issn={issn}
@@ -245,6 +244,8 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
               oaStatus={oaStatus}
               onHoverInfo={handleHoverInfo}
             />
+          </div>
+        </div>
 
             {referencesList && referencesList.length > 0 && (
               <div

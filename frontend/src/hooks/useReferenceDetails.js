@@ -225,7 +225,9 @@ export default function useReferenceDetails(article = null) {
     );
     const firstAuthorWithEmail = authorsDetail.find((a) => a && a.email);
     let authorEmail =
-      corrAuthor?.email || firstAuthorWithEmail?.email || parsedBib['author-email'] || '';
+      corrAuthor?.email ||
+      (authorsDetail.length === 1 ? firstAuthorWithEmail?.email : '') ||
+      '';
 
     let orcidCount = authorsDetail.filter((a) => a && a.orcid).length;
     if (orcidCount === 0 && parsedBib['orcid-numbers']) {

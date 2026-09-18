@@ -133,22 +133,13 @@ export default function OverviewRightColumn({
       </RightPanelBox>
 
       <RightPanelBox 
-        title="Author Email" 
+        title="Corresponding Author Email" 
         icon={icons.mail} 
         onHoverInfo={onHoverInfo} 
         infoKey="email"
         copyAction={onCopy}
       >
         {authorEmail}
-      </RightPanelBox>
-
-      <RightPanelBox 
-        title="ORCID Numbers" 
-        icon={icons.badge} 
-        onHoverInfo={onHoverInfo} 
-        infoKey="orcid"
-      >
-        {orcidCount ? `${orcidCount} ORCID IDs` : null}
       </RightPanelBox>
 
       <RightPanelBox 
