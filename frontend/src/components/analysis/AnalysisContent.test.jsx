@@ -4,11 +4,15 @@ import { render, screen } from '@testing-library/react';
 import AnalysisContent from './AnalysisContent';
 
 describe('AnalysisContent', () => {
-    it('renders placeholder string matching the activeTabId', () => {
+    it('renders CoAuthorshipNetwork when activeTabId is co-authorship', () => {
         render(<AnalysisContent activeTabId="co-authorship" />);
         
-        // Assert: Verify the routed string exists in the DOM
-        expect(screen.getByText('Placeholder for co-authorship')).toBeInTheDocument();
+        expect(
+            screen.getByRole('heading', {
+                level: 2,
+                name: 'Co-authorship Network'
+            })
+        ).toBeInTheDocument();
     });
 
     it('renders correctly with empty or null activeTabId gracefully', () => {

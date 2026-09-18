@@ -1,5 +1,6 @@
 import React from 'react';
 import OverviewViewTemplate from './OverviewViewTemplate';
+import CoAuthorshipNetwork from './CoAuthorshipNetwork';
 
 const OVERVIEW_METADATA = {
     'general-kpis': {
@@ -76,6 +77,10 @@ export default function AnalysisContent({ activeTabId }) {
                 </div>
             </OverviewViewTemplate>
         );
+    }
+
+    if (activeTabId === 'co-authorship') {
+        return <CoAuthorshipNetwork />;
     }
 
     return (
