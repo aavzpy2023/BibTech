@@ -21,12 +21,15 @@
 │   │   │   ├── main.jsx
 │   │   │   ├── views/
 │   │   │   │   ├── AnalysisView.jsx
+│   │   │   │   ├── AnalysisView.test.jsx
 │   │   │   │   ├── LoadView.jsx
 │   │   │   │   ├── QueueView.jsx
 │   │   │   │   ├── QueueView.test.jsx
 │   │   │   │   ├── ReferencesView.jsx
 │   │   │   │   ├── ReferencesView.test.jsx
 │   │   │   ├── hooks/
+│   │   │   │   ├── useAnalysisNavigation.js
+│   │   │   │   ├── useAnalysisNavigation.test.js
 │   │   │   │   ├── useBatchLoad.js
 │   │   │   │   ├── useBatchLoad.test.js
 │   │   │   │   ├── useBibliography.js
@@ -74,6 +77,13 @@
 │   │   │   │   │   ├── ReferencesDataTable.jsx
 │   │   │   │   │   ├── ReferencesDataTable.test.jsx
 │   │   │   │   │   ├── UploadReferencesModal.jsx
+│   │   │   │   ├── analysis/
+│   │   │   │   │   ├── AnalysisContent.jsx
+│   │   │   │   │   ├── AnalysisContent.test.jsx
+│   │   │   │   │   ├── AnalysisSidebar.jsx
+│   │   │   │   │   ├── AnalysisSidebar.test.jsx
+│   │   │   ├── config/
+│   │   │   │   ├── analysisMenuConfig.js
 │   ├── backend/
 │   │   ├── Dockerfile
 │   │   ├── __init__.py
@@ -163,6 +173,7 @@
 │   │   │   ├── roadmap_16_metadata_hover_reveal.md
 │   │   │   ├── roadmap_17_reference_details_modal.md
 │   │   │   ├── roadmap_18_bibliometric_data_warehouse.md
+│   │   │   ├── roadmap_19_analysis_navigation_shell.md
 │   │   │   ├── roadmap_1_bibliography_ingestion.md
 │   │   │   ├── roadmap_2_batch_load.md
 │   │   │   ├── roadmap_3_batch_download_execution.md

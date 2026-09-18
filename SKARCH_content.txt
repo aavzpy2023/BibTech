@@ -1,178 +1,47 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-18 20:15:35
+Date: 2026-09-18 20:43:54
 AST Mode: True
 Line Numbers: False
-Modules: context.md, global_backlog.md, AnalysisView.jsx
-Processed Files: 3
+Modules: LoadView.jsx
+Processed Files: 1
 ===========================
 
 
 
-// --- context.md ---
-
-# System Context: bibtech
-
-## 1. Architectural Foundation
-- **Backend**: FastAPI 0.110.0 running on Python &gt;= 3.11 with Uvicorn.
-- **Frontend**: React 18 (Vite SPA) enforcing clean dumb-component separation.
-- **Proxy/Ingress**: Nginx reverse proxy routing `/api` traffic to backend.
-- **Database**: PostgreSQL 16 (handled via psycopg2-binary / migrations).
-
-## 2. Domain: Bibliography Ingestion &amp; Visualization
-- **Core Responsibility**: Parsing bibliographic citation files (`.ris` and
-  `.bib`) into normalized domain entities, served via API and displayed in an
-  interactive tabular format.
-- **Core Entities**:
-  - `ParsedReference`: Author, Year, Title, Journal, and Upload Datetime.
-- **Key Modules**:
-  - `frontend/src/components/common/ModalTemplate.jsx`: Reusable base modal dumb view.
-  - `frontend/src/hooks/useReferenceDetails.js`: Centralized hook enforcing State Fractality for modal views.
-  - `frontend/src/components/references/ReferenceDetailsModal.jsx`: Assembler component wiring dumb views and state hook.
-  - `backend/src/bibliography/parser_service.py`: Pure parsing core using
-    `rispy` and `bibtexparser`. Zero I/O coupling.
-  - `backend/src/bibliography/router.py`: FastAPI boundary exposing
-    `POST /api/bibliography/upload`.
-  - `frontend/src/hooks/useBibliography.js`: Isolated React state and async
-    mutations.
-  - `frontend/src/components/BibliographyUploader.jsx`: Pure view handling file
-    drop via `react-dropzone`.
-  - `frontend/src/components/ReferenceTable.jsx`: Pure tabular view formatting
-    timestamps via `date-fns`.
-  - `frontend/src/components/references/MetadataGrid.jsx` & `HoverPopover.jsx`:
-    Dumb components enforcing State Fractality for metadata display.
-
-
-// --- leai_docs/planning/global_backlog.md ---
-
-# Global Backlog
-
-## EPIC 1: BOOTSTRAP &amp; ENVIRONMENT INITIALIZATION
-- [x] Story 1.0: Roadmap &amp; Planning Initialization
-- [x] Story 1.1: Project Dependencies &amp; Context Genesis
-
-## EPIC 2: BIBLIOGRAPHY INGESTION &amp; DISPLAY
-- [x] [REQ-001] Frontend Ingestion (Dropzone UI &amp; Hook)
-- [x] [REQ-002] Backend Parsing Engine &amp; Upload Endpoint
-- [x] [REQ-003] Bibliography Data Display &amp; Table View
-
-## EPIC 3: BATCH LOAD INTERFACE
-- [x] [REQ-004] Frontend Routing &amp; Main Layout
-- [x] [REQ-005] Load View - State Fractality (Custom Hook)
-- [x] [REQ-006] Load View - Dumb Components (Input &amp; Config)
-- [x] [REQ-007] Load View - Dumb Component (Monitor) &amp; Assembly
-
-## EPIC 4: BATCH DOWNLOAD EXECUTION
-- [x] [REQ-008] Frontend UI Fractality &amp; Validation Lockdown
-- [x] [REQ-009] PDF Resolver Generic Service (Unpaywall/OpenAlex)
-- [x] [REQ-010] Micro-fractal IO, Async Batch Orchestrator &amp; Boundary Marshal SSE
-- [x] [REQ-011] Frontend SSE Hook State Integration
-
-## EPIC 5: DOWNLOAD QUEUE &amp; ZIP EXPORT
-- [x] [REQ-012] Load View Validation &amp; Label Updates
-- [x] [REQ-013] Queue View State &amp; UI Assembly
-- [x] [REQ-014] Backend ZIP Service &amp; Download Action
-
-## EPIC 6: RELATIONAL DATABASE SCHEMA DEFINITION
-- [x] [REQ-015] Core Domain Models (Projects &amp; Articles)
-- [x] [REQ-016] Identity Domain Models &amp; Keywords
-- [x] [REQ-017] Extended Tracking Models (References, Funding, Downloads)
-
-## EPIC 7: REFERENCES DATABASE INGESTION
-- [x] [REQ-018] Backend DB Ingestion Repository &amp; Endpoint
-- [x] [REQ-019] References Data Table View
-- [x] [REQ-020] Frontend Injection State Hook
-- [x] [REQ-021] References View Routing &amp; Assembly
-
-## EPIC 8: UI STANDARDIZATION & MULTI-FILE UPLOAD
-- [x] [REQ-022] Multiple File Upload Logic (FIFO Queue)
-- [x] [REQ-023] References Tab Translation to English
-- [x] [REQ-024] UI Standardization (Width & Headers)
-
-## EPIC 9: LOCAL FILE BATCH DOWNLOAD
-- [x] [REQ-025] Local File Batch Download Schema (Boundary Marshal)
-- [x] [REQ-026] Local File Batch Download Endpoint (Micro-Surgery & OCP)
-
-## EPIC 10: INSTITUTIONAL IP DIRECT RESOLVER
-- [x] [REQ-027] Institutional Direct PDF URL Extractor (Landing Page Metadata)
-- [x] [REQ-028] Cascading Resolver Fallback Chain Integration
-
-## EPIC 11: COOKIE AUTHENTICATION PASSTHROUGH
-- [x] [REQ-029] Frontend UI State Fractality & Dumb View Wiring (Cookies)
-- [x] [REQ-030] Backend Boundary Marshal & Core Resolver Cookie Injection
-- [x] [REQ-031] CLI Argument Cookie Support (Script OCP)
-
-## EPIC 12: REFERENCES UI REFINEMENT & BACKEND BUGFIX
-- [x] [REQ-032] Backend Typing Bugfix (Micro-Surgery)
-- [x] [REQ-033] UploadReferencesModal Dark Mode Compliance
-- [x] [REQ-034] References Table Pagination & Search State (State Fractality)
-- [x] [REQ-035] References Table Dumb View Wiring
-
-## EPIC 13: BIB ONLY INGESTION & INJECTION RESILIENCE
-- [x] Story 12.0: Roadmap & Planning Initialization
-- [x] [REQ-036] Backend Router Boundary Marshal (.bib Restriction)
-- [x] [REQ-038] Backend Parser Core Logic (.bib Extraction)
-- [x] [REQ-039] Backend Injection DB Resilience
-- [x] [REQ-037] Frontend Hook State Fractality (.bib Validation)
-
-## EPIC 14: REFERENCES TABLE RESIZING & COUNT FIX
-- [x] Story 13.0: Roadmap & Planning Initialization
-- [x] [REQ-040] Synchronize and Clarify Imported vs. Displayed References Count
-- [x] [REQ-041] Resizable Table Columns (State Fractality & View Wiring)
-
-## EPIC 15: BIBLIOGRAPHIC METADATA EXPANSION & BULK INJECTION
-- [x] Story 15.0: Roadmap & Planning Initialization
-- [x] [REQ-042] Frontend UI Dumb View Wiring (Text Standardization)
-- [x] [REQ-043] Database Schema Expansion & State Preservation
-- [x] [REQ-044] Boundary Marshal Schema & Parser Core Logic
-- [x] [REQ-045] Bulk Injection Refactoring (Performance & Concurrency)
-
-## EPIC 16: METADATA HOVER-REVEAL UI
-- [x] Story 16.0: Roadmap & Planning Initialization
-- [x] [REQ-046] Metadata Hover-Reveal UI (Grid & Popover)
-
-## EPIC 17: REFERENCE DETAILS MODAL & BASE MODAL TEMPLATE ARCHITECTURE
-- [x] Story 17.0: Roadmap & Planning Initialization
-- [x] [REQ-047] Backend Reference Serialization Audit & Boundary Marshal
-- [x] [REQ-048] Reusable Base Modal Architecture (ModalTemplate) Dumb View
-- [x] [REQ-049] Reference Details - Hero Ribbon Dumb View
-- [x] [REQ-050] Overview Tab - Left & Right Columns & Metrics Dumb Views
-- [x] [REQ-051] Secondary Deep-Dive Drawer Dumb View & Hook State Fractality
-
-## EPIC 18: BIBLIOMETRIC DATA WAREHOUSE & ADVANCED SCIENTOMETRICS
-- [x] Story 18.0: Roadmap & Planning Initialization
-- [x] [REQ-052] Database Schema Expansion (Countries, Journals, Cited References)
-- [x] [REQ-053] Parser Engine Upgrades (Country & CR Extraction)
-- [x] [REQ-054] Injection Service Refactoring (Snowflake Dimension Mapping)
-- [x] [REQ-055] Alembic Migration Generation & Schema Upgrade
-
-## Active Roadmaps
-- [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
-- [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
-- [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
-- [Roadmap 4: Download Queue &amp; ZIP Export](roadmap_4_download_queue_and_zip.md)
-- [Roadmap 5: Database Schema Definition](roadmap_5_database_schema.md)
-- [Roadmap 6: References Database Ingestion](roadmap_6_references_ingestion.md)
-- [Roadmap 7: UI Standardization & Multi-File Upload](roadmap_7_ui_standardization_and_multi_upload.md)
-- [Roadmap 8: Local File Batch Download](roadmap_8_local_file_batch_download.md)
-- [Roadmap 9: Institutional IP Direct Resolver](roadmap_9_institutional_ip_direct_resolver.md)
-- [Roadmap 10: Cookie Authentication](roadmap_10_cookie_authentication.md)
-- [Roadmap 11: References UI Refinement & Backend Bugfix](roadmap_11_references_ui_and_bugfixes.md)
-- [Roadmap 12: Bib Only Ingestion & Injection Resilience](roadmap_12_bib_only_and_injection_fix.md)
-- [Roadmap 13: References Table Resizing & Count Fix](roadmap_13_references_table_resizing_and_count_fix.md)
-- [Roadmap 15: Bibliographic Metadata & Bulk Injection](roadmap_15_bibliographic_metadata_and_bulk_injection.md)
-- [Roadmap 16: Metadata Hover-Reveal UI](roadmap_16_metadata_hover_reveal.md)
-- [Roadmap 17: Reference Details Modal](roadmap_17_reference_details_modal.md)
-- [Roadmap 18: Bibliometric Data Warehouse](roadmap_18_bibliometric_data_warehouse.md)
-
-
-// --- frontend/src/views/AnalysisView.jsx ---
+// --- frontend/src/views/LoadView.jsx ---
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import useBatchLoad from '../hooks/useBatchLoad';
+import BatchInput from '../components/load/BatchInput';
+import BatchConfig from '../components/load/BatchConfig';
+import BatchMonitor from '../components/load/BatchMonitor';
 
 const styles = {
   container: {
-    padding: '0'
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px'
+  },
+  header: {
+    borderBottom: 'none',
+    paddingBottom: '8px'
+  },
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  newBatchBtn: {
+    backgroundColor: '#21262d',
+    border: '1px solid #30363d',
+    borderRadius: '6px',
+    padding: '6px 14px',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#f0f6fc',
+    cursor: 'pointer'
   },
   title: {
     fontSize: '24px',
@@ -187,15 +56,95 @@ const styles = {
   }
 };
 
-export function AnalysisView() {
+export function LoadView() {
+  const navigate = useNavigate();
+  const {
+    input,
+    config,
+    monitor,
+    updateInput,
+    updateConfig,
+    isValidEmail,
+    isDownloading,
+    resetBatch,
+    startBatch,
+    addDoisToQueue
+  } = useBatchLoad();
+
+  const isValid =
+    input.dois.trim() !== '' &&
+    config.destination.trim() !== '' &&
+    isValidEmail;
+
+  const hasDois = Boolean(input.dois && input.dois.trim().length > 0);
+
+  const handleAddToQueue = () => {
+    if (!input.dois.trim()) return;
+    const currentDois = input.dois;
+    if (addDoisToQueue) {
+      addDoisToQueue(currentDois, config);
+    }
+    updateInput('dois', '');
+    updateInput('files', []);
+    navigate('/queue', { state: { dois: currentDois, config } });
+  };
+
+
+
   return (
-    <div style={styles.container} data-testid="analysis-view">
-      <h2 style={styles.title}>Bibliographic Analysis</h2>
-      <p style={styles.subtitle}>
-        Analyze bibliographic metadata and downloaded publications.
-      </p>
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={styles.headerRow}>
+          <div>
+            <h2 style={styles.title}>Batch Bibliography Load</h2>
+            <p style={styles.subtitle}>
+          Enter bibliographic files or DOI identifiers for automatic download.
+            </p>
+          </div>
+          <button
+            type="button"
+            style={styles.newBatchBtn}
+            onClick={resetBatch}
+          >
+            New batch
+          </button>
+        </div>
+      </div>
+
+      <BatchInput
+        files={input.files}
+        dois={input.dois}
+        onInputUpdate={updateInput}
+      />
+
+      <BatchConfig
+        delay={config.delay}
+        destination={config.destination}
+        email={config.email}
+        onConfigUpdate={updateConfig}
+      />
+
+      <BatchMonitor
+        progress={monitor.progress}
+        total={monitor.total}
+        logs={monitor.logs}
+        disabled={!isValid}
+        isDownloading={isDownloading}
+        hasDois={hasDois}
+        onAddToQueue={handleAddToQueue}
+        onStart={() => {
+          if (isDownloading && addDoisToQueue) {
+            addDoisToQueue(input.dois, config);
+          } else {
+            startBatch();
+          }
+          updateInput('dois', '');
+          updateInput('files', []);
+          navigate('/queue', { state: { dois: input.dois, config } });
+        }}
+      />
     </div>
   );
 }
 
-export default AnalysisView;
+export default LoadView;

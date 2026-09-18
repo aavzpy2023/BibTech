@@ -1,4 +1,31 @@
 import React from 'react';
+import OverviewViewTemplate from './OverviewViewTemplate';
+
+const OVERVIEW_METADATA = {
+    'general-kpis': {
+        title: 'General KPIs',
+        subtitle: 'Overall performance metrics and summary indicators.'
+    },
+    'publication-citation-evolution': {
+        title: 'Publication & Citation Evolution',
+        subtitle: 'Historical trajectory of publications and citation impact.'
+    },
+    'journal-distribution': {
+        title: 'Journal Distribution',
+        subtitle:
+            'Breakdown and dispersion of articles across publication sources.'
+    },
+    'research-snapshot': {
+        title: 'Research Snapshot',
+        subtitle:
+            'Consolidated scientometric snapshot of the current collection.'
+    },
+    'key-insights': {
+        title: 'Key Insights',
+        subtitle:
+            'Automated analysis findings and primary bibliographic takeaways.'
+    }
+};
 
 export default function AnalysisContent({ activeTabId }) {
     const styles = {
@@ -32,6 +59,24 @@ export default function AnalysisContent({ activeTabId }) {
             color: '#8b949e'
         }
     };
+
+    const overviewConfig = OVERVIEW_METADATA[activeTabId];
+
+    if (overviewConfig) {
+        return (
+            <OverviewViewTemplate
+                title={overviewConfig.title}
+                subtitle={overviewConfig.subtitle}
+            >
+                <div style={styles.placeholderCard}>
+                    <p style={styles.subtitle}>
+                        Visualizations and metrics for {overviewConfig.title} will
+                        appear here.
+                    </p>
+                </div>
+            </OverviewViewTemplate>
+        );
+    }
 
     return (
         <div style={styles.container} data-testid="analysis-content">
