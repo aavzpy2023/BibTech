@@ -323,7 +323,7 @@ export default function useReferenceDetails(article = null) {
       language: article.language || 'English',
       issn: article.issn || '',
       month: article.month || '',
-      articleNumber: article.pages || '',
+      articleNumber: parsedBib['article-number'] || parsedBib['art-no'] || '',
       publisher: article.publisher || '',
       address: article.address || '',
       timesCited:

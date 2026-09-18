@@ -1,539 +1,374 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-16 18:34:48
+Date: 2026-09-18 17:11:56
 AST Mode: True
 Line Numbers: False
-Modules: injection_service.py, core.py
-Processed Files: 2
+Modules: useReferenceDetails.js, core.py, wos_parser.py
+Processed Files: 3
 ===========================
 
 
 
-// --- backend/src/bibliography/injection_service.py ---
+// --- frontend/src/hooks/useReferenceDetails.js ---
 
-"""Service for persisting bibliographic references into the database."""
-import re
-from typing import List, Optional
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import OperationalError
+import { useState, useMemo, useCallback } from 'react';
 
-try:
-    from .schemas import ParsedReference
-    from ..database.models.core import Article, Project, ProjectArticle
-    from ..database.models.identity import (
-        Author,
-        AuthorArticle,
-        Affiliation,
-        Keyword,
-        KeywordArticle,
-    )
-except (ImportError, ValueError):
-    from backend.src.bibliography.schemas import ParsedReference
-    from backend.src.database.models.core import (
-        Article,
-        Project,
-        ProjectArticle,
-    )
-    from backend.src.database.models.identity import (
-        Author,
-        AuthorArticle,
-        Affiliation,
-        Keyword,
-        KeywordArticle,
-    )
-    from backend.src.bibliography.schemas import ParsedReference
-    from backend.src.database.models.core import (
-        Article,
-        Project,
-        ProjectArticle,
-    )
+function parseBibtexFields(raw) {
+    if (!raw || typeof raw !== 'string') return {};
+    const fields = {};
+    const bodyStart = raw.indexOf(',');
+    if (bodyStart === -1) return {};
+    const body = raw.slice(bodyStart + 1);
 
+    let i = 0;
+    const n = body.length;
+    while (i < n) {
+        while (i < n && /[\s,]/.test(body[i])) i++;
+        if (i >= n || body[i] === '}') break;
 
-def _get_insert_stmt(table_or_model, db: Session):
-    dialect_name = ""
-    try:
-        if db.bind:
-            dialect_name = db.bind.dialect.name
-    except Exception:
-        pass
-    if dialect_name == "postgresql":
-        from sqlalchemy.dialects.postgresql import insert as pg_insert
-
-        return pg_insert(table_or_model).on_conflict_do_nothing()
-    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-
-    return sqlite_insert(table_or_model).on_conflict_do_nothing()
-
-
-def _bulk_inject_references(
-    db: Session, refs: List[ParsedReference], project_code: str
-) -> int:
-    """Persist parsed references and associate them with a project in bulk."""
-    project = db.query(Project).filter(Project.name == project_code).first()
-    if not project:
-        project = Project(name=project_code)
-        db.add(project)
-        db.flush()
-
-    if not refs:
-        db.commit()
-        return 0
-
-    all_dois = {
-        ref.doi.strip()
-        for ref in refs
-        if ref.doi and ref.doi.strip()
-    }
-    all_titles = {
-        ref.title.strip()
-        for ref in refs
-        if ref.title and ref.title.strip()
-    }
-
-    existing_by_doi = {}
-    if all_dois:
-        for a in db.query(Article).filter(Article.doi.in_(all_dois)).all():
-            if a.doi:
-                existing_by_doi[a.doi] = a
-
-    existing_by_title = {}
-    if all_titles:
-        for a in (
-            db.query(Article).filter(Article.title.in_(all_titles)).all()
-        ):
-            if a.title:
-                existing_by_title[a.title] = a
-
-    seen_batch_dois = set()
-    seen_batch_titles = set()
-    new_articles_data = []
-
-    for ref in refs:
-        doi_val = (ref.doi or "").strip() or None
-        title_val = (ref.title or "").strip() or "Untitled"
-
-        if doi_val:
-            if doi_val in seen_batch_dois or doi_val in existing_by_doi:
-                continue
-            seen_batch_dois.add(doi_val)
-        else:
-            if (
-                title_val in seen_batch_titles
-                or title_val in existing_by_title
-            ):
-                continue
-            seen_batch_titles.add(title_val)
-
-        year_val: Optional[int] = None
-        if ref.year:
-            try:
-                year_val = int(float(str(ref.year).strip()))
-            except (ValueError, TypeError):
-                year_val = None
-
-        new_articles_data.append(
-            {
-                "title": title_val,
-                "journal": ref.journal,
-                "year": year_val,
-                "doi": doi_val,
-                "abstract": getattr(ref, "abstract", None),
-                "publisher": getattr(ref, "publisher", None),
-                "language": getattr(ref, "language", None),
-                "research_areas": getattr(ref, "research_areas", None),
-                "web_of_science_categories": getattr(
-                    ref, "web_of_science_categories", None
-                ),
-                "funding_text": getattr(ref, "funding_text", None),
-                "journal_iso": getattr(ref, "journal_iso", None),
-                "oa_status": getattr(ref, "oa_status", None),
-                "issn": getattr(ref, "issn", None),
-                "volume": getattr(ref, "volume", None),
-                "issue": getattr(ref, "issue", None),
-                "pages": getattr(ref, "pages", None),
-                "times_cited": getattr(ref, "times_cited", None),
-                "cited_references_count": getattr(
-                    ref, "cited_references_count", None
-                ),
-                "raw_data": getattr(ref, "raw_data", None) or (str(ref.author) if ref.author else None),
-            }
-        )
-
-    if new_articles_data:
-        stmt = _get_insert_stmt(Article, db).values(new_articles_data)
-        db.execute(stmt)
-
-    if all_dois:
-        for a in db.query(Article).filter(Article.doi.in_(all_dois)).all():
-            if a.doi:
-                existing_by_doi[a.doi] = a
-
-    if all_titles:
-        for a in (
-            db.query(Article).filter(Article.title.in_(all_titles)).all()
-        ):
-            if a.title:
-                existing_by_title[a.title] = a
-
-    linked_article_ids = set()
-    project_articles_data = []
-    seen_proj_links = set(
-        (
-            pa.project_id,
-            pa.article_id,
-        )
-        for pa in db.query(ProjectArticle)
-        .filter(ProjectArticle.project_id == project.id)
-        .all()
-    )
-
-    for ref in refs:
-        doi_val = (ref.doi or "").strip() or None
-        title_val = (ref.title or "").strip() or "Untitled"
-        art = existing_by_doi.get(doi_val) if doi_val else None
-        if not art:
-            art = existing_by_title.get(title_val)
-
-        if art:
-            linked_article_ids.add(art.id)
-            if (project.id, art.id) not in seen_proj_links:
-                project_articles_data.append(
-                    {
-                        "project_id": project.id,
-                        "article_id": art.id,
-                        "status": "pending",
-                    }
-                )
-                seen_proj_links.add((project.id, art.id))
-
-    if project_articles_data:
-        stmt_pa = _get_insert_stmt(ProjectArticle, db).values(
-            project_articles_data
-        )
-        db.execute(stmt_pa)
-
-    # 1. Bulk inject affiliations from authors_detail
-    all_affil_strings = set()
-    for ref in refs:
-        if getattr(ref, "authors_detail", None):
-            for ad in ref.authors_detail:
-                aff = ad.get("affiliation")
-                if aff and str(aff).strip():
-                    all_affil_strings.add(str(aff).strip()[:255])
-
-    existing_affils = {}
-    if all_affil_strings:
-        for aff in (
-            db.query(Affiliation)
-            .filter(Affiliation.institution.in_(all_affil_strings))
-            .all()
-        ):
-            existing_affils[aff.institution] = aff.id
-        
-        new_affils = [
-            {"institution": inst}
-            for inst in all_affil_strings
-            if inst not in existing_affils
-        ]
-        if new_affils:
-            stmt_aff = _get_insert_stmt(Affiliation, db).values(new_affils)
-            db.execute(stmt_aff)
-            for aff in (
-                db.query(Affiliation)
-                .filter(Affiliation.institution.in_(all_affil_strings))
-                .all()
-            ):
-                existing_affils[aff.institution] = aff.id
-
-    # 2. Extract author metadata map (ORCID, email, affiliation_id)
-    author_info_map = {}
-    all_authors_raw = set()
-    for ref in refs:
-        if getattr(ref, "authors_detail", None):
-            for ad in ref.authors_detail:
-                name = (ad.get("name") or "").strip()[:255]
-                if name:
-                    all_authors_raw.add(name)
-                    aff_str = (ad.get("affiliation") or "").strip()[:255]
-                    aff_id = existing_affils.get(aff_str)
-                    author_info_map[name] = {
-                        "name": name,
-                        "orcid": (ad.get("orcid") or "")[:50] or None,
-                        "email": (ad.get("email") or "")[:255] or None,
-                        "affiliation_id": aff_id,
-                    }
-        elif ref.author:
-            for a_name in re.split(r"\s+and\s+", str(ref.author), flags=re.I):
-                clean = a_name.strip()[:255]
-                if clean:
-                    all_authors_raw.add(clean)
-                    if clean not in author_info_map:
-                        author_info_map[clean] = {
-                            "name": clean,
-                            "orcid": None,
-                            "email": None,
-                            "affiliation_id": None,
-                        }
-
-    # 3. Bulk inject authors
-    if all_authors_raw:
-        existing_authors = {
-            auth.name: auth
-            for auth in db.query(Author)
-            .filter(Author.name.in_(all_authors_raw))
-            .all()
+        const keyStart = i;
+        while (i < n && body[i] !== '=' && body[i] !== '}' && !/\s/.test(body[i])) {
+            i++;
         }
-        new_authors = [
-            author_info_map.get(name, {"name": name})
-            for name in all_authors_raw
-            if name not in existing_authors
-        ]
-        if new_authors:
-            stmt_auth = _get_insert_stmt(Author, db).values(new_authors)
-            db.execute(stmt_auth)
-            existing_authors = {
-                auth.name: auth
-                for auth in db.query(Author)
-                .filter(Author.name.in_(all_authors_raw))
-                .all()
+        const key = body.slice(keyStart, i).trim().toLowerCase();
+        while (i < n && /[\s=]/.test(body[i])) i++;
+        if (i >= n || body[i] === '}') break;
+
+        let val = '';
+        if (body[i] === '{') {
+            i++;
+            let depth = 1;
+            const valStart = i;
+            while (i < n && depth > 0) {
+                if (body[i] === '{') depth++;
+                else if (body[i] === '}') depth--;
+                if (depth > 0) i++;
             }
-
-        # 4. Link authors to articles with corresponding flag
-        author_articles_data = []
-        seen_auth_links = set()
-        for ref in refs:
-            doi_val = (ref.doi or "").strip() or None
-            title_val = (ref.title or "").strip() or "Untitled"
-            art = existing_by_doi.get(doi_val) if doi_val else None
-            if not art:
-                art = existing_by_title.get(title_val)
-            if not art:
-                continue
-
-            author_items = []
-            if getattr(ref, "authors_detail", None):
-                author_items = [
-                    (
-                        (ad.get("name") or "").strip()[:255],
-                        bool(ad.get("is_corresponding", False)),
-                    )
-                    for ad in ref.authors_detail
-                    if (ad.get("name") or "").strip()
-                ]
-            elif ref.author:
-                author_items = [
-                    (a.strip()[:255], False)
-                    for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
-                    if a.strip()
-                ]
-
-            for idx, (a_name, is_corr) in enumerate(author_items):
-                auth_obj = existing_authors.get(a_name)
-                if (
-                    auth_obj
-                    and (auth_obj.id, art.id) not in seen_auth_links
-                ):
-                    author_articles_data.append(
-                        {
-                            "author_id": auth_obj.id,
-                            "article_id": art.id,
-                            "author_order": idx + 1,
-                            "is_corresponding": is_corr,
-                        }
-                    )
-                    seen_auth_links.add((auth_obj.id, art.id))
-
-        if author_articles_data:
-            stmt_aa = _get_insert_stmt(AuthorArticle, db).values(
-                author_articles_data
-            )
-            db.execute(stmt_aa)
-
-    # 5. Bulk inject keywords (Author Keywords and Keywords-Plus)
-    all_keywords_to_process = set()
-    for ref in refs:
-        if ref.keywords:
-            for kw in str(ref.keywords).split(";"):
-                k_clean = kw.strip()[:255]
-                if k_clean:
-                    all_keywords_to_process.add((k_clean, "author"))
-        if getattr(ref, "keywords_plus", None):
-            for kw in str(ref.keywords_plus).split(";"):
-                k_clean = kw.strip()[:255]
-                if k_clean:
-                    all_keywords_to_process.add((k_clean, "plus"))
-
-    if all_keywords_to_process:
-        kw_names = {k[0] for k in all_keywords_to_process}
-        existing_kws = {
-            (k.name, k.type): k.id
-            for k in db.query(Keyword).filter(Keyword.name.in_(kw_names)).all()
+            val = body.slice(valStart, i).trim();
+            i++;
+        } else if (body[i] === '"') {
+            i++;
+            const valStart = i;
+            while (i < n && body[i] !== '"') {
+                if (body[i] === '\\' && i + 1 < n) i++;
+                i++;
+            }
+            val = body.slice(valStart, i).trim();
+            i++;
+        } else {
+            const valStart = i;
+            while (i < n && body[i] !== ',' && body[i] !== '}' && body[i] !== '\n') {
+                i++;
+            }
+            val = body.slice(valStart, i).trim();
         }
-        new_kws = [
-            {"name": name, "type": k_type}
-            for name, k_type in all_keywords_to_process
-            if (name, k_type) not in existing_kws
-        ]
-        if new_kws:
-            stmt_kw = _get_insert_stmt(Keyword, db).values(new_kws)
-            db.execute(stmt_kw)
-            existing_kws = {
-                (k.name, k.type): k.id
-                for k in db.query(Keyword).filter(Keyword.name.in_(kw_names)).all()
-            }
 
-        keyword_articles_data = []
-        seen_kw_links = set()
-        for ref in refs:
-            doi_val = (ref.doi or "").strip() or None
-            title_val = (ref.title or "").strip() or "Untitled"
-            art = existing_by_doi.get(doi_val) if doi_val else None
-            if not art:
-                art = existing_by_title.get(title_val)
-            if not art:
-                continue
+        if (key && val) {
+            fields[key] = val.replace(/\\_/g, '_').replace(/\s+/g, ' ');
+        }
+    }
+    return fields;
+}
 
-            ref_kws = []
-            if ref.keywords:
-                for kw in str(ref.keywords).split(";"):
-                    k_clean = kw.strip()[:255]
-                    if k_clean:
-                        ref_kws.append((k_clean, "author"))
-            if getattr(ref, "keywords_plus", None):
-                for kw in str(ref.keywords_plus).split(";"):
-                    k_clean = kw.strip()[:255]
-                    if k_clean:
-                        ref_kws.append((k_clean, "plus"))
+export default function useReferenceDetails(article = null) {
+  const [activeTab, setActiveTab] = useState('Overview');
+  const [drawerState, setDrawerState] = useState({
+    isOpen: false,
+    type: 'references',
+    title: '',
+    data: [],
+  });
+  const [hoverInfo, setHoverInfo] = useState(null);
+  const [copiedText, setCopiedText] = useState(null);
+  const [isAbstractExpanded, setIsAbstractExpanded] = useState(false);
 
-            for k_tuple in ref_kws:
-                kw_id = existing_kws.get(k_tuple)
-                if kw_id and (kw_id, art.id) not in seen_kw_links:
-                    keyword_articles_data.append(
-                        {"keyword_id": kw_id, "article_id": art.id}
-                    )
-                    seen_kw_links.add((kw_id, art.id))
+  const handleTabChange = useCallback((tab) => {
+    setActiveTab(tab);
+  }, []);
 
-        if keyword_articles_data:
-            stmt_ka = _get_insert_stmt(KeywordArticle, db).values(
-                keyword_articles_data
-            )
-            db.execute(stmt_ka)
+  const openDrawer = useCallback(
+    (type, data = null, title = '') => {
+      let resolvedData = data;
+      let resolvedTitle = title;
 
-    db.commit()
-    return len(linked_article_ids)
+      if (!resolvedData && article) {
+        if (type === 'authors') {
+          resolvedData = article.authors_detail || [];
+          resolvedTitle = resolvedTitle || 'Authors Details';
+        } else if (type === 'references') {
+          resolvedData = article.references_list || [];
+          resolvedTitle = resolvedTitle || 'Cited References';
+        } else if (type === 'funding') {
+          const hasList =
+            article.funding_list && article.funding_list.length > 0;
+          resolvedData = hasList
+            ? article.funding_list
+            : article.funding_text
+            ? [article.funding_text]
+            : [];
+          resolvedTitle = resolvedTitle || 'Funding Acknowledgments';
+        } else if (type === 'abstract') {
+          resolvedData = article.abstract ? [article.abstract] : [];
+          resolvedTitle = resolvedTitle || 'Full Abstract';
+        } else if (type === 'affiliations') {
+          resolvedData = article.affiliations ? [article.affiliations] : [];
+          resolvedTitle = resolvedTitle || 'Affiliations';
+        }
+      }
 
+      setDrawerState({
+        isOpen: true,
+        type: type || 'references',
+        title: resolvedTitle || 'Details',
+        data: resolvedData || [],
+      });
+    },
+    [article]
+  );
 
-def inject_references_to_db(
-    db: Session, refs: List[ParsedReference], project_code: str
-) -> int:
-    try:
-        return _bulk_inject_references(db, refs, project_code)
-    except OperationalError:
-        raise RuntimeError("Database connection failed")
+  const handleExpandDrawer = useCallback(
+    (type, customData, customTitle) => {
+      openDrawer(type, customData, customTitle);
+    },
+    [openDrawer]
+  );
 
+  const closeDrawer = useCallback(() => {
+    setDrawerState((prev) => ({
+      ...prev,
+      isOpen: false,
+    }));
+  }, []);
 
-def _inject_references_inner(
-    db: Session, refs: List[ParsedReference], project_code: str
-) -> int:
-    """Persist parsed references and associate them with a project."""
-    return _bulk_inject_references(db, refs, project_code)
+  const handleHoverInfo = useCallback((key, event) => {
+    if (!key) {
+      setHoverInfo(null);
+      return;
+    }
+    setHoverInfo({
+      key,
+      rect: event?.currentTarget?.getBoundingClientRect?.() || null,
+    });
+  }, []);
 
+  const handleCopy = useCallback(async (text) => {
+    if (!text) return;
+    try {
+      if (
+        typeof navigator !== 'undefined' &&
+        navigator.clipboard &&
+        navigator.clipboard.writeText
+      ) {
+        await navigator.clipboard.writeText(text);
+      }
+      setCopiedText(text);
+      setTimeout(() => setCopiedText(null), 2500);
+    } catch {
+      // Fallback or silent error handling
+    }
+  }, []);
 
-def _legacy_inject_references_unused(
-    db: Session, refs: List[ParsedReference], project_code: str
-) -> int:
-    project = db.query(Project).filter(Project.name == project_code).first()
-    if not project:
-        project = Project(name=project_code)
-        db.add(project)
-        db.flush()
+  const toggleAbstractExpanded = useCallback(() => {
+    setIsAbstractExpanded((prev) => !prev);
+  }, []);
 
-    linked_article_ids = set()
-    seen_proj_links = set()
-    seen_auth_links = set()
+  const formattedData = useMemo(() => {
+    if (!article) {
+      return {
+        title: '',
+        authors: '',
+        year: '',
+        journal: '',
+        volume: '',
+        issue: '',
+        pages: '',
+        doi: '',
+        abstract: '',
+        authorKeywords: [],
+        plusKeywords: [],
+        researchAreas: '',
+        wosCategories: '',
+        affiliations: '',
+        authorsDetailsCount: 0,
+        authorEmail: '',
+        orcidCount: 0,
+        researcherIdCount: 0,
+        fundingText: '',
+        type: 'Article',
+        language: 'English',
+        issn: '',
+        month: '',
+        articleNumber: '',
+        publisher: '',
+        address: '',
+        timesCited: null,
+        oaStatus: '',
+        referencesList: [],
+        authorsDetail: [],
+        fundingList: [],
+      };
+    }
 
-    for ref in refs:
-        year_val: Optional[int] = None
-        if ref.year:
-            try:
-                year_val = int(float(str(ref.year).strip()))
-            except (ValueError, TypeError):
-                year_val = None
+    const parsedBib = parseBibtexFields(article.raw_data || article.raw_bibtex || '');
 
-        doi_val = getattr(ref, "doi", None)
-        article = None
-        
-        if doi_val:
-            article = db.query(Article).filter(Article.doi == doi_val).first()
-        if not article:
-            title_val = ref.title or "Untitled"
-            article = db.query(Article).filter(Article.title == title_val).first()
-            
-        if not article:
-            article = Article(
-                title=ref.title or "Untitled",
-                journal=ref.journal,
-                year=year_val,
-                doi=doi_val,
-            )
-            db.add(article)
-            db.flush()
+    const keywords = Array.isArray(article.keywords) ? article.keywords : [];
+    let authorKeywords = keywords
+      .filter((k) => k && k.type === 'author')
+      .map((k) => k.name || k)
+      .filter(Boolean);
 
-        link = None
-        if (project.id, article.id) not in seen_proj_links:
-            link = db.query(ProjectArticle).filter(
-                ProjectArticle.project_id == project.id,
-                ProjectArticle.article_id == article.id
-            ).first()
-        
-        if not link and (project.id, article.id) not in seen_proj_links:
-            db.add(ProjectArticle(project_id=project.id, article_id=article.id))
-            db.flush()
-        seen_proj_links.add((project.id, article.id))
+    let plusKeywords = keywords
+      .filter((k) => k && k.type === 'plus')
+      .map((k) => k.name || k)
+      .filter(Boolean);
 
-        linked_article_ids.add(article.id)
+    if (authorKeywords.length === 0 && parsedBib['keywords']) {
+        authorKeywords = parsedBib['keywords'].split(';').map((k) => k.trim()).filter(Boolean);
+    }
+    if (plusKeywords.length === 0 && parsedBib['keywords-plus']) {
+        plusKeywords = parsedBib['keywords-plus'].split(';').map((k) => k.trim()).filter(Boolean);
+    }
 
-        if ref.author:
-            if not getattr(article, "raw_data", None):
-                article.raw_data = str(ref.author)
-            auth_list = [
-                a.strip()
-                for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
-                if a.strip()
-            ]
-            for idx, a_name in enumerate(auth_list):
-                c_name = a_name[:255]
-                auth_obj = (
-                    db.query(Author).filter(Author.name == c_name).first()
-                )
-                if not auth_obj:
-                    auth_obj = Author(name=c_name)
-                    db.add(auth_obj)
-                    db.flush()
-                a_link = None
-                if (auth_obj.id, article.id) not in seen_auth_links:
-                    a_link = (
-                        db.query(AuthorArticle)
-                        .filter(
-                            AuthorArticle.author_id == auth_obj.id,
-                            AuthorArticle.article_id == article.id,
-                        )
-                        .first()
-                    )
-                if not a_link and (auth_obj.id, article.id) not in seen_auth_links:
-                    db.add(
-                        AuthorArticle(
-                            author_id=auth_obj.id,
-                            article_id=article.id,
-                            author_order=idx + 1,
-                        )
-                    )
-                    db.flush()
-                seen_auth_links.add((auth_obj.id, article.id))
+    const authorsDetail = Array.isArray(article.authors_detail)
+      ? article.authors_detail
+      : [];
 
-    db.commit()
-    return len(linked_article_ids)
+    const corrAuthor = authorsDetail.find(
+      (a) => a && a.is_corresponding && a.email
+    );
+    const firstAuthorWithEmail = authorsDetail.find((a) => a && a.email);
+    let authorEmail =
+      corrAuthor?.email ||
+      (authorsDetail.length === 1 ? firstAuthorWithEmail?.email : '') ||
+      '';
 
+    let orcidCount = authorsDetail.filter((a) => a && a.orcid).length;
+    if (orcidCount === 0 && parsedBib['orcid-numbers']) {
+        orcidCount = parsedBib['orcid-numbers'].split('/').length - 1;
+    }
+
+    let researcherIdCount = authorsDetail.filter(
+      (a) => a && a.researcher_id
+    ).length;
+    if (researcherIdCount === 0 && parsedBib['researcherid-numbers']) {
+        researcherIdCount = parsedBib['researcherid-numbers'].split('/').length - 1;
+    }
+
+    let rawAffils = authorsDetail
+      .map((a) => a && a.affiliation)
+      .filter((aff) => typeof aff === 'string' && aff.trim() !== '');
+
+    if (rawAffils.length === 0) {
+      const parsedBib = parseBibtexFields(article.raw_data || article.raw_bibtex || '');
+      const rawAffil = parsedBib['affiliation'] || parsedBib['affiliations'] || '';
+      if (rawAffil) {
+        if (typeof rawAffil === 'string' && rawAffil.includes('=')) {
+          const matched = rawAffil.match(/\[.*?\]\s*([^.]+)/g);
+          rawAffils = matched ? matched : [rawAffil];
+        } else {
+          rawAffils = rawAffil.split('.').filter(Boolean);
+        }
+      }
+    }
+
+    const instKeywords = /\b(Univ|University|Inst|Institute|Sch|School|Dept|Department|Ctr|Center|Centre|Fac|Faculty|Lab|Laboratory|Hosp|Hospital|Coll|College|Academy|Corp|Corporation|Inc|Ltd|GmbH|LLC|Ministry|Div|Division|Agency|Natl|National|Hlth|Health|Biol|Biology|Chem|Chemistry|Phys|Physics|Med|Medicine|Medical|Engn|Engineering|Tech|Technology|Sci|Science|Sciences|Stat|Statistics|Observ|Observatory|Polytech|Polytechnic|Foundation)\b/i;
+    const affiliationsSet = new Set();
+
+    rawAffils.forEach((raw) => {
+      let lastBlock = raw;
+      if (raw.includes(';')) {
+        const segments = raw.split(';');
+        const instIndex = segments.findIndex((seg) => instKeywords.test(seg));
+        if (instIndex !== -1) {
+          lastBlock = segments.slice(instIndex).join(';').trim();
+        }
+      }
+
+      let clean = lastBlock.replace(/^\[.*?\]\s*/, '').trim().replace(/\.+$/, '');
+      const subparts = clean.split(',').map((p) => p.trim());
+
+      if (subparts.length >= 2) {
+        if (!instKeywords.test(subparts[0]) && instKeywords.test(subparts[1])) {
+          clean = subparts.slice(1).join(', ').trim();
+        } else if (
+          subparts.length >= 3 &&
+          !instKeywords.test(subparts[0]) &&
+          !instKeywords.test(subparts[1])
+        ) {
+          clean = subparts.slice(2).join(', ').trim();
+        }
+      }
+
+      if (clean && clean.length > 5) {
+        const isPureAuthor =
+          !/\d/.test(clean) &&
+          (clean.match(/,/g) || []).length === 1 &&
+          clean.length < 25 &&
+          !instKeywords.test(clean);
+
+        if (!isPureAuthor) affiliationsSet.add(clean);
+      }
+    });
+
+    let affiliations = Array.from(affiliationsSet).join('; ');
+
+    return {
+      title: article.title || '',
+      authors: article.author || '',
+      year: article.year ? String(article.year) : '',
+      journal: article.journal || '',
+      volume: article.volume ? String(article.volume) : '',
+      issue: article.issue ? String(article.issue) : '',
+      pages: article.pages || '',
+      doi: article.doi || '',
+      abstract: article.abstract || '',
+      authorKeywords,
+      plusKeywords,
+      researchAreas: article.research_areas || '',
+      wosCategories: article.web_of_science_categories || '',
+      affiliations,
+      authorsDetailsCount: authorsDetail.length,
+      authorEmail,
+      orcidCount,
+      researcherIdCount,
+      fundingText: article.funding_text || '',
+      type: 'Article',
+      language: article.language || 'English',
+      issn: article.issn || '',
+      month: article.month || '',
+      articleNumber: article.pages || '',
+      publisher: article.publisher || '',
+      address: article.address || '',
+      timesCited:
+        typeof article.times_cited === 'number' ? article.times_cited : null,
+      oaStatus: article.oa_status || '',
+      referencesList: Array.isArray(article.references_list)
+        ? article.references_list
+        : [],
+      authorsDetail,
+      fundingList: Array.isArray(article.funding_list)
+        ? article.funding_list
+        : [],
+    };
+  }, [article]);
+
+  return {
+    activeTab,
+    setActiveTab,
+    handleTabChange,
+    drawerState,
+    openDrawer,
+    handleExpandDrawer,
+    closeDrawer,
+    hoverInfo,
+    handleHoverInfo,
+    copiedText,
+    handleCopy,
+    isAbstractExpanded,
+    toggleAbstractExpanded,
+    ...formattedData,
+  };
+}
 
 
 // --- backend/src/database/models/core.py ---
@@ -592,51 +427,352 @@ class ProjectArticle(Base):
     """..."""
 
 class ArticleCountry(Base):
-    """Junction model mapping articles to countries."""
-    __tablename__ = 'article_countries'
-    __table_args__ = (UniqueConstraint('article_id', 'country_id', name='uq_article_country'),)
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key junction identifier')
-    article_id = Column(Integer, ForeignKey('articles.id', ondelete='CASCADE'), nullable=False, index=True, comment='Foreign key linking to articles.id')
-    country_id = Column(Integer, ForeignKey('countries.id', ondelete='CASCADE'), nullable=False, index=True, comment='Foreign key linking to countries.id')
-    article = relationship('Article', back_populates='article_countries')
-    country = relationship('Country', back_populates='article_countries')
+    """..."""
 
 class ArticleCitation(Base):
-    """Junction model connecting an article to cited references."""
-    __tablename__ = 'article_citations'
-    __table_args__ = (UniqueConstraint('article_id', 'cited_reference_id', name='uq_article_citation'),)
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key junction identifier')
-    article_id = Column(Integer, ForeignKey('articles.id', ondelete='CASCADE'), nullable=False, index=True, comment='Foreign key linking to citing article')
-    cited_reference_id = Column(Integer, ForeignKey('cited_references.id', ondelete='CASCADE'), nullable=False, index=True, comment='Foreign key linking to cited reference')
-    article = relationship('Article', back_populates='article_citations')
-    cited_reference = relationship('CitedReference', back_populates='article_citations')
+    """..."""
 
 class Country(Base):
-    """Represents a geographical country involved in the publication."""
-    __tablename__ = 'countries'
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key integer identifier')
-    name = Column(String(100), nullable=False, unique=True, index=True, comment='Standardized name of the country')
-    article_countries = relationship('ArticleCountry', back_populates='country', cascade='all, delete-orphan')
-    articles = relationship('Article', secondary='article_countries', back_populates='countries', viewonly=True)
+    """..."""
 
 class CitedReference(Base):
-    """Represents a unique cited reference extracted from an article."""
-    __tablename__ = 'cited_references'
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key integer identifier')
-    raw_string = Column(Text, nullable=False, unique=True, index=True, comment='Raw unique string representing this reference')
-    author = Column(String(255), nullable=True, comment='Extracted first author of the reference')
-    year = Column(Integer, nullable=True, comment='Extracted publication year of the reference')
-    source = Column(String(255), nullable=True, comment='Extracted journal or source of the reference')
-    doi = Column(String(255), nullable=True, index=True, comment='DOI of the cited reference if available')
-    article_citations = relationship('ArticleCitation', back_populates='cited_reference', cascade='all, delete-orphan')
-    articles = relationship('Article', secondary='article_citations', back_populates='cited_references', viewonly=True)
+    """..."""
 
 class Journal(Base):
-    """Represents an academic journal or publication venue."""
-    __tablename__ = 'journals'
-    id = Column(Integer, primary_key=True, autoincrement=True, comment='Primary key integer identifier')
-    name = Column(String(255), nullable=False, unique=True, index=True, comment='Full name of the journal')
-    iso_abbreviation = Column(String(255), nullable=True, comment='ISO abbreviation of the journal')
-    issn = Column(String(50), nullable=True, comment='International Standard Serial Number')
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, comment='UTC timestamp of creation')
-    articles = relationship('Article', back_populates='journal_entity')
+    """..."""
+
+
+// --- backend/src/bibliography/wos_parser.py ---
+
+import re
+from typing import List, Dict, Any
+
+
+def _normalize_name(name: str) -> str:
+    """Normalize names for fuzzy matching by removing non-alpha chars."""
+    return re.sub(r"[^a-zA-Z]", "", name).lower()
+
+
+def split_affiliation_blocks(raw_affil: str) -> List[str]:
+    """
+    Universally splits bibliographic affiliation blocks for both:
+    - Scopus: Institutions separated by ';' (e.g. 'Inst 1, Country; Inst 2, Country')
+    - WoS: Institutions separated by '.' followed by newline/next entity
+    Preserves author names separated by ';' inside WoS lines.
+    """
+    if not raw_affil or not str(raw_affil).strip():
+        return []
+
+    text = str(raw_affil).strip()
+    inst_kw = re.compile(
+        r"\b(Univ|University|Inst|Institute|Dept|Department|Fac|Faculty|"
+        r"Sch|School|Ctr|Center|Centre|Hospital|Coll|College|Lab|Laboratory|"
+        r"Academy|Campus|Ministry|Division|Div)\b",
+        re.IGNORECASE,
+    )
+
+    # 1. WoS check: Lines ending with a period followed by newline or next entity
+    # In WoS, each affiliation line terminates with a period (e.g. '..., India.\n   Author, ...')
+    wos_candidates = [
+        s.strip().rstrip(".")
+        for s in re.split(r"\.\s*\r?\n+\s*|\.\s+(?=[A-Z\[])", text)
+        if s.strip()
+    ]
+    if len(wos_candidates) > 1:
+        return wos_candidates
+
+    # 2. Scopus check: Distinct institutions separated by ';'
+    if ";" in text:
+        scopus_candidates = [
+            s.strip().rstrip(".") for s in text.split(";") if s.strip()
+        ]
+        if len(scopus_candidates) > 1:
+            return scopus_candidates
+
+    newline_candidates = [
+        s.strip().rstrip(".") for s in text.splitlines() if s.strip()
+    ]
+    if len(newline_candidates) > 1:
+        return newline_candidates
+
+    return [text.rstrip(".")]
+
+
+def parse_wos_countries(entry: dict) -> List[str]:
+    """Extracts unique countries from the affiliation field."""
+    def get_val(*keys):
+        for k, v in entry.items():
+            if str(k).lower() in keys:
+                val = getattr(v, "value", v)
+                if hasattr(val, "value"):
+                    val = val.value
+                s = str(val).strip()
+                while (s.startswith("{") and s.endswith("}")) or (
+                    s.startswith('"') and s.endswith('"')
+                ):
+                    s = s[1:-1].strip()
+                return s
+        return ""
+
+    affil_raw = get_val("affiliation", "affiliations")
+    if not affil_raw:
+        return []
+        
+    countries = set()
+    lines = split_affiliation_blocks(affil_raw)
+    
+    for line in lines:
+        line_clean = re.sub(r"^\[.*?\]\s*", "", line).strip()
+        if not line_clean:
+            continue
+        parts = [p.strip() for p in line_clean.split(",")]
+        if parts:
+            last_part = parts[-1].rstrip(".")
+            country = re.sub(r"[0-9\-]", "", last_part).strip()
+            if "USA" in country.upper():
+                country = "USA"
+            elif "CHINA" in country.upper():
+                country = "China"
+            elif "UK" in country.upper() or "ENGLAND" in country.upper():
+                country = "UK"
+            if country:
+                countries.add(country)
+                
+    return sorted(list(countries))
+
+
+def parse_wos_cited_references(entry: dict) -> List[Dict[str, str]]:
+    """Parses cited references into structured dicts (author, year, source)."""
+    def get_val(*keys):
+        for k, v in entry.items():
+            if str(k).lower() in keys:
+                val = getattr(v, "value", v)
+                if hasattr(val, "value"):
+                    val = val.value
+                s = str(val).strip()
+                while (s.startswith("{") and s.endswith("}")) or (
+                    s.startswith('"') and s.endswith('"')
+                ):
+                    s = s[1:-1].strip()
+                return s
+        return ""
+
+    cr_raw = get_val("cited-references", "cited_references")
+    if not cr_raw:
+        return []
+
+    parsed_crs = []
+    cr_list = [cr.strip() for cr in re.split(r";|\n", cr_raw) if cr.strip()]
+    
+    for cr in cr_list:
+        parts = [p.strip() for p in cr.split(",")]
+        if not parts:
+            continue
+            
+        author = parts[0] if len(parts) > 0 else ""
+        year = ""
+        source = ""
+        
+        if len(parts) > 1:
+            if re.match(r"^\d{4}$", parts[1]):
+                year = parts[1]
+                source = ", ".join(parts[2:]) if len(parts) > 2 else ""
+            else:
+                source = ", ".join(parts[1:])
+                
+        doi = ""
+        doi_match = re.search(r"(10\.\d{4,9}/[-._;()/:a-zA-Z0-9]+)", source)
+        if doi_match:
+            doi = doi_match.group(1).rstrip(".]}")
+                
+        parsed_crs.append({
+            "author": author,
+            "year": year,
+            "source": source,
+            "doi": doi,
+            "raw": cr
+        })
+        
+    unique_crs = {cr["raw"]: cr for cr in parsed_crs}
+    return list(unique_crs.values())
+
+
+def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
+    """
+    Parses chaotic WOS identity fields (ORCID, ResearcherID, Affiliation) 
+    and cross-references them to build a structured list of authors.
+    """
+    kw_pattern = re.compile(
+        r"\b(Univ|University|Inst|Institute|Sch|School|Dept|Department|Ctr|Center|Centre|"
+        r"Fac|Faculty|Lab|Laboratory|Hosp|Hospital|Coll|College|Academy|Corp|Corporation|"
+        r"Inc|Ltd|GmbH|LLC|Ministry|Div|Division|Agency|Natl|National|Hlth|Health|Biol|Biology|"
+        r"Chem|Chemistry|Phys|Physics|Med|Medicine|Medical|Engn|Engineering|Tech|Technology|"
+        r"Sci|Science|Sciences|Stat|Statistics|Observ|Observatory|Polytech|Polytechnic|Foundation)\b", 
+        re.IGNORECASE
+    )
+
+    def get_val(*keys):
+        for k, v in entry.items():
+            if str(k).lower() in keys:
+                val = getattr(v, "value", v)
+                if hasattr(val, "value"):
+                    val = val.value
+                s = str(val).strip()
+                while (s.startswith("{") and s.endswith("}")) or (
+                    s.startswith('"') and s.endswith('"')
+                ):
+                    s = s[1:-1].strip()
+                return s
+        return ""
+
+    raw_authors = get_val("author")
+    if not raw_authors:
+        return []
+
+    raw_authors = re.sub(r"\s+", " ", raw_authors)
+
+    author_names = [
+        a.strip() for a in re.split(r"\s+and\s+", raw_authors, flags=re.IGNORECASE) if a.strip()
+    ]
+    
+    details = []
+    for name in author_names:
+        details.append({
+            "name": name,
+            "email": None,
+            "orcid": None,
+            "researcher_id": None,
+            "affiliation": None,
+            "department": None,
+            "country": None,
+            "is_corresponding": False
+        })
+
+    def match_author(d_name: str, n_name: str) -> bool:
+        d_norm = _normalize_name(d_name)
+        n_norm = _normalize_name(n_name)
+        if not d_norm or not n_norm:
+            return False
+        if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
+            return True
+        d_parts = [p.strip() for p in d_name.split(",")]
+        n_parts = [p.strip() for p in n_name.split(",")]
+        if len(d_parts) > 0 and len(n_parts) > 0:
+            d_last = _normalize_name(d_parts[0])
+            n_last = _normalize_name(n_parts[0])
+            if d_last and d_last == n_last:
+                if len(d_parts) > 1 and len(n_parts) > 1:
+                    d_first = _normalize_name(d_parts[1])
+                    n_first = _normalize_name(n_parts[1])
+                    if d_first and n_first and d_first[0] == n_first[0]:
+                        return True
+                else:
+                    return True
+        return False
+
+    # 1. Process ORCID
+    orcid_raw = get_val("orcid-numbers", "orcid_numbers")
+    for match in re.finditer(
+        r"([^/]+?)/([0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X])", 
+        orcid_raw, 
+        flags=re.IGNORECASE
+    ):
+        n_part = re.sub(r"^[\s;,]+", "", match.group(1)).strip()
+        i_part = match.group(2).upper()
+        for d in details:
+            if match_author(d["name"], n_part):
+                d["orcid"] = i_part
+                break
+
+    # 2. Process ResearcherID
+    rid_raw = get_val("researcherid-numbers", "researcherid")
+    for line in rid_raw.replace(";", "\n").split("\n"):
+        if "/" in line:
+            n_part, i_part = line.rsplit("/", 1)
+            for d in details:
+                if match_author(d["name"], n_part):
+                    d["researcher_id"] = i_part.strip()
+                    break
+
+    # 3. Process Affiliations & Corresponding Author
+    affil_raw = get_val("affiliation", "affiliations")
+    lines = split_affiliation_blocks(affil_raw)
+    
+    for line in lines:
+        is_corr = "(Corresponding Author)" in line or "(corresponding author)" in line.lower()
+        line_clean = re.sub(r"\(\s*Corresponding\s*Author\s*\)", "", line, flags=re.I).strip()
+        
+        matched_authors = []
+        for d in details:
+            last_name = d["name"].split(",")[0].strip()
+            if last_name and last_name.lower() in line_clean.lower():
+                matched_authors.append(d)
+                if is_corr:
+                    d["is_corresponding"] = True
+        
+        bracket_match = re.match(r"^\[(.*?)\]\s*(.*)", line_clean)
+        if bracket_match:
+            inst_part = bracket_match.group(2).strip()
+        else:
+            inst_part = line_clean
+            
+            if ";" in inst_part:
+                segments = [s.strip() for s in inst_part.split(";")]
+                for i, seg in enumerate(segments):
+                    if kw_pattern.search(seg):
+                        inst_part = "; ".join(segments[i:]).strip()
+                        break
+            
+            subparts = [p.strip() for p in inst_part.split(",")]
+            if len(subparts) >= 2:
+                if not kw_pattern.search(subparts[0]) and kw_pattern.search(subparts[1]):
+                    inst_part = ", ".join(subparts[1:]).strip()
+                elif len(subparts) >= 3 and not kw_pattern.search(subparts[0]) and not kw_pattern.search(subparts[1]):
+                    inst_part = ", ".join(subparts[2:]).strip()
+                    
+        dept_val = None
+        country_val = None
+        ext_parts = [p.strip() for p in line_clean.split(",")]
+        if ext_parts:
+            c_clean = re.sub(r"[0-9\-]", "", ext_parts[-1].rstrip(".")).strip()
+            if "USA" in c_clean.upper():
+                country_val = "USA"
+            elif "CHINA" in c_clean.upper():
+                country_val = "China"
+            elif "UK" in c_clean.upper() or "ENGLAND" in c_clean.upper():
+                country_val = "UK"
+            elif c_clean:
+                country_val = c_clean
+            dept_kws = re.compile(
+                r"\b(Dept|Department|Sch|School|Fac|Faculty|Lab|Laboratory|"
+                r"Ctr|Center|Centre|Div|Division)\b", re.IGNORECASE
+            )
+            for p in ext_parts:
+                if dept_kws.search(p):
+                    dept_val = p
+                    break
+
+        for d in matched_authors:
+            if not d["affiliation"]:
+                d["affiliation"] = inst_part
+                d["department"] = dept_val
+                d["country"] = country_val
+
+    # 4. Process Emails (Attach to corresponding, or first author)
+    email_raw = get_val("author-email", "author_email")
+    emails = re.findall(
+        r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", 
+        str(email_raw)
+    )
+    
+    corr_authors = [d for d in details if d["is_corresponding"]]
+    if not corr_authors and details:
+        corr_authors = [details[0]]
+        
+    for idx, email in enumerate(emails):
+        if idx < len(corr_authors):
+            corr_authors[idx]["email"] = email
+        elif idx < len(details):
+            details[idx]["email"] = email
+
+    return details
