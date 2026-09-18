@@ -193,59 +193,32 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <OverviewRightColumn
                   affiliations={affiliations}
-                authorsDetailsCount={authorsDetailsCount}
-                authorEmail={authorEmail}
-                orcidCount={orcidCount}
-                researcherIdCount={researcherIdCount}
-                fundingText={fundingText}
-                onHoverInfo={handleHoverInfo}
-                onCopy={handleCopy}
-                onExpandDrawer={(drawerType) => {
-                  if (drawerType === 'authors') {
-                    handleExpandDrawer('authors', authorsDetail, 'Authors Details');
-                  } else if (drawerType === 'affiliations') {
-                    const affilList = affiliations
-                      ? affiliations
-                          .split(';')
-                          .map((a) => a.trim())
-                          .filter(Boolean)
-                      : [];
-                    handleExpandDrawer(
-                      'affiliations',
-                      affilList,
-                      'Affiliations'
-                    );
-                  } else if (drawerType === 'funding') {
-                    const fundingData =
-                      fundingList && fundingList.length > 0
-                        ? fundingList
-                        : fundingText
-                        ? [fundingText]
-                        : [];
-                    handleExpandDrawer(
-                      'funding',
-                      fundingData,
-                      'Funding Acknowledgments'
-                    );
-                  } else {
-                    handleExpandDrawer(drawerType);
-                  }
-                }}
-              />
-              <MetricsFooterCards
-              type={type}
-              language={language}
-              issn={issn}
-              month={month}
-              articleNumber={articleNumber}
-              pages={pages}
-              publisher={publisher}
-              address={address}
-              timesCited={timesCited}
-              oaStatus={oaStatus}
-              onHoverInfo={handleHoverInfo}
-            />
-          </div>
+                  authorsDetailsCount={authorsDetailsCount}
+                  authorEmail={authorEmail}
+                  orcidCount={orcidCount}
+                  researcherIdCount={researcherIdCount}
+                  fundingText={fundingText}
+                  onHoverInfo={handleHoverInfo}
+                  onCopy={handleCopy}
+                  onExpandDrawer={(drawerType) => {
+                    if (drawerType === 'funding') {
+                      const fundingData =
+                        fundingList && fundingList.length > 0
+                          ? fundingList
+                          : fundingText
+                          ? [fundingText]
+                          : [];
+                      handleExpandDrawer(
+                        'funding',
+                        fundingData,
+                        'Funding Acknowledgments'
+                      );
+                    } else {
+                      handleExpandDrawer(drawerType);
+                    }
+                  }}
+                />
+              </div>
         </div>
 
             {referencesList && referencesList.length > 0 && (
@@ -303,70 +276,67 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
         )}
 
         {activeTab === 'Metadata' && (
-          <div
-            style={{
-              backgroundColor: '#0C1427',
-              border: '1px solid #18243c',
-              borderRadius: '8px',
-              padding: '20px',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '16px 24px',
-            }}
-          >
-            {[
-              { label: 'DOI', val: doi },
-              { label: 'Journal', val: journal },
-              { label: 'Journal ISO', val: article?.journal_iso },
-              { label: 'Publisher', val: publisher },
-              { label: 'ISSN / EISSN', val: issn },
-              { label: 'Language', val: language },
-              { label: 'Document Type', val: type },
-              { label: 'OA Status', val: oaStatus },
-              {
-                label: 'Times Cited',
-                val: timesCited != null ? String(timesCited) : null,
-              },
-              { label: 'WoS Categories', val: wosCategories },
-              { label: 'Research Areas', val: researchAreas },
-              {
-                label: 'Database ID',
-                val: article?.id ? String(article.id) : null,
-              },
-              { label: 'Status', val: article?.project_status },
-              { label: 'Created At', val: article?.created_at },
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                }}
-              >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div
+              style={{
+                backgroundColor: '#0C1427',
+                border: '1px solid #18243c',
+                borderRadius: '8px',
+                padding: '16px 18px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+                gap: '16px',
+              }}
+            >
+              <div>
                 <span
                   style={{
                     fontSize: '11px',
                     color: '#64748b',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
                     fontWeight: '600',
+                    display: 'block',
+                    marginBottom: '4px',
                   }}
                 >
-                  {item.label}
+                  Research Areas
                 </span>
+                <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: '1.5' }}>
+                  {researchAreas || '—'}
+                </div>
+              </div>
+              <div>
                 <span
                   style={{
-                    fontSize: '13px',
-                    color: '#e2e8f0',
-                    fontWeight: '500',
-                    wordBreak: 'break-all',
+                    fontSize: '11px',
+                    color: '#64748b',
+                    textTransform: 'uppercase',
+                    fontWeight: '600',
+                    display: 'block',
+                    marginBottom: '4px',
                   }}
                 >
-                  {item.val || '—'}
+                  Web of Science Categories
                 </span>
+                <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: '1.5' }}>
+                  {wosCategories || '—'}
+                </div>
               </div>
-            ))}
+            </div>
+
+            <MetricsFooterCards
+              type={type}
+              language={language}
+              issn={issn}
+              month={month}
+              articleNumber={articleNumber}
+              pages={pages}
+              publisher={publisher}
+              address={address}
+              timesCited={timesCited}
+              oaStatus={oaStatus}
+              onHoverInfo={handleHoverInfo}
+            />
           </div>
         )}
 

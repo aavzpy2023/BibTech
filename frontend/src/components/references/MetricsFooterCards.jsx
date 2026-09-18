@@ -42,7 +42,14 @@ export default function MetricsFooterCards({
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '0px' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+        gap: '16px',
+        marginTop: '0px',
+      }}
+    >
       {/* Bibliographic Card */}
       <div style={{ backgroundColor: '#0C1427', border: '1px solid #18243c', borderRadius: '8px', padding: '14px 16px', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>

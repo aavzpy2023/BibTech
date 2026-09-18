@@ -289,24 +289,6 @@ export default function OverviewLeftColumn({
       >
         {renderChips(plusKeywords)}
       </SectionCard>
-
-      <SectionCard 
-        title="Research Areas" 
-        icon={globeIcon} 
-        onHoverInfo={onHoverInfo} 
-        infoKey="research-areas"
-      >
-        {renderBox(researchAreas)}
-      </SectionCard>
-
-      <SectionCard 
-        title="Web of Science Categories" 
-        icon={filterIcon} 
-        onHoverInfo={onHoverInfo} 
-        infoKey="wos-categories"
-      >
-        {renderBox(wosCategories)}
-      </SectionCard>
     </div>
   );
 }
