@@ -285,13 +285,7 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
                   </div>
                 </div>
                 <button
-                  onClick={() =>
-                    handleExpandDrawer(
-                      'references',
-                      referencesList,
-                      'Cited References'
-                    )
-                  }
+                  onClick={() => handleTabChange('References')}
                   style={{
                     background: 'none',
                     border: 'none',

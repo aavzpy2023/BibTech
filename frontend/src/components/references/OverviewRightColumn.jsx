@@ -113,26 +113,6 @@ export default function OverviewRightColumn({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <RightPanelBox 
-        title="Affiliations" 
-        icon={icons.building} 
-        onHoverInfo={onHoverInfo} 
-        infoKey="affiliations"
-        onClick={affiliations ? () => onExpandDrawer('affiliations') : null}
-      >
-        {affiliations}
-      </RightPanelBox>
-
-      <RightPanelBox 
-        title="Authors Details" 
-        icon={icons.users} 
-        onHoverInfo={onHoverInfo} 
-        infoKey="authors"
-        onClick={authorsDetailsCount > 0 ? () => onExpandDrawer('authors') : null}
-      >
-        {authorsDetailsCount ? `${authorsDetailsCount} authors (see full list)` : null}
-      </RightPanelBox>
-
-      <RightPanelBox 
         title="Corresponding Author Email" 
         icon={icons.mail} 
         onHoverInfo={onHoverInfo} 
