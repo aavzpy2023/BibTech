@@ -368,9 +368,37 @@ export default function useReferenceDetails(article = null) {
       timesCited:
         typeof article.times_cited === 'number' ? article.times_cited : null,
       oaStatus: article.oa_status || '',
-      referencesList: Array.isArray(article.references_list)
-        ? article.references_list
-        : [],
+      referencesList: (() => {
+        const fromApi = Array.isArray(article.references_list)
+          ? article.references_list
+          : [];
+        if (fromApi.length > 0) return fromApi;
+
+        const rawCr =
+          parsedBib['cited-references'] || parsedBib['cited_references'];
+        if (!rawCr) return [];
+
+        const lines = String(rawCr)
+          .split(/\r?\n|;/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        return lines.map((line, idx) => {
+          const doiMatch = line.match(/(10\.\d{4,9}\/[-._;()/:a-zA-Z0-9]+)/);
+          const yearMatch = line.match(/,?\s*(\b(19|20)\d{2}\b)/);
+          const parts = line.split(',');
+          const author = parts.length > 0 ? parts[0].trim() : '';
+          return {
+            id: idx + 1,
+            author: author || null,
+            title: line,
+            source: parts.length > 2 ? parts.slice(2).join(',').trim() : null,
+            doi: doiMatch ? doiMatch[1].replace(/[.\\]+$/, '') : null,
+            year: yearMatch ? yearMatch[1] : null,
+            raw_citation: line,
+          };
+        });
+      })(),
       authorsDetail,
       fundingList: Array.isArray(article.funding_list)
         ? article.funding_list

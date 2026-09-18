@@ -486,7 +486,7 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
                       lineHeight: '1.4',
                     }}
                   >
-                    {refItem.title || refItem.raw_citation || 'Untitled Reference'}
+                    {refItem.raw_citation || refItem.title || 'Untitled Reference'}
                   </div>
                   <div
                     style={{
@@ -497,6 +497,7 @@ export default function ReferenceDetailsModal({ isOpen, onClose, article }) {
                       color: '#94a3b8',
                     }}
                   >
+                    {refItem.author && <span>Author: {refItem.author}</span>}
                     {refItem.year && <span>Year: {refItem.year}</span>}
                     {refItem.doi && (
                       <span style={{ color: '#60a5fa', fontFamily: 'monospace' }}>

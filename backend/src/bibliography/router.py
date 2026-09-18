@@ -243,15 +243,31 @@ if HAS_MULTIPART:
                 for k in _safe_list(getattr(a, "keywords", None))
             ]
 
+            cr_items = _safe_list(getattr(a, "cited_references", None))
+            if not cr_items:
+                cr_items = _safe_list(getattr(a, "references", None))
+
             references_list = [
                 {
                     "id": getattr(r, "id", None),
-                    "title": getattr(r, "title", None),
+                    "author": getattr(r, "author", None),
+                    "title": (
+                        getattr(r, "source", None)
+                        or getattr(r, "title", None)
+                    ),
+                    "source": getattr(r, "source", None),
                     "doi": getattr(r, "doi", None),
-                    "year": getattr(r, "year", None),
-                    "raw_citation": getattr(r, "raw_citation", None),
+                    "year": (
+                        str(getattr(r, "year", ""))
+                        if getattr(r, "year", None)
+                        else None
+                    ),
+                    "raw_citation": (
+                        getattr(r, "raw_string", None)
+                        or getattr(r, "raw_citation", None)
+                    ),
                 }
-                for r in _safe_list(getattr(a, "references", None))
+                for r in cr_items
             ]
 
             funding_list = [
