@@ -15,6 +15,7 @@ from .identity import (
     AuthorArticle,
     Keyword,
     KeywordArticle,
+)
 from .tracking import (
     Download,
     Funding,
