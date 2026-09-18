@@ -117,9 +117,36 @@ const styles = {
 
 };
 
+let globalSelectedRows = [];
+let globalIsDetailsOpen = false;
+
 export function ReferencesDataTable({ data = [] }) {
-  const [selectedRows, setSelectedRows] = useState([]);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedRows, setSelectedRows] = useState(() => {
+    if (globalSelectedRows.length === 0) return [];
+    if (!data || data.length === 0) return globalSelectedRows;
+    const currentIds = new Set(data.map((d) => (d.id != null ? d.id : d)));
+    const valid = globalSelectedRows.filter((r) =>
+      currentIds.has(r.id != null ? r.id : r)
+    );
+    return valid.length > 0 ? valid : globalSelectedRows;
+  });
+  const [isDetailsOpen, setIsDetailsOpen] = useState(globalIsDetailsOpen);
+
+  const updateSelectedRows = (newRowsOrUpdater) => {
+    setSelectedRows((prev) => {
+      const next =
+        typeof newRowsOrUpdater === 'function'
+          ? newRowsOrUpdater(prev)
+          : newRowsOrUpdater;
+      globalSelectedRows = next;
+      return next;
+    });
+  };
+
+  const updateIsDetailsOpen = (isOpen) => {
+    globalIsDetailsOpen = isOpen;
+    setIsDetailsOpen(isOpen);
+  };
 
   const {
     searchQuery,
@@ -142,7 +169,7 @@ export function ReferencesDataTable({ data = [] }) {
 
   const handleCheckboxChange = (row, e) => {
     e.stopPropagation();
-    setSelectedRows((prev) => {
+    updateSelectedRows((prev) => {
       const exists = prev.some((r) =>
         r.id != null && row.id != null ? r.id === row.id : r === row
       );
@@ -160,7 +187,7 @@ export function ReferencesDataTable({ data = [] }) {
     if (e.ctrlKey || e.metaKey) {
       handleCheckboxChange(row, e);
     } else {
-      setSelectedRows((prev) => {
+      updateSelectedRows((prev) => {
         const isOnlyThis =
           prev.length === 1 &&
           (prev[0].id != null && row.id != null
@@ -184,7 +211,7 @@ export function ReferencesDataTable({ data = [] }) {
       const visibleKeys = new Set(
         paginatedData.map((r) => (r.id != null ? r.id : r))
       );
-      setSelectedRows((prev) =>
+      updateSelectedRows((prev) =>
         prev.filter((r) => !visibleKeys.has(r.id != null ? r.id : r))
       );
     } else {
@@ -194,7 +221,7 @@ export function ReferencesDataTable({ data = [] }) {
       const toAdd = paginatedData.filter(
         (r) => !currentKeys.has(r.id != null ? r.id : r)
       );
-      setSelectedRows((prev) => [...prev, ...toAdd]);
+      updateSelectedRows((prev) => [...prev, ...toAdd]);
     }
   };
 
@@ -226,7 +253,7 @@ export function ReferencesDataTable({ data = [] }) {
               ...(!isSingleSelected ? styles.detailsBtnDisabled : {}),
             }}
             disabled={!isSingleSelected}
-            onClick={() => setIsDetailsOpen(true)}
+            onClick={() => updateIsDetailsOpen(true)}
           >
             View Details
           </button>
@@ -356,7 +383,7 @@ export function ReferencesDataTable({ data = [] }) {
 
       <ReferenceDetailsModal
         isOpen={isDetailsOpen && isSingleSelected}
-        onClose={() => setIsDetailsOpen(false)}
+        onClose={() => updateIsDetailsOpen(false)}
         article={singleSelectedRow}
       />
     </div>

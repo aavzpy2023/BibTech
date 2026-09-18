@@ -1,13 +1,26 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
+
+let globalSearchQuery = '';
+let globalCurrentPage = 1;
 
 export function useReferencesTable(data = [], pageSize = 13) {
-    const [currentPage, setCurrentPage] = useState(1);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [currentPage, setCurrentPage] = useState(globalCurrentPage);
+    const [searchQuery, setSearchQuery] = useState(globalSearchQuery);
 
-    // Reset pagination when search query changes
-    useEffect(() => {
+    const handleSetSearchQuery = (query) => {
+        globalSearchQuery = query;
+        setSearchQuery(query);
+        globalCurrentPage = 1;
         setCurrentPage(1);
-    }, [searchQuery]);
+    };
+
+    const handleSetCurrentPage = (updater) => {
+        setCurrentPage((prev) => {
+            const next = typeof updater === 'function' ? updater(prev) : updater;
+            globalCurrentPage = next;
+            return next;
+        });
+    };
 
     const filteredData = useMemo(() => {
         if (!searchQuery.trim()) {
@@ -34,9 +47,9 @@ export function useReferencesTable(data = [], pageSize = 13) {
 
     return {
         searchQuery,
-        setSearchQuery,
+        setSearchQuery: handleSetSearchQuery,
         currentPage,
-        setCurrentPage,
+        setCurrentPage: handleSetCurrentPage,
         paginatedData,
         totalPages,
     };

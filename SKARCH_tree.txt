@@ -94,6 +94,7 @@
 │   │   │   │   ├── 004_add_tracking_models.py
 │   │   │   │   ├── 005_add_article_metadata.py
 │   │   │   │   ├── 006_add_bibliometric_snowflake_schema.py
+│   │   │   │   ├── 007_add_source_database_dimension.py
 │   │   ├── src/
 │   │   │   ├── __init__.py
 │   │   │   ├── bibliography/

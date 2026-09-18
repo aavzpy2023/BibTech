@@ -108,9 +108,11 @@ const styles = {
   },
 };
 
+let cachedTableData = [];
+
 export function ReferencesView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tableData, setTableData] = useState([]);
+  const [tableData, setTableData] = useState(cachedTableData);
   const [_dummyState, _setDummy] = useState([
     {
       id: 1,
@@ -150,6 +152,7 @@ export function ReferencesView() {
       );
       if (res.ok) {
         const data = await res.json();
+        cachedTableData = data;
         setTableData(data);
       }
     } catch {

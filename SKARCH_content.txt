@@ -1,1091 +1,406 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-18 17:19:57
+Date: 2026-09-18 17:47:48
 AST Mode: True
 Line Numbers: False
-Modules: wos_parser.py, injection_service.py, schemas.py
-Processed Files: 3
+Modules: package.json, ReferencesDataTable.jsx
+Processed Files: 2
 ===========================
 
 
 
-// --- backend/src/bibliography/wos_parser.py ---
+// --- frontend/package.json ---
 
-import re
-from typing import List, Dict, Any
-
-
-def _normalize_name(name: str) -> str:
-    """Normalize names for fuzzy matching by removing non-alpha chars."""
-    return re.sub(r"[^a-zA-Z]", "", name).lower()
-
-
-def split_affiliation_blocks(raw_affil: str) -> List[str]:
-    """
-    Universally splits bibliographic affiliation blocks for both:
-    - Scopus: Institutions separated by ';' (e.g. 'Inst 1, Country; Inst 2, Country')
-    - WoS: Institutions separated by '.' followed by newline/next entity
-    Preserves author names separated by ';' inside WoS lines.
-    """
-    if not raw_affil or not str(raw_affil).strip():
-        return []
-
-    text = str(raw_affil).strip()
-    inst_kw = re.compile(
-        r"\b(Univ|University|Inst|Institute|Dept|Department|Fac|Faculty|"
-        r"Sch|School|Ctr|Center|Centre|Hospital|Coll|College|Lab|Laboratory|"
-        r"Academy|Campus|Ministry|Division|Div)\b",
-        re.IGNORECASE,
-    )
-
-    # 1. WoS check: Lines ending with a period followed by newline or next entity
-    # In WoS, each affiliation line terminates with a period (e.g. '..., India.\n   Author, ...')
-    wos_candidates = [
-        s.strip().rstrip(".")
-        for s in re.split(r"\.\s*\r?\n+\s*|\.\s+(?=[A-Z\[])", text)
-        if s.strip()
-    ]
-    if len(wos_candidates) > 1:
-        return wos_candidates
-
-    # 2. Scopus check: Distinct institutions separated by ';'
-    if ";" in text:
-        scopus_candidates = [
-            s.strip().rstrip(".") for s in text.split(";") if s.strip()
-        ]
-        if len(scopus_candidates) > 1:
-            return scopus_candidates
-
-    newline_candidates = [
-        s.strip().rstrip(".") for s in text.splitlines() if s.strip()
-    ]
-    if len(newline_candidates) > 1:
-        return newline_candidates
-
-    return [text.rstrip(".")]
+{
+  "name": "frontend-react",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-dropzone": "^14.2.3",
+    "date-fns": "^3.6.0",
+    "react-router-dom": "^6.22.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.1.4"
+  }
+}
 
 
-def parse_wos_countries(entry: dict) -> List[str]:
-    """Extracts unique countries from the affiliation field."""
-    def get_val(*keys):
-        for k, v in entry.items():
-            if str(k).lower() in keys:
-                val = getattr(v, "value", v)
-                if hasattr(val, "value"):
-                    val = val.value
-                s = str(val).strip()
-                while (s.startswith("{") and s.endswith("}")) or (
-                    s.startswith('"') and s.endswith('"')
-                ):
-                    s = s[1:-1].strip()
-                return s
-        return ""
 
-    affil_raw = get_val("affiliation", "affiliations")
-    if not affil_raw:
-        return []
-        
-    countries = set()
-    lines = split_affiliation_blocks(affil_raw)
-    
-    for line in lines:
-        line_clean = re.sub(r"^\[.*?\]\s*", "", line).strip()
-        if not line_clean:
-            continue
-        parts = [p.strip() for p in line_clean.split(",")]
-        if parts:
-            last_part = parts[-1].rstrip(".")
-            country = re.sub(r"[0-9\-]", "", last_part).strip()
-            if "USA" in country.upper():
-                country = "USA"
-            elif "CHINA" in country.upper():
-                country = "China"
-            elif "UK" in country.upper() or "ENGLAND" in country.upper():
-                country = "UK"
-            if country:
-                countries.add(country)
-                
-    return sorted(list(countries))
+// --- frontend/src/components/references/ReferencesDataTable.jsx ---
 
+import React, { useState } from 'react';
+import { useReferencesTable } from '../../hooks/useReferencesTable';
+import { useTableResize } from '../../hooks/useTableResize';
+import ReferenceDetailsModal from './ReferenceDetailsModal';
 
-def parse_wos_cited_references(entry: dict) -> List[Dict[str, str]]:
-    """Parses cited references into structured dicts (author, year, source)."""
-    def get_val(*keys):
-        for k, v in entry.items():
-            if str(k).lower() in keys:
-                val = getattr(v, "value", v)
-                if hasattr(val, "value"):
-                    val = val.value
-                s = str(val).strip()
-                while (s.startswith("{") and s.endswith("}")) or (
-                    s.startswith('"') and s.endswith('"')
-                ):
-                    s = s[1:-1].strip()
-                return s
-        return ""
+function getDoiUrl(doi) {
+  if (!doi) return '';
+  const clean = String(doi).trim();
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    return clean;
+  }
+  return `https://doi.org/${clean.replace(/^doi:\s*/i, '')}`;
+}
 
-    cr_raw = get_val("cited-references", "cited_references")
-    if not cr_raw:
-        return []
+const styles = {
+  controls: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  },
+  searchInput: {
+    padding: '8px 12px',
+    borderRadius: '6px',
+    border: '1px solid #30363d',
+    backgroundColor: '#0d1117',
+    color: '#f0f6fc',
+    width: '300px',
+    outline: 'none',
+  },
+  pagination: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: '16px',
+    padding: '8px 0',
+  },
+  pageBtn: {
+    padding: '6px 12px',
+    backgroundColor: '#21262d',
+    border: '1px solid #30363d',
+    color: '#f0f6fc',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px',
+  },
+  pageBtnDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
+  container: {
+    width: '100%',
+    overflowX: 'auto',
+    marginTop: '20px',
+    position: 'relative',
+  },
+  table: {
+    width: '100%',
+    tableLayout: 'fixed',
+    borderCollapse: 'collapse',
+    textAlign: 'left',
+    fontSize: '14px',
+    fontFamily: 'system-ui, sans-serif',
+  },
+  th: {
+    backgroundColor: '#161b22',
+    borderBottom: '1px solid #30363d',
+    borderRight: '1px solid #30363d',
+    padding: '10px 14px',
+    fontWeight: '600',
+    color: '#f0f6fc',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  tr: {
+    borderBottom: '1px solid #30363d',
+    cursor: 'pointer',
+    transition: 'background-color 0.15s ease',
+  },
+  selectedTr: {
+    backgroundColor: '#1c2128',
+    outline: '1px solid #388bfd',
+  },
+  detailsBtn: {
+    padding: '8px 14px',
+    backgroundColor: '#21262d',
+    color: '#f0f6fc',
+    border: '1px solid #30363d',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '500',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s ease',
+  },
+  detailsBtnDisabled: {
+    opacity: 0.45,
+    cursor: 'not-allowed',
+  },
 
-    parsed_crs = []
-    cr_list = [cr.strip() for cr in re.split(r";|\n", cr_raw) if cr.strip()]
-    
-    for cr in cr_list:
-        parts = [p.strip() for p in cr.split(",")]
-        if not parts:
-            continue
-            
-        author = parts[0] if len(parts) > 0 else ""
-        year = ""
-        source = ""
-        
-        if len(parts) > 1:
-            if re.match(r"^\d{4}$", parts[1]):
-                year = parts[1]
-                source = ", ".join(parts[2:]) if len(parts) > 2 else ""
-            else:
-                source = ", ".join(parts[1:])
-                
-        doi = ""
-        doi_match = re.search(r"(10\.\d{4,9}/[-._;()/:a-zA-Z0-9]+)", source)
-        if doi_match:
-            doi = doi_match.group(1).rstrip(".]}")
-                
-        parsed_crs.append({
-            "author": author,
-            "year": year,
-            "source": source,
-            "doi": doi,
-            "raw": cr
-        })
-        
-    unique_crs = {cr["raw"]: cr for cr in parsed_crs}
-    return list(unique_crs.values())
+  td: {
+    padding: '10px 14px',
+    color: '#f0f6fc',
+    borderRight: '1px solid #30363d',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  empty: {
+    padding: '24px',
+    textAlign: 'center',
+    color: '#8b949e',
+    fontSize: '14px',
+    fontStyle: 'italic',
+  },
 
+};
 
-def parse_wos_authors_detail(entry: dict) -> List[Dict[str, Any]]:
-    """
-    Parses chaotic WOS identity fields (ORCID, ResearcherID, Affiliation) 
-    and cross-references them to build a structured list of authors.
-    """
-    kw_pattern = re.compile(
-        r"\b(Univ|University|Inst|Institute|Sch|School|Dept|Department|Ctr|Center|Centre|"
-        r"Fac|Faculty|Lab|Laboratory|Hosp|Hospital|Coll|College|Academy|Corp|Corporation|"
-        r"Inc|Ltd|GmbH|LLC|Ministry|Div|Division|Agency|Natl|National|Hlth|Health|Biol|Biology|"
-        r"Chem|Chemistry|Phys|Physics|Med|Medicine|Medical|Engn|Engineering|Tech|Technology|"
-        r"Sci|Science|Sciences|Stat|Statistics|Observ|Observatory|Polytech|Polytechnic|Foundation)\b", 
-        re.IGNORECASE
-    )
+export function ReferencesDataTable({ data = [] }) {
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-    def get_val(*keys):
-        for k, v in entry.items():
-            if str(k).lower() in keys:
-                val = getattr(v, "value", v)
-                if hasattr(val, "value"):
-                    val = val.value
-                s = str(val).strip()
-                while (s.startswith("{") and s.endswith("}")) or (
-                    s.startswith('"') and s.endswith('"')
-                ):
-                    s = s[1:-1].strip()
-                return s
-        return ""
+  const {
+    searchQuery,
+    setSearchQuery,
+    currentPage,
+    setCurrentPage,
+    paginatedData,
+    totalPages,
+  } = useReferencesTable(data, 13);
 
-    raw_authors = get_val("author")
-    if not raw_authors:
-        return []
+  const { colWidths, handleMouseDown } = useTableResize();
 
-    raw_authors = re.sub(r"\s+", " ", raw_authors)
+  const isSingleSelected = selectedRows.length === 1;
+  const singleSelectedRow = isSingleSelected ? selectedRows[0] : null;
 
-    author_names = [
-        a.strip() for a in re.split(r"\s+and\s+", raw_authors, flags=re.IGNORECASE) if a.strip()
-    ]
-    
-    details = []
-    for name in author_names:
-        details.append({
-            "name": name,
-            "email": None,
-            "orcid": None,
-            "researcher_id": None,
-            "affiliation": None,
-            "department": None,
-            "country": None,
-            "is_corresponding": False
-        })
+  const isRowSelected = (row) =>
+    selectedRows.some((r) =>
+      r.id != null && row.id != null ? r.id === row.id : r === row
+    );
 
-    def match_author(d_name: str, n_name: str) -> bool:
-        d_norm = _normalize_name(d_name)
-        n_norm = _normalize_name(n_name)
-        if not d_norm or not n_norm:
-            return False
-        if d_norm.startswith(n_norm) or n_norm.startswith(d_norm):
-            return True
-        d_parts = [p.strip() for p in d_name.split(",")]
-        n_parts = [p.strip() for p in n_name.split(",")]
-        if len(d_parts) > 0 and len(n_parts) > 0:
-            d_last = _normalize_name(d_parts[0])
-            n_last = _normalize_name(n_parts[0])
-            if d_last and d_last == n_last:
-                if len(d_parts) > 1 and len(n_parts) > 1:
-                    d_first = _normalize_name(d_parts[1])
-                    n_first = _normalize_name(n_parts[1])
-                    if d_first and n_first and d_first[0] == n_first[0]:
-                        return True
-                else:
-                    return True
-        return False
+  const handleCheckboxChange = (row, e) => {
+    e.stopPropagation();
+    setSelectedRows((prev) => {
+      const exists = prev.some((r) =>
+        r.id != null && row.id != null ? r.id === row.id : r === row
+      );
+      if (exists) {
+        return prev.filter((r) =>
+          r.id != null && row.id != null ? r.id !== row.id : r !== row
+        );
+      }
+      return [...prev, row];
+    });
+  };
 
-    # 1. Process ORCID
-    orcid_raw = get_val("orcid-numbers", "orcid_numbers")
-    for match in re.finditer(
-        r"([^/]+?)/([0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X])", 
-        orcid_raw, 
-        flags=re.IGNORECASE
-    ):
-        n_part = re.sub(r"^[\s;,]+", "", match.group(1)).strip()
-        i_part = match.group(2).upper()
-        for d in details:
-            if match_author(d["name"], n_part):
-                d["orcid"] = i_part
-                break
-
-    # 2. Process ResearcherID
-    rid_raw = get_val("researcherid-numbers", "researcherid")
-    for line in rid_raw.replace(";", "\n").split("\n"):
-        if "/" in line:
-            n_part, i_part = line.rsplit("/", 1)
-            for d in details:
-                if match_author(d["name"], n_part):
-                    d["researcher_id"] = i_part.strip()
-                    break
-
-    # 3. Process Affiliations & Corresponding Author
-    affil_raw = get_val("affiliation", "affiliations")
-    lines = split_affiliation_blocks(affil_raw)
-    
-    for line in lines:
-        is_corr = "(Corresponding Author)" in line or "(corresponding author)" in line.lower()
-        line_clean = re.sub(r"\(\s*Corresponding\s*Author\s*\)", "", line, flags=re.I).strip()
-        
-        matched_authors = []
-        for d in details:
-            last_name = d["name"].split(",")[0].strip()
-            if last_name and last_name.lower() in line_clean.lower():
-                matched_authors.append(d)
-                if is_corr:
-                    d["is_corresponding"] = True
-        
-        bracket_match = re.match(r"^\[(.*?)\]\s*(.*)", line_clean)
-        if bracket_match:
-            inst_part = bracket_match.group(2).strip()
-        else:
-            inst_part = line_clean
-            
-            if ";" in inst_part:
-                segments = [s.strip() for s in inst_part.split(";")]
-                for i, seg in enumerate(segments):
-                    if kw_pattern.search(seg):
-                        inst_part = "; ".join(segments[i:]).strip()
-                        break
-            
-            subparts = [p.strip() for p in inst_part.split(",")]
-            if len(subparts) >= 2:
-                if not kw_pattern.search(subparts[0]) and kw_pattern.search(subparts[1]):
-                    inst_part = ", ".join(subparts[1:]).strip()
-                elif len(subparts) >= 3 and not kw_pattern.search(subparts[0]) and not kw_pattern.search(subparts[1]):
-                    inst_part = ", ".join(subparts[2:]).strip()
-                    
-        dept_val = None
-        country_val = None
-        ext_parts = [p.strip() for p in line_clean.split(",")]
-        if ext_parts:
-            c_clean = re.sub(r"[0-9\-]", "", ext_parts[-1].rstrip(".")).strip()
-            if "USA" in c_clean.upper():
-                country_val = "USA"
-            elif "CHINA" in c_clean.upper():
-                country_val = "China"
-            elif "UK" in c_clean.upper() or "ENGLAND" in c_clean.upper():
-                country_val = "UK"
-            elif c_clean:
-                country_val = c_clean
-            dept_kws = re.compile(
-                r"\b(Dept|Department|Sch|School|Fac|Faculty|Lab|Laboratory|"
-                r"Ctr|Center|Centre|Div|Division)\b", re.IGNORECASE
-            )
-            for p in ext_parts:
-                if dept_kws.search(p):
-                    dept_val = p
-                    break
-
-        for d in matched_authors:
-            if not d["affiliation"]:
-                d["affiliation"] = inst_part
-                d["department"] = dept_val
-                d["country"] = country_val
-
-    # 4. Process Emails (Attach to corresponding, or first author)
-    email_raw = get_val("author-email", "author_email")
-    emails = re.findall(
-        r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", 
-        str(email_raw)
-    )
-    
-    corr_authors = [d for d in details if d["is_corresponding"]]
-    if not corr_authors and details:
-        corr_authors = [details[0]]
-        
-    for idx, email in enumerate(emails):
-        if idx < len(corr_authors):
-            corr_authors[idx]["email"] = email
-        elif idx < len(details):
-            details[idx]["email"] = email
-
-    return details
-
-
-// --- backend/src/bibliography/injection_service.py ---
-
-"""Service for persisting bibliographic references into the database."""
-import re
-from typing import List, Optional
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import OperationalError
-
-try:
-    from .schemas import ParsedReference
-    from ..database.models.core import (
-        Article,
-        Project,
-        ProjectArticle,
-        Country,
-        ArticleCountry,
-        CitedReference,
-        ArticleCitation,
-        Journal,
-    )
-    from ..database.models.identity import (
-        Author,
-        AuthorArticle,
-        Affiliation,
-        Keyword,
-        KeywordArticle,
-    )
-except (ImportError, ValueError):
-    from backend.src.bibliography.schemas import ParsedReference
-    from backend.src.database.models.core import (
-        Article,
-        Project,
-        ProjectArticle,
-        Country,
-        ArticleCountry,
-        CitedReference,
-        ArticleCitation,
-        Journal,
-    )
-    from backend.src.database.models.identity import (
-        Author,
-        AuthorArticle,
-        Affiliation,
-        Keyword,
-        KeywordArticle,
-    )
-    from backend.src.bibliography.schemas import ParsedReference
-    from backend.src.database.models.core import (
-        Article,
-        Project,
-        ProjectArticle,
-    )
-
-
-def _get_insert_stmt(table_or_model, db: Session):
-    dialect_name = ""
-    try:
-        if db.bind:
-            dialect_name = db.bind.dialect.name
-    except Exception:
-        pass
-    if dialect_name == "postgresql":
-        from sqlalchemy.dialects.postgresql import insert as pg_insert
-
-        return pg_insert(table_or_model).on_conflict_do_nothing()
-    from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-
-    return sqlite_insert(table_or_model).on_conflict_do_nothing()
-
-
-def _bulk_inject_references(
-    db: Session, refs: List[ParsedReference], project_code: str
-) -> int:
-    """Persist parsed references and associate them with a project in bulk."""
-    project = db.query(Project).filter(Project.name == project_code).first()
-    if not project:
-        project = Project(name=project_code)
-        db.add(project)
-        db.flush()
-
-    if not refs:
-        db.commit()
-        return 0
-
-    all_dois = {
-        ref.doi.strip()
-        for ref in refs
-        if ref.doi and ref.doi.strip()
+  const handleRowClick = (row, e) => {
+    if (e.target.type === 'checkbox') return;
+    if (e.ctrlKey || e.metaKey) {
+      handleCheckboxChange(row, e);
+    } else {
+      setSelectedRows((prev) => {
+        const isOnlyThis =
+          prev.length === 1 &&
+          (prev[0].id != null && row.id != null
+            ? prev[0].id === row.id
+            : prev[0] === row);
+        if (isOnlyThis) {
+          return [];
+        }
+        return [row];
+      });
     }
-    all_titles = {
-        ref.title.strip()
-        for ref in refs
-        if ref.title and ref.title.strip()
+  };
+
+  const allVisibleSelected =
+    paginatedData.length > 0 &&
+    paginatedData.every((r) => isRowSelected(r));
+
+  const handleSelectAll = (e) => {
+    e.stopPropagation();
+    if (allVisibleSelected) {
+      const visibleKeys = new Set(
+        paginatedData.map((r) => (r.id != null ? r.id : r))
+      );
+      setSelectedRows((prev) =>
+        prev.filter((r) => !visibleKeys.has(r.id != null ? r.id : r))
+      );
+    } else {
+      const currentKeys = new Set(
+        selectedRows.map((r) => (r.id != null ? r.id : r))
+      );
+      const toAdd = paginatedData.filter(
+        (r) => !currentKeys.has(r.id != null ? r.id : r)
+      );
+      setSelectedRows((prev) => [...prev, ...toAdd]);
     }
+  };
 
-    existing_by_doi = {}
-    if all_dois:
-        for a in db.query(Article).filter(Article.doi.in_(all_dois)).all():
-            if a.doi:
-                existing_by_doi[a.doi] = a
+  if (!data || data.length === 0) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.empty}>
+          No references available to display.
+        </div>
+      </div>
+    );
+  }
 
-    existing_by_title = {}
-    if all_titles:
-        for a in (
-            db.query(Article).filter(Article.title.in_(all_titles)).all()
-        ):
-            if a.title:
-                existing_by_title[a.title] = a
+  return (
+    <div style={styles.container}>
+      <div style={styles.controls}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="Search by title or author..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={styles.searchInput}
+          />
+          <button
+            type="button"
+            style={{
+              ...styles.detailsBtn,
+              ...(!isSingleSelected ? styles.detailsBtnDisabled : {}),
+            }}
+            disabled={!isSingleSelected}
+            onClick={() => setIsDetailsOpen(true)}
+          >
+            View Details
+          </button>
+        </div>
+        <span style={{ fontSize: '13px', color: '#8b949e' }}>
+          Total References: {data.length}
+          {selectedRows.length > 0 ? ` (${selectedRows.length} selected)` : ''}
+        </span>
+      </div>
+      <table style={styles.table}>
+        <thead>
+          <tr>
+            <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
+              <input
+                type="checkbox"
+                aria-label="Select all references on this page"
+                checked={allVisibleSelected}
+                onChange={handleSelectAll}
+                style={{ cursor: 'pointer' }}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.title}%`, position: 'relative' }}>
+              Title
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'title')}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.author}%`, position: 'relative' }}>
+              Author
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'author')}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.year}%`, position: 'relative' }}>
+              Year
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'year')}
+              />
+            </th>
+            <th style={{ ...styles.th, width: `${colWidths.journal}%`, position: 'relative' }}>
+              Journal
+              <div
+                style={{
+                  cursor: 'col-resize', width: '5px', position: 'absolute',
+                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
+                }}
+                onMouseDown={(e) => handleMouseDown(e, 'journal')}
+              />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginatedData.map((row, index) => {
+            const isSelected = isRowSelected(row);
+            return (
+              <tr
+                key={row.id || index}
+                style={{
+                  ...styles.tr,
+                  ...(isSelected ? styles.selectedTr : {}),
+                }}
+                onClick={(e) => handleRowClick(row, e)}
+              >
+              <td
+                style={{ ...styles.td, width: '40px', textAlign: 'center' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  aria-label={`Select reference ${row.title || ''}`}
+                  checked={isSelected}
+                  onChange={(e) => handleCheckboxChange(row, e)}
+                  style={{ cursor: 'pointer' }}
+                />
+              </td>
+              <td style={styles.td} title={row.title || 'N/A'}>
+                {row.title || 'N/A'}
+              </td>
+              <td style={styles.td} title={row.author || 'N/A'}>
+                {row.author || 'N/A'}
+              </td>
+              <td style={styles.td} title={String(row.year || 'N/A')}>
+                {row.year || 'N/A'}
+              </td>
+              <td style={styles.td} title={row.journal || 'N/A'}>
+                {row.journal || 'N/A'}
+              </td>
+            </tr>
+            );
+          })}
+        </tbody>
+      </table>
 
-    # 0. Bulk inject Journals
-    all_journals = set()
-    for ref in refs:
-        if ref.journal and ref.journal.strip():
-            all_journals.add(ref.journal.strip()[:255])
-            
-    existing_journals = {}
-    if all_journals:
-        for j in db.query(Journal).filter(Journal.name.in_(all_journals)).all():
-            existing_journals[j.name] = j.id
-            
-        new_journals = [
-            {"name": j_name}
-            for j_name in all_journals
-            if j_name not in existing_journals
-        ]
-        if new_journals:
-            stmt_j = _get_insert_stmt(Journal, db).values(new_journals)
-            db.execute(stmt_j)
-            for j in db.query(Journal).filter(Journal.name.in_(all_journals)).all():
-                existing_journals[j.name] = j.id
+      {totalPages > 1 && (
+        <div style={styles.pagination}>
+          <button
+            style={{ ...styles.pageBtn, ...(currentPage === 1 ? styles.pageBtnDisabled : {}) }}
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+          <span style={{ fontSize: '14px', color: '#8b949e' }}>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            style={{ ...styles.pageBtn, ...(currentPage === totalPages ? styles.pageBtnDisabled : {}) }}
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
-    seen_batch_dois = set()
-    seen_batch_titles = set()
-    new_articles_data = []
+      <ReferenceDetailsModal
+        isOpen={isDetailsOpen && isSingleSelected}
+        onClose={() => setIsDetailsOpen(false)}
+        article={singleSelectedRow}
+      />
+    </div>
+  );
+}
 
-    for ref in refs:
-        doi_val = (ref.doi or "").strip() or None
-        title_val = (ref.title or "").strip() or "Untitled"
+export default ReferencesDataTable;
 
-        if doi_val:
-            if doi_val in seen_batch_dois or doi_val in existing_by_doi:
-                continue
-            seen_batch_dois.add(doi_val)
-        else:
-            if (
-                title_val in seen_batch_titles
-                or title_val in existing_by_title
-            ):
-                continue
-            seen_batch_titles.add(title_val)
-
-        year_val: Optional[int] = None
-        if ref.year:
-            try:
-                year_val = int(float(str(ref.year).strip()))
-            except (ValueError, TypeError):
-                year_val = None
-
-        j_name = ref.journal.strip()[:255] if ref.journal else None
-        j_id = existing_journals.get(j_name) if j_name else None
-
-        new_articles_data.append(
-            {
-                "title": title_val,
-                "journal": ref.journal,
-                "journal_id": j_id,
-                "year": year_val,
-                "doi": doi_val,
-                "abstract": getattr(ref, "abstract", None),
-                "publisher": getattr(ref, "publisher", None),
-                "language": getattr(ref, "language", None),
-                "research_areas": getattr(ref, "research_areas", None),
-                "web_of_science_categories": getattr(
-                    ref, "web_of_science_categories", None
-                ),
-                "funding_text": getattr(ref, "funding_text", None),
-                "journal_iso": getattr(ref, "journal_iso", None),
-                "oa_status": getattr(ref, "oa_status", None),
-                "issn": getattr(ref, "issn", None),
-                "volume": getattr(ref, "volume", None),
-                "issue": getattr(ref, "issue", None),
-                "pages": getattr(ref, "pages", None),
-                "times_cited": getattr(ref, "times_cited", None),
-                "cited_references_count": getattr(
-                    ref, "cited_references_count", None
-                ),
-                "raw_data": getattr(ref, "raw_data", None) or (str(ref.author) if ref.author else None),
-            }
-        )
-
-    if new_articles_data:
-        stmt = _get_insert_stmt(Article, db).values(new_articles_data)
-        db.execute(stmt)
-
-    if all_dois:
-        for a in db.query(Article).filter(Article.doi.in_(all_dois)).all():
-            if a.doi:
-                existing_by_doi[a.doi] = a
-
-    if all_titles:
-        for a in (
-            db.query(Article).filter(Article.title.in_(all_titles)).all()
-        ):
-            if a.title:
-                existing_by_title[a.title] = a
-
-    linked_article_ids = set()
-    project_articles_data = []
-    seen_proj_links = set(
-        (
-            pa.project_id,
-            pa.article_id,
-        )
-        for pa in db.query(ProjectArticle)
-        .filter(ProjectArticle.project_id == project.id)
-        .all()
-    )
-
-    for ref in refs:
-        doi_val = (ref.doi or "").strip() or None
-        title_val = (ref.title or "").strip() or "Untitled"
-        art = existing_by_doi.get(doi_val) if doi_val else None
-        if not art:
-            art = existing_by_title.get(title_val)
-
-        if art:
-            linked_article_ids.add(art.id)
-            if (project.id, art.id) not in seen_proj_links:
-                project_articles_data.append(
-                    {
-                        "project_id": project.id,
-                        "article_id": art.id,
-                        "status": "pending",
-                    }
-                )
-                seen_proj_links.add((project.id, art.id))
-
-    if project_articles_data:
-        stmt_pa = _get_insert_stmt(ProjectArticle, db).values(
-            project_articles_data
-        )
-        db.execute(stmt_pa)
-
-    # 1. Bulk inject affiliations from authors_detail
-    all_affils_map = {}
-    for ref in refs:
-        if getattr(ref, "authors_detail", None):
-            for ad in ref.authors_detail:
-                aff = ad.get("affiliation")
-                if aff and str(aff).strip():
-                    inst_str = str(aff).strip().rstrip(".")[:255]
-                    if inst_str not in all_affils_map:
-                        all_affils_map[inst_str] = {
-                            "institution": inst_str,
-                            "department": (ad.get("department") or "")[:255] or None,
-                            "country": (ad.get("country") or "")[:100] or None,
-                        }
-
-    existing_affils = {}
-    if all_affils_map:
-        for aff in (
-            db.query(Affiliation)
-            .filter(Affiliation.institution.in_(list(all_affils_map.keys())))
-            .all()
-        ):
-            existing_affils[aff.institution] = aff.id
-        
-        new_affils = [
-            all_affils_map[inst]
-            for inst in all_affils_map.keys()
-            if inst not in existing_affils
-        ]
-        if new_affils:
-            stmt_aff = _get_insert_stmt(Affiliation, db).values(new_affils)
-            db.execute(stmt_aff)
-            for aff in (
-                db.query(Affiliation)
-                .filter(Affiliation.institution.in_(list(all_affils_map.keys())))
-                .all()
-            ):
-                existing_affils[aff.institution] = aff.id
-
-    # 2. Extract author metadata map (ORCID, email, affiliation_id)
-    author_info_map = {}
-    all_authors_raw = set()
-    for ref in refs:
-        if getattr(ref, "authors_detail", None):
-            for ad in ref.authors_detail:
-                name = (ad.get("name") or "").strip()[:255]
-                if name:
-                    all_authors_raw.add(name)
-                    aff_str = (ad.get("affiliation") or "").strip().rstrip(".")[:255]
-                    aff_id = existing_affils.get(aff_str)
-                    author_info_map[name] = {
-                        "name": name,
-                        "orcid": (ad.get("orcid") or "")[:50] or None,
-                        "email": (ad.get("email") or "")[:255] or None,
-                        "affiliation_id": aff_id,
-                    }
-        elif ref.author:
-            for a_name in re.split(r"\s+and\s+", str(ref.author), flags=re.I):
-                clean = a_name.strip()[:255]
-                if clean:
-                    all_authors_raw.add(clean)
-                    if clean not in author_info_map:
-                        author_info_map[clean] = {
-                            "name": clean,
-                            "orcid": None,
-                            "email": None,
-                            "affiliation_id": None,
-                        }
-
-    # 3. Bulk inject authors
-    if all_authors_raw:
-        existing_authors = {
-            auth.name: auth
-            for auth in db.query(Author)
-            .filter(Author.name.in_(all_authors_raw))
-            .all()
-        }
-        
-        for a_name, auth_obj in existing_authors.items():
-            new_data = author_info_map.get(a_name)
-            if new_data:
-                if not auth_obj.orcid and new_data.get("orcid"):
-                    auth_obj.orcid = new_data["orcid"]
-                if not auth_obj.email and new_data.get("email"):
-                    auth_obj.email = new_data["email"]
-                if not auth_obj.affiliation_id and new_data.get("affiliation_id"):
-                    auth_obj.affiliation_id = new_data["affiliation_id"]
-
-        new_authors = [
-            author_info_map.get(name, {"name": name})
-            for name in all_authors_raw
-            if name not in existing_authors
-        ]
-        if new_authors:
-            stmt_auth = _get_insert_stmt(Author, db).values(new_authors)
-            db.execute(stmt_auth)
-            existing_authors = {
-                auth.name: auth
-                for auth in db.query(Author)
-                .filter(Author.name.in_(all_authors_raw))
-                .all()
-            }
-
-        # 4. Link authors to articles with corresponding flag
-        author_articles_data = []
-        seen_auth_links = set()
-        for ref in refs:
-            doi_val = (ref.doi or "").strip() or None
-            title_val = (ref.title or "").strip() or "Untitled"
-            art = existing_by_doi.get(doi_val) if doi_val else None
-            if not art:
-                art = existing_by_title.get(title_val)
-            if not art:
-                continue
-
-            author_items = []
-            if getattr(ref, "authors_detail", None):
-                author_items = [
-                    (
-                        (ad.get("name") or "").strip()[:255],
-                        bool(ad.get("is_corresponding", False)),
-                    )
-                    for ad in ref.authors_detail
-                    if (ad.get("name") or "").strip()
-                ]
-            elif ref.author:
-                author_items = [
-                    (a.strip()[:255], False)
-                    for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
-                    if a.strip()
-                ]
-
-            for idx, (a_name, is_corr) in enumerate(author_items):
-                auth_obj = existing_authors.get(a_name)
-                if (
-                    auth_obj
-                    and (auth_obj.id, art.id) not in seen_auth_links
-                ):
-                    author_articles_data.append(
-                        {
-                            "author_id": auth_obj.id,
-                            "article_id": art.id,
-                            "author_order": idx + 1,
-                            "is_corresponding": is_corr,
-                        }
-                    )
-                    seen_auth_links.add((auth_obj.id, art.id))
-
-        if author_articles_data:
-            stmt_aa = _get_insert_stmt(AuthorArticle, db).values(
-                author_articles_data
-            )
-            db.execute(stmt_aa)
-
-    # 5. Bulk inject keywords (Author Keywords and Keywords-Plus)
-    all_keywords_to_process = set()
-    for ref in refs:
-        if ref.keywords:
-            for kw in str(ref.keywords).split(";"):
-                k_clean = kw.strip()[:255]
-                if k_clean:
-                    all_keywords_to_process.add((k_clean, "author"))
-        if getattr(ref, "keywords_plus", None):
-            for kw in str(ref.keywords_plus).split(";"):
-                k_clean = kw.strip()[:255]
-                if k_clean:
-                    all_keywords_to_process.add((k_clean, "plus"))
-
-    if all_keywords_to_process:
-        kw_names = {k[0] for k in all_keywords_to_process}
-        existing_kws = {
-            (k.name, k.type): k.id
-            for k in db.query(Keyword).filter(Keyword.name.in_(kw_names)).all()
-        }
-        new_kws = [
-            {"name": name, "type": k_type}
-            for name, k_type in all_keywords_to_process
-            if (name, k_type) not in existing_kws
-        ]
-        if new_kws:
-            stmt_kw = _get_insert_stmt(Keyword, db).values(new_kws)
-            db.execute(stmt_kw)
-            existing_kws = {
-                (k.name, k.type): k.id
-                for k in db.query(Keyword).filter(Keyword.name.in_(kw_names)).all()
-            }
-
-        keyword_articles_data = []
-        seen_kw_links = set()
-        for ref in refs:
-            doi_val = (ref.doi or "").strip() or None
-            title_val = (ref.title or "").strip() or "Untitled"
-            art = existing_by_doi.get(doi_val) if doi_val else None
-            if not art:
-                art = existing_by_title.get(title_val)
-            if not art:
-                continue
-
-            ref_kws = []
-            if ref.keywords:
-                for kw in str(ref.keywords).split(";"):
-                    k_clean = kw.strip()[:255]
-                    if k_clean:
-                        ref_kws.append((k_clean, "author"))
-            if getattr(ref, "keywords_plus", None):
-                for kw in str(ref.keywords_plus).split(";"):
-                    k_clean = kw.strip()[:255]
-                    if k_clean:
-                        ref_kws.append((k_clean, "plus"))
-
-            for k_tuple in ref_kws:
-                kw_id = existing_kws.get(k_tuple)
-                if kw_id and (kw_id, art.id) not in seen_kw_links:
-                    keyword_articles_data.append(
-                        {"keyword_id": kw_id, "article_id": art.id}
-                    )
-                    seen_kw_links.add((kw_id, art.id))
-
-        if keyword_articles_data:
-            stmt_ka = _get_insert_stmt(KeywordArticle, db).values(
-                keyword_articles_data
-            )
-            db.execute(stmt_ka)
-
-    # 6. Bulk inject Countries
-    all_countries = set()
-    for ref in refs:
-        if getattr(ref, "countries", None):
-            for c in ref.countries:
-                if c and str(c).strip():
-                    all_countries.add(str(c).strip()[:100])
-                    
-    if all_countries:
-        existing_countries = {
-            c.name: c.id
-            for c in db.query(Country).filter(Country.name.in_(all_countries)).all()
-        }
-        new_countries = [
-            {"name": c_name}
-            for c_name in all_countries
-            if c_name not in existing_countries
-        ]
-        if new_countries:
-            stmt_c = _get_insert_stmt(Country, db).values(new_countries)
-            db.execute(stmt_c)
-            existing_countries = {
-                c.name: c.id
-                for c in db.query(Country).filter(Country.name.in_(all_countries)).all()
-            }
-            
-        article_countries_data = []
-        seen_ac_links = set()
-        for ref in refs:
-            if not getattr(ref, "countries", None):
-                continue
-            doi_val = (ref.doi or "").strip() or None
-            title_val = (ref.title or "").strip() or "Untitled"
-            art = existing_by_doi.get(doi_val) if doi_val else None
-            if not art:
-                art = existing_by_title.get(title_val)
-            if not art:
-                continue
-                
-            for c in ref.countries:
-                c_name = str(c).strip()[:100]
-                c_id = existing_countries.get(c_name)
-                if c_id and (art.id, c_id) not in seen_ac_links:
-                    article_countries_data.append({
-                        "article_id": art.id,
-                        "country_id": c_id
-                    })
-                    seen_ac_links.add((art.id, c_id))
-                    
-        if article_countries_data:
-            stmt_ac = _get_insert_stmt(ArticleCountry, db).values(article_countries_data)
-            db.execute(stmt_ac)
-
-    # 7. Bulk inject Cited References
-    all_crs = {}
-    for ref in refs:
-        if getattr(ref, "cited_references", None):
-            for cr in ref.cited_references:
-                raw = cr.get("raw")
-                if raw and str(raw).strip():
-                    raw_clean = str(raw).strip()
-                    all_crs[raw_clean] = {
-                        "raw_string": raw_clean,
-                        "author": (cr.get("author") or "")[:255] or None,
-                        "year": int(cr.get("year")) if cr.get("year") and str(cr.get("year")).isdigit() else None,
-                        "source": (cr.get("source") or "")[:255] or None,
-                        "doi": (cr.get("doi") or "")[:255] or None,
-                    }
-                    
-    if all_crs:
-        existing_crs = {
-            cr.raw_string: cr.id
-            for cr in db.query(CitedReference).filter(CitedReference.raw_string.in_(all_crs.keys())).all()
-        }
-        new_crs = [
-            cr_data
-            for raw, cr_data in all_crs.items()
-            if raw not in existing_crs
-        ]
-        if new_crs:
-            stmt_cr = _get_insert_stmt(CitedReference, db).values(new_crs)
-            db.execute(stmt_cr)
-            existing_crs = {
-                cr.raw_string: cr.id
-                for cr in db.query(CitedReference).filter(CitedReference.raw_string.in_(all_crs.keys())).all()
-            }
-            
-        article_citations_data = []
-        seen_cr_links = set()
-        for ref in refs:
-            if not getattr(ref, "cited_references", None):
-                continue
-            doi_val = (ref.doi or "").strip() or None
-            title_val = (ref.title or "").strip() or "Untitled"
-            art = existing_by_doi.get(doi_val) if doi_val else None
-            if not art:
-                art = existing_by_title.get(title_val)
-            if not art:
-                continue
-                
-            for cr in ref.cited_references:
-                raw = cr.get("raw")
-                if not raw:
-                    continue
-                raw_clean = str(raw).strip()
-                cr_id = existing_crs.get(raw_clean)
-                if cr_id and (art.id, cr_id) not in seen_cr_links:
-                    article_citations_data.append({
-                        "article_id": art.id,
-                        "cited_reference_id": cr_id
-                    })
-                    seen_cr_links.add((art.id, cr_id))
-                    
-        if article_citations_data:
-            stmt_acr = _get_insert_stmt(ArticleCitation, db).values(article_citations_data)
-            db.execute(stmt_acr)
-
-    db.commit()
-    return len(linked_article_ids)
-
-
-def inject_references_to_db(
-    db: Session, refs: List[ParsedReference], project_code: str
-) -> int:
-    try:
-        return _bulk_inject_references(db, refs, project_code)
-    except OperationalError:
-        raise RuntimeError("Database connection failed")
-
-
-def _inject_references_inner(
-    db: Session, refs: List[ParsedReference], project_code: str
-) -> int:
-    """Persist parsed references and associate them with a project."""
-    return _bulk_inject_references(db, refs, project_code)
-
-
-def _legacy_inject_references_unused(
-    db: Session, refs: List[ParsedReference], project_code: str
-) -> int:
-    project = db.query(Project).filter(Project.name == project_code).first()
-    if not project:
-        project = Project(name=project_code)
-        db.add(project)
-        db.flush()
-
-    linked_article_ids = set()
-    seen_proj_links = set()
-    seen_auth_links = set()
-
-    for ref in refs:
-        year_val: Optional[int] = None
-        if ref.year:
-            try:
-                year_val = int(float(str(ref.year).strip()))
-            except (ValueError, TypeError):
-                year_val = None
-
-        doi_val = getattr(ref, "doi", None)
-        article = None
-        
-        if doi_val:
-            article = db.query(Article).filter(Article.doi == doi_val).first()
-        if not article:
-            title_val = ref.title or "Untitled"
-            article = db.query(Article).filter(Article.title == title_val).first()
-            
-        if not article:
-            article = Article(
-                title=ref.title or "Untitled",
-                journal=ref.journal,
-                year=year_val,
-                doi=doi_val,
-            )
-            db.add(article)
-            db.flush()
-
-        link = None
-        if (project.id, article.id) not in seen_proj_links:
-            link = db.query(ProjectArticle).filter(
-                ProjectArticle.project_id == project.id,
-                ProjectArticle.article_id == article.id
-            ).first()
-        
-        if not link and (project.id, article.id) not in seen_proj_links:
-            db.add(ProjectArticle(project_id=project.id, article_id=article.id))
-            db.flush()
-        seen_proj_links.add((project.id, article.id))
-
-        linked_article_ids.add(article.id)
-
-        if ref.author:
-            if not getattr(article, "raw_data", None):
-                article.raw_data = str(ref.author)
-            auth_list = [
-                a.strip()
-                for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
-                if a.strip()
-            ]
-            for idx, a_name in enumerate(auth_list):
-                c_name = a_name[:255]
-                auth_obj = (
-                    db.query(Author).filter(Author.name == c_name).first()
-                )
-                if not auth_obj:
-                    auth_obj = Author(name=c_name)
-                    db.add(auth_obj)
-                    db.flush()
-                a_link = None
-                if (auth_obj.id, article.id) not in seen_auth_links:
-                    a_link = (
-                        db.query(AuthorArticle)
-                        .filter(
-                            AuthorArticle.author_id == auth_obj.id,
-                            AuthorArticle.article_id == article.id,
-                        )
-                        .first()
-                    )
-                if not a_link and (auth_obj.id, article.id) not in seen_auth_links:
-                    db.add(
-                        AuthorArticle(
-                            author_id=auth_obj.id,
-                            article_id=article.id,
-                            author_order=idx + 1,
-                        )
-                    )
-                    db.flush()
-                seen_auth_links.add((auth_obj.id, article.id))
-
-    db.commit()
-    return len(linked_article_ids)
-
-
-
-// --- backend/src/bibliography/schemas.py ---
-
-from datetime import datetime
-from typing import Optional, List, Dict, Any, AsyncGenerator
-from pydantic import BaseModel, ConfigDict, Field
-
-class ZipDownloadRequest(BaseModel):
-    """..."""
-
-class BatchDownloadRequest(BaseModel):
-    """..."""
-
-class LocalBatchDownloadRequest(BaseModel):
-    """..."""
-
-class ParsedReference(BaseModel):
-    model_config = ConfigDict(strict=True, extra='forbid')
-    author: Optional[str] = None
-    year: Optional[str] = None
-    title: Optional[str] = None
-    journal: Optional[str] = None
-    doi: Optional[str] = None
-    abstract: Optional[str] = None
-    publisher: Optional[str] = None
-    language: Optional[str] = None
-    keywords: Optional[str] = None
-    keywords_plus: Optional[str] = None
-    research_areas: Optional[str] = None
-    web_of_science_categories: Optional[str] = None
-    funding_text: Optional[str] = None
-    journal_iso: Optional[str] = None
-    oa_status: Optional[str] = None
-    issn: Optional[str] = None
-    volume: Optional[str] = None
-    issue: Optional[str] = None
-    pages: Optional[str] = None
-    times_cited: Optional[int] = None
-    cited_references_count: Optional[int] = None
-    raw_data: Optional[str] = None
-    authors_detail: Optional[List[Dict[str, Any]]] = None
-    countries: Optional[List[str]] = None
-    cited_references: Optional[List[Dict[str, str]]] = None
-    upload_datetime: datetime
