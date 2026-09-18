@@ -157,23 +157,6 @@ if HAS_MULTIPART:
             db.query(Article).filter(Article.id.in_(article_ids)).all()
         )
 
-        # Transparent Auto-Backfill: If articles have funding_text but no funding records
-        has_text = any(
-            bool(getattr(a, "funding_text", None) and str(a.funding_text).strip())
-            for a in articles
-        )
-        has_records = any(
-            bool(_safe_list(getattr(a, "funding", None)))
-            for a in articles
-        )
-        if has_text and not has_records:
-            try:
-                backfill_funding_from_articles(db)
-                for a in articles:
-                    db.refresh(a)
-            except Exception:
-                pass
-
         def _to_str(val):
             return str(val) if isinstance(val, (str, int, float)) else None
 
@@ -196,6 +179,26 @@ if HAS_MULTIPART:
             if isinstance(val, (list, tuple, set)):
                 return [x for x in val if not _is_mock(x)]
             return []
+
+        # Auto-Backfill: If articles have funding_text but no funding records
+        has_text = any(
+            bool(
+                getattr(a, "funding_text", None)
+                and str(a.funding_text).strip()
+            )
+            for a in articles
+        )
+        has_records = any(
+            bool(_safe_list(getattr(a, "funding", None)))
+            for a in articles
+        )
+        if has_text and not has_records:
+            try:
+                backfill_funding_from_articles(db)
+                for a in articles:
+                    db.refresh(a)
+            except Exception:
+                pass
 
         now_iso = datetime.now(timezone.utc).isoformat()
         result = []
