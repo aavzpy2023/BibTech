@@ -82,6 +82,8 @@
 │   │   │   │   │   ├── AnalysisContent.test.jsx
 │   │   │   │   │   ├── AnalysisSidebar.jsx
 │   │   │   │   │   ├── AnalysisSidebar.test.jsx
+│   │   │   │   │   ├── OverviewViewTemplate.jsx
+│   │   │   │   │   ├── OverviewViewTemplate.test.jsx
 │   │   │   ├── config/
 │   │   │   │   ├── analysisMenuConfig.js
 │   ├── backend/

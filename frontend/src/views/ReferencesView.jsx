@@ -5,9 +5,7 @@ import UploadReferencesModal from '../components/references/UploadReferencesModa
 
 const styles = {
   container: {
-    fontFamily: 'system-ui, sans-serif',
     padding: '0',
-    color: '#24292e',
   },
   header: {
     display: 'flex',
@@ -42,9 +40,14 @@ const styles = {
     color: '#f0f6fc',
     margin: '0 0 8px 0'
   },
+  subtitle: {
+    fontSize: '14px',
+    color: '#8b949e',
+    margin: 0,
+  },
   description: {
     fontSize: '14px',
-    color: '#586069',
+    color: '#8b949e',
     marginBottom: '20px',
   },
   formGroup: {
@@ -170,10 +173,8 @@ export function ReferencesView() {
     <div style={styles.container}>
       <div style={styles.header}>
         <div>
-      <h2 style={{ ...styles.title, margin: 0 }}>
-        Bibliographic References
-      </h2>
-      <p style={{ ...styles.description, margin: '4px 0 0 0' }}>
+      <h2 style={styles.title}>Bibliographic References</h2>
+      <p style={styles.subtitle}>
         View and manage persisted publications.
         {projectCode && (
           <span> Active project: <strong>{projectCode}</strong></span>
