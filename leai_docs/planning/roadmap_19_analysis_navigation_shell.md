@@ -24,7 +24,8 @@ complexity_aggregate: "MEDIUM"
   - [ID-19.1.4] [DOCUMENTATION/SYNC]: [1. Open context.md. 2. Document the creation of analysisMenuConfig and useAnalysisNavigation under the Frontend Architecture section]. Type: Task.
   - [ID-19.1.5] [PLANNING/SYNC]: [1. Open roadmap_19_analysis_navigation_shell.md and check - [x] for Story 19.1. 2. Append > Files touched: ... under the story. 3. Check - [x] for REQ-057 in global_backlog.md]. Type: Task.
 
-- [ ] Story 19.2: Analysis Sidebar Pure Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-058)
+- [x] Story 19.2: Analysis Sidebar Pure Dumb View | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-058)
+  > Files touched: `frontend/src/components/analysis/AnalysisSidebar.test.jsx`, `frontend/src/components/analysis/AnalysisSidebar.jsx`
   Business Requirement: Create the left sidebar visual component. It MUST NOT maintain internal state. It strictly receives configuration and callback functions via props.
   Story Context Radius: {"frontend/src/components/analysis/AnalysisSidebar.jsx": [""], "frontend/src/components/analysis/AnalysisSidebar.test.jsx": [""], "frontend/src/config/analysisMenuConfig.js": [""], "leai_docs/planning/roadmap_19_analysis_navigation_shell.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown:
