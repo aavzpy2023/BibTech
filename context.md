@@ -28,3 +28,5 @@
     timestamps via `date-fns`.
   - `frontend/src/components/references/MetadataGrid.jsx` & `HoverPopover.jsx`:
     Dumb components enforcing State Fractality for metadata display.
+  - `frontend/src/config/analysisMenuConfig.js` & `useAnalysisNavigation.js`:
+    Static config and State hook isolating pure UI transitions for the Analysis shell.

@@ -13,7 +13,8 @@ complexity_aggregate: "MEDIUM"
   Layered Technical Breakdown:
   - [ID-19.0.1] [PLANNING/INIT]: [1. Create/Verify leai_docs/planning/ path. 2. Append EPIC 19, REQ-056 through REQ-059, and this Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_19_analysis_navigation_shell.md]. Type: Task.
 
-- [ ] Story 19.1: Configuration Tree & Navigation Hook | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-057)
+- [x] Story 19.1: Configuration Tree & Navigation Hook | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-057)
+  > Files touched: `frontend/src/hooks/useAnalysisNavigation.test.js`, `frontend/src/config/analysisMenuConfig.js`, `frontend/src/hooks/useAnalysisNavigation.js`, `context.md`
   Business Requirement: Define the static menu structure and create a custom React hook to manage active categories and tabs. Pure logic, zero UI.
   Story Context Radius: {"frontend/src/config/analysisMenuConfig.js": [""], "frontend/src/hooks/useAnalysisNavigation.js": [""], "frontend/src/hooks/useAnalysisNavigation.test.js": [""], "context.md": [""], "leai_docs/planning/roadmap_19_analysis_navigation_shell.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown:
