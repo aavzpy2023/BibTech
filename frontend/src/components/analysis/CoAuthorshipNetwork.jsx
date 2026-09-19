@@ -149,6 +149,10 @@ export default function CoAuthorshipNetwork() {
         setViewMode,
         clusters,
         resetRotation,
+        nodeScale,
+        setNodeScale,
+        is3DMode,
+        setIs3DMode,
         isDragging,
         handleMouseDown,
         handleMouseMove,
@@ -270,6 +274,22 @@ export default function CoAuthorshipNetwork() {
                         Overlay
                     </button>
                 </div>
+                <div style={{ ...styles.modeSwitchGroup, marginLeft: '8px' }}>
+                    <button
+                        type="button"
+                        style={styles.modeBtn(!is3DMode)}
+                        onClick={() => setIs3DMode(false)}
+                    >
+                        2D
+                    </button>
+                    <button
+                        type="button"
+                        style={styles.modeBtn(is3DMode)}
+                        onClick={() => setIs3DMode(true)}
+                    >
+                        3D
+                    </button>
+                </div>
             </div>
 
             <div style={styles.controlGroup}>
@@ -297,18 +317,36 @@ export default function CoAuthorshipNetwork() {
                     max="7"
                     value={minWeight}
                     onChange={e => setMinWeight(Number(e.target.value))}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', width: '60px' }}
                 />
             </div>
 
             <div style={styles.controlGroup}>
-                <button
-                    type="button"
-                    style={styles.resetBtn}
-                    onClick={resetRotation}
-                >
-                    Reset 3D View
-                </button>
+                <label htmlFor="node-scale-slider" style={styles.label}>
+                    Size:
+                </label>
+                <input
+                    id="node-scale-slider"
+                    type="range"
+                    min="0.5"
+                    max="3.0"
+                    step="0.1"
+                    value={nodeScale}
+                    onChange={e => setNodeScale(Number(e.target.value))}
+                    style={{ cursor: 'pointer', width: '60px' }}
+                />
+            </div>
+
+            <div style={styles.controlGroup}>
+                {is3DMode && (
+                    <button
+                        type="button"
+                        style={styles.resetBtn}
+                        onClick={resetRotation}
+                    >
+                        Reset 3D View
+                    </button>
+                )}
                 <button
                     type="button"
                     style={styles.exportBtn}
@@ -391,7 +429,7 @@ export default function CoAuthorshipNetwork() {
                     style={{
                         backgroundColor: '#06090e',
                         borderRadius: '6px',
-                        cursor: isDragging ? 'grabbing' : 'grab',
+                        cursor: is3DMode ? (isDragging ? 'grabbing' : 'grab') : 'default',
                         userSelect: 'none'
                     }}
                 >

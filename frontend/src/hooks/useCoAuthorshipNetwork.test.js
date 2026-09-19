@@ -72,4 +72,19 @@ describe('useCoAuthorshipNetwork', () => {
 
         expect(result.current.viewMode).toBe('overlay');
     });
+
+    it('supports 2D/3D mode toggling and node scaling', () => {
+        const { result } = renderHook(() => useCoAuthorshipNetwork());
+
+        expect(result.current.is3DMode).toBe(true);
+        expect(result.current.nodeScale).toBe(1);
+
+        act(() => {
+            result.current.setIs3DMode(false);
+            result.current.setNodeScale(1.5);
+        });
+
+        expect(result.current.is3DMode).toBe(false);
+        expect(result.current.nodeScale).toBe(1.5);
+    });
 });

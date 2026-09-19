@@ -161,6 +161,8 @@ const CLUSTER_METADATA = {
 const INITIAL_ROTATION = { rotX: 15, rotY: 25 };
 
 export default function useCoAuthorshipNetwork() {
+    const [nodeScale, setNodeScale] = useState(1);
+    const [is3DMode, setIs3DMode] = useState(true);
     const [dynamicNodes, setDynamicNodes] = useState(null);
     const [dynamicLinks, setDynamicLinks] = useState(null);
     const [dynamicClusters, setDynamicClusters] = useState(null);
@@ -216,8 +218,8 @@ export default function useCoAuthorshipNetwork() {
     }, [filteredLinks]);
 
     const projectedNodes = useMemo(() => {
-        const radX = (rotation.rotX * Math.PI) / 180;
-        const radY = (rotation.rotY * Math.PI) / 180;
+        const radX = is3DMode ? (rotation.rotX * Math.PI) / 180 : 0;
+        const radY = is3DMode ? (rotation.rotY * Math.PI) / 180 : 0;
         const focalLength = 460;
         const cx = 390;
         const cy = 200;
@@ -225,20 +227,19 @@ export default function useCoAuthorshipNetwork() {
         const projected = sourceNodes
             .filter(n => activeNodeIds.has(n.id))
             .map(n => {
-                const x1 = n.x * Math.cos(radY) + n.z * Math.sin(radY);
-                const z1 = -n.x * Math.sin(radY) + n.z * Math.cos(radY);
-                const y2 = n.y * Math.cos(radX) - z1 * Math.sin(radX);
-                const z2 = n.y * Math.sin(radX) + z1 * Math.cos(radX);
+                const x1 = is3DMode ? n.x * Math.cos(radY) + n.z * Math.sin(radY) : n.x;
+                const z1 = is3DMode ? -n.x * Math.sin(radY) + n.z * Math.cos(radY) : 0;
+                const y2 = is3DMode ? n.y * Math.cos(radX) - z1 * Math.sin(radX) : n.y;
+                const z2 = is3DMode ? n.y * Math.sin(radX) + z1 * Math.cos(radX) : 0;
 
                 const scale = focalLength / (focalLength + z2);
                 const px = cx + x1 * scale;
                 const py = cy + y2 * scale;
-                const baseRadius = 7 + Math.sqrt(n.papers) * 2.8;
+                const baseRadius = (7 + Math.sqrt(n.papers) * 2.8) * nodeScale;
                 const radius = baseRadius * scale;
-                const depthOpacity = Math.max(
-                    0.4,
-                    Math.min(1.0, (z2 + 200) / 360)
-                );
+                const depthOpacity = is3DMode 
+                    ? Math.max(0.4, Math.min(1.0, (z2 + 200) / 360))
+                    : 1.0;
 
                 return {
                     ...n,
@@ -252,16 +253,17 @@ export default function useCoAuthorshipNetwork() {
             });
 
         return projected.sort((a, b) => a.z2 - b.z2);
-    }, [rotation, activeNodeIds, sourceNodes]);
+    }, [rotation, activeNodeIds, sourceNodes, is3DMode, nodeScale]);
 
     const handleMouseDown = useCallback((e) => {
+        if (!is3DMode) return;
         setIsDragging(true);
         setDragStart({ x: e.clientX, y: e.clientY });
-    }, []);
+    }, [is3DMode]);
 
     const handleMouseMove = useCallback(
         (e) => {
-            if (!isDragging) return;
+            if (!isDragging || !is3DMode) return;
             const deltaX = e.clientX - dragStart.x;
             const deltaY = e.clientY - dragStart.y;
             setDragStart({ x: e.clientX, y: e.clientY });
@@ -271,7 +273,7 @@ export default function useCoAuthorshipNetwork() {
                 rotY: (prev.rotY + deltaX * 0.45) % 360
             }));
         },
-        [isDragging, dragStart]
+        [isDragging, dragStart, is3DMode]
     );
 
     const handleMouseUp = useCallback(() => {
@@ -300,6 +302,10 @@ export default function useCoAuthorshipNetwork() {
         rotation,
         setRotation,
         resetRotation,
+        nodeScale,
+        setNodeScale,
+        is3DMode,
+        setIs3DMode,
         isDragging,
         handleMouseDown,
         handleMouseMove,

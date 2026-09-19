@@ -63,4 +63,12 @@ describe('CoAuthorshipNetwork', () => {
 
         fireEvent.click(screen.getByRole('button', { name: /Overlay/i }));
     });
+
+    it('renders 2D/3D toggles and size slider', () => {
+        render(<CoAuthorshipNetwork />);
+        
+        expect(screen.getByRole('button', { name: '2D' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: '3D' })).toBeInTheDocument();
+        expect(screen.getByLabelText(/Size:/i)).toBeInTheDocument();
+    });
 });
