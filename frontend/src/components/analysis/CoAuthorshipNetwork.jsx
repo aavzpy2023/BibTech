@@ -2,49 +2,13 @@ import React from 'react';
 import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
 import AnalysisPageTemplate from './AnalysisPageTemplate';
 
-const GROUP_COLORS = {
-    1: '#58a6ff',
-    2: '#3fb950',
-    3: '#d29922'
+const GROUP_PALETTES = {
+    1: { base: '#58a6ff', glow: '#1f6feb', highlight: '#79c0ff' },
+    2: { base: '#3fb950', glow: '#238636', highlight: '#56d364' },
+    3: { base: '#d29922', glow: '#9e6a03', highlight: '#e3b341' }
 };
 
 const styles = {
-    container: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        padding: '24px',
-        width: '100%',
-        height: '100%',
-        boxSizing: 'border-box',
-        overflowY: 'auto'
-    },
-    header: {
-        borderBottom: 'none',
-        paddingBottom: '8px'
-    },
-    title: {
-        fontSize: '24px',
-        fontWeight: 'bold',
-        color: '#f0f6fc',
-        margin: '0 0 8px 0'
-    },
-    subtitle: {
-        fontSize: '14px',
-        color: '#8b949e',
-        margin: 0
-    },
-    toolbar: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: '#161b22',
-        border: '1px solid #30363d',
-        borderRadius: '6px',
-        padding: '12px 16px',
-        gap: '16px',
-        flexWrap: 'wrap'
-    },
     controlGroup: {
         display: 'flex',
         alignItems: 'center',
@@ -66,28 +30,27 @@ const styles = {
     },
     stats: {
         fontSize: '13px',
-        color: '#8b949e'
-    },
-    canvasCard: {
-        backgroundColor: '#161b22',
-        border: '1px solid #30363d',
-        borderRadius: '8px',
-        padding: '16px',
+        color: '#8b949e',
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
-        position: 'relative'
+        gap: '12px'
     },
-    detailDrawer: {
-        marginTop: '12px',
-        padding: '12px 16px',
+    resetBtn: {
         backgroundColor: '#21262d',
-        borderRadius: '6px',
-        border: '1px solid #30363d',
-        width: '100%',
-        boxSizing: 'border-box',
         color: '#f0f6fc',
-        fontSize: '13px'
+        border: '1px solid #30363d',
+        borderRadius: '6px',
+        padding: '4px 10px',
+        fontSize: '12px',
+        cursor: 'pointer'
+    },
+    hintBadge: {
+        fontSize: '11px',
+        color: '#58a6ff',
+        backgroundColor: '#0d1117',
+        padding: '2px 8px',
+        borderRadius: '12px',
+        border: '1px solid #30363d'
     }
 };
 
@@ -103,7 +66,12 @@ export default function CoAuthorshipNetwork() {
         setSelectedNodeId,
         hoveredNodeId,
         setHoveredNodeId,
-        selectedNode
+        selectedNode,
+        resetRotation,
+        isDragging,
+        handleMouseDown,
+        handleMouseMove,
+        handleMouseUp
     } = useCoAuthorshipNetwork();
 
     const nodeMap = React.useMemo(() => {
@@ -130,7 +98,7 @@ export default function CoAuthorshipNetwork() {
 
             <div style={styles.controlGroup}>
                 <label htmlFor="min-weight-slider" style={styles.label}>
-                    Min Collaborations ({minWeight}):
+                    Min Collab ({minWeight}):
                 </label>
                 <input
                     id="min-weight-slider"
@@ -144,8 +112,18 @@ export default function CoAuthorshipNetwork() {
             </div>
 
             <div style={styles.stats}>
-                Nodes: <strong>{nodes.length}</strong> | Links:{' '}
-                <strong>{links.length}</strong>
+                <span style={styles.hintBadge}>3D Orbit: Drag to Rotate</span>
+                <button
+                    type="button"
+                    style={styles.resetBtn}
+                    onClick={resetRotation}
+                >
+                    Reset 3D View
+                </button>
+                <span>
+                    Nodes: <strong>{nodes.length}</strong> | Links:{' '}
+                    <strong>{links.length}</strong>
+                </span>
             </div>
         </>
     );
@@ -167,80 +145,136 @@ export default function CoAuthorshipNetwork() {
             dataTestId="coauthorship-network-view"
         >
             <svg
-                    data-testid="coauthorship-svg"
-                    width="100%"
-                    height="420"
-                    viewBox="0 0 780 400"
-                    style={{ backgroundColor: '#0d1117', borderRadius: '6px' }}
-                >
-                    {links.map((link, idx) => {
-                        const s = nodeMap.get(link.source);
-                        const t = nodeMap.get(link.target);
-                        if (!s || !t) return null;
+                data-testid="coauthorship-svg"
+                width="100%"
+                height="460"
+                viewBox="0 0 780 400"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                style={{
+                    backgroundColor: '#0a0d12',
+                    borderRadius: '6px',
+                    cursor: isDragging ? 'grabbing' : 'grab',
+                    userSelect: 'none'
+                }}
+            >
+                <defs>
+                    <radialGradient id="sphereGrad1" cx="35%" cy="35%" r="65%">
+                        <stop offset="0%" stopColor="#79c0ff" />
+                        <stop offset="60%" stopColor="#1f6feb" />
+                        <stop offset="100%" stopColor="#0d1117" />
+                    </radialGradient>
+                    <radialGradient id="sphereGrad2" cx="35%" cy="35%" r="65%">
+                        <stop offset="0%" stopColor="#7ee787" />
+                        <stop offset="60%" stopColor="#238636" />
+                        <stop offset="100%" stopColor="#0d1117" />
+                    </radialGradient>
+                    <radialGradient id="sphereGrad3" cx="35%" cy="35%" r="65%">
+                        <stop offset="0%" stopColor="#f2cc60" />
+                        <stop offset="60%" stopColor="#9e6a03" />
+                        <stop offset="100%" stopColor="#0d1117" />
+                    </radialGradient>
+                </defs>
 
-                        const isHighlighted =
-                            hoveredNodeId === s.id ||
-                            hoveredNodeId === t.id ||
-                            selectedNodeId === s.id ||
-                            selectedNodeId === t.id;
+                {/* 3D Depth Edges */}
+                {links.map((link, idx) => {
+                    const s = nodeMap.get(link.source);
+                    const t = nodeMap.get(link.target);
+                    if (!s || !t) return null;
 
-                        return (
-                            <line
-                                key={`link-${idx}`}
-                                x1={s.x}
-                                y1={s.y}
-                                x2={t.x}
-                                y2={t.y}
-                                stroke={isHighlighted ? '#58a6ff' : '#30363d'}
-                                strokeWidth={link.weight}
-                                strokeOpacity={isHighlighted ? 0.9 : 0.4}
-                            />
-                        );
-                    })}
+                    const isHighlighted =
+                        hoveredNodeId === s.id ||
+                        hoveredNodeId === t.id ||
+                        selectedNodeId === s.id ||
+                        selectedNodeId === t.id;
 
-                    {nodes.map(node => {
-                        const isMatch =
-                            searchQuery.trim() === '' ||
-                            node.name
-                                .toLowerCase()
-                                .includes(searchQuery.toLowerCase());
-                        const isSelected = selectedNodeId === node.id;
-                        const isHovered = hoveredNodeId === node.id;
-                        const radius = 6 + Math.sqrt(node.papers) * 2.5;
-                        const fillColor = GROUP_COLORS[node.group] || '#58a6ff';
+                    const avgDepthOpacity = (s.depthOpacity + t.depthOpacity) / 2;
+                    const strokeWidth =
+                        Math.max(1, link.weight * ((s.scale + t.scale) / 2) * 0.9);
 
-                        return (
-                            <g
-                                key={`node-${node.id}`}
-                                onClick={() => setSelectedNodeId(node.id)}
-                                onMouseEnter={() => setHoveredNodeId(node.id)}
-                                onMouseLeave={() => setHoveredNodeId(null)}
-                                style={{ cursor: 'pointer' }}
-                            >
+                    return (
+                        <line
+                            key={`link-${idx}`}
+                            x1={s.px}
+                            y1={s.py}
+                            x2={t.px}
+                            y2={t.py}
+                            stroke={isHighlighted ? '#79c0ff' : '#30363d'}
+                            strokeWidth={strokeWidth}
+                            strokeOpacity={
+                                isHighlighted ? 0.95 : avgDepthOpacity * 0.45
+                            }
+                        />
+                    );
+                })}
+
+                {/* 3D Painter's Sorted Nodes */}
+                {nodes.map(node => {
+                    const isMatch =
+                        searchQuery.trim() === '' ||
+                        node.name
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase());
+                    const isSelected = selectedNodeId === node.id;
+                    const isHovered = hoveredNodeId === node.id;
+                    const gradId = `url(#sphereGrad${node.group || 1})`;
+                    const palette = GROUP_PALETTES[node.group] || GROUP_PALETTES[1];
+
+                    return (
+                        <g
+                            key={`node-${node.id}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedNodeId(node.id);
+                            }}
+                            onMouseEnter={() => setHoveredNodeId(node.id)}
+                            onMouseLeave={() => setHoveredNodeId(null)}
+                            style={{ cursor: 'pointer' }}
+                        >
+                            {/* 3D Ambient Glow for Foreground / Highlighted Nodes */}
+                            {(isSelected || isHovered) && (
                                 <circle
-                                    cx={node.x}
-                                    cy={node.y}
-                                    r={radius}
-                                    fill={fillColor}
-                                    fillOpacity={isMatch ? (isSelected ? 1 : 0.85) : 0.2}
-                                    stroke={isSelected || isHovered ? '#f0f6fc' : '#30363d'}
-                                    strokeWidth={isSelected ? 3 : 1.5}
+                                    cx={node.px}
+                                    cy={node.py}
+                                    r={node.radius + 6}
+                                    fill={palette.highlight}
+                                    fillOpacity={0.25}
                                 />
-                                <text
-                                    x={node.x}
-                                    y={node.y + radius + 14}
-                                    textAnchor="middle"
-                                    fill={isMatch ? '#c9d1d9' : '#484f58'}
-                                    fontSize="11px"
-                                    fontWeight={isSelected ? 'bold' : 'normal'}
-                                >
-                                    {node.name}
-                                </text>
-                            </g>
-                        );
-                    })}
-                </svg>
+                            )}
 
+                            {/* Pseudo-3D Shaded Sphere */}
+                            <circle
+                                cx={node.px}
+                                cy={node.py}
+                                r={node.radius}
+                                fill={gradId}
+                                fillOpacity={isMatch ? node.depthOpacity : 0.15}
+                                stroke={
+                                    isSelected || isHovered
+                                        ? '#f0f6fc'
+                                        : palette.glow
+                                }
+                                strokeWidth={isSelected ? 2.5 : 1}
+                            />
+
+                            {/* Depth perspective label */}
+                            <text
+                                x={node.px}
+                                y={node.py + node.radius + 12}
+                                textAnchor="middle"
+                                fill={isMatch ? '#c9d1d9' : '#484f58'}
+                                fillOpacity={node.depthOpacity}
+                                fontSize={`${Math.max(9, Math.round(11 * node.scale))}px`}
+                                fontWeight={isSelected ? 'bold' : 'normal'}
+                            >
+                                {node.name}
+                            </text>
+                        </g>
+                    );
+                })}
+            </svg>
         </AnalysisPageTemplate>
     );
 }

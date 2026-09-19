@@ -1,18 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
-const DEFAULT_NODES = [
-    { id: '1', name: 'Vaswani, A.', papers: 14, group: 1, x: 260, y: 190 },
-    { id: '2', name: 'Shazeer, N.', papers: 12, group: 1, x: 330, y: 150 },
-    { id: '3', name: 'Parmar, N.', papers: 10, group: 1, x: 220, y: 130 },
-    { id: '4', name: 'Uszkoreit, J.', papers: 9, group: 1, x: 350, y: 220 },
-    { id: '5', name: 'Jones, L.', papers: 8, group: 1, x: 290, y: 260 },
-    { id: '6', name: 'Gomez, A. N.', papers: 7, group: 1, x: 200, y: 230 },
-    { id: '7', name: 'Kaiser, L.', papers: 11, group: 1, x: 230, y: 300 },
-    { id: '8', name: 'Polosukhin, I.', papers: 6, group: 1, x: 170, y: 180 },
-    { id: '9', name: 'Bengio, Y.', papers: 24, group: 2, x: 540, y: 200 },
-    { id: '10', name: 'LeCun, Y.', papers: 21, group: 2, x: 610, y: 160 },
-    { id: '11', name: 'Hinton, G.', papers: 19, group: 2, x: 570, y: 280 },
-    { id: '12', name: 'Goodfellow, I.', papers: 15, group: 2, x: 480, y: 240 }
+const DEFAULT_NODES_3D = [
+    { id: '1', name: 'Vaswani, A.', papers: 14, group: 1, x: -110, y: -20, z: 90 },
+    { id: '2', name: 'Shazeer, N.', papers: 12, group: 1, x: -40, y: -70, z: 50 },
+    { id: '3', name: 'Parmar, N.', papers: 10, group: 1, x: -130, y: -90, z: -20 },
+    { id: '4', name: 'Uszkoreit, J.', papers: 9, group: 1, x: -20, y: 30, z: 80 },
+    { id: '5', name: 'Jones, L.', papers: 8, group: 1, x: -70, y: 80, z: 30 },
+    { id: '6', name: 'Gomez, A. N.', papers: 7, group: 1, x: -160, y: 40, z: -50 },
+    { id: '7', name: 'Kaiser, L.', papers: 11, group: 1, x: -110, y: 110, z: -10 },
+    { id: '8', name: 'Polosukhin, I.', papers: 6, group: 1, x: -190, y: -30, z: 20 },
+    { id: '9', name: 'Bengio, Y.', papers: 24, group: 2, x: 130, y: -10, z: -60 },
+    { id: '10', name: 'LeCun, Y.', papers: 21, group: 2, x: 190, y: -60, z: 60 },
+    { id: '11', name: 'Hinton, G.', papers: 19, group: 2, x: 150, y: 90, z: 70 },
+    { id: '12', name: 'Goodfellow, I.', papers: 15, group: 2, x: 80, y: 50, z: -70 }
 ];
 
 const DEFAULT_LINKS = [
@@ -30,14 +30,23 @@ const DEFAULT_LINKS = [
     { source: '9', target: '11', weight: 4 },
     { source: '9', target: '12', weight: 7 },
     { source: '10', target: '11', weight: 5 },
-    { source: '1', target: '9', weight: 1 }
+    { source: '1', target: '9', weight: 2 }
 ];
+
+const INITIAL_ROTATION = { rotX: 15, rotY: 25 };
 
 export default function useCoAuthorshipNetwork() {
     const [minWeight, setMinWeight] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedNodeId, setSelectedNodeId] = useState(null);
     const [hoveredNodeId, setHoveredNodeId] = useState(null);
+    const [rotation, setRotation] = useState(INITIAL_ROTATION);
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+    const resetRotation = useCallback(() => {
+        setRotation(INITIAL_ROTATION);
+    }, []);
 
     const filteredLinks = useMemo(() => {
         return DEFAULT_LINKS.filter(link => link.weight >= minWeight);
@@ -52,16 +61,80 @@ export default function useCoAuthorshipNetwork() {
         return set;
     }, [filteredLinks]);
 
-    const filteredNodes = useMemo(() => {
-        return DEFAULT_NODES.filter(node => activeNodeIds.has(node.id));
-    }, [activeNodeIds]);
+    const projectedNodes = useMemo(() => {
+        const radX = (rotation.rotX * Math.PI) / 180;
+        const radY = (rotation.rotY * Math.PI) / 180;
+        const focalLength = 440;
+        const cx = 390;
+        const cy = 200;
+
+        const projected = DEFAULT_NODES_3D.filter(n => activeNodeIds.has(n.id)).map(
+            n => {
+                // 3D rotation around Y axis
+                const x1 = n.x * Math.cos(radY) + n.z * Math.sin(radY);
+                const z1 = -n.x * Math.sin(radY) + n.z * Math.cos(radY);
+
+                // 3D rotation around X axis
+                const y2 = n.y * Math.cos(radX) - z1 * Math.sin(radX);
+                const z2 = n.y * Math.sin(radX) + z1 * Math.cos(radX);
+
+                // Perspective projection scale
+                const scale = focalLength / (focalLength + z2);
+                const px = cx + x1 * scale;
+                const py = cy + y2 * scale;
+                const baseRadius = 6 + Math.sqrt(n.papers) * 2.4;
+                const radius = baseRadius * scale;
+                const depthOpacity = Math.max(
+                    0.35,
+                    Math.min(1.0, (z2 + 200) / 360)
+                );
+
+                return {
+                    ...n,
+                    px,
+                    py,
+                    z2,
+                    scale,
+                    radius,
+                    depthOpacity
+                };
+            }
+        );
+
+        // Painter's algorithm: sort by depth Z ascending
+        return projected.sort((a, b) => a.z2 - b.z2);
+    }, [rotation, activeNodeIds]);
+
+    const handleMouseDown = useCallback((e) => {
+        setIsDragging(true);
+        setDragStart({ x: e.clientX, y: e.clientY });
+    }, []);
+
+    const handleMouseMove = useCallback(
+        (e) => {
+            if (!isDragging) return;
+            const deltaX = e.clientX - dragStart.x;
+            const deltaY = e.clientY - dragStart.y;
+            setDragStart({ x: e.clientX, y: e.clientY });
+
+            setRotation(prev => ({
+                rotX: Math.max(-65, Math.min(65, prev.rotX - deltaY * 0.45)),
+                rotY: (prev.rotY + deltaX * 0.45) % 360
+            }));
+        },
+        [isDragging, dragStart]
+    );
+
+    const handleMouseUp = useCallback(() => {
+        setIsDragging(false);
+    }, []);
 
     const selectedNode = useMemo(() => {
-        return DEFAULT_NODES.find(n => n.id === selectedNodeId) || null;
+        return DEFAULT_NODES_3D.find(n => n.id === selectedNodeId) || null;
     }, [selectedNodeId]);
 
     return {
-        nodes: filteredNodes,
+        nodes: projectedNodes,
         links: filteredLinks,
         minWeight,
         setMinWeight,
@@ -71,6 +144,13 @@ export default function useCoAuthorshipNetwork() {
         setSelectedNodeId,
         hoveredNodeId,
         setHoveredNodeId,
-        selectedNode
+        selectedNode,
+        rotation,
+        setRotation,
+        resetRotation,
+        isDragging,
+        handleMouseDown,
+        handleMouseMove,
+        handleMouseUp
     };
 }

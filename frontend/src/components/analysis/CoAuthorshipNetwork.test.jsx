@@ -29,4 +29,17 @@ describe('CoAuthorshipNetwork', () => {
         fireEvent.change(input, { target: { value: 'Vaswani' } });
         expect(input.value).toBe('Vaswani');
     });
+
+    it('supports 3D rotation via mouse drag and reset button', () => {
+        render(<CoAuthorshipNetwork />);
+        const svg = screen.getByTestId('coauthorship-svg');
+        const resetBtn = screen.getByRole('button', { name: /Reset 3D View/i });
+
+        fireEvent.mouseDown(svg, { clientX: 100, clientY: 100 });
+        fireEvent.mouseMove(svg, { clientX: 150, clientY: 120 });
+        fireEvent.mouseUp(svg);
+
+        expect(resetBtn).toBeInTheDocument();
+        fireEvent.click(resetBtn);
+    });
 });

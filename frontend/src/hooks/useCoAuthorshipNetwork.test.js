@@ -34,4 +34,30 @@ describe('useCoAuthorshipNetwork', () => {
         expect(result.current.selectedNodeId).toBe('1');
         expect(result.current.hoveredNodeId).toBe('2');
     });
+
+    it('calculates 3D coordinates and updates rotation angles', () => {
+        const { result } = renderHook(() => useCoAuthorshipNetwork());
+
+        expect(result.current.nodes[0]).toHaveProperty('z2');
+        expect(result.current.nodes[0]).toHaveProperty('scale');
+
+        act(() => {
+            result.current.setRotation({ rotX: 45, rotY: 90 });
+        });
+
+        expect(result.current.rotation.rotX).toBe(45);
+        expect(result.current.rotation.rotY).toBe(90);
+    });
+
+    it('resets 3D rotation back to initial orientation', () => {
+        const { result } = renderHook(() => useCoAuthorshipNetwork());
+
+        act(() => {
+            result.current.setRotation({ rotX: 30, rotY: 60 });
+            result.current.resetRotation();
+        });
+
+        expect(result.current.rotation.rotX).toBe(15);
+        expect(result.current.rotation.rotY).toBe(25);
+    });
 });
