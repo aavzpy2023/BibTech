@@ -1,5 +1,11 @@
 import type { NetworkLink, NetworkNode } from "../types";
 
+let edgeOpacityMultiplier = 1.0;
+
+export const setEdgeOpacityMultiplier = (val: number) => {
+    edgeOpacityMultiplier = val;
+};
+
 /**
  * Pure function to render structural connections between nodes.
  * Executes a single batch path to preserve canvas frame performance.
@@ -32,6 +38,8 @@ export const drawLinks = (
                 opacity = Math.min(0.08, 0.03 + weight * 0.01);
                 ctx.lineWidth = 0.4;
             }
+            
+            opacity *= edgeOpacityMultiplier;
             
             ctx.strokeStyle = `rgba(148, 163, 184, ${opacity.toFixed(3)})`;
 

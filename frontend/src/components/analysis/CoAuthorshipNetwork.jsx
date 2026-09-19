@@ -1,6 +1,7 @@
-import React, { useRef, useCallback, useMemo } from 'react';
+import React, { useRef, useState, useCallback, useMemo } from 'react';
 import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
 import useNetworkLayout from '../../hooks/useNetworkLayout';
+import { setEdgeOpacityMultiplier } from '../../graph/render/drawLinks';
 import useElementSize from '../../hooks/useElementSize';
 import NetworkGraphTemplate from './NetworkGraphTemplate';
 import AnalysisPageTemplate from './AnalysisPageTemplate';
@@ -140,20 +141,22 @@ export default function CoAuthorshipNetwork() {
         links,
         minWeight,
         setMinWeight,
-        searchQuery,
-        setSearchQuery,
         selectedNodeId,
         setSelectedNodeId,
         hoveredNodeId,
         setHoveredNodeId,
         selectedNode,
-        viewMode,
-        setViewMode,
         clusters,
         louvainGamma,
         setLouvainGamma,
         isLoading
     } = useCoAuthorshipNetwork();
+
+    const [edgeOpacity, setEdgeOpacity] = useState(1.0);
+
+    React.useEffect(() => {
+        setEdgeOpacityMultiplier(edgeOpacity);
+    }, [edgeOpacity]);
 
     // Offload heavy physics calculation to the state fractality hook
     const { frozenData, isCalculating } = useNetworkLayout(nodes, links);
@@ -176,36 +179,18 @@ export default function CoAuthorshipNetwork() {
     const toolbar = (
         <>
             <div style={styles.controlGroup}>
-                <span style={styles.label}>Mode:</span>
-                <div style={styles.modeSwitchGroup}>
-                    <button
-                        type="button"
-                        style={styles.modeBtn(viewMode === 'network')}
-                        onClick={() => setViewMode('network')}
-                    >
-                        Network
-                    </button>
-                    <button
-                        type="button"
-                        style={styles.modeBtn(viewMode === 'overlay')}
-                        onClick={() => setViewMode('overlay')}
-                    >
-                        Overlay
-                    </button>
-                </div>
-            </div>
-
-            <div style={styles.controlGroup}>
-                <label htmlFor="search-author" style={styles.label}>
-                    Filter:
+                <label htmlFor="edge-opacity-slider" style={styles.label}>
+                    Connections:
                 </label>
                 <input
-                    id="search-author"
-                    type="text"
-                    placeholder="Search author..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    style={styles.input}
+                    id="edge-opacity-slider"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={edgeOpacity}
+                    onChange={e => setEdgeOpacity(Number(e.target.value))}
+                    style={{ cursor: 'pointer', width: '60px' }}
                 />
             </div>
 
@@ -294,31 +279,14 @@ export default function CoAuthorshipNetwork() {
 
                 <div style={styles.legendPanel} data-testid="vosviewer-legend">
                     <span style={{ ...styles.label, fontSize: '10px', color: '#64748b' }}>
-                        {viewMode === 'network' ? 'CLUSTERS' : 'AVG YEAR'}
+                        CLUSTERS
                     </span>
-                    {viewMode === 'network' ? (
-                        Object.entries(clusters).map(([gid, c]) => (
-                            <div key={gid} style={styles.legendItem}>
-                                <div style={styles.legendDot(c.color)} />
-                                <span>{c.name}</span>
-                            </div>
-                        ))
-                    ) : (
-                        <>
-                            <div style={styles.legendItem}>
-                                <div style={styles.legendDot('#3b82f6')} />
-                                <span>&le; 2016</span>
-                            </div>
-                            <div style={styles.legendItem}>
-                                <div style={styles.legendDot('#10b981')} />
-                                <span>2017 - 2019</span>
-                            </div>
-                            <div style={styles.legendItem}>
-                                <div style={styles.legendDot('#facc15')} />
-                                <span>&ge; 2020</span>
-                            </div>
-                        </>
-                    )}
+                    {Object.entries(clusters).map(([gid, c]) => (
+                        <div key={gid} style={styles.legendItem}>
+                            <div style={styles.legendDot(c.color)} />
+                            <span>{c.name}</span>
+                        </div>
+                    ))}
                 </div>
 
                 {(isCalculating || isLoading) ? (

@@ -1,12 +1,445 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-19 15:31:38
+Date: 2026-09-19 15:42:54
 AST Mode: False
 Line Numbers: True
-Modules: GraphWrapper.tsx, GraphCanvas.tsx, drawNodes.ts, drawLinks.ts, renderLoop.ts, types.ts
+Modules: CoAuthorshipNetwork.jsx, AnalysisSidebar.jsx, GraphWrapper.tsx, GraphCanvas.tsx, drawLinks.ts, renderLoop.ts
 Processed Files: 6
 ===========================
 
+
+
+// --- frontend/src/components/analysis/CoAuthorshipNetwork.jsx ---
+
+[L001, S0] import React, { useRef, useCallback, useMemo } from 'react';
+[L002, S0] import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
+[L003, S0] import useNetworkLayout from '../../hooks/useNetworkLayout';
+[L004, S0] import useElementSize from '../../hooks/useElementSize';
+[L005, S0] import NetworkGraphTemplate from './NetworkGraphTemplate';
+[L006, S0] import AnalysisPageTemplate from './AnalysisPageTemplate';
+[L007, S0] import { exportCanvasToImage } from '../../views/analysis/network/exportNetwork';
+[L008, S0] import { setRenderNodes } from '../../views/analysis/network/networkRender';
+[L009, S0] import { fitGraphView } from '../../views/analysis/network/networkFit';
+[L010, S0] import logoImg from '../../assets/logo.png';
+[L011, S0] 
+[L012, S0] const styles = {
+[L013, S4]     controlGroup: {
+[L014, S8]         display: 'flex',
+[L015, S8]         alignItems: 'center',
+[L016, S8]         gap: '8px'
+[L017, S4]     },
+[L018, S4]     label: {
+[L019, S8]         fontSize: '12px',
+[L020, S8]         color: '#c9d1d9',
+[L021, S8]         fontWeight: '600',
+[L022, S8]         textTransform: 'uppercase',
+[L023, S8]         letterSpacing: '0.5px'
+[L024, S4]     },
+[L025, S4]     input: {
+[L026, S8]         backgroundColor: '#0d1117',
+[L027, S8]         border: '1px solid #30363d',
+[L028, S8]         borderRadius: '6px',
+[L029, S8]         padding: '5px 10px',
+[L030, S8]         color: '#f0f6fc',
+[L031, S8]         fontSize: '12px',
+[L032, S8]         outline: 'none'
+[L033, S4]     },
+[L034, S4]     modeSwitchGroup: {
+[L035, S8]         display: 'inline-flex',
+[L036, S8]         borderRadius: '6px',
+[L037, S8]         border: '1px solid #30363d',
+[L038, S8]         overflow: 'hidden'
+[L039, S4]     },
+[L040, S4]     modeBtn: (isActive) => ({
+[L041, S8]         backgroundColor: isActive ? '#1f6feb' : '#0d1117',
+[L042, S8]         color: isActive ? '#ffffff' : '#8b949e',
+[L043, S8]         border: 'none',
+[L044, S8]         padding: '5px 12px',
+[L045, S8]         fontSize: '12px',
+[L046, S8]         fontWeight: '600',
+[L047, S8]         cursor: 'pointer',
+[L048, S8]         transition: 'all 0.2s'
+[L049, S4]     }),
+[L050, S4]     exportBtn: {
+[L051, S8]         backgroundColor: '#238636',
+[L052, S8]         color: '#ffffff',
+[L053, S8]         border: '1px solid #2ea043',
+[L054, S8]         borderRadius: '6px',
+[L055, S8]         padding: '5px 12px',
+[L056, S8]         fontSize: '12px',
+[L057, S8]         fontWeight: '600',
+[L058, S8]         cursor: 'pointer',
+[L059, S8]         display: 'flex',
+[L060, S8]         alignItems: 'center',
+[L061, S8]         gap: '6px'
+[L062, S4]     },
+[L063, S4]     fitBtn: {
+[L064, S8]         backgroundColor: '#21262d',
+[L065, S8]         color: '#f0f6fc',
+[L066, S8]         border: '1px solid #30363d',
+[L067, S8]         borderRadius: '6px',
+[L068, S8]         padding: '5px 10px',
+[L069, S8]         fontSize: '12px',
+[L070, S8]         cursor: 'pointer'
+[L071, S4]     },
+[L072, S4]     canvasWrapper: {
+[L073, S8]         position: 'relative',
+[L074, S8]         width: 'min(100%, calc(75vh * 1.6))',
+[L075, S8]         aspectRatio: '16 / 10',
+[L076, S8]         margin: '0 auto',
+[L077, S8]         backgroundColor: '#ffffff',
+[L078, S8]         borderRadius: '6px',
+[L079, S8]         overflow: 'hidden'
+[L080, S4]     },
+[L081, S4]     watermark: {
+[L082, S8]         position: 'absolute',
+[L083, S8]         bottom: '12px',
+[L084, S8]         right: '12px',
+[L085, S8]         zIndex: 5,
+[L086, S8]         pointerEvents: 'none',
+[L087, S8]         display: 'flex',
+[L088, S8]         alignItems: 'center',
+[L089, S8]         padding: '6px',
+[L090, S8]         borderRadius: '8px',
+[L091, S8]         backgroundColor: 'rgba(255, 255, 255, 0.85)',
+[L092, S8]         border: '1px solid rgba(0, 0, 0, 0.1)',
+[L093, S8]         boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+[L094, S4]     },
+[L095, S4]     logoImage: {
+[L096, S8]         width: '32px',
+[L097, S8]         height: '32px',
+[L098, S8]         objectFit: 'contain'
+[L099, S4]     },
+[L100, S4]     legendPanel: {
+[L101, S8]         position: 'absolute',
+[L102, S8]         bottom: '12px',
+[L103, S8]         left: '12px',
+[L104, S8]         zIndex: 5,
+[L105, S8]         backgroundColor: 'rgba(255, 255, 255, 0.92)',
+[L106, S8]         border: '1px solid rgba(0, 0, 0, 0.12)',
+[L107, S8]         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+[L108, S8]         borderRadius: '6px',
+[L109, S8]         padding: '8px 12px',
+[L110, S8]         display: 'flex',
+[L111, S8]         flexDirection: 'column',
+[L112, S8]         gap: '6px',
+[L113, S8]         pointerEvents: 'none'
+[L114, S4]     },
+[L115, S4]     legendItem: {
+[L116, S8]         display: 'flex',
+[L117, S8]         alignItems: 'center',
+[L118, S8]         gap: '8px',
+[L119, S8]         fontSize: '11px',
+[L120, S8]         color: '#1e293b',
+[L121, S8]         fontWeight: '500'
+[L122, S4]     },
+[L123, S4]     legendDot: (color) => ({
+[L124, S8]         width: '10px',
+[L125, S8]         height: '10px',
+[L126, S8]         borderRadius: '50%',
+[L127, S8]         backgroundColor: color
+[L128, S4]     })
+[L129, S0] };
+[L130, S0] 
+[L131, S0] const FIT_PADDING = 24; // px de margen; el ajuste ya cuenta las etiquetas
+[L132, S0] 
+[L133, S0] export default function CoAuthorshipNetwork() {
+[L134, S4]     const fgRef = useRef();
+[L135, S4]     const wrapperRef = useRef();
+[L136, S4]     const size = useElementSize(wrapperRef);
+[L137, S0] 
+[L138, S4]     const {
+[L139, S8]         nodes,
+[L140, S8]         links,
+[L141, S8]         minWeight,
+[L142, S8]         setMinWeight,
+[L143, S8]         searchQuery,
+[L144, S8]         setSearchQuery,
+[L145, S8]         selectedNodeId,
+[L146, S8]         setSelectedNodeId,
+[L147, S8]         hoveredNodeId,
+[L148, S8]         setHoveredNodeId,
+[L149, S8]         selectedNode,
+[L150, S8]         viewMode,
+[L151, S8]         setViewMode,
+[L152, S8]         clusters,
+[L153, S8]         louvainGamma,
+[L154, S8]         setLouvainGamma,
+[L155, S8]         isLoading
+[L156, S4]     } = useCoAuthorshipNetwork();
+[L157, S0] 
+[L158, S4]     // Offload heavy physics calculation to the state fractality hook
+[L159, S4]     const { frozenData, isCalculating } = useNetworkLayout(nodes, links);
+[L160, S0] 
+[L161, S4]     React.useEffect(() => {
+[L162, S8]         if (!isCalculating && frozenData?.nodes?.length > 0) {
+[L163, S12]             setRenderNodes(frozenData.nodes);
+[L164, S8]         }
+[L165, S4]     }, [isCalculating, frozenData]);
+[L166, S0] 
+[L167, S4]     // Ajusta al cargar y cada vez que cambia el tamaño REAL del contenedor.
+[L168, S4]     React.useEffect(() => {
+[L169, S8]         if (isCalculating || !frozenData?.nodes?.length || !size.width || !size.height) return undefined;
+[L170, S8]         const t = setTimeout(() => {
+[L171, S12]             fitGraphView(fgRef.current, frozenData.nodes, size.width, size.height, FIT_PADDING);
+[L172, S8]         }, 100);
+[L173, S8]         return () => clearTimeout(t);
+[L174, S4]     }, [isCalculating, frozenData, size.width, size.height]);
+[L175, S0] 
+[L176, S4]     const toolbar = (
+[L177, S8]         <>
+[L178, S12]             <div style={styles.controlGroup}>
+[L179, S16]                 <span style={styles.label}>Mode:</span>
+[L180, S16]                 <div style={styles.modeSwitchGroup}>
+[L181, S20]                     <button
+[L182, S24]                         type="button"
+[L183, S24]                         style={styles.modeBtn(viewMode === 'network')}
+[L184, S24]                         onClick={() => setViewMode('network')}
+[L185, S20]                     >
+[L186, S24]                         Network
+[L187, S20]                     </button>
+[L188, S20]                     <button
+[L189, S24]                         type="button"
+[L190, S24]                         style={styles.modeBtn(viewMode === 'overlay')}
+[L191, S24]                         onClick={() => setViewMode('overlay')}
+[L192, S20]                     >
+[L193, S24]                         Overlay
+[L194, S20]                     </button>
+[L195, S16]                 </div>
+[L196, S12]             </div>
+[L197, S0] 
+[L198, S12]             <div style={styles.controlGroup}>
+[L199, S16]                 <label htmlFor="search-author" style={styles.label}>
+[L200, S20]                     Filter:
+[L201, S16]                 </label>
+[L202, S16]                 <input
+[L203, S20]                     id="search-author"
+[L204, S20]                     type="text"
+[L205, S20]                     placeholder="Search author..."
+[L206, S20]                     value={searchQuery}
+[L207, S20]                     onChange={e => setSearchQuery(e.target.value)}
+[L208, S20]                     style={styles.input}
+[L209, S16]                 />
+[L210, S12]             </div>
+[L211, S0] 
+[L212, S12]             <div style={styles.controlGroup}>
+[L213, S16]                 <label htmlFor="min-weight-slider" style={styles.label}>
+[L214, S20]                     Min Collab ({minWeight}):
+[L215, S16]                 </label>
+[L216, S16]                 <input
+[L217, S20]                     id="min-weight-slider"
+[L218, S20]                     type="range"
+[L219, S20]                     min="1"
+[L220, S20]                     max="7"
+[L221, S20]                     value={minWeight}
+[L222, S20]                     onChange={e => setMinWeight(Number(e.target.value))}
+[L223, S20]                     style={{ cursor: 'pointer', width: '60px' }}
+[L224, S16]                 />
+[L225, S12]             </div>
+[L226, S0] 
+[L227, S12]             <div style={styles.controlGroup}>
+[L228, S16]                 <label htmlFor="gamma-slider" style={styles.label}>
+[L229, S20]                     Louvain &gamma; ({louvainGamma.toFixed(1)}):
+[L230, S16]                 </label>
+[L231, S16]                 <input
+[L232, S20]                     id="gamma-slider"
+[L233, S20]                     type="range"
+[L234, S20]                     min="0.1"
+[L235, S20]                     max="3.0"
+[L236, S20]                     step="0.1"
+[L237, S20]                     value={louvainGamma}
+[L238, S20]                     onChange={e => setLouvainGamma(Number(e.target.value))}
+[L239, S20]                     style={{ cursor: 'pointer', width: '70px', accentColor: '#3b82f6' }}
+[L240, S20]                     title="Bajo: Macro-Comunidades (Instituciones). Alto: Micro-Comunidades (Laboratorios)."
+[L241, S16]                 />
+[L242, S12]             </div>
+[L243, S0] 
+[L244, S12]             <div style={styles.controlGroup}>
+[L245, S16]                 <button
+[L246, S20]                     type="button"
+[L247, S20]                     style={styles.fitBtn}
+[L248, S20]                     onClick={() => fitGraphView(fgRef.current, frozenData.nodes, size.width, size.height, FIT_PADDING)}
+[L249, S16]                 >
+[L250, S20]                     Center
+[L251, S16]                 </button>
+[L252, S16]                 <button
+[L253, S20]                     type="button"
+[L254, S20]                     style={styles.exportBtn}
+[L255, S20]                     onClick={() => exportCanvasToImage(fgRef, 'co-authorship-novascope-hd.png', {
+[L256, S24]                         nodes: frozenData.nodes,
+[L257, S24]                         links: frozenData.links,
+[L258, S24]                         logoSrc: logoImg
+[L259, S20]                     })}
+[L260, S20]                     data-testid="export-hd-btn"
+[L261, S16]                 >
+[L262, S20]                     Download HD
+[L263, S16]                 </button>
+[L264, S12]             </div>
+[L265, S8]         </>
+[L266, S4]     );
+[L267, S0] 
+[L268, S4]     const footer = selectedNode ? (
+[L269, S8]         <div>
+[L270, S12]             <strong>Author:</strong> {selectedNode.name} |{' '}
+[L271, S12]             <strong>Citations:</strong> {selectedNode.citations?.toLocaleString() || 0} |{' '}
+[L272, S12]             <strong>Publications:</strong> {selectedNode.papers} |{' '}
+[L273, S12]             <strong>Cluster:</strong> {clusters[selectedNode.group]?.name || 'Collaboration Cluster'}
+[L274, S8]         </div>
+[L275, S4]     ) : null;
+[L276, S0] 
+[L277, S4]     return (
+[L278, S8]         <AnalysisPageTemplate
+[L279, S12]             title="Co-authorship Network"
+[L280, S12]             subtitle="Novascope D3 force simulation: Radial cluster dynamics and convex co-authorship relationships."
+[L281, S12]             toolbar={toolbar}
+[L282, S12]             footer={footer}
+[L283, S12]             dataTestId="coauthorship-network-view"
+[L284, S8]         >
+[L285, S12]             <div ref={wrapperRef} style={styles.canvasWrapper} data-testid="coauthorship-force-graph-wrapper">
+[L286, S16]                 <div style={styles.watermark}>
+[L287, S20]                     <img
+[L288, S24]                         src={logoImg}
+[L289, S24]                         alt="Logo Watermark"
+[L290, S24]                         style={styles.logoImage}
+[L291, S24]                         data-testid="corner-watermark-logo"
+[L292, S20]                     />
+[L293, S16]                 </div>
+[L294, S0] 
+[L295, S16]                 <div style={styles.legendPanel} data-testid="vosviewer-legend">
+[L296, S20]                     <span style={{ ...styles.label, fontSize: '10px', color: '#64748b' }}>
+[L297, S24]                         {viewMode === 'network' ? 'CLUSTERS' : 'AVG YEAR'}
+[L298, S20]                     </span>
+[L299, S20]                     {viewMode === 'network' ? (
+[L300, S24]                         Object.entries(clusters).map(([gid, c]) => (
+[L301, S28]                             <div key={gid} style={styles.legendItem}>
+[L302, S32]                                 <div style={styles.legendDot(c.color)} />
+[L303, S32]                                 <span>{c.name}</span>
+[L304, S28]                             </div>
+[L305, S24]                         ))
+[L306, S20]                     ) : (
+[L307, S24]                         <>
+[L308, S28]                             <div style={styles.legendItem}>
+[L309, S32]                                 <div style={styles.legendDot('#3b82f6')} />
+[L310, S32]                                 <span>&le; 2016</span>
+[L311, S28]                             </div>
+[L312, S28]                             <div style={styles.legendItem}>
+[L313, S32]                                 <div style={styles.legendDot('#10b981')} />
+[L314, S32]                                 <span>2017 - 2019</span>
+[L315, S28]                             </div>
+[L316, S28]                             <div style={styles.legendItem}>
+[L317, S32]                                 <div style={styles.legendDot('#facc15')} />
+[L318, S32]                                 <span>&ge; 2020</span>
+[L319, S28]                             </div>
+[L320, S24]                         </>
+[L321, S20]                     )}
+[L322, S16]                 </div>
+[L323, S0] 
+[L324, S16]                 {(isCalculating || isLoading) ? (
+[L325, S20]                     <div style={{ padding: '20px', textAlign: 'center', color: '#8b949e' }}>
+[L326, S24]                         {isLoading ? "Recalculating Community Modularity..." : "Calculating Network Physics..."}
+[L327, S20]                     </div>
+[L328, S16]                 ) : (
+[L329, S20]                     <NetworkGraphTemplate
+[L330, S24]                         ref={fgRef}
+[L331, S24]                         frozenData={frozenData}
+[L332, S24]                         width={size.width || undefined}
+[L333, S24]                         height={size.height || undefined}
+[L334, S24]                         onNodeClick={node => setSelectedNodeId(node.id)}
+[L335, S20]                     />
+[L336, S16]                 )}
+[L337, S12]             </div>
+[L338, S8]         </AnalysisPageTemplate>
+[L339, S4]     );
+[L340, S0] }
+
+
+// --- frontend/src/components/analysis/AnalysisSidebar.jsx ---
+
+[L001, S0] import React from 'react';
+[L002, S0] 
+[L003, S0] export default function AnalysisSidebar({
+[L004, S4]     config,
+[L005, S4]     activeCategory,
+[L006, S4]     activeTab,
+[L007, S4]     onSelectCategory,
+[L008, S4]     onSelectTab
+[L009, S0] }) {
+[L010, S4]     const styles = {
+[L011, S8]         container: {
+[L012, S12]             width: '260px',
+[L013, S12]             borderRight: '1px solid #30363d',
+[L014, S12]             backgroundColor: '#0d1117',
+[L015, S12]             height: '100%',
+[L016, S12]             overflowY: 'auto',
+[L017, S12]             display: 'flex',
+[L018, S12]             flexDirection: 'column',
+[L019, S12]             padding: '16px 0'
+[L020, S8]         },
+[L021, S8]         categoryButton: (isActive) => ({
+[L022, S12]             width: '100%',
+[L023, S12]             textAlign: 'left',
+[L024, S12]             padding: '10px 16px',
+[L025, S12]             backgroundColor: isActive ? '#1f2428' : 'transparent',
+[L026, S12]             color: isActive ? '#f0f6fc' : '#8b949e',
+[L027, S12]             border: 'none',
+[L028, S12]             fontWeight: isActive ? '600' : 'normal',
+[L029, S12]             cursor: 'pointer',
+[L030, S12]             fontSize: '14px',
+[L031, S12]             outline: 'none',
+[L032, S12]             transition: 'background-color 0.2s'
+[L033, S8]         }),
+[L034, S8]         tabList: {
+[L035, S12]             listStyle: 'none',
+[L036, S12]             padding: '0',
+[L037, S12]             margin: '4px 0 16px 0'
+[L038, S8]         },
+[L039, S8]         tabButton: (isActive) => ({
+[L040, S12]             width: '100%',
+[L041, S12]             textAlign: 'left',
+[L042, S12]             padding: '8px 16px 8px 32px',
+[L043, S12]             backgroundColor: isActive ? '#161b22' : 'transparent',
+[L044, S12]             color: isActive ? '#58a6ff' : '#8b949e',
+[L045, S12]             border: 'none',
+[L046, S12]             borderLeft: isActive ? '3px solid #58a6ff' : '3px solid transparent',
+[L047, S12]             cursor: 'pointer',
+[L048, S12]             fontSize: '13px',
+[L049, S12]             outline: 'none',
+[L050, S12]             transition: 'all 0.2s'
+[L051, S8]         })
+[L052, S4]     };
+[L053, S0] 
+[L054, S4]     return (
+[L055, S8]         <div style={styles.container} data-testid="analysis-sidebar">
+[L056, S12]             {config.map(category => (
+[L057, S16]                 <div key={category.id}>
+[L058, S20]                     <button
+[L059, S24]                         style={styles.categoryButton(activeCategory === category.id)}
+[L060, S24]                         onClick={() => onSelectCategory(category.id)}
+[L061, S24]                         data-testid={`cat-${category.id}`}
+[L062, S20]                     >
+[L063, S24]                         {category.label}
+[L064, S20]                     </button>
+[L065, S20]                     
+[L066, S20]                     {activeCategory === category.id && (
+[L067, S24]                         <ul style={styles.tabList}>
+[L068, S28]                             {category.tabs.map(tab => (
+[L069, S32]                                 <li key={tab.id}>
+[L070, S36]                                     <button
+[L071, S40]                                         style={styles.tabButton(activeTab === tab.id)}
+[L072, S40]                                         onClick={() => onSelectTab(tab.id)}
+[L073, S40]                                         data-testid={`tab-${tab.id}`}
+[L074, S36]                                     >
+[L075, S40]                                         {tab.label}
+[L076, S36]                                     </button>
+[L077, S32]                                 </li>
+[L078, S28]                             ))}
+[L079, S24]                         </ul>
+[L080, S20]                     )}
+[L081, S16]                 </div>
+[L082, S12]             ))}
+[L083, S8]         </div>
+[L084, S4]     );
+[L085, S0] }
 
 
 // --- frontend/src/graph/GraphWrapper.tsx ---
@@ -83,78 +516,6 @@ Processed Files: 6
 [L033, S0] };
 
 
-// --- frontend/src/graph/render/drawNodes.ts ---
-
-[L001, S0] import type { NetworkNode } from "../types";
-[L002, S0] 
-[L003, S0] const GRADIENT_PALETTE = [
-[L004, S4]     { start: "#ff6b6b", end: "#c92a2a" }, // 1: Red
-[L005, S4]     { start: "#4dabf7", end: "#1864ab" }, // 2: Blue
-[L006, S4]     { start: "#69db7c", end: "#2b8a3e" }, // 3: Green
-[L007, S4]     { start: "#4dd0e1", end: "#0097a7" }, // 4: Cyan
-[L008, S4]     { start: "#ffb74d", end: "#f57c00" }, // 5: Orange
-[L009, S4]     { start: "#ba68c8", end: "#7b1fa2" }, // 6: Purple
-[L010, S4]     { start: "#fff176", end: "#fbc02d" }, // 7: Yellow
-[L011, S4]     { start: "#f06292", end: "#c2185b" }, // 8: Pink
-[L012, S4]     { start: "#a1887f", end: "#5d4037" }, // 9: Brown
-[L013, S4]     { start: "#dce775", end: "#afb42b" }, // 10: Lime
-[L014, S4]     { start: "#9575cd", end: "#512da8" }, // 11: Deep Purple
-[L015, S4]     { start: "#4db6ac", end: "#00796b" }, // 12: Teal
-[L016, S4]     { start: "#ff8a65", end: "#e64a19" }, // 13: Deep Orange
-[L017, S4]     { start: "#90a4ae", end: "#455a64" }, // 14: Blue Grey
-[L018, S4]     { start: "#aed581", end: "#689f38" }, // 15: Light Green
-[L019, S0] ];
-[L020, S0] 
-[L021, S0] const getGradientColors = (clusterId: string | number | undefined) => {
-[L022, S4]     if (clusterId === 'red') return GRADIENT_PALETTE[0];
-[L023, S4]     if (clusterId === 'blue') return GRADIENT_PALETTE[1];
-[L024, S4]     if (clusterId === 'green') return GRADIENT_PALETTE[2];
-[L025, S0] 
-[L026, S4]     const idx = parseInt(String(clusterId), 10);
-[L027, S4]     if (!isNaN(idx)) {
-[L028, S8]         const safeIdx = Math.max(0, idx - 1);
-[L029, S8]         return GRADIENT_PALETTE[safeIdx % GRADIENT_PALETTE.length];
-[L030, S4]     }
-[L031, S4]     return { start: "#9ca3af", end: "#4b5563" }; // Fallback
-[L032, S0] };
-[L033, S0] 
-[L034, S0] /**
-[L035, S1]  * Pure function to render spherical 3D nodes.
-[L036, S1]  * Iterates context drawing for individual radial gradients.
-[L037, S1]  */
-[L038, S0] export const drawNodes = (
-[L039, S4]     ctx: CanvasRenderingContext2D,
-[L040, S4]     nodes: NetworkNode[]
-[L041, S0] ) => {
-[L042, S4]     nodes.forEach((node) => {
-[L043, S8]         if (node.x == null || node.y == null) return;
-[L044, S0] 
-[L045, S8]         ctx.beginPath();
-[L046, S8]         ctx.arc(node.x, node.y, node.radius, 0, 2 * Math.PI);
-[L047, S0] 
-[L048, S8]         // Offset gradient origin to simulate top-left directional lighting
-[L049, S8]         const offset = node.radius / 3;
-[L050, S8]         const grad = ctx.createRadialGradient(
-[L051, S12]             node.x - offset, node.y - offset, 0,
-[L052, S12]             node.x, node.y, node.radius
-[L053, S8]         );
-[L054, S0] 
-[L055, S8]         const clusterId = node.cluster ?? (node as any).group;
-[L056, S8]         const colors = getGradientColors(clusterId);
-[L057, S8]         grad.addColorStop(0, "#ffffff");
-[L058, S8]         grad.addColorStop(0.3, colors.start);
-[L059, S8]         grad.addColorStop(1, "#1f2937");
-[L060, S0] 
-[L061, S8]         ctx.fillStyle = grad;
-[L062, S8]         ctx.fill();
-[L063, S8]         
-[L064, S8]         ctx.lineWidth = 0.5;
-[L065, S8]         ctx.strokeStyle = '#111827';
-[L066, S8]         ctx.stroke();
-[L067, S4]     });
-[L068, S0] };
-
-
 // --- frontend/src/graph/render/drawLinks.ts ---
 
 [L001, S0] import type { NetworkLink, NetworkNode } from "../types";
@@ -168,34 +529,49 @@ Processed Files: 6
 [L009, S4]     links: NetworkLink[]
 [L010, S0] ) => {
 [L011, S4]     ctx.save();
-[L012, S4]     // Use multiply blending and a gentle slate gray for an ultra-clean background
-[L013, S4]     ctx.globalCompositeOperation = "multiply";
-[L014, S4]     ctx.lineWidth = 0.5;
-[L015, S4]     ctx.strokeStyle = "rgba(148, 163, 184, 0.12)";
-[L016, S4]     ctx.beginPath();
-[L017, S4]     
-[L018, S4]     links.forEach((link) => {
-[L019, S8]         const source = link.source as NetworkNode;
-[L020, S8]         const target = link.target as NetworkNode;
-[L021, S0] 
-[L022, S8]         if (source.x != null && source.y != null && target.x != null && target.y != null) {
-[L023, S12]             ctx.moveTo(source.x, source.y);
+[L012, S4]     ctx.globalCompositeOperation = "multiply";
+[L013, S4]     
+[L014, S4]     links.forEach((link) => {
+[L015, S8]         const source = link.source as NetworkNode;
+[L016, S8]         const target = link.target as NetworkNode;
+[L017, S0] 
+[L018, S8]         if (source.x != null && source.y != null && target.x != null && target.y != null) {
+[L019, S12]             ctx.beginPath();
+[L020, S0] 
+[L021, S12]             const sourceCluster = String(source.cluster ?? (source as any).group);
+[L022, S12]             const targetCluster = String(target.cluster ?? (target as any).group);
+[L023, S12]             const isIntra = sourceCluster === targetCluster;
 [L024, S12]             
-[L025, S12]             const midX = (source.x + target.x) / 2;
-[L026, S12]             const midY = (source.y + target.y) / 2;
-[L027, S12]             const dx = target.x - source.x;
-[L028, S12]             const dy = target.y - source.y;
-[L029, S12]             
-[L030, S12]             const cpX = midX - dy * 0.2;
-[L031, S12]             const cpY = midY + dx * 0.2;
-[L032, S12]             
-[L033, S12]             ctx.quadraticCurveTo(cpX, cpY, target.x, target.y);
-[L034, S8]         }
-[L035, S4]     });
-[L036, S4]     
-[L037, S4]     ctx.stroke();
-[L038, S4]     ctx.restore();
-[L039, S0] };
+[L025, S12]             const weight = link.weight ?? 1;
+[L026, S12]             let opacity = 0.12;
+[L027, S12]             
+[L028, S12]             if (isIntra) {
+[L029, S16]                 opacity = Math.min(0.4, 0.15 + weight * 0.05);
+[L030, S16]                 ctx.lineWidth = 0.8;
+[L031, S12]             } else {
+[L032, S16]                 opacity = Math.min(0.08, 0.03 + weight * 0.01);
+[L033, S16]                 ctx.lineWidth = 0.4;
+[L034, S12]             }
+[L035, S12]             
+[L036, S12]             ctx.strokeStyle = `rgba(148, 163, 184, ${opacity.toFixed(3)})`;
+[L037, S0] 
+[L038, S12]             ctx.moveTo(source.x, source.y);
+[L039, S12]             
+[L040, S12]             const midX = (source.x + target.x) / 2;
+[L041, S12]             const midY = (source.y + target.y) / 2;
+[L042, S12]             const dx = target.x - source.x;
+[L043, S12]             const dy = target.y - source.y;
+[L044, S12]             
+[L045, S12]             const cpX = midX - dy * 0.2;
+[L046, S12]             const cpY = midY + dx * 0.2;
+[L047, S12]             
+[L048, S12]             ctx.quadraticCurveTo(cpX, cpY, target.x, target.y);
+[L049, S12]             ctx.stroke();
+[L050, S8]         }
+[L051, S4]     });
+[L052, S4]     
+[L053, S4]     ctx.restore();
+[L054, S0] };
 
 
 // --- frontend/src/graph/render/renderLoop.ts ---
@@ -218,37 +594,13 @@ Processed Files: 6
 [L016, S0] ) => {
 [L017, S4]     ctx.clearRect(0, 0, width, height);
 [L018, S4]     
-[L019, S4]     drawLinks(ctx, links);
-[L020, S4]     drawNodes(ctx, nodes);
-[L021, S4]     drawLabels(ctx, nodes);
-[L022, S0] };
-
-
-// --- frontend/src/graph/types.ts ---
-
-[L001, S0] import type { SimulationNodeDatum, SimulationLinkDatum } from "d3";
-[L002, S0] 
-[L003, S0] /**
-[L004, S1]  * NetworkNode represents a single vertex in the D3 force simulation.
-[L005, S1]  * Extends the baseline D3 SimulationNodeDatum to inherit vx, vy, x, y, etc.
-[L006, S1]  */
-[L007, S0] export interface NetworkNode extends SimulationNodeDatum {
-[L008, S4]     id: string;
-[L009, S4]     name: string;
-[L010, S4]     radius: number;
-[L011, S4]     /**
-[L012, S5]      * The cluster assignment dictates the node's visual 3D styling mapping.
-[L013, S5]      * - "red"   -> Primary cluster
-[L014, S5]      * - "blue"  -> Secondary cluster
-[L015, S5]      * - "green" -> Tertiary cluster
-[L016, S5]      */
-[L017, S4]     cluster: "red" | "blue" | "green";
-[L018, S0] }
-[L019, S0] 
-[L020, S0] /**
-[L021, S1]  * NetworkLink represents an edge connecting two NetworkNodes in the simulation.
-[L022, S1]  */
-[L023, S0] export interface NetworkLink extends SimulationLinkDatum<NetworkNode> {
-[L024, S4]     source: string | NetworkNode;
-[L025, S4]     target: string | NetworkNode;
-[L026, S0] }
+[L019, S4]     const sortedNodes = [...nodes].sort((a, b) => {
+[L020, S8]         const valA = a.degree ?? a.radius;
+[L021, S8]         const valB = b.degree ?? b.radius;
+[L022, S8]         return valA - valB;
+[L023, S4]     });
+[L024, S4]     
+[L025, S4]     drawLinks(ctx, links);
+[L026, S4]     drawNodes(ctx, sortedNodes);
+[L027, S4]     drawLabels(ctx, sortedNodes);
+[L028, S0] };
