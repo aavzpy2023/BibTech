@@ -108,7 +108,7 @@
 
 ## EPIC 20: NOVASCOPE D3 VISUALIZATION
 - [x] Story 1.0: Roadmap & Planning Initialization
-- [ ] Story 1.1: Core Infrastructure & Semantic Primitives
+- [x] Story 1.1: Core Infrastructure & Semantic Primitives
 - [ ] Story 1.2: Physics Simulation Engine (Isolated Logic)
 - [ ] Story 1.3: Render Micro-Surgery (Links & Nodes Utilities)
 - [ ] Story 1.4: Render Micro-Surgery (Labels & Orchestrator)

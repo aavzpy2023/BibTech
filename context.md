@@ -2,7 +2,7 @@
 
 ## 1. Architectural Foundation
 - **Backend**: FastAPI 0.110.0 running on Python &gt;= 3.11 with Uvicorn.
-- **Frontend**: React 18 (Vite SPA) enforcing clean dumb-component separation.
+- **Frontend**: React 18 (Vite SPA) enforcing clean dumb-component separation. All D3/Canvas rendering must be done via Canvas 2D pure functions; UI components must be dumb.
 - **Proxy/Ingress**: Nginx reverse proxy routing `/api` traffic to backend.
 - **Database**: PostgreSQL 16 (handled via psycopg2-binary / migrations).
 

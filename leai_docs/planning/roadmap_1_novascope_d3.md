@@ -13,7 +13,8 @@ complexity_aggregate: "HARD"
   Layered Technical Breakdown:
   [ID-1.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Create leai_docs/planning/global_backlog.md and append EPIC 1 with REQs 001 through 014. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_1_novascope_d3.md]. Type: Task.
 
-- [ ] Story 1.1: Core Infrastructure & Semantic Primitives | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 1.1: Core Infrastructure & Semantic Primitives | [MoSCoW: MUST] | [Complexity: EASY]
+  > Files touched: frontend/package.json, frontend/src/graph/types.ts, context.md
   Business Requirement: Install D3.js and establish the strict semantic type contracts for the graph data.
   Story Context Radius: {"package.json": [""], "src/graph/types.ts": [""], "context.md": [""], "leai_docs/planning/roadmap_1_novascope_d3.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown:
