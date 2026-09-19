@@ -49,6 +49,22 @@
 │   │   │   │   ├── useTableResize.js
 │   │   │   │   ├── useTableResize.test.js
 │   │   │   ├── assets/
+│   │   │   ├── graph/
+│   │   │   │   ├── GraphCanvas.tsx
+│   │   │   │   ├── GraphWrapper.tsx
+│   │   │   │   ├── dummyData.ts
+│   │   │   │   ├── simulationFactory.test.ts
+│   │   │   │   ├── simulationFactory.ts
+│   │   │   │   ├── types.ts
+│   │   │   │   ├── hooks/
+│   │   │   │   │   ├── useForceSimulation.ts
+│   │   │   │   ├── render/
+│   │   │   │   │   ├── draw.test.ts
+│   │   │   │   │   ├── drawLabels.ts
+│   │   │   │   │   ├── drawLinks.ts
+│   │   │   │   │   ├── drawNodes.ts
+│   │   │   │   │   ├── renderLoop.test.ts
+│   │   │   │   │   ├── renderLoop.ts
 │   │   │   ├── components/
 │   │   │   │   ├── BibliographyUploader.jsx
 │   │   │   │   ├── Layout.jsx
@@ -185,6 +201,7 @@
 │   │   │   ├── roadmap_18_bibliometric_data_warehouse.md
 │   │   │   ├── roadmap_19_analysis_navigation_shell.md
 │   │   │   ├── roadmap_1_bibliography_ingestion.md
+│   │   │   ├── roadmap_1_novascope_d3.md
 │   │   │   ├── roadmap_2_batch_load.md
 │   │   │   ├── roadmap_3_batch_download_execution.md
 │   │   │   ├── roadmap_4_download_queue_and_zip.md

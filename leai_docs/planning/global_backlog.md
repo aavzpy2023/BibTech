@@ -115,7 +115,16 @@
 - [x] Story 1.5: State Fractality (React Hook vs Dumb Canvas)
 - [x] Story 1.6: Boundary Layer UI (Branding Overlay)
 
+## EPIC 21: PROFESSIONAL NETWORK VISUALIZATION & TEMPLATING
+- [ ] [REQ-060] Frontend Semantic Primitives & Styles
+- [ ] [REQ-061] Static D3 Force Layout Engine
+- [ ] [REQ-062] Canvas Micro-Rendering (Nodes & Links)
+- [ ] [REQ-063] Canvas Micro-Rendering (Labels & Branding)
+- [ ] [REQ-064] Network Template State Fractality
+- [ ] [REQ-065] CoAuthorship Integration (State Fractality & Export)
+
 ## Active Roadmaps
+- [Roadmap 21: Professional Network Visualization](roadmap_21_professional_network_visualization.md)
 - [Roadmap 20: Novascope D3](roadmap_1_novascope_d3.md)
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
