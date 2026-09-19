@@ -1,12 +1,158 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-19 15:23:35
+Date: 2026-09-19 15:31:38
 AST Mode: False
 Line Numbers: True
-Modules: drawLinks.ts, networkRender.js
-Processed Files: 2
+Modules: GraphWrapper.tsx, GraphCanvas.tsx, drawNodes.ts, drawLinks.ts, renderLoop.ts, types.ts
+Processed Files: 6
 ===========================
 
+
+
+// --- frontend/src/graph/GraphWrapper.tsx ---
+
+[L001, S0] import React from "react";
+[L002, S0] import { GraphCanvas } from "./GraphCanvas";
+[L003, S0] 
+[L004, S0] /**
+[L005, S1]  * Boundary Layer UI that wraps the dumb canvas.
+[L006, S1]  * Provides a relative positioning context for absolute overlays
+[L007, S1]  * like the branding watermark, ensuring zero interference with the D3 physics engine.
+[L008, S1]  */
+[L009, S0] export const GraphWrapper: React.FC = () => {
+[L010, S4]     return (
+[L011, S8]         <div style={{ display: "flex", flex: 1, minHeight: "85vh", width: "100%", position: "relative", overflow: "hidden", backgroundColor: "#ffffff", borderRadius: "8px" }}>
+[L012, S12]             <GraphCanvas />
+[L013, S12]             
+[L014, S12]             {/* Branding Overlay */}
+[L015, S12]             <div
+[L016, S16]                 style={{
+[L017, S20]                     position: "absolute",
+[L018, S20]                     bottom: "20px",
+[L019, S20]                     right: "20px",
+[L020, S20]                     pointerEvents: "none", // Prevent capturing canvas drag events
+[L021, S20]                     fontFamily: "sans-serif",
+[L022, S20]                     fontSize: "1.2rem",
+[L023, S20]                     fontWeight: "bold",
+[L024, S20]                     color: "rgba(15, 23, 42, 0.4)", // Dark slate semi-transparent
+[L025, S20]                     letterSpacing: "0.15em",
+[L026, S20]                     userSelect: "none"
+[L027, S16]                 }}
+[L028, S12]             >
+[L029, S16]                 NOVASCOPE
+[L030, S12]             </div>
+[L031, S8]         </div>
+[L032, S4]     );
+[L033, S0] };
+
+
+// --- frontend/src/graph/GraphCanvas.tsx ---
+
+[L001, S0] import React, { useRef } from "react";
+[L002, S0] import { useForceSimulation } from "./hooks/useForceSimulation";
+[L003, S0] import { dummyNodes, dummyLinks } from "./dummyData";
+[L004, S0] 
+[L005, S0] /**
+[L006, S1]  * 100% Dumb View component.
+[L007, S1]  * Responsible ONLY for providing the DOM node reference.
+[L008, S1]  * Zero logic allowed inside the JSX.
+[L009, S1]  */
+[L010, S0] export const GraphCanvas: React.FC = () => {
+[L011, S4]     const containerRef = React.useRef<HTMLDivElement>(null);
+[L012, S4]     const canvasRef = React.useRef<HTMLCanvasElement>(null);
+[L013, S4]     const [dim, setDim] = React.useState({ w: 800, h: 600 });
+[L014, S0] 
+[L015, S4]     // Responsive Listener: Binds canvas resolution strictly to its parent container
+[L016, S4]     React.useEffect(() => {
+[L017, S8]         if (!containerRef.current) return;
+[L018, S8]         const obs = new ResizeObserver((entries) => {
+[L019, S12]             setDim({ w: entries[0].contentRect.width, h: entries[0].contentRect.height });
+[L020, S8]         });
+[L021, S8]         obs.observe(containerRef.current);
+[L022, S8]         return () => obs.disconnect();
+[L023, S4]     }, []);
+[L024, S0] 
+[L025, S4]     // State Fractality: Pass dynamic dimensions to the physics orchestrator
+[L026, S4]     useForceSimulation({ nodes: dummyNodes, links: dummyLinks }, canvasRef, dim);
+[L027, S0] 
+[L028, S4]     return (
+[L029, S8]         <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
+[L030, S12]             <canvas ref={canvasRef} width={dim.w} height={dim.h} style={{ display: "block" }} />
+[L031, S8]         </div>
+[L032, S4]     );
+[L033, S0] };
+
+
+// --- frontend/src/graph/render/drawNodes.ts ---
+
+[L001, S0] import type { NetworkNode } from "../types";
+[L002, S0] 
+[L003, S0] const GRADIENT_PALETTE = [
+[L004, S4]     { start: "#ff6b6b", end: "#c92a2a" }, // 1: Red
+[L005, S4]     { start: "#4dabf7", end: "#1864ab" }, // 2: Blue
+[L006, S4]     { start: "#69db7c", end: "#2b8a3e" }, // 3: Green
+[L007, S4]     { start: "#4dd0e1", end: "#0097a7" }, // 4: Cyan
+[L008, S4]     { start: "#ffb74d", end: "#f57c00" }, // 5: Orange
+[L009, S4]     { start: "#ba68c8", end: "#7b1fa2" }, // 6: Purple
+[L010, S4]     { start: "#fff176", end: "#fbc02d" }, // 7: Yellow
+[L011, S4]     { start: "#f06292", end: "#c2185b" }, // 8: Pink
+[L012, S4]     { start: "#a1887f", end: "#5d4037" }, // 9: Brown
+[L013, S4]     { start: "#dce775", end: "#afb42b" }, // 10: Lime
+[L014, S4]     { start: "#9575cd", end: "#512da8" }, // 11: Deep Purple
+[L015, S4]     { start: "#4db6ac", end: "#00796b" }, // 12: Teal
+[L016, S4]     { start: "#ff8a65", end: "#e64a19" }, // 13: Deep Orange
+[L017, S4]     { start: "#90a4ae", end: "#455a64" }, // 14: Blue Grey
+[L018, S4]     { start: "#aed581", end: "#689f38" }, // 15: Light Green
+[L019, S0] ];
+[L020, S0] 
+[L021, S0] const getGradientColors = (clusterId: string | number | undefined) => {
+[L022, S4]     if (clusterId === 'red') return GRADIENT_PALETTE[0];
+[L023, S4]     if (clusterId === 'blue') return GRADIENT_PALETTE[1];
+[L024, S4]     if (clusterId === 'green') return GRADIENT_PALETTE[2];
+[L025, S0] 
+[L026, S4]     const idx = parseInt(String(clusterId), 10);
+[L027, S4]     if (!isNaN(idx)) {
+[L028, S8]         const safeIdx = Math.max(0, idx - 1);
+[L029, S8]         return GRADIENT_PALETTE[safeIdx % GRADIENT_PALETTE.length];
+[L030, S4]     }
+[L031, S4]     return { start: "#9ca3af", end: "#4b5563" }; // Fallback
+[L032, S0] };
+[L033, S0] 
+[L034, S0] /**
+[L035, S1]  * Pure function to render spherical 3D nodes.
+[L036, S1]  * Iterates context drawing for individual radial gradients.
+[L037, S1]  */
+[L038, S0] export const drawNodes = (
+[L039, S4]     ctx: CanvasRenderingContext2D,
+[L040, S4]     nodes: NetworkNode[]
+[L041, S0] ) => {
+[L042, S4]     nodes.forEach((node) => {
+[L043, S8]         if (node.x == null || node.y == null) return;
+[L044, S0] 
+[L045, S8]         ctx.beginPath();
+[L046, S8]         ctx.arc(node.x, node.y, node.radius, 0, 2 * Math.PI);
+[L047, S0] 
+[L048, S8]         // Offset gradient origin to simulate top-left directional lighting
+[L049, S8]         const offset = node.radius / 3;
+[L050, S8]         const grad = ctx.createRadialGradient(
+[L051, S12]             node.x - offset, node.y - offset, 0,
+[L052, S12]             node.x, node.y, node.radius
+[L053, S8]         );
+[L054, S0] 
+[L055, S8]         const clusterId = node.cluster ?? (node as any).group;
+[L056, S8]         const colors = getGradientColors(clusterId);
+[L057, S8]         grad.addColorStop(0, "#ffffff");
+[L058, S8]         grad.addColorStop(0.3, colors.start);
+[L059, S8]         grad.addColorStop(1, "#1f2937");
+[L060, S0] 
+[L061, S8]         ctx.fillStyle = grad;
+[L062, S8]         ctx.fill();
+[L063, S8]         
+[L064, S8]         ctx.lineWidth = 0.5;
+[L065, S8]         ctx.strokeStyle = '#111827';
+[L066, S8]         ctx.stroke();
+[L067, S4]     });
+[L068, S0] };
 
 
 // --- frontend/src/graph/render/drawLinks.ts ---
@@ -21,252 +167,88 @@ Processed Files: 2
 [L008, S4]     ctx: CanvasRenderingContext2D,
 [L009, S4]     links: NetworkLink[]
 [L010, S0] ) => {
-[L011, S4]     ctx.beginPath();
-[L012, S4]     ctx.strokeStyle = "rgba(200, 200, 200, 0.3)";
-[L013, S4]     
-[L014, S4]     links.forEach((link) => {
-[L015, S8]         // D3 force simulation coerces source/target into object references
-[L016, S8]         const source = link.source as NetworkNode;
-[L017, S8]         const target = link.target as NetworkNode;
-[L018, S0] 
-[L019, S8]         if (source.x != null && source.y != null && target.x != null && target.y != null) {
-[L020, S12]             ctx.moveTo(source.x, source.y);
-[L021, S12]             
-[L022, S12]             // Calculate midpoint and offset for a subtle bezier curve
-[L023, S12]             const midX = (source.x + target.x) / 2;
-[L024, S12]             const midY = (source.y + target.y) / 2;
-[L025, S12]             const dx = target.x - source.x;
-[L026, S12]             const dy = target.y - source.y;
-[L027, S12]             
-[L028, S12]             const cpX = midX - dy * 0.2;
-[L029, S12]             const cpY = midY + dx * 0.2;
-[L030, S12]             
-[L031, S12]             ctx.quadraticCurveTo(cpX, cpY, target.x, target.y);
-[L032, S8]         }
-[L033, S4]     });
-[L034, S4]     
-[L035, S4]     ctx.stroke();
-[L036, S0] };
+[L011, S4]     ctx.save();
+[L012, S4]     // Use multiply blending and a gentle slate gray for an ultra-clean background
+[L013, S4]     ctx.globalCompositeOperation = "multiply";
+[L014, S4]     ctx.lineWidth = 0.5;
+[L015, S4]     ctx.strokeStyle = "rgba(148, 163, 184, 0.12)";
+[L016, S4]     ctx.beginPath();
+[L017, S4]     
+[L018, S4]     links.forEach((link) => {
+[L019, S8]         const source = link.source as NetworkNode;
+[L020, S8]         const target = link.target as NetworkNode;
+[L021, S0] 
+[L022, S8]         if (source.x != null && source.y != null && target.x != null && target.y != null) {
+[L023, S12]             ctx.moveTo(source.x, source.y);
+[L024, S12]             
+[L025, S12]             const midX = (source.x + target.x) / 2;
+[L026, S12]             const midY = (source.y + target.y) / 2;
+[L027, S12]             const dx = target.x - source.x;
+[L028, S12]             const dy = target.y - source.y;
+[L029, S12]             
+[L030, S12]             const cpX = midX - dy * 0.2;
+[L031, S12]             const cpY = midY + dx * 0.2;
+[L032, S12]             
+[L033, S12]             ctx.quadraticCurveTo(cpX, cpY, target.x, target.y);
+[L034, S8]         }
+[L035, S4]     });
+[L036, S4]     
+[L037, S4]     ctx.stroke();
+[L038, S4]     ctx.restore();
+[L039, S0] };
 
 
-// --- frontend/src/views/analysis/network/networkRender.js ---
+// --- frontend/src/graph/render/renderLoop.ts ---
 
-[L001, S0] import { getNodeColor, calculateRadius } from './networkStyles';
+[L001, S0] import type { NetworkNode, NetworkLink } from "../types";
+[L002, S0] import { drawLinks } from "./drawLinks";
+[L003, S0] import { drawNodes } from "./drawNodes";
+[L004, S0] import { drawLabels } from "./drawLabels";
+[L005, S0] 
+[L006, S0] /**
+[L007, S1]  * Orchestrates a single tick/frame of the Canvas rendering.
+[L008, S1]  * Enforces strict Z-index rendering order: Canvas Clear -> Links -> Nodes -> Labels.
+[L009, S1]  */
+[L010, S0] export const executeRenderFrame = (
+[L011, S4]     ctx: CanvasRenderingContext2D,
+[L012, S4]     width: number,
+[L013, S4]     height: number,
+[L014, S4]     nodes: NetworkNode[],
+[L015, S4]     links: NetworkLink[]
+[L016, S0] ) => {
+[L017, S4]     ctx.clearRect(0, 0, width, height);
+[L018, S4]     
+[L019, S4]     drawLinks(ctx, links);
+[L020, S4]     drawNodes(ctx, nodes);
+[L021, S4]     drawLabels(ctx, nodes);
+[L022, S0] };
+
+
+// --- frontend/src/graph/types.ts ---
+
+[L001, S0] import type { SimulationNodeDatum, SimulationLinkDatum } from "d3";
 [L002, S0] 
-[L003, S0] let labelCache = new Map();
-[L004, S0] let cacheNodes = null;
-[L005, S0] let lastK = -1;
-[L006, S0] let graphNodes = [];
-[L007, S0] 
-[L008, S0] export const setRenderNodes = (nodes) => {
-[L009, S4]     graphNodes = nodes || [];
-[L010, S4]     cacheNodes = null;
-[L011, S4]     lastK = -1;
-[L012, S0] };
-[L013, S0] 
-[L014, S0] // Hubs = los pocos nodos más conectados. Con umbral absoluto (degree >= 5) casi
-[L015, S0] // todos los autores de un artículo con muchos coautores serían "hubs" y sus
-[L016, S0] // etiquetas forzadas se apilarían unas sobre otras.
-[L017, S0] const HUB_MAX = 12;
-[L018, S0] const HUB_RATIO = 0.15;
-[L019, S0] const HUB_MIN_DEGREE = 5;
-[L020, S0] 
-[L021, S0] export const pickHubIds = (nodes) => {
-[L022, S4]     const limit = Math.min(HUB_MAX, Math.ceil(nodes.length * HUB_RATIO));
-[L023, S4]     const ranked = nodes
-[L024, S8]         .filter(n => (n.degree || 0) >= HUB_MIN_DEGREE)
-[L025, S8]         .sort((a, b) => (b.degree || 0) - (a.degree || 0));
-[L026, S4]     return new Set(ranked.slice(0, limit).map(n => n.id));
-[L027, S0] };
-[L028, S0] 
-[L029, S0] /**
-[L030, S1]  * Colocación greedy anti-solape. Devuelve Map(id -> { x, y, w, h, fs, hub }) en
-[L031, S1]  * coordenadas del grafo. Los nodos que no encuentran hueco se quedan sin etiqueta;
-[L032, S1]  * solo los hubs se fuerzan.
-[L033, S1]  */
-[L034, S0] export const layoutLabels = (nodes, ctx, k) => {
-[L035, S4]     const hit = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-[L036, S4]     const placed = nodes.map(n => {
-[L037, S8]         const r = calculateRadius(n);
-[L038, S8]         return { x: n.x - r, y: n.y - r, w: 2 * r, h: 2 * r };
-[L039, S4]     });
-[L040, S4]     const out = new Map();
-[L041, S4]     const hubIds = pickHubIds(nodes);
-[L042, S4]     const margin = 1.5 / k;
-[L043, S0] 
-[L044, S4]     [...nodes].sort((a, b) => (b.degree || 0) - (a.degree || 0)).forEach(n => {
-[L045, S8]         const r = calculateRadius(n);
-[L046, S8]         const g = 3 / k;
-[L047, S8]         const d = r * 0.7;
-[L048, S8]         const isHub = hubIds.has(n.id);
-[L049, S8]         let last = null;
-[L050, S0] 
-[L051, S8]         for (const f of [1, 0.85, 0.7]) {          // fuente normal, -15 %, -30 %
-[L052, S12]             const fs = ((11 + r * 0.25) / k) * f;
-[L053, S12]             ctx.font = `${isHub ? 600 : 500} ${fs}px Sans-Serif`;   // mismo peso que en paintLabel
-[L054, S12]             const w = ctx.measureText(n.name || '').width;
-[L055, S12]             const h = fs * 1.2;
-[L056, S12]             const cands = [
-[L057, S16]                 { x: n.x + r + g,         y: n.y - h / 2 },          // derecha
-[L058, S16]                 { x: n.x - r - g - w,     y: n.y - h / 2 },          // izquierda
-[L059, S16]                 { x: n.x - w / 2,         y: n.y + r + g },          // abajo
-[L060, S16]                 { x: n.x - w / 2,         y: n.y - r - g - h },      // arriba
-[L061, S16]                 { x: n.x + d + g,         y: n.y - d - g - h },      // arriba-derecha
-[L062, S16]                 { x: n.x + d + g,         y: n.y + d + g },          // abajo-derecha
-[L063, S16]                 { x: n.x - d - g - w,     y: n.y - d - g - h },      // arriba-izquierda
-[L064, S16]                 { x: n.x - d - g - w,     y: n.y + d + g },          // abajo-izquierda
-[L065, S16]                 { x: n.x + r + g * 3,     y: n.y - h / 2 }           // derecha, más lejos
-[L066, S12]             ];
-[L067, S12]             const pick = cands.find(c => {
-[L068, S16]                 const box = { x: c.x - margin, y: c.y - margin, w: w + 2 * margin, h: h + 2 * margin };
-[L069, S16]                 return !placed.some(p => hit(box, p));
-[L070, S12]             });
-[L071, S12]             last = { fs, w, h, first: cands[0] };
-[L072, S12]             if (pick) {
-[L073, S16]                 placed.push({ ...pick, w, h });
-[L074, S16]                 out.set(n.id, { ...pick, w, h, fs, hub: isHub });
-[L075, S16]                 return;
-[L076, S12]             }
-[L077, S8]         }
-[L078, S8]         // los hubs (pocos) siempre llevan etiqueta, aunque se solape un poco
-[L079, S8]         if (isHub && last) {
-[L080, S12]             placed.push({ ...last.first, w: last.w, h: last.h });
-[L081, S12]             out.set(n.id, { ...last.first, w: last.w, h: last.h, fs: last.fs, hub: true });
-[L082, S8]         }
-[L083, S4]     });
-[L084, S4]     return out;
-[L085, S0] };
-[L086, S0] 
-[L087, S0] const ensureLabels = (nodes, ctx, k) => {
-[L088, S4]     if (cacheNodes === nodes && lastK === k) return;
-[L089, S4]     try {
-[L090, S8]         labelCache = layoutLabels(nodes, ctx, k);
-[L091, S4]     } catch (e) {
-[L092, S8]         console.error('layoutLabels error:', e);
-[L093, S8]         labelCache = new Map();
-[L094, S4]     }
-[L095, S4]     cacheNodes = nodes;
-[L096, S4]     lastK = k;
-[L097, S0] };
-[L098, S0] 
-[L099, S0] /**
-[L100, S1]  * Renders a highly stylized 3D-like sphere for a node using Canvas radial gradients.
-[L101, S1]  */
-[L102, S0] export const drawNode = (node, ctx, globalScale) => {
-[L103, S4]     const radius = calculateRadius(node);
-[L104, S4]     const color = getNodeColor(node.group);
-[L105, S0] 
-[L106, S4]     ctx.beginPath();
-[L107, S4]     ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-[L108, S0] 
-[L109, S4]     // Create a 3D light-source effect (top-left offset)
-[L110, S4]     const gradient = ctx.createRadialGradient(
-[L111, S8]         node.x - radius / 3,
-[L112, S8]         node.y - radius / 3,
-[L113, S8]         radius / 10,
-[L114, S8]         node.x,
-[L115, S8]         node.y,
-[L116, S8]         radius
-[L117, S4]     );
-[L118, S0] 
-[L119, S4]     const darken = (hex) => {
-[L120, S8]         if (!hex || !hex.startsWith('#')) return '#1e293b';
-[L121, S8]         const r = Math.floor(parseInt(hex.slice(1, 3), 16) * 0.5);
-[L122, S8]         const g = Math.floor(parseInt(hex.slice(3, 5), 16) * 0.5);
-[L123, S8]         const b = Math.floor(parseInt(hex.slice(5, 7), 16) * 0.5);
-[L124, S8]         return `rgb(${r},${g},${b})`;
-[L125, S4]     };
-[L126, S0] 
-[L127, S4]     gradient.addColorStop(0, '#ffffff'); // Specular highlight
-[L128, S4]     gradient.addColorStop(0.3, color);   // Base color
-[L129, S4]     gradient.addColorStop(1, darken(color)); // Core shadow
-[L130, S0] 
-[L131, S4]     ctx.fillStyle = gradient;
-[L132, S4]     ctx.fill();
-[L133, S0] };
-[L134, S0] 
-[L135, S0] /**
-[L136, S1]  * Pinta una etiqueta ya colocada por layoutLabels.
-[L137, S1]  */
-[L138, S0] export const paintLabel = (node, pos, ctx) => {
-[L139, S4]     ctx.font = `${pos.hub ? '600' : '500'} ${pos.fs}px Sans-Serif`;
-[L140, S4]     ctx.textAlign = 'left';
-[L141, S4]     ctx.textBaseline = 'top';
-[L142, S4]     const text = node.name || '';
-[L143, S0] 
-[L144, S4]     if (ctx.strokeText) {                       // halo blanco: legible sobre las aristas
-[L145, S8]         ctx.lineJoin = 'round';
-[L146, S8]         ctx.lineWidth = pos.fs * 0.28;
-[L147, S8]         ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-[L148, S8]         ctx.strokeText(text, pos.x, pos.y);
-[L149, S4]     }
-[L150, S4]     ctx.fillStyle = pos.hub ? '#0f172a' : '#334155';
-[L151, S4]     ctx.fillText(text, pos.x, pos.y);
-[L152, S0] };
-[L153, S0] 
-[L154, S0] /**
-[L155, S1]  * Etiqueta de un solo nodo (usa la caché registrada con setRenderNodes).
-[L156, S1]  */
-[L157, S0] export const drawLabel = (node, ctx, globalScale) => {
-[L158, S4]     if (graphNodes.length > 0) ensureLabels(graphNodes, ctx, globalScale);
-[L159, S4]     const pos = labelCache.get(node.id);
-[L160, S4]     if (!pos) return;
-[L161, S4]     paintLabel(node, pos, ctx);
-[L162, S0] };
-[L163, S0] 
-[L164, S0] /**
-[L165, S1]  * Todas las etiquetas en una sola pasada, DESPUÉS de dibujar nodos y aristas,
-[L166, S1]  * para que ningún nodo tape un texto. Pensada para onRenderFramePost.
-[L167, S1]  */
-[L168, S0] export const drawAllLabels = (nodes, ctx, globalScale) => {
-[L169, S4]     if (!nodes || nodes.length === 0) return;
-[L170, S4]     ensureLabels(nodes, ctx, globalScale);
-[L171, S4]     nodes.forEach(n => {
-[L172, S8]         const pos = labelCache.get(n.id);
-[L173, S8]         if (pos) paintLabel(n, pos, ctx);
-[L174, S4]     });
-[L175, S0] };
-[L176, S0] 
-[L177, S0] export const drawBranding = (ctx, width, height) => {
-[L178, S4]     ctx.save();
-[L179, S4]     ctx.font = 'bold 16px Sans-Serif';
-[L180, S4]     ctx.fillStyle = 'rgba(156, 163, 175, 0.4)'; // Tailwind gray-400, 40% opacity
-[L181, S4]     ctx.textAlign = 'right';
-[L182, S4]     ctx.textBaseline = 'bottom';
-[L183, S4]     ctx.fillText('NOVASCOPE', width - 20, height - 20);
-[L184, S4]     ctx.restore();
-[L185, S0] };
-[L186, S0] 
-[L187, S0] /**
-[L188, S1]  * Renders smooth bezier curves for links, mapping weight to opacity and thickness.
-[L189, S1]  */
-[L190, S0] export const drawLink = (link, ctx, globalScale) => {
-[L191, S4]     const { source, target, weight } = link;
-[L192, S0] 
-[L193, S4]     const opacity = Math.min(0.7, 0.25 + (weight * 0.08));
-[L194, S4]     const thickness = Math.min(2.0, Math.max(0.5, weight * 0.4)) / globalScale;
-[L195, S4]     const color = getNodeColor(source.group);
-[L196, S0] 
-[L197, S4]     ctx.beginPath();
-[L198, S4]     ctx.moveTo(source.x, source.y);
-[L199, S0] 
-[L200, S4]     // Quadratic-like Bezier control points to add a slight curve
-[L201, S4]     const dx = target.x - source.x;
-[L202, S4]     const dy = target.y - source.y;
-[L203, S4]     const cx1 = source.x + dx * 0.5 - dy * 0.04;
-[L204, S4]     const cy1 = source.y + dy * 0.5 + dx * 0.04;
-[L205, S0] 
-[L206, S4]     ctx.bezierCurveTo(cx1, cy1, cx1, cy1, target.x, target.y);
-[L207, S0] 
-[L208, S4]     const hexToRgba = (hex, alpha) => {
-[L209, S8]         if (!hex || !hex.startsWith('#')) return `rgba(148, 163, 184, ${alpha})`;
-[L210, S8]         const r = parseInt(hex.slice(1, 3), 16);
-[L211, S8]         const g = parseInt(hex.slice(3, 5), 16);
-[L212, S8]         const b = parseInt(hex.slice(5, 7), 16);
-[L213, S8]         return `rgba(${r},${g},${b},${alpha})`;
-[L214, S4]     };
-[L215, S0] 
-[L216, S4]     ctx.strokeStyle = hexToRgba(color, opacity);
-[L217, S4]     ctx.lineWidth = thickness;
-[L218, S4]     ctx.stroke();
-[L219, S0] };
+[L003, S0] /**
+[L004, S1]  * NetworkNode represents a single vertex in the D3 force simulation.
+[L005, S1]  * Extends the baseline D3 SimulationNodeDatum to inherit vx, vy, x, y, etc.
+[L006, S1]  */
+[L007, S0] export interface NetworkNode extends SimulationNodeDatum {
+[L008, S4]     id: string;
+[L009, S4]     name: string;
+[L010, S4]     radius: number;
+[L011, S4]     /**
+[L012, S5]      * The cluster assignment dictates the node's visual 3D styling mapping.
+[L013, S5]      * - "red"   -> Primary cluster
+[L014, S5]      * - "blue"  -> Secondary cluster
+[L015, S5]      * - "green" -> Tertiary cluster
+[L016, S5]      */
+[L017, S4]     cluster: "red" | "blue" | "green";
+[L018, S0] }
+[L019, S0] 
+[L020, S0] /**
+[L021, S1]  * NetworkLink represents an edge connecting two NetworkNodes in the simulation.
+[L022, S1]  */
+[L023, S0] export interface NetworkLink extends SimulationLinkDatum<NetworkNode> {
+[L024, S4]     source: string | NetworkNode;
+[L025, S4]     target: string | NetworkNode;
+[L026, S0] }

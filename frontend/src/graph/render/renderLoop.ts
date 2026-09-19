@@ -16,7 +16,13 @@ export const executeRenderFrame = (
 ) => {
     ctx.clearRect(0, 0, width, height);
     
+    const sortedNodes = [...nodes].sort((a, b) => {
+        const valA = a.degree ?? a.radius;
+        const valB = b.degree ?? b.radius;
+        return valA - valB;
+    });
+    
     drawLinks(ctx, links);
-    drawNodes(ctx, nodes);
-    drawLabels(ctx, nodes);
+    drawNodes(ctx, sortedNodes);
+    drawLabels(ctx, sortedNodes);
 };

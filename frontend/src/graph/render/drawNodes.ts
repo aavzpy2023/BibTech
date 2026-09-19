@@ -1,34 +1,28 @@
 import type { NetworkNode } from "../types";
 
-const GRADIENT_PALETTE = [
-    { start: "#ff6b6b", end: "#c92a2a" }, // 1: Red
-    { start: "#4dabf7", end: "#1864ab" }, // 2: Blue
-    { start: "#69db7c", end: "#2b8a3e" }, // 3: Green
-    { start: "#4dd0e1", end: "#0097a7" }, // 4: Cyan
-    { start: "#ffb74d", end: "#f57c00" }, // 5: Orange
-    { start: "#ba68c8", end: "#7b1fa2" }, // 6: Purple
-    { start: "#fff176", end: "#fbc02d" }, // 7: Yellow
-    { start: "#f06292", end: "#c2185b" }, // 8: Pink
-    { start: "#a1887f", end: "#5d4037" }, // 9: Brown
-    { start: "#dce775", end: "#afb42b" }, // 10: Lime
-    { start: "#9575cd", end: "#512da8" }, // 11: Deep Purple
-    { start: "#4db6ac", end: "#00796b" }, // 12: Teal
-    { start: "#ff8a65", end: "#e64a19" }, // 13: Deep Orange
-    { start: "#90a4ae", end: "#455a64" }, // 14: Blue Grey
-    { start: "#aed581", end: "#689f38" }, // 15: Light Green
+const TOP_PALETTE = [
+    { start: "#ff6b6b", end: "#e63946" },
+    { start: "#60a5fa", end: "#1d4ed8" },
+    { start: "#4fd1c5", end: "#2a9d8f" },
+    { start: "#fde047", end: "#e9c46a" },
 ];
 
-const getGradientColors = (clusterId: string | number | undefined) => {
-    if (clusterId === 'red') return GRADIENT_PALETTE[0];
-    if (clusterId === 'blue') return GRADIENT_PALETTE[1];
-    if (clusterId === 'green') return GRADIENT_PALETTE[2];
+let topClustersCache: string[] | null = null;
+let lastNodesRef: NetworkNode[] | null = null;
 
-    const idx = parseInt(String(clusterId), 10);
-    if (!isNaN(idx)) {
-        const safeIdx = Math.max(0, idx - 1);
-        return GRADIENT_PALETTE[safeIdx % GRADIENT_PALETTE.length];
+const getTopClusters = (nodes: NetworkNode[]): string[] => {
+    if (nodes === lastNodesRef && topClustersCache) {
+        return topClustersCache;
     }
-    return { start: "#9ca3af", end: "#4b5563" }; // Fallback
+    const counts = new Map<string, number>();
+    nodes.forEach(n => {
+        const cid = String(n.cluster ?? (n as any).group);
+        counts.set(cid, (counts.get(cid) || 0) + 1);
+    });
+    const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+    topClustersCache = sorted.slice(0, 4).map(e => e[0]);
+    lastNodesRef = nodes;
+    return topClustersCache;
 };
 
 /**
@@ -39,6 +33,9 @@ export const drawNodes = (
     ctx: CanvasRenderingContext2D,
     nodes: NetworkNode[]
 ) => {
+    const topClusters = getTopClusters(nodes);
+    const threshold = 15;
+
     nodes.forEach((node) => {
         if (node.x == null || node.y == null) return;
 
@@ -52,17 +49,32 @@ export const drawNodes = (
             node.x, node.y, node.radius
         );
 
-        const clusterId = node.cluster ?? (node as any).group;
-        const colors = getGradientColors(clusterId);
+        const clusterId = String(node.cluster ?? (node as any).group);
+        const idx = topClusters.indexOf(clusterId);
+        const colors = idx !== -1 ? TOP_PALETTE[idx] : { start: "#e5e7eb", end: "#c9c9c9" };
+
         grad.addColorStop(0, "#ffffff");
         grad.addColorStop(0.3, colors.start);
-        grad.addColorStop(1, "#1f2937");
+        grad.addColorStop(1, colors.end);
+
+        const isLarge = (node.degree ?? node.radius) > threshold;
+
+        if (isLarge) {
+            ctx.shadowColor = "rgba(0,0,0,0.25)";
+            ctx.shadowBlur = 6;
+            ctx.shadowOffsetY = 3;
+        } else {
+            ctx.shadowColor = "transparent";
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+        }
 
         ctx.fillStyle = grad;
         ctx.fill();
         
-        ctx.lineWidth = 0.5;
-        ctx.strokeStyle = '#111827';
+        ctx.shadowColor = "transparent"; // Reset shadow
+        ctx.lineWidth = isLarge ? 3 : 0.5;
+        ctx.strokeStyle = isLarge ? "#ffffff" : "#111827";
         ctx.stroke();
     });
 };

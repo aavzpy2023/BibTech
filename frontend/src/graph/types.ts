@@ -8,13 +8,12 @@ export interface NetworkNode extends SimulationNodeDatum {
     id: string;
     name: string;
     radius: number;
+    degree?: number;
     /**
      * The cluster assignment dictates the node's visual 3D styling mapping.
-     * - "red"   -> Primary cluster
-     * - "blue"  -> Secondary cluster
-     * - "green" -> Tertiary cluster
+     * Resolved dynamically: Top 4 clusters are colored, rest are fallback.
      */
-    cluster: "red" | "blue" | "green";
+    cluster: string | number;
 }
 
 /**
@@ -23,4 +22,5 @@ export interface NetworkNode extends SimulationNodeDatum {
 export interface NetworkLink extends SimulationLinkDatum<NetworkNode> {
     source: string | NetworkNode;
     target: string | NetworkNode;
+    weight?: number;
 }
