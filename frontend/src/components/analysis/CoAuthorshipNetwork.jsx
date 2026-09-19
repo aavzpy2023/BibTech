@@ -371,7 +371,7 @@ export default function CoAuthorshipNetwork() {
                             </div>
                         </div>
                     ) : (
-                    useMemo(() => {
+                    (() => {
                         if (!frozenData || !frozenData.nodes) return null;
                         const counts = {};
                         frozenData.nodes.forEach(n => {
@@ -397,7 +397,7 @@ export default function CoAuthorshipNetwork() {
                             );
                         }
                         return items;
-                    }, [frozenData, clusters])
+                    })()
                     )}
                 </div>
 
