@@ -13,10 +13,12 @@ if str(BACKEND_DIR / "src") not in sys.path:
 
 try:
     from src.database.models.core import Article, Project, ProjectArticle, Base
+    from src.database.models.identity import Author, AuthorArticle
     from src.database.session import get_db
     from src.bibliography.router import router
 except ImportError:
     from database.models.core import Article, Project, ProjectArticle, Base
+    from database.models.identity import Author, AuthorArticle
     from database.session import get_db
     from bibliography.router import router
 
@@ -45,19 +47,38 @@ def client(in_memory_db):
     return TestClient(app)
 
 def test_get_coauthorship_network_extracts_real_authors(client, in_memory_db):
+    alice = Author(name="Alice Smith")
+    bob = Author(name="Bob Jones")
+    charlie = Author(name="Charlie Brown")
+    in_memory_db.add_all([alice, bob, charlie])
+    in_memory_db.commit()
+
     art1 = Article(
         title="Paper A",
-        author="Alice Smith and Bob Jones",
         year="2021",
         times_cited=50
     )
     art2 = Article(
         title="Paper B",
-        author="Bob Jones and Charlie Brown",
         year="2022",
         times_cited=20
     )
     in_memory_db.add_all([art1, art2])
+    in_memory_db.commit()
+
+    aa1 = AuthorArticle(
+        article_id=art1.id, author_id=alice.id, author_order=1
+    )
+    aa2 = AuthorArticle(
+        article_id=art1.id, author_id=bob.id, author_order=2
+    )
+    aa3 = AuthorArticle(
+        article_id=art2.id, author_id=bob.id, author_order=1
+    )
+    aa4 = AuthorArticle(
+        article_id=art2.id, author_id=charlie.id, author_order=2
+    )
+    in_memory_db.add_all([aa1, aa2, aa3, aa4])
     in_memory_db.commit()
 
     response = client.get("/api/bibliography/network/co-authorship")
