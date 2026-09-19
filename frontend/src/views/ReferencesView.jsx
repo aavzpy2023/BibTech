@@ -148,13 +148,13 @@ export function ReferencesView() {
   } = useReferencesUpload();
 
   const fetchProjectReferences = React.useCallback(async (code) => {
-    if (!code || !code.trim()) {
-      setTableData([]);
+    const trimmed = code ? code.trim() : '';
+    if (!trimmed) {
       return;
     }
     try {
       const res = await fetch(
-        `/api/bibliography/references?project_code=${encodeURIComponent(code.trim())}`
+        `/api/bibliography/references?project_code=${encodeURIComponent(trimmed)}`
       );
       if (res.ok) {
         const data = await res.json();

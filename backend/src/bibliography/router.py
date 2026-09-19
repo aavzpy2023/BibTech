@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from .schemas import (
     ParsedReference,
     BatchDownloadRequest,
@@ -55,6 +55,28 @@ try:
     HAS_MULTIPART = True
 except ImportError:
     HAS_MULTIPART = False
+
+
+def format_author_name(raw_name: str) -> str:
+    """Format an author name to standardized 'Lastname, I.' format."""
+    if not raw_name:
+        return ""
+    name = raw_name.strip()
+    if not name:
+        return ""
+    if "," in name:
+        parts = [p.strip() for p in name.split(",", 1) if p.strip()]
+        last = parts[0]
+        if len(parts) > 1 and parts[1]:
+            first_init = parts[1][0].upper()
+            return f"{last}, {first_init}."
+        return last
+    parts = [p.strip() for p in name.split() if p.strip()]
+    if len(parts) == 1:
+        return parts[0]
+    last = parts[-1]
+    first_init = parts[0][0].upper()
+    return f"{last}, {first_init}."
 
 async def _process_upload(file: UploadFile) -> List[ParsedReference]:
     if not file.filename:
@@ -192,7 +214,18 @@ if HAS_MULTIPART:
 
         article_ids = list(status_map.keys())
         articles = (
-            db.query(Article).filter(Article.id.in_(article_ids)).all()
+            db.query(Article)
+            .options(
+                selectinload(Article.author_articles)
+                .selectinload("author")
+                .selectinload("affiliation"),
+                selectinload(Article.keywords),
+                selectinload(Article.cited_references),
+                selectinload(Article.funding),
+                selectinload(Article.downloads),
+            )
+            .filter(Article.id.in_(article_ids))
+            .all()
         )
 
         def _to_str(val):
@@ -217,9 +250,6 @@ if HAS_MULTIPART:
             if isinstance(val, (list, tuple, set)):
                 return [x for x in val if not _is_mock(x)]
             return []
-
-        # Purge physical duplicates in database if any exist
-        clean_duplicate_fundings(db)
 
         now_iso = datetime.now(timezone.utc).isoformat()
         result = []
@@ -526,15 +556,20 @@ def get_coauthorship_network(
             except (ValueError, TypeError):
                 pass
 
-        for name in names:
+        formatted_names = [
+            format_author_name(n) for n in names if format_author_name(n)
+        ]
+        formatted_names = list(dict.fromkeys(formatted_names))
+
+        for name in formatted_names:
             author_papers[name] += 1
             author_citations[name] += cites_val
             if year_val:
                 author_years[name].append(year_val)
 
-        for i in range(len(names)):
-            for j in range(i + 1, len(names)):
-                pair = tuple(sorted([names[i], names[j]]))
+        for i in range(len(formatted_names)):
+            for j in range(i + 1, len(formatted_names)):
+                pair = tuple(sorted([formatted_names[i], formatted_names[j]]))
                 coauthorship_counts[pair] += 1
 
     ranked_authors = sorted(
@@ -691,14 +726,14 @@ def get_cocitation_network(
         valid_refs = []
         for cr in crs:
             if cr.id not in ref_data:
-                auth = cr.author or "Unknown"
-                auth = auth.split(",")[0].strip() if "," in auth else auth.split(" ")[0].strip()
+                raw_auth = cr.author or "Unknown"
+                auth = format_author_name(raw_auth) or raw_auth
                 yr = str(cr.year) if cr.year else ""
                 label = f"{auth} ({yr})" if yr else auth
                 ref_data[cr.id] = {
                     "id": str(cr.id),
                     "name": label,
-                    "author": cr.author,
+                    "author": auth,
                     "year": cr.year,
                     "source": cr.source,
                 }

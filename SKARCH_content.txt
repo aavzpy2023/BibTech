@@ -1,391 +1,130 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-19 16:56:12
+Date: 2026-09-19 17:02:01
 AST Mode: True
 Line Numbers: False
-Modules: useNetworkLayout.js, useCoAuthorshipNetwork.js, useCoCitationNetwork.js
-Processed Files: 3
+Modules: useReferencesUpload.js
+Processed Files: 1
 ===========================
 
 
 
-// --- frontend/src/hooks/useNetworkLayout.js ---
+// --- frontend/src/hooks/useReferencesUpload.js ---
 
-import { useState, useEffect } from 'react';
-import { calculateStaticLayout } from '../views/analysis/network/networkLayout';
+import { useState, useCallback } from 'react';
 
-/**
- * State Fractality Hook: Pre-calculates physical graph forces asynchronously.
- * Prevents UI thread blocking while D3 ticks 300 times in the background.
- */
-export default function useNetworkLayout(rawNodes, rawLinks) {
-    const [frozenData, setFrozenData] = useState({ nodes: [], links: [] });
-    const [isCalculating, setIsCalculating] = useState(true);
+export function useReferencesUpload() {
+  const [projectCode, setProjectCode] = useState(() => {
+    try {
+      return localStorage.getItem('last_project_code') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState(null);
+  const [insertedCount, setInsertedCount] = useState(null);
+  const [parsedCount, setParsedCount] = useState(null);
 
-    useEffect(() => {
-        if (!rawNodes || rawNodes.length === 0) {
-            setFrozenData({ nodes: [], links: [] });
-            setIsCalculating(false);
-            return;
+  const uploadAndInject = useCallback(
+    async (filesInput) => {
+      if (!projectCode || !projectCode.trim()) {
+        setError('El código de proyecto es requerido');
+        setIsSuccess(false);
+        return;
+      }
+
+      if (!filesInput || (Array.isArray(filesInput) && filesInput.length === 0)) {
+        setError('Debe seleccionar un archivo bibliográfico válido');
+        setIsSuccess(false);
+        return;
+      }
+      
+      const files = Array.isArray(filesInput) ? filesInput : [filesInput];
+
+      const hasInvalid = files.some(f => !f.name.toLowerCase().endsWith('.bib'));
+      if (hasInvalid) {
+        setError('Solo se permiten archivos .bib');
+        setIsSuccess(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      setIsSuccess(false);
+
+      try {
+        let totalInserted = 0;
+        const allParsed = [];
+
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('project_code', projectCode.trim());
+
+          const response = await fetch('/api/bibliography/inject', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errPayload = await response.json().catch(() => ({}));
+          throw new Error(
+            errPayload.detail || 'Error al inyectar referencias'
+          );
         }
 
-        setIsCalculating(true);
-        
-        // Relieve the main thread rendering cycle by deferring the heavy math
-        const timer = setTimeout(() => {
-            const staticData = calculateStaticLayout(rawNodes, rawLinks);
-            setFrozenData(staticData);
-            setIsCalculating(false);
-        }, 0);
+        const data = await response.json();
+        totalInserted += (data.inserted ?? 0);
 
-        return () => clearTimeout(timer);
-    }, [rawNodes, rawLinks]);
+        try {
+          const uploadForm = new FormData();
+          uploadForm.append('file', file);
+          const parseRes = await fetch('/api/bibliography/upload', {
+            method: 'POST',
+            body: uploadForm,
+          });
+          if (parseRes.ok) {
+            const parsed = await parseRes.json();
+            if (Array.isArray(parsed)) allParsed.push(...parsed);
+          }
+        } catch {}
+        }
 
-    return { frozenData, isCalculating };
+        try {
+          localStorage.setItem('last_project_code', projectCode.trim());
+        } catch {}
+        setIsSuccess(true);
+        setInsertedCount(totalInserted);
+        setParsedCount(allParsed.length);
+        return allParsed;
+      } catch (err) {
+        setError(err.message || 'Error inesperado durante la carga');
+        setIsSuccess(false);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [projectCode]
+  );
+
+  const resetStatus = useCallback(() => {
+    setIsSuccess(false);
+    setError(null);
+  }, []);
+
+  return {
+    projectCode,
+    setProjectCode,
+    isLoading,
+    isSuccess,
+    error,
+    insertedCount,
+    parsedCount,
+    uploadAndInject,
+    resetStatus,
+  };
 }
 
-
-// --- frontend/src/hooks/useCoAuthorshipNetwork.js ---
-
-import React, { useState, useMemo, useCallback } from 'react';
-
-const DEFAULT_NODES_3D = [
-    {
-        id: '1',
-        name: 'Vaswani, A.',
-        papers: 14,
-        citations: 12400,
-        avgYear: 2018.5,
-        group: 1,
-        x: -110,
-        y: -20,
-        z: 90
-    },
-    {
-        id: '2',
-        name: 'Shazeer, N.',
-        papers: 12,
-        citations: 9800,
-        avgYear: 2019.2,
-        group: 1,
-        x: -40,
-        y: -70,
-        z: 50
-    },
-    {
-        id: '3',
-        name: 'Parmar, N.',
-        papers: 10,
-        citations: 7500,
-        avgYear: 2019.0,
-        group: 1,
-        x: -130,
-        y: -90,
-        z: -20
-    },
-    {
-        id: '4',
-        name: 'Uszkoreit, J.',
-        papers: 9,
-        citations: 6900,
-        avgYear: 2018.2,
-        group: 1,
-        x: -20,
-        y: 30,
-        z: 80
-    },
-    {
-        id: '5',
-        name: 'Jones, L.',
-        papers: 8,
-        citations: 5400,
-        avgYear: 2017.9,
-        group: 1,
-        x: -70,
-        y: 80,
-        z: 30
-    },
-    {
-        id: '6',
-        name: 'Gomez, A. N.',
-        papers: 7,
-        citations: 4900,
-        avgYear: 2019.8,
-        group: 1,
-        x: -160,
-        y: 40,
-        z: -50
-    },
-    {
-        id: '7',
-        name: 'Kaiser, L.',
-        papers: 11,
-        citations: 8600,
-        avgYear: 2020.1,
-        group: 1,
-        x: -110,
-        y: 110,
-        z: -10
-    },
-    {
-        id: '8',
-        name: 'Polosukhin, I.',
-        papers: 6,
-        citations: 4100,
-        avgYear: 2017.5,
-        group: 1,
-        x: -190,
-        y: -30,
-        z: 20
-    },
-    {
-        id: '9',
-        name: 'Bengio, Y.',
-        papers: 24,
-        citations: 28900,
-        avgYear: 2016.4,
-        group: 2,
-        x: 130,
-        y: -10,
-        z: -60
-    },
-    {
-        id: '10',
-        name: 'LeCun, Y.',
-        papers: 21,
-        citations: 24500,
-        avgYear: 2015.8,
-        group: 2,
-        x: 190,
-        y: -60,
-        z: 60
-    },
-    {
-        id: '11',
-        name: 'Hinton, G.',
-        papers: 19,
-        citations: 26100,
-        avgYear: 2015.2,
-        group: 2,
-        x: 150,
-        y: 90,
-        z: 70
-    },
-    {
-        id: '12',
-        name: 'Goodfellow, I.',
-        papers: 15,
-        citations: 19200,
-        avgYear: 2017.1,
-        group: 2,
-        x: 80,
-        y: 50,
-        z: -70
-    }
-];
-
-const DEFAULT_LINKS = [
-    { source: '1', target: '2', weight: 6 },
-    { source: '1', target: '3', weight: 5 },
-    { source: '1', target: '4', weight: 4 },
-    { source: '1', target: '5', weight: 4 },
-    { source: '1', target: '6', weight: 3 },
-    { source: '1', target: '7', weight: 5 },
-    { source: '1', target: '8', weight: 3 },
-    { source: '2', target: '3', weight: 4 },
-    { source: '2', target: '4', weight: 5 },
-    { source: '3', target: '7', weight: 4 },
-    { source: '9', target: '10', weight: 6 },
-    { source: '9', target: '11', weight: 4 },
-    { source: '9', target: '12', weight: 7 },
-    { source: '10', target: '11', weight: 5 },
-    { source: '1', target: '9', weight: 2 }
-];
-
-const CLUSTER_METADATA = {
-    1: { name: 'Attention & Transformers', color: '#ef4444' },
-    2: { name: 'Deep Learning Foundations', color: '#3b82f6' },
-    3: { name: 'Emerging Research', color: '#10b981' },
-    4: { name: 'Secondary Hub', color: '#06b6d4' }
-};
-
-
-
-import { filterNetworkData } from '../views/analysis/network/networkData';
-
-export default function useCoAuthorshipNetwork() {
-    const [louvainGamma, setLouvainGamma] = useState(1.0);
-    const [debouncedGamma, setDebouncedGamma] = useState(1.0);
-    const [dynamicNodes, setDynamicNodes] = useState(null);
-    const [dynamicLinks, setDynamicLinks] = useState(null);
-    const [dynamicClusters, setDynamicClusters] = useState(null);
-    const [minWeight, setMinWeight] = useState(1);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedNodeId, setSelectedNodeId] = useState(null);
-    const [hoveredNodeId, setHoveredNodeId] = useState(null);
-    const [viewMode, setViewMode] = useState('network');
-    const [isLoading, setIsLoading] = useState(false);
-
-    // Debounce the Gamma slider to prevent backend DDoS
-    React.useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedGamma(louvainGamma);
-        }, 1000);
-        return () => clearTimeout(handler);
-    }, [louvainGamma]);
-
-    React.useEffect(() => {
-        let isMounted = true;
-        setIsLoading(true);
-        fetch(`/api/bibliography/network/co-authorship?resolution=${debouncedGamma}`)
-            .then(res => (res.ok ? res.json() : null))
-            .then(data => {
-                if (isMounted && data && data.nodes && data.nodes.length > 0) {
-                    setDynamicNodes(data.nodes);
-                    setDynamicLinks(data.links);
-                    if (data.clusters) {
-                        setDynamicClusters(data.clusters);
-                    }
-                }
-            })
-            .catch(() => {
-                // Fallback to static distribution on failure or testing
-            })
-            .finally(() => {
-                if (isMounted) setIsLoading(false);
-            });
-        return () => {
-            isMounted = false;
-        };
-    }, [debouncedGamma]);
-
-
-
-    const sourceNodes = dynamicNodes || DEFAULT_NODES_3D;
-    const sourceLinks = dynamicLinks || DEFAULT_LINKS;
-    const sourceClusters = dynamicClusters || CLUSTER_METADATA;
-
-    const filteredLinks = useMemo(() => {
-        return sourceLinks.filter(link => link.weight >= minWeight);
-    }, [sourceLinks, minWeight]);
-
-    const { nodes: finalNodes, links: finalLinks } = useMemo(() => {
-        return filterNetworkData(sourceNodes, sourceLinks, minWeight);
-    }, [sourceNodes, sourceLinks, minWeight]);
-
-    const selectedNode = useMemo(() => {
-        return sourceNodes.find(n => n.id === selectedNodeId) || null;
-    }, [selectedNodeId, sourceNodes]);
-
-    return {
-        nodes: finalNodes,
-        links: finalLinks,
-        minWeight,
-        setMinWeight,
-        searchQuery,
-        setSearchQuery,
-        selectedNodeId,
-        setSelectedNodeId,
-        hoveredNodeId,
-        setHoveredNodeId,
-        selectedNode,
-        viewMode,
-        setViewMode,
-        clusters: sourceClusters,
-        louvainGamma,
-        setLouvainGamma,
-        isLoading
-    };
-}
-
-
-// --- frontend/src/hooks/useCoCitationNetwork.js ---
-
-import React, { useState, useMemo, useCallback } from 'react';
-import { filterNetworkData } from '../views/analysis/network/networkData';
-
-const DEFAULT_NODES_3D = [];
-const DEFAULT_LINKS = [];
-const CLUSTER_METADATA = {};
-
-export default function useCoCitationNetwork() {
-    const [louvainGamma, setLouvainGamma] = useState(1.0);
-    const [debouncedGamma, setDebouncedGamma] = useState(1.0);
-    const [dynamicNodes, setDynamicNodes] = useState(null);
-    const [dynamicLinks, setDynamicLinks] = useState(null);
-    const [dynamicClusters, setDynamicClusters] = useState(null);
-    const [minWeight, setMinWeight] = useState(1);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedNodeId, setSelectedNodeId] = useState(null);
-    const [hoveredNodeId, setHoveredNodeId] = useState(null);
-    const [viewMode, setViewMode] = useState('network');
-    const [isLoading, setIsLoading] = useState(false);
-
-    React.useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedGamma(louvainGamma);
-        }, 1000);
-        return () => clearTimeout(handler);
-    }, [louvainGamma]);
-
-    React.useEffect(() => {
-        let isMounted = true;
-        setIsLoading(true);
-        fetch(`/api/bibliography/network/co-citation?resolution=${debouncedGamma}`)
-            .then(res => (res.ok ? res.json() : null))
-            .then(data => {
-                if (isMounted && data && data.nodes && data.nodes.length > 0) {
-                    setDynamicNodes(data.nodes);
-                    setDynamicLinks(data.links);
-                    if (data.clusters) {
-                        setDynamicClusters(data.clusters);
-                    }
-                }
-            })
-            .catch(() => {
-                // Fallback handled
-            })
-            .finally(() => {
-                if (isMounted) setIsLoading(false);
-            });
-        return () => {
-            isMounted = false;
-        };
-    }, [debouncedGamma]);
-
-    const sourceNodes = dynamicNodes || DEFAULT_NODES_3D;
-    const sourceLinks = dynamicLinks || DEFAULT_LINKS;
-    const sourceClusters = dynamicClusters || CLUSTER_METADATA;
-
-    const filteredLinks = useMemo(() => {
-        return sourceLinks.filter(link => link.weight >= minWeight);
-    }, [sourceLinks, minWeight]);
-
-    const { nodes: finalNodes, links: finalLinks } = useMemo(() => {
-        return filterNetworkData(sourceNodes, sourceLinks, minWeight);
-    }, [sourceNodes, sourceLinks, minWeight]);
-
-    const selectedNode = useMemo(() => {
-        return sourceNodes.find(n => n.id === selectedNodeId) || null;
-    }, [selectedNodeId, sourceNodes]);
-
-    return {
-        nodes: finalNodes,
-        links: finalLinks,
-        minWeight,
-        setMinWeight,
-        searchQuery,
-        setSearchQuery,
-        selectedNodeId,
-        setSelectedNodeId,
-        hoveredNodeId,
-        setHoveredNodeId,
-        selectedNode,
-        viewMode,
-        setViewMode,
-        clusters: sourceClusters,
-        louvainGamma,
-        setLouvainGamma,
-        isLoading
-    };
-}
+export default useReferencesUpload;
