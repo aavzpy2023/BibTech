@@ -200,7 +200,7 @@ export default function CoAuthorshipNetwork() {
         <>
             <div style={styles.controlGroup}>
                 <label htmlFor="edge-opacity-slider" style={styles.label}>
-                    Connections:
+                    Connections ({edgeOpacity.toFixed(2)}):
                 </label>
                 <input
                     id="edge-opacity-slider"

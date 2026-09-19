@@ -222,9 +222,6 @@ export const drawLink = (link, ctx, globalScale) => {
     const isConnected = isHoverActive && (source.id === activeHoveredNodeId || target.id === activeHoveredNodeId);
     const isHighlighted = Boolean(link.highlighted || link.hovered || isConnected);
 
-    // 1 + 3: Neutral desaturated gray by default, community color only on highlight
-    const color = isHighlighted ? getNodeColor(source.group) : '#94a3b8';
-
     // 2 + 4: Weight-driven opacity with extreme contrast separation in focus mode
         const sourceGroup = String(source.group || source.cluster);
         const targetGroup = String(target.group || target.cluster);
