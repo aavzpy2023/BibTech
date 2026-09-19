@@ -60,4 +60,16 @@ describe('useCoAuthorshipNetwork', () => {
         expect(result.current.rotation.rotX).toBe(15);
         expect(result.current.rotation.rotY).toBe(25);
     });
+
+    it('supports VOSviewer view mode toggling between network and overlay', () => {
+        const { result } = renderHook(() => useCoAuthorshipNetwork());
+
+        expect(result.current.viewMode).toBe('network');
+
+        act(() => {
+            result.current.setViewMode('overlay');
+        });
+
+        expect(result.current.viewMode).toBe('overlay');
+    });
 });

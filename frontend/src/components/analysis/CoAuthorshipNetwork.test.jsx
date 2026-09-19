@@ -53,4 +53,14 @@ describe('CoAuthorshipNetwork', () => {
 
         fireEvent.click(downloadBtn);
     });
+
+    it('renders VOSviewer mode switchers and cluster legend', () => {
+        render(<CoAuthorshipNetwork />);
+
+        expect(screen.getByRole('button', { name: /Network/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Overlay/i })).toBeInTheDocument();
+        expect(screen.getByTestId('vosviewer-legend')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: /Overlay/i }));
+    });
 });
