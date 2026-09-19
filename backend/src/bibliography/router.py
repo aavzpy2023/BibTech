@@ -535,34 +535,53 @@ def get_coauthorship_network(
                         queue.append(neighbor)
             curr_cluster = (curr_cluster % 3) + 1
 
+    degree = {n: len(adj[n]) for n in ranked_authors}
+    cluster_nodes = defaultdict(list)
+    for name in ranked_authors:
+        cluster_nodes[visited.get(name, 1)].append(name)
+        
+    cluster_ids = sorted(cluster_nodes.keys())
+    num_clusters = len(cluster_ids)
+    
     nodes = []
-    n_count = len(ranked_authors)
-    for idx, name in enumerate(ranked_authors):
-        node_id = author_id_map[name]
-        papers = author_papers[name]
-        citations = author_citations[name]
-        years = author_years[name]
-        avg_year = sum(years) / len(years) if years else 2020.0
-        cluster = visited.get(name, 1)
-
-        phi = math.acos(1 - 2 * (idx + 0.5) / n_count)
-        theta = math.pi * (1 + 5**0.5) * idx
-        radius_3d = 160.0 + (idx % 3) * 18.0
-        x = radius_3d * math.sin(phi) * math.cos(theta)
-        y = radius_3d * math.cos(phi) * 0.78
-        z = radius_3d * math.sin(phi) * math.sin(theta)
-
-        nodes.append({
-            "id": node_id,
-            "name": name,
-            "papers": papers,
-            "citations": citations,
-            "avgYear": round(avg_year, 1),
-            "group": cluster,
-            "x": round(x, 1),
-            "y": round(y, 1),
-            "z": round(z, 1),
-        })
+    for c_idx, cid in enumerate(cluster_ids):
+        c_names = cluster_nodes[cid]
+        c_names.sort(key=lambda n: degree[n], reverse=True)
+        base_angle = c_idx * (2 * math.pi / max(1, num_clusters))
+        
+        for i, name in enumerate(c_names):
+            node_id = author_id_map[name]
+            papers = author_papers[name]
+            citations = author_citations[name]
+            years = author_years[name]
+            avg_year = sum(years) / len(years) if years else 2020.0
+            
+            rank_pct = i / max(1, len(c_names) - 1)
+            
+            # Radial Core-Periphery Layout: High degree at center (10px), low at edge (250px)
+            r_2d = 10.0 + 240.0 * (rank_pct ** 0.85)
+            
+            angle_offset = (math.pi * 0.9 / max(1, num_clusters)) * rank_pct * (1 if i % 2 == 0 else -1)
+            jitter = (math.sin((i + c_idx) * 1234.5) * 0.25) * rank_pct
+            theta = base_angle + angle_offset + jitter
+            
+            x = r_2d * math.cos(theta)
+            y = r_2d * math.sin(theta)
+            
+            z_base = math.sqrt(max(0, 260.0**2 - r_2d**2))
+            z = z_base * (1 if (i // 2) % 2 == 0 else -1) * 0.5
+            
+            nodes.append({
+                "id": node_id,
+                "name": name,
+                "papers": papers,
+                "citations": citations,
+                "avgYear": round(avg_year, 1),
+                "group": cid,
+                "x": round(x, 1),
+                "y": round(y, 1),
+                "z": round(z, 1),
+            })
 
     links = []
     for (a1, a2), w in coauthorship_counts.items():

@@ -480,17 +480,27 @@ export default function CoAuthorshipNetwork() {
                             ? 0.04
                             : ((s.depthOpacity + t.depthOpacity) / 2) * 0.2;
 
+                        const dx = t.px - s.px;
+                        const dy = t.py - s.py;
                         const midX = (s.px + t.px) / 2;
-                        const midY = (s.py + t.py) / 2 - 12;
+                        const midY = (s.py + t.py) / 2;
+                        
+                        const nx = -dy;
+                        const ny = dx;
+                        
+                        // Generates convex sweeping arcs proportional to distance
+                        const cx = midX + nx * 0.2;
+                        const cy = midY + ny * 0.2;
+
                         const strokeWidth =
-                            Math.max(1, link.weight * ((s.scale + t.scale) / 2) * 0.7);
+                            Math.max(1, link.weight * ((s.scale + t.scale) / 2) * 0.5);
                         
                         const sourcePalette = GROUP_PALETTES[s.group] || GROUP_PALETTES[1];
 
                         return (
                             <path
                                 key={`link-${idx}`}
-                                d={`M ${s.px} ${s.py} Q ${midX} ${midY} ${t.px} ${t.py}`}
+                                d={`M ${s.px} ${s.py} Q ${cx} ${cy} ${t.px} ${t.py}`}
                                 fill="none"
                                 stroke={isFocused ? '#000000' : sourcePalette.base}
                                 strokeWidth={strokeWidth}
@@ -533,15 +543,21 @@ export default function CoAuthorshipNetwork() {
                                     strokeWidth={isSelected || isHovered ? 2 : 0}
                                 />
 
-                                {/* Clean Navy Labels Above Nodes */}
+                                {/* Clean Navy Labels Next to Nodes for readability */}
                                 <text
-                                    x={node.px}
-                                    y={node.py - node.radius - 6}
-                                    textAnchor="middle"
+                                    x={node.px + node.radius + 6}
+                                    y={node.py + 4}
+                                    textAnchor="start"
                                     fill={isSelected || isHovered ? '#000000' : '#1e3a8a'}
-                                    fillOpacity={isMatch ? Math.max(0.6, node.depthOpacity) : 0.15}
-                                    fontSize={`${Math.max(10, Math.round(11 * node.scale))}px`}
-                                    fontWeight={isSelected || node.papers > 12 ? '600' : '400'}
+                                    fillOpacity={isMatch ? Math.max(0.75, node.depthOpacity) : 0.15}
+                                    fontSize={`${Math.max(10, Math.round(12 * node.scale))}px`}
+                                    fontWeight={isSelected || node.papers > 8 ? '600' : '400'}
+                                    style={{
+                                        paintOrder: 'stroke fill',
+                                        stroke: '#ffffff',
+                                        strokeWidth: '2.5px',
+                                        strokeLinejoin: 'round'
+                                    }}
                                 >
                                     {node.name}
                                 </text>
