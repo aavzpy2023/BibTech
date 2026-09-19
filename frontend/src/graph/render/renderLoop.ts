@@ -14,6 +14,13 @@ export const executeRenderFrame = (
     nodes: NetworkNode[],
     links: NetworkLink[]
 ) => {
+    // Hard physics bounding box constraint: Prevents any node from escaping the canvas
+    const margin = 40; 
+    nodes.forEach((n) => {
+        if (n.x != null) n.x = Math.max(margin, Math.min(width - margin, n.x));
+        if (n.y != null) n.y = Math.max(margin, Math.min(height - margin, n.y));
+    });
+
     ctx.clearRect(0, 0, width, height);
     
     drawLinks(ctx, links);
