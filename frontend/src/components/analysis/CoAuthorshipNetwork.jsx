@@ -154,6 +154,9 @@ export default function CoAuthorshipNetwork() {
         isLoading
     } = useCoAuthorshipNetwork();
 
+    // Offload heavy physics calculation to the state fractality hook
+    const { frozenData, isCalculating } = useNetworkLayout(nodes, links);
+
     const { minYear, maxYear } = useMemo(() => {
         const years = (frozenData?.nodes || [])
             .map(n => n.avgYear)
@@ -180,9 +183,6 @@ export default function CoAuthorshipNetwork() {
     }, [viewMode, frozenData, minYear, maxYear]);
 
     const [edgeOpacity, setEdgeOpacity] = useState(0.35);
-
-    // Offload heavy physics calculation to the state fractality hook
-    const { frozenData, isCalculating } = useNetworkLayout(nodes, links);
 
     // Force canvas repaint when opacity slider changes
     React.useEffect(() => {

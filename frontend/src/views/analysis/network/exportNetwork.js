@@ -134,9 +134,6 @@ export const drawExportLegend = (ctx, W, H, clusters, nodes, viewMode = 'network
         items.push({ name: 'Others', color: '#c9c9c9' });
     }
 
-    const s = W / REFERENCE_W;
-    const padX = 24 * s;
-    const padY = 24 * s;
     const itemH = 22 * s;
     const radius = 5.5 * s;
 

@@ -1,115 +1,433 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-19 16:49:46
+Date: 2026-09-19 19:31:32
 AST Mode: False
 Line Numbers: True
-Modules: schemas.py
+Modules: CoAuthorshipNetwork.jsx
 Processed Files: 1
 ===========================
 
 
 
-// --- backend/src/bibliography/schemas.py ---
+// --- frontend/src/components/analysis/CoAuthorshipNetwork.jsx ---
 
-[L001, S0] from datetime import datetime
-[L002, S0] from typing import Optional, List, Dict, Any, AsyncGenerator
-[L003, S0] from pydantic import BaseModel, ConfigDict, Field
-[L004, S0] 
-[L005, S0] 
-[L006, S0] class ZipDownloadRequest(BaseModel):
-[L007, S4]     model_config = ConfigDict(strict=True, extra="forbid")
-[L008, S0] 
-[L009, S4]     batch_name: str = Field(
-[L010, S8]         ...,
-[L011, S8]         description="The name of the batch folder containing the PDFs.",
-[L012, S4]     )
-[L013, S4]     dois: List[str] = Field(
-[L014, S8]         ...,
-[L015, S8]         description="List of DOIs to include in the ZIP archive.",
-[L016, S4]     )
-[L017, S0] 
-[L018, S0] 
-[L019, S0] class BatchDownloadRequest(BaseModel):
-[L020, S4]     cookies: Optional[str] = Field(
-[L021, S8]         None, description="Optional raw session cookies to bypass 403 blocks."
-[L022, S4]     )
-[L023, S4]     model_config = ConfigDict(strict=True, extra="forbid")
-[L024, S0] 
-[L025, S4]     dois: List[str] = Field(
-[L026, S8]         ...,
-[L027, S8]         description="List of Digital Object Identifiers to fetch."
-[L028, S4]     )
-[L029, S4]     delay: int = Field(
-[L030, S8]         ...,
-[L031, S8]         ge=0,
-[L032, S8]         description="Delay in seconds between sequential downloads."
-[L033, S4]     )
-[L034, S4]     destination: str = Field(
-[L035, S8]         ...,
-[L036, S8]         min_length=1,
-[L037, S8]         description="Target directory path for storing downloaded PDF files."
-[L038, S4]     )
-[L039, S4]     email: str = Field(
-[L040, S8]         ...,
-[L041, S8]         min_length=1,
-[L042, S8]         description="Contact email address for academic API polite pools."
-[L043, S4]     )
-[L044, S0] 
-[L045, S0] 
-[L046, S0] class LocalBatchDownloadRequest(BaseModel):
-[L047, S4]     cookies: Optional[str] = Field(
-[L048, S8]         None, description="Optional raw session cookies to bypass 403 blocks."
-[L049, S4]     )
-[L050, S4]     model_config = ConfigDict(strict=True, extra="forbid")
-[L051, S0] 
-[L052, S4]     file_path: str = Field(
-[L053, S8]         ...,
-[L054, S8]         min_length=1,
-[L055, S8]         description="Absolute or relative path to the local bibliography file."
-[L056, S4]     )
-[L057, S4]     destination: str = Field(
-[L058, S8]         ...,
-[L059, S8]         min_length=1,
-[L060, S8]         description="Target directory path for storing downloaded PDF files."
-[L061, S4]     )
-[L062, S4]     email: str = Field(
-[L063, S8]         ...,
-[L064, S8]         min_length=1,
-[L065, S8]         description="Contact email address for academic API polite pools."
-[L066, S4]     )
-[L067, S4]     delay: int = Field(
-[L068, S8]         5,
-[L069, S8]         ge=0,
-[L070, S8]         description="Delay in seconds between sequential downloads."
-[L071, S4]     )
-[L072, S0] 
-[L073, S0] 
-[L074, S0] class ParsedReference(BaseModel):
-[L075, S4]     model_config = ConfigDict(strict=True, extra="forbid")
-[L076, S4]     
-[L077, S4]     author: Optional[str] = None
-[L078, S4]     year: Optional[str] = None
-[L079, S4]     title: Optional[str] = None
-[L080, S4]     journal: Optional[str] = None
-[L081, S4]     doi: Optional[str] = None
-[L082, S4]     abstract: Optional[str] = None
-[L083, S4]     publisher: Optional[str] = None
-[L084, S4]     language: Optional[str] = None
-[L085, S4]     keywords: Optional[str] = None
-[L086, S4]     keywords_plus: Optional[str] = None
-[L087, S4]     research_areas: Optional[str] = None
-[L088, S4]     web_of_science_categories: Optional[str] = None
-[L089, S4]     funding_text: Optional[str] = None
-[L090, S4]     journal_iso: Optional[str] = None
-[L091, S4]     oa_status: Optional[str] = None
-[L092, S4]     issn: Optional[str] = None
-[L093, S4]     volume: Optional[str] = None
-[L094, S4]     issue: Optional[str] = None
-[L095, S4]     pages: Optional[str] = None
-[L096, S4]     times_cited: Optional[int] = None
-[L097, S4]     cited_references_count: Optional[int] = None
-[L098, S4]     raw_data: Optional[str] = None
-[L099, S4]     authors_detail: Optional[List[Dict[str, Any]]] = None
-[L100, S4]     countries: Optional[List[str]] = None
-[L101, S4]     cited_references: Optional[List[Dict[str, str]]] = None
-[L102, S4]     upload_datetime: datetime
+[L001, S0] import React, { useRef, useState, useCallback, useMemo } from 'react';
+[L002, S0] import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
+[L003, S0] import useNetworkLayout from '../../hooks/useNetworkLayout';
+[L004, S0] import useElementSize from '../../hooks/useElementSize';
+[L005, S0] import NetworkGraphTemplate from './NetworkGraphTemplate';
+[L006, S0] import AnalysisPageTemplate from './AnalysisPageTemplate';
+[L007, S0] import { exportCanvasToImage } from '../../views/analysis/network/exportNetwork';
+[L008, S0] import { setRenderNodes, setEdgeOpacityMultiplier } from '../../views/analysis/network/networkRender';
+[L009, S0] import { fitGraphView } from '../../views/analysis/network/networkFit';
+[L010, S0] import { getYearColor } from '../../views/analysis/network/networkStyles';
+[L011, S0] import logoImg from '../../assets/logo.png';
+[L012, S0] 
+[L013, S0] const styles = {
+[L014, S4]     controlGroup: {
+[L015, S8]         display: 'flex',
+[L016, S8]         alignItems: 'center',
+[L017, S8]         gap: '8px'
+[L018, S4]     },
+[L019, S4]     label: {
+[L020, S8]         fontSize: '12px',
+[L021, S8]         color: '#c9d1d9',
+[L022, S8]         fontWeight: '600',
+[L023, S8]         textTransform: 'uppercase',
+[L024, S8]         letterSpacing: '0.5px'
+[L025, S4]     },
+[L026, S4]     input: {
+[L027, S8]         backgroundColor: '#0d1117',
+[L028, S8]         border: '1px solid #30363d',
+[L029, S8]         borderRadius: '6px',
+[L030, S8]         padding: '5px 10px',
+[L031, S8]         color: '#f0f6fc',
+[L032, S8]         fontSize: '12px',
+[L033, S8]         outline: 'none'
+[L034, S4]     },
+[L035, S4]     modeSwitchGroup: {
+[L036, S8]         display: 'inline-flex',
+[L037, S8]         borderRadius: '6px',
+[L038, S8]         border: '1px solid #30363d',
+[L039, S8]         overflow: 'hidden'
+[L040, S4]     },
+[L041, S4]     modeBtn: (isActive) => ({
+[L042, S8]         backgroundColor: isActive ? '#1f6feb' : '#0d1117',
+[L043, S8]         color: isActive ? '#ffffff' : '#8b949e',
+[L044, S8]         border: 'none',
+[L045, S8]         padding: '5px 12px',
+[L046, S8]         fontSize: '12px',
+[L047, S8]         fontWeight: '600',
+[L048, S8]         cursor: 'pointer',
+[L049, S8]         transition: 'all 0.2s'
+[L050, S4]     }),
+[L051, S4]     exportBtn: {
+[L052, S8]         backgroundColor: '#238636',
+[L053, S8]         color: '#ffffff',
+[L054, S8]         border: '1px solid #2ea043',
+[L055, S8]         borderRadius: '6px',
+[L056, S8]         padding: '5px 12px',
+[L057, S8]         fontSize: '12px',
+[L058, S8]         fontWeight: '600',
+[L059, S8]         cursor: 'pointer',
+[L060, S8]         display: 'flex',
+[L061, S8]         alignItems: 'center',
+[L062, S8]         gap: '6px'
+[L063, S4]     },
+[L064, S4]     fitBtn: {
+[L065, S8]         backgroundColor: '#21262d',
+[L066, S8]         color: '#f0f6fc',
+[L067, S8]         border: '1px solid #30363d',
+[L068, S8]         borderRadius: '6px',
+[L069, S8]         padding: '5px 10px',
+[L070, S8]         fontSize: '12px',
+[L071, S8]         cursor: 'pointer'
+[L072, S4]     },
+[L073, S4]     canvasWrapper: {
+[L074, S8]         position: 'relative',
+[L075, S8]         width: 'min(100%, calc(75vh * 1.6))',
+[L076, S8]         aspectRatio: '16 / 10',
+[L077, S8]         margin: '0 auto',
+[L078, S8]         backgroundColor: '#ffffff',
+[L079, S8]         borderRadius: '6px',
+[L080, S8]         overflow: 'hidden'
+[L081, S4]     },
+[L082, S4]     watermark: {
+[L083, S8]         position: 'absolute',
+[L084, S8]         bottom: '12px',
+[L085, S8]         right: '12px',
+[L086, S8]         zIndex: 5,
+[L087, S8]         pointerEvents: 'none',
+[L088, S8]         display: 'flex',
+[L089, S8]         alignItems: 'center',
+[L090, S8]         padding: '6px',
+[L091, S8]         borderRadius: '8px',
+[L092, S8]         backgroundColor: 'rgba(255, 255, 255, 0.85)',
+[L093, S8]         border: '1px solid rgba(0, 0, 0, 0.1)',
+[L094, S8]         boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+[L095, S4]     },
+[L096, S4]     logoImage: {
+[L097, S8]         width: '32px',
+[L098, S8]         height: '32px',
+[L099, S8]         objectFit: 'contain'
+[L100, S4]     },
+[L101, S4]     legendPanel: {
+[L102, S8]         position: 'absolute',
+[L103, S8]         bottom: '12px',
+[L104, S8]         left: '12px',
+[L105, S8]         zIndex: 5,
+[L106, S8]         backgroundColor: 'rgba(255, 255, 255, 0.92)',
+[L107, S8]         border: '1px solid rgba(0, 0, 0, 0.12)',
+[L108, S8]         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+[L109, S8]         borderRadius: '6px',
+[L110, S8]         padding: '8px 12px',
+[L111, S8]         display: 'flex',
+[L112, S8]         flexDirection: 'column',
+[L113, S8]         gap: '6px',
+[L114, S8]         pointerEvents: 'none'
+[L115, S4]     },
+[L116, S4]     legendItem: {
+[L117, S8]         display: 'flex',
+[L118, S8]         alignItems: 'center',
+[L119, S8]         gap: '8px',
+[L120, S8]         fontSize: '11px',
+[L121, S8]         color: '#1e293b',
+[L122, S8]         fontWeight: '500'
+[L123, S4]     },
+[L124, S4]     legendDot: (color) => ({
+[L125, S8]         width: '10px',
+[L126, S8]         height: '10px',
+[L127, S8]         borderRadius: '50%',
+[L128, S8]         backgroundColor: color
+[L129, S4]     })
+[L130, S0] };
+[L131, S0] 
+[L132, S0] const FIT_PADDING = 24; // px de margen; el ajuste ya cuenta las etiquetas
+[L133, S0] 
+[L134, S0] export default function CoAuthorshipNetwork() {
+[L135, S4]     const fgRef = useRef();
+[L136, S4]     const wrapperRef = useRef();
+[L137, S4]     const size = useElementSize(wrapperRef);
+[L138, S0] 
+[L139, S4]     const {
+[L140, S8]         nodes,
+[L141, S8]         links,
+[L142, S8]         minWeight,
+[L143, S8]         setMinWeight,
+[L144, S8]         selectedNodeId,
+[L145, S8]         setSelectedNodeId,
+[L146, S8]         hoveredNodeId,
+[L147, S8]         setHoveredNodeId,
+[L148, S8]         selectedNode,
+[L149, S8]         viewMode,
+[L150, S8]         setViewMode,
+[L151, S8]         clusters,
+[L152, S8]         louvainGamma,
+[L153, S8]         setLouvainGamma,
+[L154, S8]         isLoading
+[L155, S4]     } = useCoAuthorshipNetwork();
+[L156, S0] 
+[L157, S4]     const { minYear, maxYear } = useMemo(() => {
+[L158, S8]         const years = (frozenData?.nodes || [])
+[L159, S12]             .map(n => n.avgYear)
+[L160, S12]             .filter(y => y != null && !isNaN(y) && y > 1900);
+[L161, S8]         if (!years.length) return { minYear: 2018, maxYear: 2024 };
+[L162, S8]         return {
+[L163, S12]             minYear: Math.floor(Math.min(...years)),
+[L164, S12]             maxYear: Math.ceil(Math.max(...years))
+[L165, S8]         };
+[L166, S4]     }, [frozenData]);
+[L167, S0] 
+[L168, S4]     React.useEffect(() => {
+[L169, S8]         if (!frozenData?.nodes) return;
+[L170, S8]         frozenData.nodes.forEach(n => {
+[L171, S12]             if (viewMode === 'overlay') {
+[L172, S16]                 n.color = getYearColor(n.avgYear, minYear, maxYear);
+[L173, S12]             } else {
+[L174, S16]                 delete n.color;
+[L175, S12]             }
+[L176, S8]         });
+[L177, S8]         if (fgRef.current && typeof fgRef.current.refresh === 'function') {
+[L178, S12]             fgRef.current.refresh();
+[L179, S8]         }
+[L180, S4]     }, [viewMode, frozenData, minYear, maxYear]);
+[L181, S0] 
+[L182, S4]     const [edgeOpacity, setEdgeOpacity] = useState(0.35);
+[L183, S0] 
+[L184, S4]     // Offload heavy physics calculation to the state fractality hook
+[L185, S4]     const { frozenData, isCalculating } = useNetworkLayout(nodes, links);
+[L186, S0] 
+[L187, S4]     // Force canvas repaint when opacity slider changes
+[L188, S4]     React.useEffect(() => {
+[L189, S8]         setEdgeOpacityMultiplier(edgeOpacity);
+[L190, S8]         if (fgRef.current && !isCalculating) {
+[L191, S12]             if (typeof fgRef.current.refresh === 'function') {
+[L192, S16]                 fgRef.current.refresh();
+[L193, S12]             }
+[L194, S12]             const currentZoom = fgRef.current.zoom?.();
+[L195, S12]             if (currentZoom != null) {
+[L196, S16]                 fgRef.current.zoom(currentZoom * 1.0001);
+[L197, S16]                 setTimeout(() => {
+[L198, S20]                     fgRef.current?.zoom?.(currentZoom);
+[L199, S16]                 }, 10);
+[L200, S12]             }
+[L201, S8]         }
+[L202, S4]     }, [edgeOpacity, isCalculating]);
+[L203, S0] 
+[L204, S4]     React.useEffect(() => {
+[L205, S8]         if (!isCalculating && frozenData?.nodes?.length > 0) {
+[L206, S12]             // Reordenar nodos (pequeños primero, grandes al final) para garantizar
+[L207, S12]             // que los hubs importantes se dibujen siempre encima de la masa en Canvas (Z-Index fix)
+[L208, S12]             const sortedNodes = [...frozenData.nodes].sort((a, b) => {
+[L209, S16]                 const valA = a.degree || a.radius || 0;
+[L210, S16]                 const valB = b.degree || b.radius || 0;
+[L211, S16]                 return valA - valB;
+[L212, S12]             });
+[L213, S12]             frozenData.nodes = sortedNodes;
+[L214, S12]             setRenderNodes(frozenData.nodes);
+[L215, S8]         }
+[L216, S4]     }, [isCalculating, frozenData]);
+[L217, S0] 
+[L218, S4]     // Ajusta al cargar y cada vez que cambia el tamaño REAL del contenedor.
+[L219, S4]     React.useEffect(() => {
+[L220, S8]         if (isCalculating || !frozenData?.nodes?.length || !size.width || !size.height) return undefined;
+[L221, S8]         const t = setTimeout(() => {
+[L222, S12]             fitGraphView(fgRef.current, frozenData.nodes, size.width, size.height, FIT_PADDING);
+[L223, S8]         }, 100);
+[L224, S8]         return () => clearTimeout(t);
+[L225, S4]     }, [isCalculating, frozenData, size.width, size.height]);
+[L226, S0] 
+[L227, S4]     const toolbar = (
+[L228, S8]         <>
+[L229, S12]             <div style={styles.modeSwitchGroup}>
+[L230, S16]                 <button
+[L231, S20]                     type="button"
+[L232, S20]                     style={styles.modeBtn(viewMode === 'network')}
+[L233, S20]                     onClick={() => setViewMode('network')}
+[L234, S16]                 >
+[L235, S20]                     Network
+[L236, S16]                 </button>
+[L237, S16]                 <button
+[L238, S20]                     type="button"
+[L239, S20]                     style={styles.modeBtn(viewMode === 'overlay')}
+[L240, S20]                     onClick={() => setViewMode('overlay')}
+[L241, S16]                 >
+[L242, S20]                     Overlay
+[L243, S16]                 </button>
+[L244, S12]             </div>
+[L245, S0] 
+[L246, S12]             <div style={styles.controlGroup}>
+[L247, S16]                 <label htmlFor="edge-opacity-slider" style={styles.label}>
+[L248, S20]                     Connections ({edgeOpacity.toFixed(2)}):
+[L249, S16]                 </label>
+[L250, S16]                 <input
+[L251, S20]                     id="edge-opacity-slider"
+[L252, S20]                     type="range"
+[L253, S20]                     min="0"
+[L254, S20]                     max="1"
+[L255, S20]                     step="0.05"
+[L256, S20]                     value={edgeOpacity}
+[L257, S20]                     onChange={e => setEdgeOpacity(Number(e.target.value))}
+[L258, S20]                     style={{ cursor: 'pointer', width: '60px' }}
+[L259, S16]                 />
+[L260, S12]             </div>
+[L261, S0] 
+[L262, S12]             <div style={styles.controlGroup}>
+[L263, S16]                 <label htmlFor="min-weight-slider" style={styles.label}>
+[L264, S20]                     Min Collab ({minWeight}):
+[L265, S16]                 </label>
+[L266, S16]                 <input
+[L267, S20]                     id="min-weight-slider"
+[L268, S20]                     type="range"
+[L269, S20]                     min="1"
+[L270, S20]                     max="7"
+[L271, S20]                     value={minWeight}
+[L272, S20]                     onChange={e => setMinWeight(Number(e.target.value))}
+[L273, S20]                     style={{ cursor: 'pointer', width: '60px' }}
+[L274, S16]                 />
+[L275, S12]             </div>
+[L276, S0] 
+[L277, S12]             <div style={styles.controlGroup}>
+[L278, S16]                 <label htmlFor="gamma-slider" style={styles.label}>
+[L279, S20]                     Louvain &gamma; ({louvainGamma.toFixed(1)}):
+[L280, S16]                 </label>
+[L281, S16]                 <input
+[L282, S20]                     id="gamma-slider"
+[L283, S20]                     type="range"
+[L284, S20]                     min="0.1"
+[L285, S20]                     max="3.0"
+[L286, S20]                     step="0.1"
+[L287, S20]                     value={louvainGamma}
+[L288, S20]                     onChange={e => setLouvainGamma(Number(e.target.value))}
+[L289, S20]                     style={{ cursor: 'pointer', width: '70px', accentColor: '#3b82f6' }}
+[L290, S20]                     title="Bajo: Macro-Comunidades (Instituciones). Alto: Micro-Comunidades (Laboratorios)."
+[L291, S16]                 />
+[L292, S12]             </div>
+[L293, S0] 
+[L294, S12]             <div style={styles.controlGroup}>
+[L295, S16]                 <button
+[L296, S20]                     type="button"
+[L297, S20]                     style={styles.fitBtn}
+[L298, S20]                     onClick={() => fitGraphView(fgRef.current, frozenData.nodes, size.width, size.height, FIT_PADDING)}
+[L299, S16]                 >
+[L300, S20]                     Center
+[L301, S16]                 </button>
+[L302, S16]                 <button
+[L303, S20]                     type="button"
+[L304, S20]                     style={styles.exportBtn}
+[L305, S16]                 onClick={() => exportCanvasToImage(fgRef, 'co-authorship-novascope-hd.png', {
+[L306, S20]                     nodes: frozenData.nodes,
+[L307, S20]                     links: frozenData.links,
+[L308, S20]                     clusters,
+[L309, S20]                     viewMode,
+[L310, S20]                     minYear,
+[L311, S20]                     maxYear,
+[L312, S20]                     logoSrc: logoImg
+[L313, S16]                 })}
+[L314, S20]                     data-testid="export-hd-btn"
+[L315, S16]                 >
+[L316, S20]                     Download
+[L317, S16]                 </button>
+[L318, S12]             </div>
+[L319, S8]         </>
+[L320, S4]     );
+[L321, S0] 
+[L322, S4]     const footer = selectedNode ? (
+[L323, S8]         <div>
+[L324, S12]             <strong>Author:</strong> {selectedNode.name} |{' '}
+[L325, S12]             <strong>Citations:</strong> {selectedNode.citations?.toLocaleString() || 0} |{' '}
+[L326, S12]             <strong>Publications:</strong> {selectedNode.papers} |{' '}
+[L327, S12]             <strong>Cluster:</strong> {clusters[selectedNode.group]?.name || 'Collaboration Cluster'} |{' '}
+[L328, S12]             <strong>Avg Year:</strong> {selectedNode.avgYear ? selectedNode.avgYear.toFixed(1) : 'N/A'}
+[L329, S8]         </div>
+[L330, S4]     ) : null;
+[L331, S0] 
+[L332, S4]     return (
+[L333, S8]         <AnalysisPageTemplate
+[L334, S12]             title="Co-authorship Network"
+[L335, S12]             subtitle="Novascope D3 force simulation: Radial cluster dynamics and convex co-authorship relationships."
+[L336, S12]             toolbar={toolbar}
+[L337, S12]             footer={footer}
+[L338, S12]             dataTestId="coauthorship-network-view"
+[L339, S8]         >
+[L340, S12]             <div ref={wrapperRef} style={styles.canvasWrapper} data-testid="coauthorship-force-graph-wrapper">
+[L341, S16]                 <div style={styles.watermark}>
+[L342, S20]                     <img
+[L343, S24]                         src={logoImg}
+[L344, S24]                         alt="Logo Watermark"
+[L345, S24]                         style={styles.logoImage}
+[L346, S24]                         data-testid="corner-watermark-logo"
+[L347, S20]                     />
+[L348, S16]                 </div>
+[L349, S0] 
+[L350, S16]                 <div style={styles.legendPanel} data-testid="vosviewer-legend">
+[L351, S20]                     <span style={{ ...styles.label, fontSize: '10px', color: '#64748b' }}>
+[L352, S24]                         {viewMode === 'overlay' ? 'AVG. PUBLICATION YEAR' : 'CLUSTERS'}
+[L353, S20]                     </span>
+[L354, S20]                     {viewMode === 'overlay' ? (
+[L355, S24]                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '160px' }}>
+[L356, S28]                             <div style={{
+[L357, S32]                                 height: '10px',
+[L358, S32]                                 borderRadius: '4px',
+[L359, S32]                                 background: 'linear-gradient(to right, #3b82f6, #06b6d4, #10b981, #facc15)'
+[L360, S28]                             }} />
+[L361, S28]                             <div style={{
+[L362, S32]                                 display: 'flex',
+[L363, S32]                                 justifyContent: 'space-between',
+[L364, S32]                                 fontSize: '10px',
+[L365, S32]                                 color: '#64748b',
+[L366, S32]                                 fontWeight: '600'
+[L367, S28]                             }}>
+[L368, S32]                                 <span>{minYear}</span>
+[L369, S32]                                 <span>{Math.round((minYear + maxYear) / 2)}</span>
+[L370, S32]                                 <span>{maxYear}</span>
+[L371, S28]                             </div>
+[L372, S24]                         </div>
+[L373, S20]                     ) : (
+[L374, S20]                     useMemo(() => {
+[L375, S24]                         if (!frozenData || !frozenData.nodes) return null;
+[L376, S24]                         const counts = {};
+[L377, S24]                         frozenData.nodes.forEach(n => {
+[L378, S28]                             counts[n.group] = (counts[n.group] || 0) + 1;
+[L379, S24]                         });
+[L380, S24]                         const top4 = Object.keys(counts)
+[L381, S28]                             .sort((a, b) => counts[b] - counts[a])
+[L382, S28]                             .slice(0, 4);
+[L383, S0] 
+[L384, S24]                         const items = top4.map(gid => (
+[L385, S28]                             <div key={gid} style={styles.legendItem}>
+[L386, S32]                                 <div style={styles.legendDot(clusters[gid]?.color || '#9ca3af')} />
+[L387, S32]                                 <span>{clusters[gid]?.name || `Cluster ${gid}`}</span>
+[L388, S28]                             </div>
+[L389, S24]                         ));
+[L390, S24]                         
+[L391, S24]                         if (Object.keys(counts).length > 4) {
+[L392, S28]                             items.push(
+[L393, S32]                                 <div key="others" style={styles.legendItem}>
+[L394, S36]                                     <div style={styles.legendDot('#c9c9c9')} />
+[L395, S36]                                     <span>Others</span>
+[L396, S32]                                 </div>
+[L397, S28]                             );
+[L398, S24]                         }
+[L399, S24]                         return items;
+[L400, S20]                     }, [frozenData, clusters])
+[L401, S20]                     )}
+[L402, S16]                 </div>
+[L403, S0] 
+[L404, S16]                 {(isCalculating || isLoading) ? (
+[L405, S20]                     <div style={{ padding: '20px', textAlign: 'center', color: '#8b949e' }}>
+[L406, S24]                         {isLoading ? "Recalculating Community Modularity..." : "Calculating Network Physics..."}
+[L407, S20]                     </div>
+[L408, S16]                 ) : (
+[L409, S20]                     <NetworkGraphTemplate
+[L410, S24]                         ref={fgRef}
+[L411, S24]                         frozenData={frozenData}
+[L412, S24]                         width={size.width || undefined}
+[L413, S24]                         height={size.height || undefined}
+[L414, S24]                         onNodeClick={node => setSelectedNodeId(node.id)}
+[L415, S20]                     />
+[L416, S16]                 )}
+[L417, S12]             </div>
+[L418, S8]         </AnalysisPageTemplate>
+[L419, S4]     );
+[L420, S0] }
