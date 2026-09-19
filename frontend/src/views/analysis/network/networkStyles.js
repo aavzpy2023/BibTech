@@ -100,3 +100,34 @@ export const calculateRadius = (node, scale = 1) => {
     const value = Math.max(0, getMetric(node));
     return Math.min(RADIUS_RANGE.max, RADIUS_RANGE.min + Math.sqrt(value) * 1.4) * scale;
 };
+
+/**
+ * Gradiente cromático para Overlay Visualization por año (estándar VOSviewer):
+ * Azul (antiguo) -> Cian -> Verde Esmeralda -> Amarillo (reciente).
+ */
+export const getYearColor = (year, minYear, maxYear) => {
+    if (!year || isNaN(year)) return '#9ca3af';
+    if (minYear >= maxYear) return '#3b82f6';
+    const t = Math.max(0, Math.min(1, (year - minYear) / (maxYear - minYear)));
+
+    const stops = [
+        { t: 0.0, r: 59, g: 130, b: 246 },
+        { t: 0.33, r: 6, g: 182, b: 212 },
+        { t: 0.66, r: 16, g: 185, b: 129 },
+        { t: 1.0, r: 250, g: 204, b: 21 }
+    ];
+
+    let i = 0;
+    while (i < stops.length - 1 && stops[i + 1].t < t) {
+        i++;
+    }
+    const s0 = stops[i];
+    const s1 = stops[Math.min(i + 1, stops.length - 1)];
+    const localT = s1.t === s0.t ? 0 : (t - s0.t) / (s1.t - s0.t);
+
+    const r = Math.round(s0.r + (s1.r - s0.r) * localT);
+    const g = Math.round(s0.g + (s1.g - s0.g) * localT);
+    const b = Math.round(s0.b + (s1.b - s0.b) * localT);
+
+    return `rgb(${r},${g},${b})`;
+};

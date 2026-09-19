@@ -7,6 +7,7 @@ import AnalysisPageTemplate from './AnalysisPageTemplate';
 import { exportCanvasToImage } from '../../views/analysis/network/exportNetwork';
 import { setRenderNodes, setEdgeOpacityMultiplier } from '../../views/analysis/network/networkRender';
 import { fitGraphView } from '../../views/analysis/network/networkFit';
+import { getYearColor } from '../../views/analysis/network/networkStyles';
 import logoImg from '../../assets/logo.png';
 
 const styles = {
@@ -145,11 +146,38 @@ export default function CoAuthorshipNetwork() {
         hoveredNodeId,
         setHoveredNodeId,
         selectedNode,
+        viewMode,
+        setViewMode,
         clusters,
         louvainGamma,
         setLouvainGamma,
         isLoading
     } = useCoAuthorshipNetwork();
+
+    const { minYear, maxYear } = useMemo(() => {
+        const years = (frozenData?.nodes || [])
+            .map(n => n.avgYear)
+            .filter(y => y != null && !isNaN(y) && y > 1900);
+        if (!years.length) return { minYear: 2018, maxYear: 2024 };
+        return {
+            minYear: Math.floor(Math.min(...years)),
+            maxYear: Math.ceil(Math.max(...years))
+        };
+    }, [frozenData]);
+
+    React.useEffect(() => {
+        if (!frozenData?.nodes) return;
+        frozenData.nodes.forEach(n => {
+            if (viewMode === 'overlay') {
+                n.color = getYearColor(n.avgYear, minYear, maxYear);
+            } else {
+                delete n.color;
+            }
+        });
+        if (fgRef.current && typeof fgRef.current.refresh === 'function') {
+            fgRef.current.refresh();
+        }
+    }, [viewMode, frozenData, minYear, maxYear]);
 
     const [edgeOpacity, setEdgeOpacity] = useState(0.35);
 
@@ -198,6 +226,23 @@ export default function CoAuthorshipNetwork() {
 
     const toolbar = (
         <>
+            <div style={styles.modeSwitchGroup}>
+                <button
+                    type="button"
+                    style={styles.modeBtn(viewMode === 'network')}
+                    onClick={() => setViewMode('network')}
+                >
+                    Network
+                </button>
+                <button
+                    type="button"
+                    style={styles.modeBtn(viewMode === 'overlay')}
+                    onClick={() => setViewMode('overlay')}
+                >
+                    Overlay
+                </button>
+            </div>
+
             <div style={styles.controlGroup}>
                 <label htmlFor="edge-opacity-slider" style={styles.label}>
                     Connections ({edgeOpacity.toFixed(2)}):
@@ -261,6 +306,9 @@ export default function CoAuthorshipNetwork() {
                     nodes: frozenData.nodes,
                     links: frozenData.links,
                     clusters,
+                    viewMode,
+                    minYear,
+                    maxYear,
                     logoSrc: logoImg
                 })}
                     data-testid="export-hd-btn"
@@ -276,7 +324,8 @@ export default function CoAuthorshipNetwork() {
             <strong>Author:</strong> {selectedNode.name} |{' '}
             <strong>Citations:</strong> {selectedNode.citations?.toLocaleString() || 0} |{' '}
             <strong>Publications:</strong> {selectedNode.papers} |{' '}
-            <strong>Cluster:</strong> {clusters[selectedNode.group]?.name || 'Collaboration Cluster'}
+            <strong>Cluster:</strong> {clusters[selectedNode.group]?.name || 'Collaboration Cluster'} |{' '}
+            <strong>Avg Year:</strong> {selectedNode.avgYear ? selectedNode.avgYear.toFixed(1) : 'N/A'}
         </div>
     ) : null;
 
@@ -300,9 +349,29 @@ export default function CoAuthorshipNetwork() {
 
                 <div style={styles.legendPanel} data-testid="vosviewer-legend">
                     <span style={{ ...styles.label, fontSize: '10px', color: '#64748b' }}>
-                        CLUSTERS
+                        {viewMode === 'overlay' ? 'AVG. PUBLICATION YEAR' : 'CLUSTERS'}
                     </span>
-                    {useMemo(() => {
+                    {viewMode === 'overlay' ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '160px' }}>
+                            <div style={{
+                                height: '10px',
+                                borderRadius: '4px',
+                                background: 'linear-gradient(to right, #3b82f6, #06b6d4, #10b981, #facc15)'
+                            }} />
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                fontSize: '10px',
+                                color: '#64748b',
+                                fontWeight: '600'
+                            }}>
+                                <span>{minYear}</span>
+                                <span>{Math.round((minYear + maxYear) / 2)}</span>
+                                <span>{maxYear}</span>
+                            </div>
+                        </div>
+                    ) : (
+                    useMemo(() => {
                         if (!frozenData || !frozenData.nodes) return null;
                         const counts = {};
                         frozenData.nodes.forEach(n => {
@@ -328,7 +397,8 @@ export default function CoAuthorshipNetwork() {
                             );
                         }
                         return items;
-                    }, [frozenData, clusters])}
+                    }, [frozenData, clusters])
+                    )}
                 </div>
 
                 {(isCalculating || isLoading) ? (

@@ -111,7 +111,7 @@ const ensureLabels = (nodes, ctx, k) => {
  */
 export const drawNode = (node, ctx, globalScale) => {
     const radius = calculateRadius(node);
-    const color = getNodeColor(node.group);
+    const color = node.color || getNodeColor(node.group);
 
     ctx.beginPath();
     ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
@@ -235,7 +235,7 @@ export const drawLink = (link, ctx, globalScale) => {
         const isIntra = sourceGroup === targetGroup;
 
     const color = isHighlighted
-        ? getNodeColor(source.group)
+        ? (source.color || getNodeColor(source.group))
         : (isHoverActive ? '#cbd5e1' : (isIntra ? '#64748b' : '#94a3b8'));
 
     let opacity;

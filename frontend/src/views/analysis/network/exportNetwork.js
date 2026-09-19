@@ -54,8 +54,69 @@ export const drawExportBranding = (ctx, W, H, logo = null) => {
     ctx.restore();
 };
 
-export const drawExportLegend = (ctx, W, H, clusters, nodes) => {
+export const drawExportLegend = (ctx, W, H, clusters, nodes, viewMode = 'network', minYear = 2018, maxYear = 2024) => {
     if (!nodes || nodes.length === 0) return;
+    const s = W / REFERENCE_W;
+    const padX = 24 * s;
+    const padY = 24 * s;
+
+    if (viewMode === 'overlay') {
+        const boxW = 200 * s;
+        const boxH = 68 * s;
+        const x = padX;
+        const y = H - padY - boxH;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+        ctx.lineWidth = 1.5 * s;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
+        ctx.shadowBlur = 12 * s;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(x, y, boxW, boxH, 6 * s);
+        else ctx.rect(x, y, boxW, boxH);
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.font = `700 ${9.5 * s}px Sans-Serif`;
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('AVG. PUBLICATION YEAR', x + 14 * s, y + 10 * s);
+
+        const barX = x + 14 * s;
+        const barY = y + 26 * s;
+        const barW = boxW - 28 * s;
+        const barH = 10 * s;
+
+        const grad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+        grad.addColorStop(0, '#3b82f6');
+        grad.addColorStop(0.33, '#06b6d4');
+        grad.addColorStop(0.66, '#10b981');
+        grad.addColorStop(1, '#facc15');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(barX, barY, barW, barH, 3 * s);
+        else ctx.rect(barX, barY, barW, barH);
+        ctx.fill();
+
+        ctx.font = `600 ${9 * s}px Sans-Serif`;
+        ctx.fillStyle = '#64748b';
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'left';
+        ctx.fillText(String(minYear), barX, barY + barH + 4 * s);
+
+        ctx.textAlign = 'center';
+        ctx.fillText(String(Math.round((minYear + maxYear) / 2)), barX + barW / 2, barY + barH + 4 * s);
+
+        ctx.textAlign = 'right';
+        ctx.fillText(String(maxYear), barX + barW, barY + barH + 4 * s);
+
+        ctx.restore();
+        return;
+    }
     const counts = {};
     nodes.forEach(n => {
         if (n.group != null) counts[n.group] = (counts[n.group] || 0) + 1;
@@ -129,7 +190,7 @@ export const drawExportLegend = (ctx, W, H, clusters, nodes) => {
  * Dibuja la red completa en `canvas` (fondo blanco, ajustada al lienzo, etiquetas al final).
  * No toca el canvas de pantalla ni la caché de etiquetas de pantalla.
  */
-export const renderNetworkToCanvas = (canvas, { nodes, links = [], clusters = null, logo = null }) => {
+export const renderNetworkToCanvas = (canvas, { nodes, links = [], clusters = null, viewMode = 'network', minYear = 2018, maxYear = 2024, logo = null }) => {
     const W = canvas.width;
     const H = canvas.height;
     const ctx = canvas.getContext('2d');
@@ -162,7 +223,7 @@ export const renderNetworkToCanvas = (canvas, { nodes, links = [], clusters = nu
     });
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    drawExportLegend(ctx, W, H, clusters, nodes);
+    drawExportLegend(ctx, W, H, clusters, nodes, viewMode, minYear, maxYear);
     drawExportBranding(ctx, W, H, logo);
     return canvas;
 };
@@ -188,14 +249,14 @@ const saveCanvas = (canvas, filename) => new Promise((resolve) => {
     }
 });
 
-const exportOffscreen = async (filename, { nodes, links, clusters = null, logoSrc = null, width = EXPORT_W, height = EXPORT_H }) => {
+const exportOffscreen = async (filename, { nodes, links, clusters = null, viewMode = 'network', minYear = 2018, maxYear = 2024, logoSrc = null, width = EXPORT_W, height = EXPORT_H }) => {
     try {
         const logo = await loadImage(logoSrc);
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         if (!canvas.getContext('2d')) return;
-        renderNetworkToCanvas(canvas, { nodes, links, clusters, logo });
+        renderNetworkToCanvas(canvas, { nodes, links, clusters, viewMode, minYear, maxYear, logo });
         await saveCanvas(canvas, filename);
     } catch (err) {
         console.error('HD Export Error:', err);
