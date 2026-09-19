@@ -230,24 +230,32 @@ export const drawLink = (link, ctx, globalScale) => {
         const targetGroup = String(target.group || target.cluster);
         const isIntra = sourceGroup === targetGroup;
 
-        let opacity;
-        if (isHighlighted) {
-            opacity = Math.min(0.85, 0.55 + weight * 0.08);
-        } else if (isHoverActive) {
-            opacity = 0.03; // Dim background edges when focusing on an author
-        } else {
-            if (isIntra) {
-                opacity = Math.min(0.45, 0.15 + weight * 0.06);
-            } else {
-                opacity = Math.min(0.10, 0.03 + weight * 0.015);
-            }
-        }
+    const color = isHighlighted
+        ? getNodeColor(source.group)
+        : (isIntra ? '#64748b' : '#94a3b8');
 
-        opacity *= edgeOpacityMultiplier;
+    let opacity;
+    if (isHighlighted) {
+        opacity = Math.min(0.95, 0.65 + weight * 0.10);
+    } else if (isHoverActive) {
+        opacity = 0.05; // Dim background edges when focusing on an author
+    } else {
+        if (isIntra) {
+            // Intra-cluster: clearly visible at max slider (0.35 - 0.85)
+            opacity = Math.min(0.85, 0.35 + weight * 0.10);
+        } else {
+            // Inter-cluster: visible structure without visual noise (0.18 - 0.50)
+            opacity = Math.min(0.50, 0.18 + weight * 0.05);
+        }
+    }
+
+    opacity *= edgeOpacityMultiplier;
 
     const thickness = (isHighlighted
-        ? Math.min(2.5, 1.0 + weight * 0.35)
-        : Math.min(1.2, Math.max(0.4, weight * 0.2))) / globalScale;
+        ? Math.min(3.0, 1.2 + weight * 0.40)
+        : (isIntra
+            ? Math.min(2.0, 0.9 + weight * 0.25)
+            : Math.min(1.3, 0.6 + weight * 0.15))) / globalScale;
 
     ctx.save();
     // 6. Multiply composite prevents washed-out overlaps on white background

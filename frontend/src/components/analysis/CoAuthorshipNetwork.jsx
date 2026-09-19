@@ -159,14 +159,17 @@ export default function CoAuthorshipNetwork() {
     // Force canvas repaint when opacity slider changes
     React.useEffect(() => {
         setEdgeOpacityMultiplier(edgeOpacity);
-        // Force the react-force-graph instance to redraw its canvas immediately
         if (fgRef.current && !isCalculating) {
-            // react-force-graph doesn't have a direct redraw(), but manipulating zoom triggers it
-            const currentZoom = fgRef.current.zoom();
-            fgRef.current.zoom(currentZoom * 1.0001);
-            setTimeout(() => {
-                if (fgRef.current) fgRef.current.zoom(currentZoom);
-            }, 0);
+            if (typeof fgRef.current.refresh === 'function') {
+                fgRef.current.refresh();
+            }
+            const currentZoom = fgRef.current.zoom?.();
+            if (currentZoom != null) {
+                fgRef.current.zoom(currentZoom * 1.0001);
+                setTimeout(() => {
+                    fgRef.current?.zoom?.(currentZoom);
+                }, 10);
+            }
         }
     }, [edgeOpacity, isCalculating]);
 
