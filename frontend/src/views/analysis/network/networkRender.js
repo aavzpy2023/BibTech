@@ -37,16 +37,21 @@ export const drawNode = (node, ctx, globalScale) => {
  */
 export const drawLabel = (node, ctx, globalScale) => {
     const isHub = (node.degree || 0) >= 5;
-    const LABEL_SCALE_THRESHOLD = isHub ? 0.6 : 1.5;
-    if (globalScale < LABEL_SCALE_THRESHOLD) return;
+    const isMid = (node.degree || 0) >= 2;
+    
+    let threshold = 1.8;
+    if (isHub) threshold = 0.5;
+    else if (isMid) threshold = 1.0;
+
+    if (globalScale < threshold) return;
 
     const radius = calculateRadius(node);
-    const fontSize = Math.max(4, 12 / globalScale);
+    const fontSize = Math.max(3.5, 11 / globalScale);
     
-    ctx.font = `500 ${fontSize}px Sans-Serif`;
+    ctx.font = `${isHub ? '600' : '400'} ${fontSize}px Sans-Serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = '#1e293b'; // neutral dark-gray
+    ctx.fillStyle = isHub ? '#0f172a' : '#334155';
     
     ctx.fillText(node.name, node.x, node.y + radius + (2 / globalScale));
 };
@@ -64,8 +69,8 @@ export const drawBranding = (ctx, width, height) => {
 export const drawLink = (link, ctx, globalScale) => {
     const { source, target, weight } = link;
     
-    const opacity = Math.min(0.35, 0.12 + (weight * 0.05));
-    const thickness = Math.min(1.5, Math.max(0.5, weight * 0.3)) / globalScale;
+    const opacity = Math.min(0.25, 0.06 + (weight * 0.03));
+    const thickness = Math.min(1.2, Math.max(0.3, weight * 0.2)) / globalScale;
     
     ctx.beginPath();
     ctx.moveTo(source.x, source.y);

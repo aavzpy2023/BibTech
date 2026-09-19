@@ -17,8 +17,8 @@ export const getNodeColor = (group) => {
  * Calculates a bounded radius for nodes based on their metric (e.g. papers count).
  */
 export const calculateRadius = (node, scale = 1) => {
-    if (!node) return 5 * scale;
+    if (!node) return 4 * scale;
     const metric = node.degree !== undefined ? node.degree : (node.citations || node.papers || 1);
     const value = Math.max(0, metric);
-    return Math.min(26, 4 + Math.sqrt(value) * 3.5) * scale;
+    return Math.min(20, 3 + Math.sqrt(value) * 2.2) * scale;
 };

@@ -70,7 +70,7 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
         if (i === 0) {
             compCenters.push({ x: 0, y: 0 });
         } else {
-            const radius = 150 + i * 40;
+            const radius = 220 + i * 55;
             const angle = i * goldenAngle;
             compCenters.push({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
         }
@@ -85,11 +85,11 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
 
     // Stage D: Force-directed refinement
     const simulation = d3.forceSimulation(layoutNodes)
-        .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(45))
-        .force('charge', d3.forceManyBody().strength(-80))
-        .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 6).iterations(2))
-        .force('x', d3.forceX(d => compCenters[nodeToComp[d.id]].x).strength(0.1))
-        .force('y', d3.forceY(d => compCenters[nodeToComp[d.id]].y).strength(0.1))
+        .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(55))
+        .force('charge', d3.forceManyBody().strength(-120))
+        .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 3).iterations(4))
+        .force('x', d3.forceX(d => compCenters[nodeToComp[d.id]].x).strength(0.15))
+        .force('y', d3.forceY(d => compCenters[nodeToComp[d.id]].y).strength(0.15))
         .stop();
 
     simulation.tick(300);
@@ -107,9 +107,9 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
     const graphWidth = Math.max(1, maxX - minX);
     const graphHeight = Math.max(1, maxY - minY);
     
-    // Target dimensions (85% of canvas)
-    const targetWidth = width * 0.85;
-    const targetHeight = height * 0.85;
+    // Target dimensions (75% of canvas to guarantee margins)
+    const targetWidth = width * 0.75;
+    const targetHeight = height * 0.75;
     
     const scaleX = targetWidth / graphWidth;
     const scaleY = targetHeight / graphHeight;
