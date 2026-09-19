@@ -172,6 +172,14 @@ export default function CoAuthorshipNetwork() {
 
     React.useEffect(() => {
         if (!isCalculating && frozenData?.nodes?.length > 0) {
+            // Reordenar nodos (pequeños primero, grandes al final) para garantizar
+            // que los hubs importantes se dibujen siempre encima de la masa en Canvas (Z-Index fix)
+            const sortedNodes = [...frozenData.nodes].sort((a, b) => {
+                const valA = a.degree || a.radius || 0;
+                const valB = b.degree || b.radius || 0;
+                return valA - valB;
+            });
+            frozenData.nodes = sortedNodes;
             setRenderNodes(frozenData.nodes);
         }
     }, [isCalculating, frozenData]);
@@ -290,12 +298,33 @@ export default function CoAuthorshipNetwork() {
                     <span style={{ ...styles.label, fontSize: '10px', color: '#64748b' }}>
                         CLUSTERS
                     </span>
-                    {Object.entries(clusters).map(([gid, c]) => (
-                        <div key={gid} style={styles.legendItem}>
-                            <div style={styles.legendDot(c.color)} />
-                            <span>{c.name}</span>
-                        </div>
-                    ))}
+                    {useMemo(() => {
+                        if (!frozenData || !frozenData.nodes) return null;
+                        const counts = {};
+                        frozenData.nodes.forEach(n => {
+                            counts[n.group] = (counts[n.group] || 0) + 1;
+                        });
+                        const top4 = Object.keys(counts)
+                            .sort((a, b) => counts[b] - counts[a])
+                            .slice(0, 4);
+
+                        const items = top4.map(gid => (
+                            <div key={gid} style={styles.legendItem}>
+                                <div style={styles.legendDot(clusters[gid]?.color || '#9ca3af')} />
+                                <span>{clusters[gid]?.name || `Cluster ${gid}`}</span>
+                            </div>
+                        ));
+                        
+                        if (Object.keys(counts).length > 4) {
+                            items.push(
+                                <div key="others" style={styles.legendItem}>
+                                    <div style={styles.legendDot('#c9c9c9')} />
+                                    <span>Others</span>
+                                </div>
+                            );
+                        }
+                        return items;
+                    }, [frozenData, clusters])}
                 </div>
 
                 {(isCalculating || isLoading) ? (

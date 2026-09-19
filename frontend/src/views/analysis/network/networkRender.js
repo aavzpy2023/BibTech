@@ -138,8 +138,24 @@ export const drawNode = (node, ctx, globalScale) => {
     gradient.addColorStop(0.3, color);   // Base color
     gradient.addColorStop(1, darken(color)); // Core shadow
 
+    const isLarge = (node.degree || 0) > 15 || radius > 8;
+    if (isLarge) {
+        ctx.shadowColor = 'rgba(0,0,0,0.25)';
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetY = 3;
+    } else {
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+    }
+
     ctx.fillStyle = gradient;
     ctx.fill();
+
+    ctx.shadowColor = 'transparent'; // reset for strokes
+    ctx.lineWidth = isLarge ? 2 / (globalScale || 1) : 0.5 / (globalScale || 1);
+    ctx.strokeStyle = isLarge ? '#ffffff' : '#1e293b';
+    ctx.stroke();
 };
 
 /**
@@ -210,16 +226,24 @@ export const drawLink = (link, ctx, globalScale) => {
     const color = isHighlighted ? getNodeColor(source.group) : '#94a3b8';
 
     // 2 + 4: Weight-driven opacity with extreme contrast separation in focus mode
-    let opacity;
-    if (isHighlighted) {
-        opacity = Math.min(0.85, 0.55 + weight * 0.08);
-    } else if (isHoverActive) {
-        opacity = 0.03; // Dim background edges when focusing on an author
-    } else {
-        opacity = Math.min(0.20, 0.06 + weight * 0.025); // Subtle, clean idle background
-    }
+        const sourceGroup = String(source.group || source.cluster);
+        const targetGroup = String(target.group || target.cluster);
+        const isIntra = sourceGroup === targetGroup;
 
-    opacity *= edgeOpacityMultiplier;
+        let opacity;
+        if (isHighlighted) {
+            opacity = Math.min(0.85, 0.55 + weight * 0.08);
+        } else if (isHoverActive) {
+            opacity = 0.03; // Dim background edges when focusing on an author
+        } else {
+            if (isIntra) {
+                opacity = Math.min(0.45, 0.15 + weight * 0.06);
+            } else {
+                opacity = Math.min(0.10, 0.03 + weight * 0.015);
+            }
+        }
+
+        opacity *= edgeOpacityMultiplier;
 
     const thickness = (isHighlighted
         ? Math.min(2.5, 1.0 + weight * 0.35)
