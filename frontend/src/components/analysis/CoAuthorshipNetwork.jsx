@@ -1,17 +1,17 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
+import ForceGraph2D from 'react-force-graph-2d';
 import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
 import AnalysisPageTemplate from './AnalysisPageTemplate';
 import logoImg from '../../assets/logo.png';
 
-// Novascope Bubble Palettes
-const GROUP_PALETTES = {
-    1: { base: '#ef4444', text: '#1e3a8a' }, // Red
-    2: { base: '#3b82f6', text: '#1e3a8a' }, // Blue
-    3: { base: '#10b981', text: '#1e3a8a' }, // Green
-    4: { base: '#06b6d4', text: '#1e3a8a' }  // Cyan
+// Novascope vibrant cluster palette
+const CLUSTER_COLORS = {
+    1: { base: '#ef4444', light: '#fca5a5', dark: '#991b1b' },
+    2: { base: '#3b82f6', light: '#93c5fd', dark: '#1e40af' },
+    3: { base: '#10b981', light: '#6ee7b7', dark: '#065f46' },
+    4: { base: '#06b6d4', light: '#67e8f9', dark: '#155e75' }
 };
 
-// VOSviewer Overlay (Timeline gradient blue -> teal -> yellow)
 function getOverlayColor(year) {
     if (year <= 2016) return '#3b82f6';
     if (year <= 2018) return '#06b6d4';
@@ -70,7 +70,7 @@ const styles = {
         alignItems: 'center',
         gap: '6px'
     },
-    resetBtn: {
+    fitBtn: {
         backgroundColor: '#21262d',
         color: '#f0f6fc',
         border: '1px solid #30363d',
@@ -81,7 +81,11 @@ const styles = {
     },
     canvasWrapper: {
         position: 'relative',
-        width: '100%'
+        width: '100%',
+        height: '520px',
+        backgroundColor: '#ffffff',
+        borderRadius: '6px',
+        overflow: 'hidden'
     },
     watermark: {
         position: 'absolute',
@@ -91,14 +95,15 @@ const styles = {
         pointerEvents: 'none',
         display: 'flex',
         alignItems: 'center',
-        padding: '4px',
-        borderRadius: '6px',
-        backgroundColor: 'rgba(13, 17, 23, 0.85)',
-        border: '1px solid rgba(48, 54, 61, 0.6)'
+        padding: '6px',
+        borderRadius: '8px',
+        backgroundColor: 'rgba(255, 255, 255, 0.85)',
+        border: '1px solid rgba(0, 0, 0, 0.1)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
     },
     logoImage: {
-        width: '28px',
-        height: '28px',
+        width: '32px',
+        height: '32px',
         objectFit: 'contain'
     },
     legendPanel: {
@@ -106,15 +111,14 @@ const styles = {
         bottom: '12px',
         left: '12px',
         zIndex: 5,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        border: '1px solid rgba(0, 0, 0, 0.1)',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+        backgroundColor: 'rgba(255, 255, 255, 0.92)',
+        border: '1px solid rgba(0, 0, 0, 0.12)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
         borderRadius: '6px',
         padding: '8px 12px',
         display: 'flex',
         flexDirection: 'column',
         gap: '6px',
-        backdropFilter: 'blur(4px)',
         pointerEvents: 'none'
     },
     legendItem: {
@@ -134,7 +138,7 @@ const styles = {
 };
 
 export default function CoAuthorshipNetwork() {
-    const svgRef = useRef(null);
+    const fgRef = useRef();
 
     const {
         nodes,
@@ -151,107 +155,143 @@ export default function CoAuthorshipNetwork() {
         viewMode,
         setViewMode,
         clusters,
-        resetRotation,
         nodeScale,
-        setNodeScale,
-        is3DMode,
-        setIs3DMode,
-        isDragging,
-        handleMouseDown,
-        handleMouseMove,
-        handleMouseUp
+        setNodeScale
     } = useCoAuthorshipNetwork();
 
-    const nodeMap = React.useMemo(() => {
-        const map = new Map();
-        nodes.forEach(n => map.set(n.id, n));
-        return map;
-    }, [nodes]);
+    // Prepare immutable graphData payload for react-force-graph
+    const graphData = useMemo(() => {
+        return {
+            nodes: nodes.map(n => ({ ...n })),
+            links: links.map(l => ({ ...l }))
+        };
+    }, [nodes, links]);
+
+    // Custom 3D bubble painting on 2D HTML5 canvas
+    const paintNode = useCallback((node, ctx, globalScale) => {
+        const baseR = 7 + Math.sqrt(node.papers || 1) * 3;
+        const r = Math.max(3, baseR * nodeScale);
+        const isMatch =
+            !searchQuery.trim() ||
+            node.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const isHovered = hoveredNodeId === node.id;
+        const isSelected = selectedNodeId === node.id;
+
+        const pal = CLUSTER_COLORS[node.group] || CLUSTER_COLORS[1];
+        const fillColor =
+            viewMode === 'overlay' ? getOverlayColor(node.avgYear) : pal.base;
+        const lightColor =
+            viewMode === 'overlay' ? '#ffffff' : pal.light;
+        const darkColor =
+            viewMode === 'overlay' ? '#1e293b' : pal.dark;
+
+        ctx.save();
+        ctx.globalAlpha = isMatch ? 1.0 : 0.15;
+
+        // Floating ambient drop shadow
+        ctx.shadowColor = 'rgba(15, 23, 42, 0.18)';
+        ctx.shadowBlur = 6 * globalScale;
+        ctx.shadowOffsetX = 1 * globalScale;
+        ctx.shadowOffsetY = 3 * globalScale;
+
+        // Spherical radial gradient for glossy 3D bubble look
+        const grad = ctx.createRadialGradient(
+            node.x - r * 0.35,
+            node.y - r * 0.35,
+            r * 0.08,
+            node.x,
+            node.y,
+            r
+        );
+        grad.addColorStop(0, lightColor);
+        grad.addColorStop(0.45, fillColor);
+        grad.addColorStop(1, darkColor);
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
+        ctx.fill();
+
+        // Selection highlight ring
+        if (isSelected || isHovered) {
+            ctx.shadowColor = 'transparent';
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2.5 / globalScale;
+            ctx.stroke();
+        }
+
+        // Crisp navy labels beside nodes with white stroke halo
+        ctx.shadowColor = 'transparent';
+        const fontSize = Math.max(10, Math.min(14, 11 * nodeScale));
+        ctx.font = `${node.papers > 10 || isSelected ? '600' : '400'} ${fontSize}px sans-serif`;
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.strokeText(node.name, node.x + r + 4, node.y + 4);
+
+        ctx.fillStyle = isSelected || isHovered ? '#000000' : '#1e3a8a';
+        ctx.fillText(node.name, node.x + r + 4, node.y + 4);
+
+        ctx.restore();
+    }, [nodeScale, searchQuery, hoveredNodeId, selectedNodeId, viewMode]);
 
     const handleExportHD = useCallback(() => {
-        if (!svgRef.current) return;
         try {
-            const svg = svgRef.current;
-            const serializer = new XMLSerializer();
-            const svgStr = serializer.serializeToString(svg);
-            const blob = new Blob(
-                [svgStr],
-                { type: 'image/svg+xml;charset=utf-8' }
+            const fgEl = fgRef.current;
+            const fgCanvas = fgEl ? fgEl.canvas : document.querySelector('canvas');
+            if (!fgCanvas) return;
+
+            const scale = 2.5;
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = fgCanvas.width * scale;
+            exportCanvas.height = fgCanvas.height * scale;
+            const ctx = exportCanvas.getContext('2d');
+            if (!ctx) return;
+
+            // White background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+            // Draw ForceGraph canvas
+            ctx.drawImage(
+                fgCanvas,
+                0,
+                0,
+                exportCanvas.width,
+                exportCanvas.height
             );
-            const url = URL.createObjectURL(blob);
 
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+            // Draw corner watermark logo
+            const watermark = new Image();
+            watermark.onload = () => {
+                const logoSize = 38 * scale;
+                const margin = 18 * scale;
+                const x = exportCanvas.width - logoSize - margin;
+                const y = margin;
 
-            if (!ctx) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+                ctx.lineWidth = 1 * scale;
+                ctx.fillRect(
+                    x - 6 * scale,
+                    y - 6 * scale,
+                    logoSize + 12 * scale,
+                    logoSize + 12 * scale
+                );
+                ctx.strokeRect(
+                    x - 6 * scale,
+                    y - 6 * scale,
+                    logoSize + 12 * scale,
+                    logoSize + 12 * scale
+                );
+                ctx.drawImage(watermark, x, y, logoSize, logoSize);
+
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = 'co-authorship-vosviewer-hd.svg';
+                a.href = exportCanvas.toDataURL('image/png');
+                a.download = 'co-authorship-novascope-hd.png';
                 a.click();
-                URL.revokeObjectURL(url);
-                return;
-            }
-
-            const scale = 3;
-            canvas.width = 780 * scale;
-            canvas.height = 480 * scale;
-
-            const triggerDownload = (dataUrl) => {
-                const a = document.createElement('a');
-                a.href = dataUrl;
-                a.download = 'co-authorship-vosviewer-hd.png';
-                a.click();
-                URL.revokeObjectURL(url);
             };
-
-            const img = new Image();
-            img.onload = () => {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                const watermark = new Image();
-                watermark.onload = () => {
-                    const logoSize = 34 * scale;
-                    const margin = 16 * scale;
-                    const badgePad = 6 * scale;
-                    const x = canvas.width - logoSize - margin;
-                    const y = margin;
-
-                    ctx.fillStyle = 'rgba(13, 17, 23, 0.9)';
-                    ctx.strokeStyle = 'rgba(48, 54, 61, 0.8)';
-                    ctx.lineWidth = 1 * scale;
-                    if (ctx.roundRect) {
-                        ctx.beginPath();
-                        ctx.roundRect(
-                            x - badgePad,
-                            y - badgePad,
-                            logoSize + badgePad * 2,
-                            logoSize + badgePad * 2,
-                            6 * scale
-                        );
-                        ctx.fill();
-                        ctx.stroke();
-                    } else {
-                        ctx.fillRect(
-                            x - badgePad,
-                            y - badgePad,
-                            logoSize + badgePad * 2,
-                            logoSize + badgePad * 2
-                        );
-                    }
-
-                    ctx.drawImage(watermark, x, y, logoSize, logoSize);
-                    triggerDownload(canvas.toDataURL('image/png'));
-                };
-
-                watermark.onerror = () => {
-                    triggerDownload(canvas.toDataURL('image/png'));
-                };
-
-                watermark.src = logoImg;
-            };
-            img.src = url;
+            watermark.src = logoImg;
         } catch (err) {
             console.error('HD Export Error:', err);
         }
@@ -277,22 +317,6 @@ export default function CoAuthorshipNetwork() {
                         Overlay
                     </button>
                 </div>
-                <div style={{ ...styles.modeSwitchGroup, marginLeft: '8px' }}>
-                    <button
-                        type="button"
-                        style={styles.modeBtn(!is3DMode)}
-                        onClick={() => setIs3DMode(false)}
-                    >
-                        2D
-                    </button>
-                    <button
-                        type="button"
-                        style={styles.modeBtn(is3DMode)}
-                        onClick={() => setIs3DMode(true)}
-                    >
-                        3D
-                    </button>
-                </div>
             </div>
 
             <div style={styles.controlGroup}>
@@ -311,7 +335,7 @@ export default function CoAuthorshipNetwork() {
 
             <div style={styles.controlGroup}>
                 <label htmlFor="min-weight-slider" style={styles.label}>
-                    Min Links ({minWeight}):
+                    Min Collab ({minWeight}):
                 </label>
                 <input
                     id="min-weight-slider"
@@ -332,7 +356,7 @@ export default function CoAuthorshipNetwork() {
                     id="node-scale-slider"
                     type="range"
                     min="0.5"
-                    max="3.0"
+                    max="2.5"
                     step="0.1"
                     value={nodeScale}
                     onChange={e => setNodeScale(Number(e.target.value))}
@@ -341,15 +365,13 @@ export default function CoAuthorshipNetwork() {
             </div>
 
             <div style={styles.controlGroup}>
-                {is3DMode && (
-                    <button
-                        type="button"
-                        style={styles.resetBtn}
-                        onClick={resetRotation}
-                    >
-                        Reset 3D View
-                    </button>
-                )}
+                <button
+                    type="button"
+                    style={styles.fitBtn}
+                    onClick={() => fgRef.current && fgRef.current.zoomToFit(400)}
+                >
+                    Center
+                </button>
                 <button
                     type="button"
                     style={styles.exportBtn}
@@ -364,23 +386,22 @@ export default function CoAuthorshipNetwork() {
 
     const footer = selectedNode ? (
         <div>
-            <strong>Selected:</strong> {selectedNode.name} |{' '}
-            <strong>Citations:</strong> {selectedNode.citations.toLocaleString()} |{' '}
+            <strong>Author:</strong> {selectedNode.name} |{' '}
+            <strong>Citations:</strong> {selectedNode.citations?.toLocaleString() || 0} |{' '}
             <strong>Publications:</strong> {selectedNode.papers} |{' '}
-            <strong>Avg Pub Year:</strong> {selectedNode.avgYear.toFixed(1)} |{' '}
-            <strong>Cluster:</strong> {clusters[selectedNode.group]?.name}
+            <strong>Cluster:</strong> {clusters[selectedNode.group]?.name || 'Collaboration Cluster'}
         </div>
     ) : null;
 
     return (
         <AnalysisPageTemplate
             title="Co-authorship Network"
-            subtitle="VOSviewer scientometric landscape: Clusters, link strengths and co-authorship density."
+            subtitle="Novascope D3 force simulation: Radial cluster dynamics and convex co-authorship relationships."
             toolbar={toolbar}
             footer={footer}
             dataTestId="coauthorship-network-view"
         >
-            <div style={styles.canvasWrapper}>
+            <div style={styles.canvasWrapper} data-testid="coauthorship-force-graph-wrapper">
                 <div style={styles.watermark}>
                     <img
                         src={logoImg}
@@ -392,7 +413,7 @@ export default function CoAuthorshipNetwork() {
 
                 <div style={styles.legendPanel} data-testid="vosviewer-legend">
                     <span style={{ ...styles.label, fontSize: '10px', color: '#64748b' }}>
-                        {viewMode === 'network' ? 'CLUSTERS' : 'AVG PUB YEAR'}
+                        {viewMode === 'network' ? 'CLUSTERS' : 'AVG YEAR'}
                     </span>
                     {viewMode === 'network' ? (
                         Object.entries(clusters).map(([gid, c]) => (
@@ -419,245 +440,35 @@ export default function CoAuthorshipNetwork() {
                     )}
                 </div>
 
-                <svg
-                    ref={svgRef}
-                    data-testid="coauthorship-svg"
-                    width="100%"
-                    height="520"
-                    viewBox="0 0 780 500"
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
-                    style={{
-                        backgroundColor: '#ffffff',
-                        borderRadius: '6px',
-                        cursor: is3DMode ? (isDragging ? 'grabbing' : 'grab') : 'default',
-                        userSelect: 'none'
+                <ForceGraph2D
+                    ref={fgRef}
+                    graphData={graphData}
+                    backgroundColor="#ffffff"
+                    nodeCanvasObject={paintNode}
+                    nodePointerAreaPaint={(node, color, ctx) => {
+                        const r = Math.max(3, (7 + Math.sqrt(node.papers || 1) * 3) * nodeScale);
+                        ctx.fillStyle = color;
+                        ctx.beginPath();
+                        ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
+                        ctx.fill();
                     }}
-                >
-                    <defs>
-                        <radialGradient id="sphereGrad1" cx="30%" cy="30%" r="70%">
-                            <stop offset="0%" stopColor="#fca5a5" />
-                            <stop offset="45%" stopColor="#ef4444" />
-                            <stop offset="100%" stopColor="#7f1d1d" />
-                        </radialGradient>
-                        <radialGradient id="sphereGrad2" cx="30%" cy="30%" r="70%">
-                            <stop offset="0%" stopColor="#93c5fd" />
-                            <stop offset="45%" stopColor="#3b82f6" />
-                            <stop offset="100%" stopColor="#1e3a8a" />
-                        </radialGradient>
-                        <radialGradient id="sphereGrad3" cx="30%" cy="30%" r="70%">
-                            <stop offset="0%" stopColor="#6ee7b7" />
-                            <stop offset="45%" stopColor="#10b981" />
-                            <stop offset="100%" stopColor="#064e3b" />
-                        </radialGradient>
-                        <radialGradient id="sphereGrad4" cx="30%" cy="30%" r="70%">
-                            <stop offset="0%" stopColor="#67e8f9" />
-                            <stop offset="45%" stopColor="#06b6d4" />
-                            <stop offset="100%" stopColor="#164e63" />
-                        </radialGradient>
-
-                        {/* Ambient floating bubble drop shadow */}
-                        <filter
-                            id="bubble-shadow"
-                            x="-30%"
-                            y="-30%"
-                            width="160%"
-                            height="160%"
-                        >
-                            <feDropShadow
-                                dx="1"
-                                dy="3"
-                                stdDeviation="3"
-                                floodColor="#0f172a"
-                                floodOpacity="0.14"
-                            />
-                        </filter>
-
-                        {/* Dynamic mid-span fading gradients for all active links */}
-                        {links.map((link, idx) => {
-                            const s = nodeMap.get(link.source);
-                            const t = nodeMap.get(link.target);
-                            if (!s || !t) return null;
-                            const sCol = (
-                                GROUP_PALETTES[s.group] || GROUP_PALETTES[1]
-                            ).base;
-                            const tCol = (
-                                GROUP_PALETTES[t.group] || GROUP_PALETTES[1]
-                            ).base;
-
-                            return (
-                                <linearGradient
-                                    key={`fade-grad-${idx}`}
-                                    id={`fade-grad-${idx}`}
-                                    x1={s.px}
-                                    y1={s.py}
-                                    x2={t.px}
-                                    y2={t.py}
-                                    gradientUnits="userSpaceOnUse"
-                                >
-                                    <stop
-                                        offset="0%"
-                                        stopColor={sCol}
-                                        stopOpacity="0.55"
-                                    />
-                                    <stop
-                                        offset="28%"
-                                        stopColor={sCol}
-                                        stopOpacity="0.1"
-                                    />
-                                    <stop
-                                        offset="50%"
-                                        stopColor="#cbd5e1"
-                                        stopOpacity="0.02"
-                                    />
-                                    <stop
-                                        offset="72%"
-                                        stopColor={tCol}
-                                        stopOpacity="0.1"
-                                    />
-                                    <stop
-                                        offset="100%"
-                                        stopColor={tCol}
-                                        stopOpacity="0.55"
-                                    />
-                                </linearGradient>
-                            );
-                        })}
-                    </defs>
-
-                    {/* Glossy Colored Curved Links */}
-                    {links.map((link, idx) => {
-                        const s = nodeMap.get(link.source);
-                        const t = nodeMap.get(link.target);
-                        if (!s || !t) return null;
-
-                        const isFocused =
-                            hoveredNodeId === s.id ||
-                            hoveredNodeId === t.id ||
-                            selectedNodeId === s.id ||
-                            selectedNodeId === t.id;
-
-                        const hasFocusActive = Boolean(
-                            hoveredNodeId || selectedNodeId
-                        );
-                        const edgeOpacity = isFocused
-                            ? 0.8
-                            : hasFocusActive
-                            ? 0.04
-                            : is3DMode
-                            ? ((s.depthOpacity + t.depthOpacity) / 2) * 0.2
-                            : 0.25;
-
-                        const dx = t.px - s.px;
-                        const dy = t.py - s.py;
-                        const midX = (s.px + t.px) / 2;
-                        const midY = (s.py + t.py) / 2;
-                        
-                        const nx = -dy;
-                        const ny = dx;
-                        
-                        // Generates convex sweeping arcs proportional to distance
-                        const cx = midX + nx * 0.2;
-                        const cy = midY + ny * 0.2;
-
-                        const strokeWidth =
-                            Math.max(1, link.weight * ((s.scale + t.scale) / 2) * 0.5);
-                        
-                        const sourcePalette = GROUP_PALETTES[s.group] || GROUP_PALETTES[1];
-
-                        return (
-                            <path
-                                key={`link-${idx}`}
-                                d={`M ${s.px} ${s.py} Q ${cx} ${cy} ${t.px} ${t.py}`}
-                                fill="none"
-                                stroke={
-                                    isFocused
-                                        ? '#2563eb'
-                                        : `url(#fade-grad-${idx})`
-                                }
-                                strokeWidth={isFocused ? strokeWidth + 1 : strokeWidth}
-                                strokeOpacity={
-                                    isFocused ? 0.9 : edgeOpacity
-                                }
-                            />
-                        );
-                    })}
-
-                    {/* Glossy 3D Nodes and Clean Typography */}
-                    {nodes.map(node => {
-                        const isMatch =
-                            searchQuery.trim() === '' ||
-                            node.name
-                                .toLowerCase()
-                                .includes(searchQuery.toLowerCase());
-                        const isSelected = selectedNodeId === node.id;
-                        const isHovered = hoveredNodeId === node.id;
-
-                        const gradId = `url(#sphereGrad${node.group || 1})`;
-
-                        return (
-                            <g
-                                key={`node-${node.id}`}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedNodeId(node.id);
-                                }}
-                                onMouseEnter={() => setHoveredNodeId(node.id)}
-                                onMouseLeave={() => setHoveredNodeId(null)}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                {/* 3D Floating Bubble Sphere with Soft Shadow */}
-                                <circle
-                                    cx={node.px}
-                                    cy={node.py}
-                                    r={node.radius}
-                                    filter="url(#bubble-shadow)"
-                                    fill={
-                                        viewMode === 'network'
-                                            ? gradId
-                                            : getOverlayColor(node.avgYear)
-                                    }
-                                    fillOpacity={
-                                        isMatch ? node.depthOpacity : 0.15
-                                    }
-                                    stroke={
-                                        isSelected || isHovered
-                                            ? '#0f172a'
-                                            : 'rgba(255, 255, 255, 0.4)'
-                                    }
-                                    strokeWidth={isSelected || isHovered ? 2 : 0.75}
-                                />
-
-                                {/* Clean Navy Labels in Foreground */}
-                                <text
-                                    x={node.px + node.radius + 6}
-                                    y={node.py + 4}
-                                    textAnchor="start"
-                                    fill={isSelected || isHovered ? '#000000' : '#1e3a8a'}
-                                    fillOpacity={
-                                        isMatch
-                                            ? is3DMode
-                                                ? Math.max(0.75, node.depthOpacity)
-                                                : 1.0
-                                            : 0.15
-                                    }
-                                    fontSize={`${Math.max(10, Math.round(12 * node.scale))}px`}
-                                    fontWeight={isSelected || node.papers > 8 ? '600' : '400'}
-                                    style={{
-                                        paintOrder: 'stroke fill',
-                                        stroke: '#ffffff',
-                                        strokeWidth: '2.5px',
-                                        strokeLinejoin: 'round'
-                                    }}
-                                >
-                                    {node.name}
-                                </text>
-                            </g>
-                        );
-                    })}
-                </svg>
+                    linkCurvature={0.22}
+                    linkColor={link => {
+                        const sGroup =
+                            typeof link.source === 'object'
+                                ? link.source.group
+                                : 1;
+                        const pal = CLUSTER_COLORS[sGroup] || CLUSTER_COLORS[1];
+                        return pal.base;
+                    }}
+                    linkWidth={link => Math.max(1, (link.weight || 1) * 0.7)}
+                    linkDirectionalParticles={0}
+                    onNodeClick={node => setSelectedNodeId(node.id)}
+                    onNodeHover={node => setHoveredNodeId(node ? node.id : null)}
+                    cooldownTicks={120}
+                    d3AlphaDecay={0.02}
+                    d3VelocityDecay={0.3}
+                />
             </div>
         </AnalysisPageTemplate>
     );
