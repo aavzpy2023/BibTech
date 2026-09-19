@@ -174,9 +174,9 @@ if HAS_MULTIPART:
             Article.id.in_(request.article_ids),
             ProjectArticle.id == None
         ).all()
-        
+
         orphaned_ids = [o[0] for o in orphaned]
-        
+
         if orphaned_ids:
             db.query(Article).filter(Article.id.in_(orphaned_ids)).delete(synchronize_session=False)
 
@@ -572,11 +572,70 @@ def get_coauthorship_network(
                 pair = tuple(sorted([formatted_names[i], formatted_names[j]]))
                 coauthorship_counts[pair] += 1
 
-    ranked_authors = sorted(
-        author_papers.keys(),
-        key=lambda k: (author_papers[k], author_citations[k]),
+    # --- Selección de nodos por COMPONENTE COMPLETO, no por ranking global ---
+    #
+    # Antes: se tomaba el top-N global de autores por (papers, citas) y luego
+    # se exigía que AMBOS extremos de una arista estuvieran en ese top-N. Esto
+    # descartaba silenciosamente aristas reales cuando el autor "puente" que
+    # conectaba a dos autores relevantes no entraba al top-N por sí mismo
+    # (ej. porque solo tenía 1 paper). El resultado era que un componente
+    # conexo real (ej. 75 autores todos conectados entre sí, aunque sea
+    # indirectamente) aparecía roto en varias islas visualmente desconectadas
+    # en el grafo, aunque los datos de origen sí los conectaban.
+    #
+    # Ahora: primero se construye el grafo COMPLETO (todos los autores, todas
+    # las coautorías), se calculan sus componentes conexos, y se van
+    # agregando componentes ENTEROS (nunca fragmentos) al resultado, en orden
+    # de relevancia, hasta acercarse al presupuesto de max_nodes. Así un
+    # componente real nunca queda partido a la mitad.
+
+    full_graph = nx.Graph()
+    full_graph.add_nodes_from(author_papers.keys())
+    for (a1, a2), w in coauthorship_counts.items():
+        full_graph.add_edge(a1, a2, weight=w)
+
+    def _component_score(component: set[str]) -> tuple[int, int]:
+        # Relevancia del componente: primero por citas totales, luego por
+        # papers totales de sus miembros. Ajustable según lo que se quiera
+        # priorizar (ej. tamaño del componente en vez de citas).
+        total_citations = sum(author_citations[n] for n in component)
+        total_papers = sum(author_papers[n] for n in component)
+        return (total_citations, total_papers)
+
+    components = sorted(
+        nx.connected_components(full_graph),
+        key=_component_score,
         reverse=True,
-    )[:max_nodes]
+    )
+
+    ranked_authors: list[str] = []
+    for component in components:
+        if not ranked_authors:
+            # Siempre se incluye al menos el primer (más relevante)
+            # componente completo, aunque exceda max_nodes por sí solo, para
+            # no devolver un grafo vacío en datasets con un único componente
+            # gigante.
+            ranked_authors.extend(sorted(component))
+            continue
+        if len(ranked_authors) + len(component) > max_nodes:
+            continue
+        ranked_authors.extend(sorted(component))
+
+    # Si incluso el componente más relevante por sí solo excede max_nodes,
+    # se recorta ESE componente por grado (autores más conectados dentro de
+    # su propio componente), en vez de recortar aristas entre componentes
+    # distintos como antes. Esto puede seguir fragmentando un componente
+    # gigantesco, pero solo en ese caso extremo, no en el caso general.
+    if len(ranked_authors) > max_nodes:
+        ranked_authors = sorted(
+            ranked_authors,
+            key=lambda n: (
+                full_graph.degree(n, weight="weight"),
+                author_papers[n],
+                author_citations[n],
+            ),
+            reverse=True,
+        )[:max_nodes]
 
     if not ranked_authors:
         return {"nodes": [], "links": [], "clusters": {}}
@@ -722,7 +781,7 @@ def get_cocitation_network(
         crs = getattr(a, "cited_references", [])
         if not crs:
             continue
-        
+
         valid_refs = []
         for cr in crs:
             if cr.id not in ref_data:
@@ -739,7 +798,7 @@ def get_cocitation_network(
                 }
             ref_citations[cr.id] += 1
             valid_refs.append(cr.id)
-            
+
         valid_refs = list(set(valid_refs))
         for i in range(len(valid_refs)):
             for j in range(i + 1, len(valid_refs)):
@@ -756,7 +815,7 @@ def get_cocitation_network(
         return {"nodes": [], "links": [], "clusters": {}}
 
     ranked_set = set(ranked_refs)
-    
+
     G = nx.Graph()
     G.add_nodes_from(ranked_refs)
     for (r1, r2), w in cocitation_counts.items():

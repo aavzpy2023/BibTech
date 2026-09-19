@@ -9,7 +9,7 @@ const layoutCache = new Map();
 
 function getLayoutKey(nodes, links) {
     if (!nodes || nodes.length === 0) return null;
-    const nSig = nodes.map(n => n.id).join(',');
+    const nSig = nodes.map(n => `${n.id}:${n.group}`).join(',');
     const lSig = links.map(l => {
         const s = typeof l.source === 'object' ? l.source.id : l.source;
         const t = typeof l.target === 'object' ? l.target.id : l.target;
