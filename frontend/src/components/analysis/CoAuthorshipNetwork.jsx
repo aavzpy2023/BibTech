@@ -457,6 +457,74 @@ export default function CoAuthorshipNetwork() {
                             <stop offset="45%" stopColor="#06b6d4" />
                             <stop offset="100%" stopColor="#164e63" />
                         </radialGradient>
+
+                        {/* Ambient floating bubble drop shadow */}
+                        <filter
+                            id="bubble-shadow"
+                            x="-30%"
+                            y="-30%"
+                            width="160%"
+                            height="160%"
+                        >
+                            <feDropShadow
+                                dx="1"
+                                dy="3"
+                                stdDeviation="3"
+                                floodColor="#0f172a"
+                                floodOpacity="0.14"
+                            />
+                        </filter>
+
+                        {/* Dynamic mid-span fading gradients for all active links */}
+                        {links.map((link, idx) => {
+                            const s = nodeMap.get(link.source);
+                            const t = nodeMap.get(link.target);
+                            if (!s || !t) return null;
+                            const sCol = (
+                                GROUP_PALETTES[s.group] || GROUP_PALETTES[1]
+                            ).base;
+                            const tCol = (
+                                GROUP_PALETTES[t.group] || GROUP_PALETTES[1]
+                            ).base;
+
+                            return (
+                                <linearGradient
+                                    key={`fade-grad-${idx}`}
+                                    id={`fade-grad-${idx}`}
+                                    x1={s.px}
+                                    y1={s.py}
+                                    x2={t.px}
+                                    y2={t.py}
+                                    gradientUnits="userSpaceOnUse"
+                                >
+                                    <stop
+                                        offset="0%"
+                                        stopColor={sCol}
+                                        stopOpacity="0.55"
+                                    />
+                                    <stop
+                                        offset="28%"
+                                        stopColor={sCol}
+                                        stopOpacity="0.1"
+                                    />
+                                    <stop
+                                        offset="50%"
+                                        stopColor="#cbd5e1"
+                                        stopOpacity="0.02"
+                                    />
+                                    <stop
+                                        offset="72%"
+                                        stopColor={tCol}
+                                        stopOpacity="0.1"
+                                    />
+                                    <stop
+                                        offset="100%"
+                                        stopColor={tCol}
+                                        stopOpacity="0.55"
+                                    />
+                                </linearGradient>
+                            );
+                        })}
                     </defs>
 
                     {/* Glossy Colored Curved Links */}
@@ -504,9 +572,15 @@ export default function CoAuthorshipNetwork() {
                                 key={`link-${idx}`}
                                 d={`M ${s.px} ${s.py} Q ${cx} ${cy} ${t.px} ${t.py}`}
                                 fill="none"
-                                stroke={isFocused ? '#000000' : sourcePalette.base}
-                                strokeWidth={strokeWidth}
-                                strokeOpacity={edgeOpacity}
+                                stroke={
+                                    isFocused
+                                        ? '#2563eb'
+                                        : `url(#fade-grad-${idx})`
+                                }
+                                strokeWidth={isFocused ? strokeWidth + 1 : strokeWidth}
+                                strokeOpacity={
+                                    isFocused ? 0.9 : edgeOpacity
+                                }
                             />
                         );
                     })}
@@ -534,21 +608,26 @@ export default function CoAuthorshipNetwork() {
                                 onMouseLeave={() => setHoveredNodeId(null)}
                                 style={{ cursor: 'pointer' }}
                             >
-                                {/* 3D Bubble Sphere - Full Opacity in 2D Foreground */}
+                                {/* 3D Floating Bubble Sphere with Soft Shadow */}
                                 <circle
                                     cx={node.px}
                                     cy={node.py}
                                     r={node.radius}
-                                    fill={viewMode === 'network' ? gradId : getOverlayColor(node.avgYear)}
-                                    fillOpacity={
-                                        isMatch
-                                            ? is3DMode
-                                                ? node.depthOpacity
-                                                : 1.0
-                                            : 0.15
+                                    filter="url(#bubble-shadow)"
+                                    fill={
+                                        viewMode === 'network'
+                                            ? gradId
+                                            : getOverlayColor(node.avgYear)
                                     }
-                                    stroke={isSelected || isHovered ? '#000000' : 'none'}
-                                    strokeWidth={isSelected || isHovered ? 2 : 0}
+                                    fillOpacity={
+                                        isMatch ? node.depthOpacity : 0.15
+                                    }
+                                    stroke={
+                                        isSelected || isHovered
+                                            ? '#0f172a'
+                                            : 'rgba(255, 255, 255, 0.4)'
+                                    }
+                                    strokeWidth={isSelected || isHovered ? 2 : 0.75}
                                 />
 
                                 {/* Clean Navy Labels in Foreground */}

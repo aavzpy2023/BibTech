@@ -567,10 +567,10 @@ def get_coauthorship_network(
             
             x = r_2d * math.cos(theta)
             y = r_2d * math.sin(theta)
-            
-            z_base = math.sqrt(max(0, 260.0**2 - r_2d**2))
-            z = z_base * (1 if (i // 2) % 2 == 0 else -1) * 0.5
-            
+
+            # Degree-depth mapping: hubs in foreground (z > 0), low-degree in depth (z < 0)
+            z = (1.0 - 2.0 * rank_pct) * 140.0 + (math.sin(i * 3.7) * 15.0)
+
             nodes.append({
                 "id": node_id,
                 "name": name,

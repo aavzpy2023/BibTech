@@ -230,20 +230,26 @@ export default function useCoAuthorshipNetwork() {
             .filter(n => activeNodeIds.has(n.id))
             .map(n => {
                 if (!is3DMode) {
-                    // Absolute 2D Flat Plane: All nodes in foreground, zero depth attenuation
+                    // Depth-layered 2D: Central hubs in crisp foreground, peripheral in subtle depth
                     const scale2D = 0.82;
                     const px = cx + n.x * scale2D;
                     const py = cy + n.y * scale2D;
-                    const baseRadius = (7 + Math.sqrt(n.papers) * 2.8) * nodeScale;
+                    const depthScale = 1.0 + (n.z / 500);
+                    const baseRadius =
+                        (7 + Math.sqrt(n.papers) * 2.8) * nodeScale * depthScale;
+                    const depthOpacity = Math.max(
+                        0.7,
+                        Math.min(1.0, (n.z + 180) / 300)
+                    );
 
                     return {
                         ...n,
                         px,
                         py,
-                        z2: 0,
-                        scale: 1.0,
+                        z2: n.z,
+                        scale: depthScale,
                         radius: baseRadius,
-                        depthOpacity: 1.0
+                        depthOpacity
                     };
                 }
 
