@@ -15,11 +15,6 @@ export const CLUSTER_METADATA = {
  * Returns the hex color for a given node cluster group.
  */
 export const getNodeColor = (group) => {
-    const strGroup = String(group);
-    if (top4GroupsCache.size > 0 && !top4GroupsCache.has(strGroup)) {
-        return '#c9c9c9'; // Others
-    }
-
     const cluster = CLUSTER_METADATA[group];
     if (cluster) return cluster.color;
     
@@ -64,10 +59,7 @@ let top4GroupsCache = new Set();
 export const assignNodeRadii = (nodes) => {
     const globalMax = Math.max(...nodes.map(getMetric), 1);
 
-    const counts = new Map();
-    nodes.forEach(n => counts.set(n.group, (counts.get(n.group) || 0) + 1));
-    const sortedGroups = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
-    top4GroupsCache = new Set(sortedGroups.slice(0, 4).map(e => String(e[0])));
+    // Radii normalization
 
     const byGroup = new Map();
     nodes.forEach(n => {

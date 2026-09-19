@@ -1,298 +1,116 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-19 15:56:09
+Date: 2026-09-19 16:13:22
 AST Mode: False
 Line Numbers: True
-Modules: networkRender.js
+Modules: networkStyles.js
 Processed Files: 1
 ===========================
 
 
 
-// --- frontend/src/views/analysis/network/networkRender.js ---
+// --- frontend/src/views/analysis/network/networkStyles.js ---
 
-[L001, S0] import { getNodeColor, calculateRadius } from './networkStyles';
-[L002, S0] 
-[L003, S0] let labelCache = new Map();
-[L004, S0] let cacheNodes = null;
-[L005, S0] let lastK = -1;
-[L006, S0] let graphNodes = [];
-[L007, S0] let activeHoveredNodeId = null;
-[L008, S0] let edgeOpacityMultiplier = 1.0;
-[L009, S0] 
-[L010, S0] export const setEdgeOpacityMultiplier = (val) => {
-[L011, S4]     edgeOpacityMultiplier = val;
+[L001, S0] export const EXTENDED_PALETTE = [
+[L002, S4]     '#ff1a2e', '#1a5cff', '#00c853', '#00b8d4', '#ff9800', 
+[L003, S4]     '#9c27b0', '#ffeb3b', '#e91e63', '#795548', '#cddc39', 
+[L004, S4]     '#673ab7', '#009688', '#ff5722', '#607d8b', '#8bc34a'
+[L005, S0] ];
+[L006, S0] 
+[L007, S0] export const CLUSTER_METADATA = {
+[L008, S4]     1: { name: 'Primary Collaboration Cluster', color: EXTENDED_PALETTE[0] },
+[L009, S4]     2: { name: 'Core Scientific Cluster', color: EXTENDED_PALETTE[1] },
+[L010, S4]     3: { name: 'Emerging Research Cluster', color: EXTENDED_PALETTE[2] },
+[L011, S4]     4: { name: 'Secondary Hub', color: EXTENDED_PALETTE[3] }
 [L012, S0] };
 [L013, S0] 
-[L014, S0] export const setHoveredNodeId = (id) => {
-[L015, S4]     activeHoveredNodeId = id;
-[L016, S0] };
-[L017, S0] 
-[L018, S0] export const setRenderNodes = (nodes) => {
-[L019, S4]     graphNodes = nodes || [];
-[L020, S4]     cacheNodes = null;
-[L021, S4]     lastK = -1;
-[L022, S0] };
-[L023, S0] 
-[L024, S0] // Hubs = los pocos nodos más conectados. Con umbral absoluto (degree >= 5) casi
-[L025, S0] // todos los autores de un artículo con muchos coautores serían "hubs" y sus
-[L026, S0] // etiquetas forzadas se apilarían unas sobre otras.
-[L027, S0] const HUB_MAX = 12;
-[L028, S0] const HUB_RATIO = 0.15;
-[L029, S0] const HUB_MIN_DEGREE = 5;
-[L030, S0] 
-[L031, S0] export const pickHubIds = (nodes) => {
-[L032, S4]     const limit = Math.min(HUB_MAX, Math.ceil(nodes.length * HUB_RATIO));
-[L033, S4]     const ranked = nodes
-[L034, S8]         .filter(n => (n.degree || 0) >= HUB_MIN_DEGREE)
-[L035, S8]         .sort((a, b) => (b.degree || 0) - (a.degree || 0));
-[L036, S4]     return new Set(ranked.slice(0, limit).map(n => n.id));
-[L037, S0] };
-[L038, S0] 
-[L039, S0] /**
-[L040, S1]  * Colocación greedy anti-solape. Devuelve Map(id -> { x, y, w, h, fs, hub }) en
-[L041, S1]  * coordenadas del grafo. Los nodos que no encuentran hueco se quedan sin etiqueta;
-[L042, S1]  * solo los hubs se fuerzan.
-[L043, S1]  */
-[L044, S0] export const layoutLabels = (nodes, ctx, k) => {
-[L045, S4]     const hit = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-[L046, S4]     const placed = nodes.map(n => {
-[L047, S8]         const r = calculateRadius(n);
-[L048, S8]         return { x: n.x - r, y: n.y - r, w: 2 * r, h: 2 * r };
-[L049, S4]     });
-[L050, S4]     const out = new Map();
-[L051, S4]     const hubIds = pickHubIds(nodes);
-[L052, S4]     const margin = 1.5 / k;
-[L053, S0] 
-[L054, S4]     [...nodes].sort((a, b) => (b.degree || 0) - (a.degree || 0)).forEach(n => {
-[L055, S8]         const r = calculateRadius(n);
-[L056, S8]         const g = 3 / k;
-[L057, S8]         const d = r * 0.7;
-[L058, S8]         const isHub = hubIds.has(n.id);
-[L059, S8]         let last = null;
-[L060, S0] 
-[L061, S8]         for (const f of [1, 0.85, 0.7]) {          // fuente normal, -15 %, -30 %
-[L062, S12]             const fs = ((11 + r * 0.25) / k) * f;
-[L063, S12]             ctx.font = `${isHub ? 600 : 500} ${fs}px Sans-Serif`;   // mismo peso que en paintLabel
-[L064, S12]             const w = ctx.measureText(n.name || '').width;
-[L065, S12]             const h = fs * 1.2;
-[L066, S12]             const cands = [
-[L067, S16]                 { x: n.x + r + g,         y: n.y - h / 2 },          // derecha
-[L068, S16]                 { x: n.x - r - g - w,     y: n.y - h / 2 },          // izquierda
-[L069, S16]                 { x: n.x - w / 2,         y: n.y + r + g },          // abajo
-[L070, S16]                 { x: n.x - w / 2,         y: n.y - r - g - h },      // arriba
-[L071, S16]                 { x: n.x + d + g,         y: n.y - d - g - h },      // arriba-derecha
-[L072, S16]                 { x: n.x + d + g,         y: n.y + d + g },          // abajo-derecha
-[L073, S16]                 { x: n.x - d - g - w,     y: n.y - d - g - h },      // arriba-izquierda
-[L074, S16]                 { x: n.x - d - g - w,     y: n.y + d + g },          // abajo-izquierda
-[L075, S16]                 { x: n.x + r + g * 3,     y: n.y - h / 2 }           // derecha, más lejos
-[L076, S12]             ];
-[L077, S12]             const pick = cands.find(c => {
-[L078, S16]                 const box = { x: c.x - margin, y: c.y - margin, w: w + 2 * margin, h: h + 2 * margin };
-[L079, S16]                 return !placed.some(p => hit(box, p));
-[L080, S12]             });
-[L081, S12]             last = { fs, w, h, first: cands[0] };
-[L082, S12]             if (pick) {
-[L083, S16]                 placed.push({ ...pick, w, h });
-[L084, S16]                 out.set(n.id, { ...pick, w, h, fs, hub: isHub });
-[L085, S16]                 return;
-[L086, S12]             }
-[L087, S8]         }
-[L088, S8]         // los hubs (pocos) siempre llevan etiqueta, aunque se solape un poco
-[L089, S8]         if (isHub && last) {
-[L090, S12]             placed.push({ ...last.first, w: last.w, h: last.h });
-[L091, S12]             out.set(n.id, { ...last.first, w: last.w, h: last.h, fs: last.fs, hub: true });
-[L092, S8]         }
-[L093, S4]     });
-[L094, S4]     return out;
-[L095, S0] };
-[L096, S0] 
-[L097, S0] const ensureLabels = (nodes, ctx, k) => {
-[L098, S4]     if (cacheNodes === nodes && lastK === k) return;
-[L099, S4]     try {
-[L100, S8]         labelCache = layoutLabels(nodes, ctx, k);
-[L101, S4]     } catch (e) {
-[L102, S8]         console.error('layoutLabels error:', e);
-[L103, S8]         labelCache = new Map();
-[L104, S4]     }
-[L105, S4]     cacheNodes = nodes;
-[L106, S4]     lastK = k;
-[L107, S0] };
-[L108, S0] 
-[L109, S0] /**
-[L110, S1]  * Renders a highly stylized 3D-like sphere for a node using Canvas radial gradients.
-[L111, S1]  */
-[L112, S0] export const drawNode = (node, ctx, globalScale) => {
-[L113, S4]     const radius = calculateRadius(node);
-[L114, S4]     const color = getNodeColor(node.group);
-[L115, S0] 
-[L116, S4]     ctx.beginPath();
-[L117, S4]     ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-[L118, S0] 
-[L119, S4]     // Create a 3D light-source effect (top-left offset)
-[L120, S4]     const gradient = ctx.createRadialGradient(
-[L121, S8]         node.x - radius / 3,
-[L122, S8]         node.y - radius / 3,
-[L123, S8]         radius / 10,
-[L124, S8]         node.x,
-[L125, S8]         node.y,
-[L126, S8]         radius
-[L127, S4]     );
-[L128, S0] 
-[L129, S4]     const darken = (hex) => {
-[L130, S8]         if (!hex || !hex.startsWith('#')) return '#1e293b';
-[L131, S8]         const r = Math.floor(parseInt(hex.slice(1, 3), 16) * 0.5);
-[L132, S8]         const g = Math.floor(parseInt(hex.slice(3, 5), 16) * 0.5);
-[L133, S8]         const b = Math.floor(parseInt(hex.slice(5, 7), 16) * 0.5);
-[L134, S8]         return `rgb(${r},${g},${b})`;
-[L135, S4]     };
-[L136, S0] 
-[L137, S4]     gradient.addColorStop(0, '#ffffff'); // Specular highlight
-[L138, S4]     gradient.addColorStop(0.3, color);   // Base color
-[L139, S4]     gradient.addColorStop(1, darken(color)); // Core shadow
-[L140, S0] 
-[L141, S4]     const isLarge = (node.degree || 0) > 15 || radius > 8;
-[L142, S4]     if (isLarge) {
-[L143, S8]         ctx.shadowColor = 'rgba(0,0,0,0.25)';
-[L144, S8]         ctx.shadowBlur = 6;
-[L145, S8]         ctx.shadowOffsetY = 3;
-[L146, S4]     } else {
-[L147, S8]         ctx.shadowColor = 'transparent';
-[L148, S8]         ctx.shadowBlur = 0;
-[L149, S8]         ctx.shadowOffsetY = 0;
-[L150, S4]     }
-[L151, S0] 
-[L152, S4]     ctx.fillStyle = gradient;
-[L153, S4]     ctx.fill();
-[L154, S0] 
-[L155, S4]     ctx.shadowColor = 'transparent'; // reset for strokes
-[L156, S4]     ctx.lineWidth = isLarge ? 2 / (globalScale || 1) : 0.5 / (globalScale || 1);
-[L157, S4]     ctx.strokeStyle = isLarge ? '#ffffff' : '#1e293b';
-[L158, S4]     ctx.stroke();
-[L159, S0] };
-[L160, S0] 
-[L161, S0] /**
-[L162, S1]  * Pinta una etiqueta ya colocada por layoutLabels.
-[L163, S1]  */
-[L164, S0] export const paintLabel = (node, pos, ctx) => {
-[L165, S4]     ctx.font = `${pos.hub ? '600' : '500'} ${pos.fs}px Sans-Serif`;
-[L166, S4]     ctx.textAlign = 'left';
-[L167, S4]     ctx.textBaseline = 'top';
-[L168, S4]     const text = node.name || '';
-[L169, S0] 
-[L170, S4]     if (ctx.strokeText) {                       // halo blanco: legible sobre las aristas
-[L171, S8]         ctx.lineJoin = 'round';
-[L172, S8]         ctx.lineWidth = pos.fs * 0.28;
-[L173, S8]         ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-[L174, S8]         ctx.strokeText(text, pos.x, pos.y);
-[L175, S4]     }
-[L176, S4]     ctx.fillStyle = pos.hub ? '#0f172a' : '#334155';
-[L177, S4]     ctx.fillText(text, pos.x, pos.y);
-[L178, S0] };
-[L179, S0] 
-[L180, S0] /**
-[L181, S1]  * Etiqueta de un solo nodo (usa la caché registrada con setRenderNodes).
-[L182, S1]  */
-[L183, S0] export const drawLabel = (node, ctx, globalScale) => {
-[L184, S4]     if (graphNodes.length > 0) ensureLabels(graphNodes, ctx, globalScale);
-[L185, S4]     const pos = labelCache.get(node.id);
-[L186, S4]     if (!pos) return;
-[L187, S4]     paintLabel(node, pos, ctx);
-[L188, S0] };
-[L189, S0] 
-[L190, S0] /**
-[L191, S1]  * Todas las etiquetas en una sola pasada, DESPUÉS de dibujar nodos y aristas,
-[L192, S1]  * para que ningún nodo tape un texto. Pensada para onRenderFramePost.
-[L193, S1]  */
-[L194, S0] export const drawAllLabels = (nodes, ctx, globalScale) => {
-[L195, S4]     if (!nodes || nodes.length === 0) return;
-[L196, S4]     ensureLabels(nodes, ctx, globalScale);
-[L197, S4]     nodes.forEach(n => {
-[L198, S8]         const pos = labelCache.get(n.id);
-[L199, S8]         if (pos) paintLabel(n, pos, ctx);
-[L200, S4]     });
-[L201, S0] };
-[L202, S0] 
-[L203, S0] export const drawBranding = (ctx, width, height) => {
-[L204, S4]     ctx.save();
-[L205, S4]     ctx.font = 'bold 16px Sans-Serif';
-[L206, S4]     ctx.fillStyle = 'rgba(156, 163, 175, 0.4)'; // Tailwind gray-400, 40% opacity
-[L207, S4]     ctx.textAlign = 'right';
-[L208, S4]     ctx.textBaseline = 'bottom';
-[L209, S4]     ctx.fillText('NOVASCOPE', width - 20, height - 20);
-[L210, S4]     ctx.restore();
-[L211, S0] };
-[L212, S0] 
-[L213, S0] /**
-[L214, S1]  * Renders smooth bezier curves for links, mapping weight to opacity and thickness.
-[L215, S1]  */
-[L216, S0] export const drawLink = (link, ctx, globalScale) => {
-[L217, S4]     const { source, target, weight = 1 } = link;
-[L218, S4]     if (!source || !target || source.x == null || target.x == null) return;
-[L219, S0] 
-[L220, S4]     // Focus mode: Check if edge connects to currently hovered/selected author
-[L221, S4]     const isHoverActive = activeHoveredNodeId != null;
-[L222, S4]     const isConnected = isHoverActive && (source.id === activeHoveredNodeId || target.id === activeHoveredNodeId);
-[L223, S4]     const isHighlighted = Boolean(link.highlighted || link.hovered || isConnected);
-[L224, S0] 
-[L225, S4]     // 1 + 3: Neutral desaturated gray by default, community color only on highlight
-[L226, S4]     const color = isHighlighted ? getNodeColor(source.group) : '#94a3b8';
-[L227, S0] 
-[L228, S4]     // 2 + 4: Weight-driven opacity with extreme contrast separation in focus mode
-[L229, S8]         const sourceGroup = String(source.group || source.cluster);
-[L230, S8]         const targetGroup = String(target.group || target.cluster);
-[L231, S8]         const isIntra = sourceGroup === targetGroup;
-[L232, S0] 
-[L233, S4]     const color = isHighlighted
-[L234, S8]         ? getNodeColor(source.group)
-[L235, S8]         : (isIntra ? '#64748b' : '#94a3b8');
-[L236, S0] 
-[L237, S4]     let opacity;
-[L238, S4]     if (isHighlighted) {
-[L239, S8]         opacity = Math.min(0.95, 0.65 + weight * 0.10);
-[L240, S4]     } else if (isHoverActive) {
-[L241, S8]         opacity = 0.05; // Dim background edges when focusing on an author
-[L242, S4]     } else {
-[L243, S8]         if (isIntra) {
-[L244, S12]             // Intra-cluster: clearly visible at max slider (0.35 - 0.85)
-[L245, S12]             opacity = Math.min(0.85, 0.35 + weight * 0.10);
-[L246, S8]         } else {
-[L247, S12]             // Inter-cluster: visible structure without visual noise (0.18 - 0.50)
-[L248, S12]             opacity = Math.min(0.50, 0.18 + weight * 0.05);
-[L249, S8]         }
-[L250, S4]     }
-[L251, S0] 
-[L252, S4]     opacity *= edgeOpacityMultiplier;
-[L253, S0] 
-[L254, S4]     const thickness = (isHighlighted
-[L255, S8]         ? Math.min(3.0, 1.2 + weight * 0.40)
-[L256, S8]         : (isIntra
-[L257, S12]             ? Math.min(2.0, 0.9 + weight * 0.25)
-[L258, S12]             : Math.min(1.3, 0.6 + weight * 0.15))) / globalScale;
-[L259, S0] 
-[L260, S4]     ctx.save();
-[L261, S4]     // 6. Multiply composite prevents washed-out overlaps on white background
-[L262, S4]     ctx.globalCompositeOperation = 'multiply';
-[L263, S4]     ctx.beginPath();
-[L264, S4]     ctx.moveTo(source.x, source.y);
-[L265, S0] 
-[L266, S4]     const dx = target.x - source.x;
-[L267, S4]     const dy = target.y - source.y;
-[L268, S4]     const cx1 = source.x + dx * 0.5 - dy * 0.04;
-[L269, S4]     const cy1 = source.y + dy * 0.5 + dx * 0.04;
-[L270, S0] 
-[L271, S4]     ctx.bezierCurveTo(cx1, cy1, cx1, cy1, target.x, target.y);
-[L272, S0] 
-[L273, S4]     const hexToRgba = (hex, alpha) => {
-[L274, S8]         if (!hex || !hex.startsWith('#')) return `rgba(148, 163, 184, ${alpha})`;
-[L275, S8]         const r = parseInt(hex.slice(1, 3), 16);
-[L276, S8]         const g = parseInt(hex.slice(3, 5), 16);
-[L277, S8]         const b = parseInt(hex.slice(5, 7), 16);
-[L278, S8]         return `rgba(${r},${g},${b},${alpha})`;
-[L279, S4]     };
-[L280, S0] 
-[L281, S4]     ctx.strokeStyle = hexToRgba(color, opacity);
-[L282, S4]     ctx.lineWidth = thickness;
-[L283, S4]     ctx.stroke();
-[L284, S4]     ctx.restore();
-[L285, S0] };
+[L014, S0] /**
+[L015, S1]  * Returns the hex color for a given node cluster group.
+[L016, S1]  */
+[L017, S0] export const getNodeColor = (group) => {
+[L018, S4]     const cluster = CLUSTER_METADATA[group];
+[L019, S4]     if (cluster) return cluster.color;
+[L020, S4]     
+[L021, S4]     const numericGroup = parseInt(group, 10);
+[L022, S4]     if (!isNaN(numericGroup)) {
+[L023, S8]         const safeIndex = Math.max(0, numericGroup - 1);
+[L024, S8]         return EXTENDED_PALETTE[safeIndex % EXTENDED_PALETTE.length];
+[L025, S4]     }
+[L026, S4]     return '#9ca3af';
+[L027, S0] };
+[L028, S0] 
+[L029, S0] // Rango de radios general (en px de grafo, antes de aplicar `scale`).
+[L030, S0] // Reducido respecto a la versión anterior (antes tope 30) para que la red
+[L031, S0] // se vea menos "pesada" en general.
+[L032, S0] export const RADIUS_RANGE = { min: 3, max: 13 };
+[L033, S0] 
+[L034, S0] const getMetric = (node) =>
+[L035, S0] node.degree !== undefined ? node.degree : (node.citations || node.papers || 1);
+[L036, S0] 
+[L037, S0] /**
+[L038, S1]  * Normaliza el radio de cada nodo en dos pasos:
+[L039, S1]  *
+[L040, S1]  * 1. Variación LOCAL: dentro de su propio grupo/color, el nodo más conectado
+[L041, S1]  *    se ve más grande que el menos conectado de ESE MISMO grupo.
+[L042, S1]  * 2. Techo GLOBAL: el tamaño máximo que puede alcanzar un grupo depende de
+[L043, S1]  *    qué tan conectado está su nodo más importante frente al nodo más
+[L044, S1]  *    conectado de TODA la red. Así, un clúster aislado y pequeño (ej. 4
+[L045, S1]  *    autores en Vietnam) nunca compite en tamaño con los hubs del clúster
+[L046, S1]  *    principal — pero sigue teniendo variación interna entre sus propios
+[L047, S1]  *    nodos.
+[L048, S1]  *
+[L049, S1]  * Sin el paso 2, cada color llenaría el mismo rango de tamaños sin importar
+[L050, S1]  * su importancia real, y un clúster de 3 personas se vería tan "grande" como
+[L051, S1]  * el clúster de colaboración primario — perdiendo esa jerarquía visual.
+[L052, S1]  *
+[L053, S1]  * Debe llamarse una vez, después de calcular `node.degree`, y antes de usar
+[L054, S1]  * `calculateRadius` para el layout (separación de islas, colisiones, etc.).
+[L055, S1]  * Guarda el resultado en `node.radius`.
+[L056, S1]  */
+[L057, S0] export const assignNodeRadii = (nodes) => {
+[L058, S4]     const globalMax = Math.max(...nodes.map(getMetric), 1);
+[L059, S0] 
+[L060, S4]     const counts = new Map();
+[L061, S4]     nodes.forEach(n => counts.set(n.group, (counts.get(n.group) || 0) + 1));
+[L062, S4]     const sortedGroups = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+[L063, S4]     top4GroupsCache = new Set(sortedGroups.slice(0, 4).map(e => String(e[0])));
+[L064, S0] 
+[L065, S4]     const byGroup = new Map();
+[L066, S4]     nodes.forEach(n => {
+[L067, S8]         const list = byGroup.get(n.group) || [];
+[L068, S8]         list.push(n);
+[L069, S8]         byGroup.set(n.group, list);
+[L070, S4]     });
+[L071, S0] 
+[L072, S4]     byGroup.forEach(list => {
+[L073, S8]         const metrics = list.map(getMetric);
+[L074, S8]         const groupMin = Math.min(...metrics);
+[L075, S8]         const groupMax = Math.max(...metrics);
+[L076, S0] 
+[L077, S8]         // Techo del grupo: proporcional a qué tan conectado está su nodo más
+[L078, S8]         // importante frente al máximo global (nunca por debajo de RADIUS_RANGE.min).
+[L079, S8]         const groupCeiling = RADIUS_RANGE.min +
+[L080, S8]         (RADIUS_RANGE.max - RADIUS_RANGE.min) * (groupMax / globalMax);
+[L081, S0] 
+[L082, S8]         list.forEach(n => {
+[L083, S12]             const metric = getMetric(n);
+[L084, S12]             // Si todos los nodos del grupo tienen el mismo grado (o el grupo
+[L085, S12]             // tiene un solo nodo), no hay variación interna que mostrar: van
+[L086, S12]             // directo al techo de su grupo.
+[L087, S12]             const t = groupMax > groupMin ? (metric - groupMin) / (groupMax - groupMin) : 1;
+[L088, S12]             n.radius = RADIUS_RANGE.min + t * (groupCeiling - RADIUS_RANGE.min);
+[L089, S8]         });
+[L090, S4]     });
+[L091, S0] };
+[L092, S0] 
+[L093, S0] /**
+[L094, S1]  * Calcula el radio final de un nodo. Usa `node.radius` (calculado por
+[L095, S1]  * `assignNodeRadii`) si ya está disponible; si no, cae a una fórmula
+[L096, S1]  * genérica por si algún nodo llega sin pasar por ese paso.
+[L097, S1]  */
+[L098, S0] export const calculateRadius = (node, scale = 1) => {
+[L099, S4]     if (!node) return RADIUS_RANGE.min * scale;
+[L100, S4]     if (node.radius !== undefined) return node.radius * scale;
+[L101, S4]     const value = Math.max(0, getMetric(node));
+[L102, S4]     return Math.min(RADIUS_RANGE.max, RADIUS_RANGE.min + Math.sqrt(value) * 1.4) * scale;
+[L103, S0] };
