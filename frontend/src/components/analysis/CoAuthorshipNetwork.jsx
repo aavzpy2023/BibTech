@@ -423,8 +423,8 @@ export default function CoAuthorshipNetwork() {
                     ref={svgRef}
                     data-testid="coauthorship-svg"
                     width="100%"
-                    height="480"
-                    viewBox="0 0 780 400"
+                    height="520"
+                    viewBox="0 0 780 500"
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
@@ -475,10 +475,12 @@ export default function CoAuthorshipNetwork() {
                             hoveredNodeId || selectedNodeId
                         );
                         const edgeOpacity = isFocused
-                            ? 0.7
+                            ? 0.8
                             : hasFocusActive
                             ? 0.04
-                            : ((s.depthOpacity + t.depthOpacity) / 2) * 0.2;
+                            : is3DMode
+                            ? ((s.depthOpacity + t.depthOpacity) / 2) * 0.2
+                            : 0.25;
 
                         const dx = t.px - s.px;
                         const dy = t.py - s.py;
@@ -532,24 +534,36 @@ export default function CoAuthorshipNetwork() {
                                 onMouseLeave={() => setHoveredNodeId(null)}
                                 style={{ cursor: 'pointer' }}
                             >
-                                {/* 3D Bubble Sphere */}
+                                {/* 3D Bubble Sphere - Full Opacity in 2D Foreground */}
                                 <circle
                                     cx={node.px}
                                     cy={node.py}
                                     r={node.radius}
                                     fill={viewMode === 'network' ? gradId : getOverlayColor(node.avgYear)}
-                                    fillOpacity={isMatch ? node.depthOpacity : 0.15}
+                                    fillOpacity={
+                                        isMatch
+                                            ? is3DMode
+                                                ? node.depthOpacity
+                                                : 1.0
+                                            : 0.15
+                                    }
                                     stroke={isSelected || isHovered ? '#000000' : 'none'}
                                     strokeWidth={isSelected || isHovered ? 2 : 0}
                                 />
 
-                                {/* Clean Navy Labels Next to Nodes for readability */}
+                                {/* Clean Navy Labels in Foreground */}
                                 <text
                                     x={node.px + node.radius + 6}
                                     y={node.py + 4}
                                     textAnchor="start"
                                     fill={isSelected || isHovered ? '#000000' : '#1e3a8a'}
-                                    fillOpacity={isMatch ? Math.max(0.75, node.depthOpacity) : 0.15}
+                                    fillOpacity={
+                                        isMatch
+                                            ? is3DMode
+                                                ? Math.max(0.75, node.depthOpacity)
+                                                : 1.0
+                                            : 0.15
+                                    }
                                     fontSize={`${Math.max(10, Math.round(12 * node.scale))}px`}
                                     fontWeight={isSelected || node.papers > 8 ? '600' : '400'}
                                     style={{

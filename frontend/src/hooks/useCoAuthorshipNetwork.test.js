@@ -86,5 +86,10 @@ describe('useCoAuthorshipNetwork', () => {
 
         expect(result.current.is3DMode).toBe(false);
         expect(result.current.nodeScale).toBe(1.5);
+
+        // In 2D, all nodes are on the flat foreground plane with full opacity
+        expect(result.current.nodes[0].z2).toBe(0);
+        expect(result.current.nodes[0].scale).toBe(1.0);
+        expect(result.current.nodes[0].depthOpacity).toBe(1.0);
     });
 });

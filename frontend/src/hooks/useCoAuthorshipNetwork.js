@@ -224,24 +224,41 @@ export default function useCoAuthorshipNetwork() {
         const radY = is3DMode ? (rotation.rotY * Math.PI) / 180 : 0;
         const focalLength = 460;
         const cx = 390;
-        const cy = 200;
+        const cy = 250;
 
         const projected = sourceNodes
             .filter(n => activeNodeIds.has(n.id))
             .map(n => {
-                const x1 = is3DMode ? n.x * Math.cos(radY) + n.z * Math.sin(radY) : n.x;
-                const z1 = is3DMode ? -n.x * Math.sin(radY) + n.z * Math.cos(radY) : 0;
-                const y2 = is3DMode ? n.y * Math.cos(radX) - z1 * Math.sin(radX) : n.y;
-                const z2 = is3DMode ? n.y * Math.sin(radX) + z1 * Math.cos(radX) : 0;
+                if (!is3DMode) {
+                    // Absolute 2D Flat Plane: All nodes in foreground, zero depth attenuation
+                    const scale2D = 0.82;
+                    const px = cx + n.x * scale2D;
+                    const py = cy + n.y * scale2D;
+                    const baseRadius = (7 + Math.sqrt(n.papers) * 2.8) * nodeScale;
+
+                    return {
+                        ...n,
+                        px,
+                        py,
+                        z2: 0,
+                        scale: 1.0,
+                        radius: baseRadius,
+                        depthOpacity: 1.0
+                    };
+                }
+
+                // 3D Perspective Mode
+                const x1 = n.x * Math.cos(radY) + n.z * Math.sin(radY);
+                const z1 = -n.x * Math.sin(radY) + n.z * Math.cos(radY);
+                const y2 = n.y * Math.cos(radX) - z1 * Math.sin(radX);
+                const z2 = n.y * Math.sin(radX) + z1 * Math.cos(radX);
 
                 const scale = focalLength / (focalLength + z2);
-                const px = cx + x1 * scale;
-                const py = cy + y2 * scale;
+                const px = cx + x1 * scale * 0.82;
+                const py = cy + y2 * scale * 0.82;
                 const baseRadius = (7 + Math.sqrt(n.papers) * 2.8) * nodeScale;
                 const radius = baseRadius * scale;
-                const depthOpacity = is3DMode 
-                    ? Math.max(0.4, Math.min(1.0, (z2 + 200) / 360))
-                    : 1.0;
+                const depthOpacity = Math.max(0.4, Math.min(1.0, (z2 + 200) / 360));
 
                 return {
                     ...n,
@@ -254,7 +271,7 @@ export default function useCoAuthorshipNetwork() {
                 };
             });
 
-        return projected.sort((a, b) => a.z2 - b.z2);
+        return is3DMode ? projected.sort((a, b) => a.z2 - b.z2) : projected;
     }, [rotation, activeNodeIds, sourceNodes, is3DMode, nodeScale]);
 
     const handleMouseDown = useCallback((e) => {
