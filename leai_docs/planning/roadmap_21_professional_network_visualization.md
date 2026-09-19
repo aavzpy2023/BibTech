@@ -49,7 +49,8 @@ complexity_aggregate: "HARD"
     - [ID-21.4.2] [LOGIC/CORE]: [1. Create networkRender.js. 2. Implement drawNode(node, ctx, globalScale) using ctx.createRadialGradient for a 3D-like sphere effect based on networkStyles.js colors. 3. Implement drawLink(link, ctx, globalScale) using ctx.beginPath() and ctx.bezierCurveTo for smooth, arrow-less lines with opacity mapped to link weight]. Type: Task.
     - [ID-21.4.3] [PLANNING/SYNC]: [1. Open roadmap_21_professional_network_visualization.md and check - [x] for Story 21.4. 2. Append > Files touched: frontend/src/views/analysis/network/networkRender.js under the story. 3. Open global_backlog.md and check - [x] for [REQ-063]]. Type: Task.
 
-- [ ] Story 21.5: Canvas Micro-Rendering (Labels & Branding) | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-063)
+- [x] Story 21.5: Canvas Micro-Rendering (Labels & Branding) | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- REQ-063)
+  > Files touched: frontend/src/views/analysis/network/networkRender.js, frontend/src/views/analysis/network/networkRender.test.js
   - Business Requirement: Render professional typography with collision prevention and the NovaScope watermark.
   - Story Context Radius: {"frontend/src/views/analysis/network/networkRender.js": ["*"]}
   - Layered Technical Breakdown:
@@ -57,7 +58,8 @@ complexity_aggregate: "HARD"
     - [ID-21.5.2] [LOGIC/CORE]: [1. In networkRender.js, implement drawLabel(node, ctx, globalScale) drawing text only if globalScale > threshold, using dark blue sans-serif, offset from the node radius. 2. Implement drawBranding(ctx, width, height) to draw "NOVASCOPE" in the bottom right corner of the canvas]. Type: Task.
     - [ID-21.5.3] [PLANNING/SYNC]: [1. Open roadmap_21_professional_network_visualization.md and check - [x] for Story 21.5. 2. Append > Files touched: frontend/src/views/analysis/network/networkRender.js under the story. 3. Open global_backlog.md and check - [x] for [REQ-063]]. Type: Task.
 
-- [ ] Story 21.6: Network Template State Fractality (Hook & Dumb View) | [MoSCoW: MUST] | [Complexity: HARD] (<-- REQ-064)
+- [x] Story 21.6: Network Template State Fractality (Hook & Dumb View) | [MoSCoW: MUST] | [Complexity: HARD] (<-- REQ-064)
+  > Files touched: frontend/src/hooks/useNetworkLayout.js, frontend/src/components/analysis/NetworkGraphTemplate.jsx, frontend/src/hooks/useNetworkLayout.test.js
   - Business Requirement: Strictly separate layout calculation state from the Canvas rendering view.
   - Story Context Radius: {"frontend/src/hooks/useNetworkLayout.js": [""], "frontend/src/components/analysis/NetworkGraphTemplate.jsx": [""], "frontend/src/views/analysis/network/networkLayout.js": [""], "frontend/src/views/analysis/network/networkRender.js": [""]}
   - Layered Technical Breakdown:

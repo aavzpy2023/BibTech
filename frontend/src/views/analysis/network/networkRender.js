@@ -31,6 +31,31 @@ export const drawNode = (node, ctx, globalScale) => {
 /**
  * Renders smooth bezier curves for links, mapping weight to opacity and thickness.
  */
+export const drawLabel = (node, ctx, globalScale) => {
+    const LABEL_SCALE_THRESHOLD = 1.2;
+    if (globalScale < LABEL_SCALE_THRESHOLD) return;
+
+    const radius = calculateRadius(node.papers);
+    const fontSize = Math.max(3, 10 / globalScale);
+    
+    ctx.font = `${fontSize}px Sans-Serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#1e3a8a'; // Tailwind blue-900
+    
+    ctx.fillText(node.name, node.x, node.y + radius + (2 / globalScale));
+};
+
+export const drawBranding = (ctx, width, height) => {
+    ctx.save();
+    ctx.font = 'bold 16px Sans-Serif';
+    ctx.fillStyle = 'rgba(156, 163, 175, 0.4)'; // Tailwind gray-400, 40% opacity
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('NOVASCOPE', width - 20, height - 20);
+    ctx.restore();
+};
+
 export const drawLink = (link, ctx, globalScale) => {
     const { source, target, weight } = link;
     

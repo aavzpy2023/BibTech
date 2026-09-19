@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { drawNode, drawLink } from './networkRender';
+import { drawNode, drawLink, drawLabel, drawBranding } from './networkRender';
 
 describe('networkRender (Nodes & Links)', () => {
     it('drawNode utilizes radial gradients for 3D sphere effects', () => {
@@ -45,5 +45,45 @@ describe('networkRender (Nodes & Links)', () => {
         expect(ctx.moveTo).toHaveBeenCalledWith(0, 0);
         expect(ctx.bezierCurveTo).toHaveBeenCalled();
         expect(ctx.stroke).toHaveBeenCalled();
+    });
+});
+
+describe('networkRender (Labels & Branding)', () => {
+    it('drawLabel renders text only if globalScale is above threshold', () => {
+        const ctx = {
+            fillText: vi.fn(),
+            font: '',
+            fillStyle: '',
+            textAlign: '',
+            textBaseline: ''
+        };
+        const node = { x: 10, y: 10, name: 'Test Node', papers: 5 };
+        
+        // Below threshold (should not render)
+        drawLabel(node, ctx, 1.0);
+        expect(ctx.fillText).not.toHaveBeenCalled();
+        
+        // Above threshold (should render)
+        drawLabel(node, ctx, 2.0);
+        expect(ctx.fillText).toHaveBeenCalledWith('Test Node', 10, expect.any(Number));
+        expect(ctx.textAlign).toBe('center');
+    });
+
+    it('drawBranding renders the NovaScope watermark correctly', () => {
+        const ctx = {
+            fillText: vi.fn(),
+            save: vi.fn(),
+            restore: vi.fn(),
+            font: '',
+            fillStyle: '',
+            textAlign: '',
+            textBaseline: ''
+        };
+        
+        drawBranding(ctx, 800, 600);
+        
+        expect(ctx.save).toHaveBeenCalled();
+        expect(ctx.fillText).toHaveBeenCalledWith('NOVASCOPE', 780, 580);
+        expect(ctx.restore).toHaveBeenCalled();
     });
 });
