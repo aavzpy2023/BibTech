@@ -31,7 +31,8 @@ complexity_aggregate: "HARD"
   [ID-1.2.2] [CORE/LOGIC]: [1. Create src/graph/simulationFactory.ts. 2. Implement createSimulation using d3.forceSimulation. 3. Attach d3.forceManyBody().strength(-300) (Charge), d3.forceLink().distance(50) (Links), and d3.forceCenter() (Gravity). Return the simulation object]. Type: Task.
   [ID-1.2.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_1_novascope_d3.md and check - [x] for Story 1.2. 2. Append > Files touched: simulationFactory.ts, simulationFactory.test.ts. 3. Update global_backlog.md]. Type: Task.
 
-- [ ] Story 1.3: Render Micro-Surgery (Links & Nodes Utilities) | [MoSCoW: MUST] | [Complexity: HARD] (<-- Story 1.2)
+- [x] Story 1.3: Render Micro-Surgery (Links & Nodes Utilities) | [MoSCoW: MUST] | [Complexity: HARD] (<-- Story 1.2)
+  > Files touched: frontend/src/graph/render/draw.test.ts, frontend/src/graph/render/drawLinks.ts, frontend/src/graph/render/drawNodes.ts
   Business Requirement: Fracture rendering logic into atomic pure functions enforcing the 25-line limit and achieving the 3D visual fidelity.
   Story Context Radius: {"src/graph/render/drawLinks.ts": [""], "src/graph/render/drawNodes.ts": [""], "src/graph/render/draw.test.ts": [""], "leai_docs/planning/roadmap_1_novascope_d3.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown:
