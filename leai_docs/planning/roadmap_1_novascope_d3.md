@@ -41,7 +41,8 @@ complexity_aggregate: "HARD"
   [ID-1.3.3] [CORE/LOGIC]: [1. Create drawNodes.ts. 2. Export pure function drawNodes(ctx, nodes). 3. Loop over nodes. For each, use ctx.createRadialGradient offset to top-left to simulate 3D light. Map node.cluster to accurate hex colors. Use arc and fill()]. Type: Task.
   [ID-1.3.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_1_novascope_d3.md and check - [x] for Story 1.3. 2. Append > Files touched: [files]. 3. Update global_backlog.md]. Type: Task.
 
-- [ ] Story 1.4: Render Micro-Surgery (Labels & Orchestrator) | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- Story 1.3)
+- [x] Story 1.4: Render Micro-Surgery (Labels & Orchestrator) | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- Story 1.3)
+  > Files touched: frontend/src/graph/render/drawLabels.ts, frontend/src/graph/render/renderLoop.ts, frontend/src/graph/render/renderLoop.test.ts
   Business Requirement: Handle typography layout and unify the render sequence into a single orchestrator function.
   Story Context Radius: {"src/graph/render/drawLabels.ts": [""], "src/graph/render/renderLoop.ts": [""], "leai_docs/planning/roadmap_1_novascope_d3.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown:

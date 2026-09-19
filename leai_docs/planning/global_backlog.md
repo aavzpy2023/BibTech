@@ -111,7 +111,7 @@
 - [x] Story 1.1: Core Infrastructure & Semantic Primitives
 - [x] Story 1.2: Physics Simulation Engine (Isolated Logic)
 - [x] Story 1.3: Render Micro-Surgery (Links & Nodes Utilities)
-- [ ] Story 1.4: Render Micro-Surgery (Labels & Orchestrator)
+- [x] Story 1.4: Render Micro-Surgery (Labels & Orchestrator)
 - [ ] Story 1.5: State Fractality (React Hook vs Dumb Canvas)
 - [ ] Story 1.6: Boundary Layer UI (Branding Overlay)
 
