@@ -264,7 +264,7 @@ export default function CoAuthorshipNetwork() {
                     })}
                     data-testid="export-hd-btn"
                 >
-                    Download HD
+                    Download
                 </button>
             </div>
         </>

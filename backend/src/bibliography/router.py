@@ -520,6 +520,7 @@ def get_coauthorship_network(
     author_citations: dict[str, int] = defaultdict(int)
     author_years: dict[str, list[float]] = defaultdict(list)
     coauthorship_counts: dict[tuple[str, str], int] = defaultdict(int)
+    author_full_names: dict[str, str] = {}
 
     for a in articles:
         names = []
@@ -556,9 +557,13 @@ def get_coauthorship_network(
             except (ValueError, TypeError):
                 pass
 
-        formatted_names = [
-            format_author_name(n) for n in names if format_author_name(n)
-        ]
+        formatted_names = []
+        for n in names:
+            fmt = format_author_name(n)
+            if fmt:
+                formatted_names.append(fmt)
+                if len(n) > len(author_full_names.get(fmt, "")):
+                    author_full_names[fmt] = n.strip()
         formatted_names = list(dict.fromkeys(formatted_names))
 
         for name in formatted_names:
@@ -686,8 +691,10 @@ def get_coauthorship_network(
     visited: dict[str, int] = {n: remap[partition[n]] for n in ranked_authors}
 
     cluster_nodes = defaultdict(list)
+    last_name_counts = defaultdict(int)
     for name in ranked_authors:
         cluster_nodes[visited[name]].append(name)
+        last_name_counts[name.split(",")[0].strip()] += 1
 
     cluster_ids = sorted(cluster_nodes.keys())
 
@@ -703,9 +710,12 @@ def get_coauthorship_network(
             years = author_years[name]
             avg_year = sum(years) / len(years) if years else 2020.0
 
+            last_name = name.split(",")[0].strip()
+            display_name = author_full_names.get(name, name) if last_name_counts[last_name] > 1 else name
+
             nodes.append({
                 "id": node_id,
-                "name": name,
+                "name": display_name,
                 "papers": papers,
                 "citations": citations,
                 "avgYear": round(avg_year, 1),

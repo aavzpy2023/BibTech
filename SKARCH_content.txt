@@ -1,403 +1,955 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-19 17:42:14
+Date: 2026-09-19 18:49:41
 AST Mode: True
 Line Numbers: False
-Modules: networkRender.js, networkStyles.js
+Modules: router.py, core.py
 Processed Files: 2
 ===========================
 
 
 
-// --- frontend/src/views/analysis/network/networkRender.js ---
+// --- backend/src/bibliography/router.py ---
 
-import { getNodeColor, calculateRadius } from './networkStyles';
+import os
+import re
+from datetime import datetime, timezone
+from typing import List, Dict, Any
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session, selectinload
+from .schemas import (
+    ParsedReference,
+    BatchDownloadRequest,
+    ZipDownloadRequest,
+    LocalBatchDownloadRequest,
+    DeleteReferencesRequest,
+)
+from .parser_service import parse_bibliography_content
+from .download_service import execute_batch_download
+from .zip_service import create_zip_from_pdfs
+import math
+from collections import defaultdict
+import networkx as nx
+import community as community_louvain
+from .injection_service import (
+    inject_references_to_db,
+    backfill_funding_from_articles,
+    clean_duplicate_fundings,
+)
 
-let labelCache = new Map();
-let cacheNodes = null;
-let lastK = -1;
-let graphNodes = [];
-let activeHoveredNodeId = null;
-let edgeOpacityMultiplier = 0.35;
+try:
+    from ..database.session import get_db
+    from ..database.models.core import Article, Project, ProjectArticle
+except (ImportError, ValueError):
+    try:
+        from src.database.session import get_db
+        from src.database.models.core import (
+            Article,
+            Project,
+            ProjectArticle,
+        )
+    except ImportError:
+        from backend.src.database.session import get_db
+        from backend.src.database.models.core import (
+            Article,
+            Project,
+            ProjectArticle,
+        )
+    try:
+        from src.database.session import get_db
+    except ImportError:
+        from backend.src.database.session import get_db
 
-export const setEdgeOpacityMultiplier = (val) => {
-    edgeOpacityMultiplier = val;
-};
+router = APIRouter()
 
-export const setHoveredNodeId = (id) => {
-    activeHoveredNodeId = id;
-};
+try:
+    import multipart
+    HAS_MULTIPART = True
+except ImportError:
+    HAS_MULTIPART = False
 
-export const setRenderNodes = (nodes) => {
-    graphNodes = nodes || [];
-    cacheNodes = null;
-    lastK = -1;
-};
 
-// Hubs = los pocos nodos más conectados. Con umbral absoluto (degree >= 5) casi
-// todos los autores de un artículo con muchos coautores serían "hubs" y sus
-// etiquetas forzadas se apilarían unas sobre otras.
-const HUB_MAX = 12;
-const HUB_RATIO = 0.15;
-const HUB_MIN_DEGREE = 5;
+def format_author_name(raw_name: str) -> str:
+    """Format an author name to standardized 'Lastname, I.' format."""
+    if not raw_name:
+        return ""
+    name = raw_name.strip()
+    if not name:
+        return ""
+    if "," in name:
+        parts = [p.strip() for p in name.split(",", 1) if p.strip()]
+        last = parts[0]
+        if len(parts) > 1 and parts[1]:
+            first_init = parts[1][0].upper()
+            return f"{last}, {first_init}."
+        return last
+    parts = [p.strip() for p in name.split() if p.strip()]
+    if len(parts) == 1:
+        return parts[0]
+    last = parts[-1]
+    first_init = parts[0][0].upper()
+    return f"{last}, {first_init}."
 
-export const pickHubIds = (nodes) => {
-    const limit = Math.min(HUB_MAX, Math.ceil(nodes.length * HUB_RATIO));
-    const ranked = nodes
-        .filter(n => (n.degree || 0) >= HUB_MIN_DEGREE)
-        .sort((a, b) => (b.degree || 0) - (a.degree || 0));
-    return new Set(ranked.slice(0, limit).map(n => n.id));
-};
+async def _process_upload(file: UploadFile) -> List[ParsedReference]:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
 
-/**
- * Colocación greedy anti-solape. Devuelve Map(id -> { x, y, w, h, fs, hub }) en
- * coordenadas del grafo. Los nodos que no encuentran hueco se quedan sin etiqueta;
- * solo los hubs se fuerzan.
- */
-export const layoutLabels = (nodes, ctx, k) => {
-    const hit = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
-    const placed = nodes.map(n => {
-        const r = calculateRadius(n);
-        return { x: n.x - r, y: n.y - r, w: 2 * r, h: 2 * r };
-    });
-    const out = new Map();
-    const hubIds = pickHubIds(nodes);
-    const margin = 1.5 / k;
+    _, ext = os.path.splitext(file.filename)
+    if ext.lower() not in [".bib"]:
+        raise HTTPException(status_code=400, detail="Unsupported file extension")
 
-    [...nodes].sort((a, b) => (b.degree || 0) - (a.degree || 0)).forEach(n => {
-        const r = calculateRadius(n);
-        const g = 3 / k;
-        const d = r * 0.7;
-        const isHub = hubIds.has(n.id);
-        let last = null;
+    try:
+        content_bytes = await file.read()
+        try:
+            content_str = content_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            content_str = content_bytes.decode("latin-1")
+        refs = parse_bibliography_content(content_str, ext)
+        return refs
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error during parsing"
+        )
 
-        for (const f of [1, 0.85, 0.7]) {          // fuente normal, -15 %, -30 %
-            const fs = ((11 + r * 0.25) / k) * f;
-            ctx.font = `${isHub ? 600 : 500} ${fs}px Sans-Serif`;   // mismo peso que en paintLabel
-            const w = ctx.measureText(n.name || '').width;
-            const h = fs * 1.2;
-            const cands = [
-                { x: n.x + r + g,         y: n.y - h / 2 },          // derecha
-                { x: n.x - r - g - w,     y: n.y - h / 2 },          // izquierda
-                { x: n.x - w / 2,         y: n.y + r + g },          // abajo
-                { x: n.x - w / 2,         y: n.y - r - g - h },      // arriba
-                { x: n.x + d + g,         y: n.y - d - g - h },      // arriba-derecha
-                { x: n.x + d + g,         y: n.y + d + g },          // abajo-derecha
-                { x: n.x - d - g - w,     y: n.y - d - g - h },      // arriba-izquierda
-                { x: n.x - d - g - w,     y: n.y + d + g },          // abajo-izquierda
-                { x: n.x + r + g * 3,     y: n.y - h / 2 }           // derecha, más lejos
-            ];
-            const pick = cands.find(c => {
-                const box = { x: c.x - margin, y: c.y - margin, w: w + 2 * margin, h: h + 2 * margin };
-                return !placed.some(p => hit(box, p));
-            });
-            last = { fs, w, h, first: cands[0] };
-            if (pick) {
-                placed.push({ ...pick, w, h });
-                out.set(n.id, { ...pick, w, h, fs, hub: isHub });
-                return;
+
+async def _process_inject(
+    file: UploadFile, project_code: str, db: Session
+) -> dict:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    _, ext = os.path.splitext(file.filename)
+    if ext.lower() not in [".bib"]:
+        raise HTTPException(
+            status_code=400, detail="Unsupported file extension"
+        )
+
+    try:
+        content_bytes = await file.read()
+        content_str = content_bytes.decode("utf-8")
+        refs = parse_bibliography_content(content_str, ext)
+        try:
+            inserted = inject_references_to_db(db, refs, project_code)
+        except RuntimeError:
+            raise HTTPException(
+                status_code=503,
+                detail="Error de conexión a la base de datos. Intente nuevamente."
+            )
+        return {"message": "Success", "inserted": inserted}
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error during injection: {str(exc)}",
+        )
+
+if HAS_MULTIPART:
+    @router.post("/upload", response_model=List[ParsedReference])
+    async def upload_bibliography(file: UploadFile = File(...)):
+        return await _process_upload(file)
+
+    @router.post("/inject")
+    async def inject_bibliography(
+        file: UploadFile = File(...),
+        project_code: str = Form(...),
+        db: Session = Depends(get_db),
+    ):
+        return await _process_inject(file, project_code, db)
+
+    @router.post("/references/delete")
+    def delete_references(
+        request: DeleteReferencesRequest,
+        db: Session = Depends(get_db),
+    ):
+        project = db.query(Project).filter(Project.name == request.project_code).first()
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # Delete project links
+        db.query(ProjectArticle).filter(
+            ProjectArticle.project_id == project.id,
+            ProjectArticle.article_id.in_(request.article_ids)
+        ).delete(synchronize_session=False)
+
+        # Check for orphaned articles (not linked to any other project)
+        orphaned = db.query(Article.id).outerjoin(
+            ProjectArticle, Article.id == ProjectArticle.article_id
+        ).filter(
+            Article.id.in_(request.article_ids),
+            ProjectArticle.id == None
+        ).all()
+
+        orphaned_ids = [o[0] for o in orphaned]
+
+        if orphaned_ids:
+            db.query(Article).filter(Article.id.in_(orphaned_ids)).delete(synchronize_session=False)
+
+        db.commit()
+        return {"deleted": len(request.article_ids), "orphans_cleaned": len(orphaned_ids)}
+
+
+    @router.get("/references", response_model=List[Dict[str, Any]])
+    def get_project_references(
+        project_code: str,
+        db: Session = Depends(get_db),
+    ):
+        project = (
+            db.query(Project).filter(Project.name == project_code).first()
+        )
+        if not project:
+            return []
+        links = (
+            db.query(ProjectArticle)
+            .filter(ProjectArticle.project_id == project.id)
+            .all()
+        )
+        if not links:
+            return []
+
+        status_map = {
+            link.article_id: {
+                "status": link.status,
+                "added_at": (
+                    link.added_at.isoformat() if link.added_at else None
+                ),
             }
+            for link in links
         }
-        // los hubs (pocos) siempre llevan etiqueta, aunque se solape un poco
-        if (isHub && last) {
-            placed.push({ ...last.first, w: last.w, h: last.h });
-            out.set(n.id, { ...last.first, w: last.w, h: last.h, fs: last.fs, hub: true });
+
+        article_ids = list(status_map.keys())
+        articles = (
+            db.query(Article)
+            .options(
+                selectinload(Article.author_articles)
+                .selectinload("author")
+                .selectinload("affiliation"),
+                selectinload(Article.keywords),
+                selectinload(Article.cited_references),
+                selectinload(Article.funding),
+                selectinload(Article.downloads),
+            )
+            .filter(Article.id.in_(article_ids))
+            .all()
+        )
+
+        def _to_str(val):
+            return str(val) if isinstance(val, (str, int, float)) else None
+
+        def _is_mock(val):
+            return hasattr(val, "_mock_return_value") or hasattr(
+                val, "_mock_name"
+            )
+
+        def _to_int(val):
+            if val is not None and not _is_mock(val):
+                try:
+                    return int(val)
+                except (ValueError, TypeError):
+                    pass
+            return None
+
+        def _safe_list(val):
+            if val is None or _is_mock(val):
+                return []
+            if isinstance(val, (list, tuple, set)):
+                return [x for x in val if not _is_mock(x)]
+            return []
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        result = []
+        for a in articles:
+            authors_detail = []
+            for aa in sorted(
+                _safe_list(getattr(a, "author_articles", None)),
+                key=lambda x: getattr(x, "author_order", 1) or 1,
+            ):
+                auth = getattr(aa, "author", None)
+                if auth and not _is_mock(auth):
+                    aff = getattr(auth, "affiliation", None)
+                    aff_str = None
+                    if aff and not _is_mock(aff):
+                        inst = getattr(aff, "institution", None)
+                        dept = getattr(aff, "department", None)
+                        country = getattr(aff, "country", None)
+                        parts = []
+                        if inst and isinstance(inst, str):
+                            parts.append(inst.strip().rstrip("."))
+                        if dept and isinstance(dept, str):
+                            dept_clean = dept.strip().rstrip(".")
+                            if not inst or dept_clean.lower() not in inst.lower():
+                                parts.append(dept_clean)
+                        if country and isinstance(country, str):
+                            c_clean = country.strip().rstrip(".")
+                            if not inst or c_clean.lower() not in inst.lower():
+                                parts.append(c_clean)
+                        aff_str = ", ".join(parts) if parts else None
+                    authors_detail.append({
+                        "name": getattr(auth, "name", "N/A"),
+                        "orcid": getattr(auth, "orcid", None),
+                        "email": getattr(auth, "email", None),
+                        "author_order": getattr(aa, "author_order", 1),
+                        "is_corresponding": bool(
+                            getattr(aa, "is_corresponding", False)
+                        ),
+                        "affiliation": aff_str,
+                    })
+
+            author_val = _to_str(getattr(a, "author", None))
+            if authors_detail:
+                author_str = " and ".join(
+                    [ad["name"] for ad in authors_detail]
+                )
+            elif author_val:
+                author_str = author_val
+            elif getattr(a, "authors", None) and not _is_mock(a.authors):
+                names = [
+                    getattr(x, "name", str(x))
+                    for x in _safe_list(a.authors)
+                    if getattr(x, "name", str(x)) and not _is_mock(x)
+                ]
+                author_str = " and ".join(names) if names else "N/A"
+            elif getattr(a, "raw_data", None):
+                author_str = str(a.raw_data)[:100]
+            else:
+                author_str = "N/A"
+
+            keywords_list = [
+                {
+                    "name": getattr(k, "name", ""),
+                    "type": getattr(k, "type", "author"),
+                }
+                for k in _safe_list(getattr(a, "keywords", None))
+            ]
+
+            cr_items = _safe_list(getattr(a, "cited_references", None))
+
+            references_list = [
+                {
+                    "id": getattr(r, "id", None),
+                    "author": getattr(r, "author", None),
+                    "title": (
+                        getattr(r, "source", None)
+                        or getattr(r, "title", None)
+                    ),
+                    "source": getattr(r, "source", None),
+                    "doi": getattr(r, "doi", None),
+                    "year": (
+                        str(getattr(r, "year", ""))
+                        if getattr(r, "year", None)
+                        else None
+                    ),
+                    "raw_citation": (
+                        getattr(r, "raw_string", None)
+                        or getattr(r, "raw_citation", None)
+                    ),
+                }
+                for r in cr_items
+            ]
+
+            seen_f_keys = set()
+            funding_list = []
+            for f in _safe_list(getattr(a, "funding", None)):
+                f_key = (
+                    (getattr(f, "agency", "") or "").strip().lower(),
+                    (getattr(f, "grant_number", "") or "").strip().lower(),
+                )
+                if f_key not in seen_f_keys:
+                    seen_f_keys.add(f_key)
+                    funding_list.append({
+                        "id": getattr(f, "id", None),
+                        "agency": getattr(f, "agency", None),
+                        "grant_number": getattr(f, "grant_number", None),
+                        "country": getattr(f, "country", None),
+                    })
+
+            downloads_list = [
+                {
+                    "id": getattr(d, "id", None),
+                    "source": getattr(d, "source", None),
+                    "status": getattr(d, "status", None),
+                    "file_path": getattr(d, "file_path", None),
+                    "file_size_bytes": getattr(d, "file_size_bytes", None),
+                    "downloaded_at": (
+                        d.downloaded_at.isoformat()
+                        if getattr(d, "downloaded_at", None)
+                        and not _is_mock(d.downloaded_at)
+                        else None
+                    ),
+                }
+                for d in _safe_list(getattr(a, "downloads", None))
+            ]
+
+            p_info = status_map.get(a.id, {})
+
+            result.append({
+                "id": a.id,
+                "title": _to_str(getattr(a, "title", None)) or "Untitled",
+                "author": author_str,
+                "year": _to_str(getattr(a, "year", None)),
+                "journal": _to_str(getattr(a, "journal", None)),
+                "doi": _to_str(getattr(a, "doi", None)),
+                "volume": _to_str(getattr(a, "volume", None)),
+                "issue": _to_str(getattr(a, "issue", None)),
+                "pages": _to_str(getattr(a, "pages", None)),
+                "abstract": _to_str(getattr(a, "abstract", None)),
+                "publisher": _to_str(getattr(a, "publisher", None)),
+                "language": _to_str(getattr(a, "language", None)),
+                "research_areas": _to_str(getattr(a, "research_areas", None)),
+                "web_of_science_categories": _to_str(getattr(a, "web_of_science_categories", None)),
+                "funding_text": _to_str(getattr(a, "funding_text", None)),
+                "journal_iso": _to_str(getattr(a, "journal_iso", None)),
+                "oa_status": _to_str(getattr(a, "oa_status", None)),
+                "issn": _to_str(getattr(a, "issn", None)),
+                "times_cited": _to_int(getattr(a, "times_cited", None)),
+                "cited_references_count": _to_int(getattr(a, "cited_references_count", None)),
+                "raw_data": _to_str(getattr(a, "raw_data", None)),
+                "created_at": (
+                    a.created_at.isoformat()
+                    if getattr(a, "created_at", None)
+                    else None
+                ),
+                "updated_at": (
+                    a.updated_at.isoformat()
+                    if getattr(a, "updated_at", None)
+                    else None
+                ),
+                "project_status": p_info.get("status", "pending"),
+                "project_added_at": p_info.get("added_at"),
+                "upload_datetime": now_iso,
+                "authors_detail": authors_detail,
+                "keywords": keywords_list,
+                "references_list": references_list,
+                "funding_list": funding_list,
+                "downloads_list": downloads_list,
+            })
+        return result
+else:
+    async def upload_bibliography(file: UploadFile):
+        return await _process_upload(file)
+
+    async def inject_bibliography(
+        file: UploadFile,
+        project_code: str,
+        db: Session,
+    ):
+        return await _process_inject(file, project_code, db)
+
+
+@router.post("/backfill-funding")
+def trigger_backfill_funding(db: Session = Depends(get_db)):
+    """API endpoint to trigger parsing of funding_text into the funding table."""
+    count = backfill_funding_from_articles(db)
+    return {
+        "message": f"Successfully parsed and stored {count} funding records",
+        "inserted": count,
+    }
+
+
+@router.post("/batch-download")
+async def batch_download(request: BatchDownloadRequest):
+    async def sse_generator():
+        async for event in execute_batch_download(
+            request.dois,
+            request.destination,
+            request.email,
+            request.delay,
+            request.cookies,
+        ):
+            yield f"data: {event}\n\n"
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream"
+    )
+
+
+@router.post("/batch-download-local")
+async def batch_download_local(request: LocalBatchDownloadRequest):
+    try:
+        with open(request.file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
+
+    _, ext = os.path.splitext(request.file_path)
+    try:
+        refs = parse_bibliography_content(content, ext)
+        dois = list(set(ref.doi for ref in refs if ref.doi))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Parse error: {str(e)}")
+
+    async def sse_generator():
+        async for event in execute_batch_download(
+            dois,
+            request.destination,
+            request.email,
+            request.delay,
+            request.cookies,
+        ):
+            yield f"data: {event}\n\n"
+
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")
+
+
+@router.get("/network/co-authorship")
+def get_coauthorship_network(
+    project_code: str | None = None,
+    max_nodes: int = 150,
+    resolution: float = 1.0,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Article)
+    if project_code and project_code.strip():
+        project = (
+            db.query(Project)
+            .filter(Project.name == project_code.strip())
+            .first()
+        )
+        if project:
+            links = (
+                db.query(ProjectArticle.article_id)
+                .filter(ProjectArticle.project_id == project.id)
+                .all()
+            )
+            article_ids = [l[0] for l in links]
+            query = query.filter(Article.id.in_(article_ids))
+        else:
+            return {"nodes": [], "links": [], "clusters": {}}
+
+    articles = query.all()
+    if not articles:
+        return {"nodes": [], "links": [], "clusters": {}}
+
+    author_papers: dict[str, int] = defaultdict(int)
+    author_citations: dict[str, int] = defaultdict(int)
+    author_years: dict[str, list[float]] = defaultdict(list)
+    coauthorship_counts: dict[tuple[str, str], int] = defaultdict(int)
+
+    for a in articles:
+        names = []
+        if getattr(a, "author_articles", None):
+            for aa in a.author_articles:
+                auth = getattr(aa, "author", None)
+                if auth and getattr(auth, "name", None):
+                    names.append(auth.name.strip())
+
+        if not names and getattr(a, "author", None):
+            raw = str(a.author)
+            if " and " in raw:
+                names = [p.strip() for p in raw.split(" and ") if p.strip()]
+            elif ";" in raw:
+                names = [p.strip() for p in raw.split(";") if p.strip()]
+            else:
+                names = [raw.strip()]
+
+        names = list(dict.fromkeys(names))
+        if not names:
+            continue
+
+        year_val = None
+        if getattr(a, "year", None):
+            try:
+                year_val = float(str(a.year).strip())
+            except (ValueError, TypeError):
+                pass
+
+        cites_val = 0
+        if getattr(a, "times_cited", None):
+            try:
+                cites_val = int(a.times_cited)
+            except (ValueError, TypeError):
+                pass
+
+        formatted_names = [
+            format_author_name(n) for n in names if format_author_name(n)
+        ]
+        formatted_names = list(dict.fromkeys(formatted_names))
+
+        for name in formatted_names:
+            author_papers[name] += 1
+            author_citations[name] += cites_val
+            if year_val:
+                author_years[name].append(year_val)
+
+        for i in range(len(formatted_names)):
+            for j in range(i + 1, len(formatted_names)):
+                pair = tuple(sorted([formatted_names[i], formatted_names[j]]))
+                coauthorship_counts[pair] += 1
+
+    # --- Selección de nodos por COMPONENTE COMPLETO, no por ranking global ---
+    #
+    # Antes: se tomaba el top-N global de autores por (papers, citas) y luego
+    # se exigía que AMBOS extremos de una arista estuvieran en ese top-N. Esto
+    # descartaba silenciosamente aristas reales cuando el autor "puente" que
+    # conectaba a dos autores relevantes no entraba al top-N por sí mismo
+    # (ej. porque solo tenía 1 paper). El resultado era que un componente
+    # conexo real (ej. 75 autores todos conectados entre sí, aunque sea
+    # indirectamente) aparecía roto en varias islas visualmente desconectadas
+    # en el grafo, aunque los datos de origen sí los conectaban.
+    #
+    # Ahora: primero se construye el grafo COMPLETO (todos los autores, todas
+    # las coautorías), se calculan sus componentes conexos, y se van
+    # agregando componentes ENTEROS (nunca fragmentos) al resultado, en orden
+    # de relevancia, hasta acercarse al presupuesto de max_nodes. Así un
+    # componente real nunca queda partido a la mitad.
+
+    full_graph = nx.Graph()
+    full_graph.add_nodes_from(author_papers.keys())
+    for (a1, a2), w in coauthorship_counts.items():
+        full_graph.add_edge(a1, a2, weight=w)
+
+    def _component_score(component: set[str]) -> tuple[int, int]:
+        # Relevancia del componente: primero por citas totales, luego por
+        # papers totales de sus miembros. Ajustable según lo que se quiera
+        # priorizar (ej. tamaño del componente en vez de citas).
+        total_citations = sum(author_citations[n] for n in component)
+        total_papers = sum(author_papers[n] for n in component)
+        return (total_citations, total_papers)
+
+    components = sorted(
+        nx.connected_components(full_graph),
+        key=_component_score,
+        reverse=True,
+    )
+
+    ranked_authors: list[str] = []
+    for component in components:
+        if not ranked_authors:
+            # Siempre se incluye al menos el primer (más relevante)
+            # componente completo, aunque exceda max_nodes por sí solo, para
+            # no devolver un grafo vacío en datasets con un único componente
+            # gigante.
+            ranked_authors.extend(sorted(component))
+            continue
+        if len(ranked_authors) + len(component) > max_nodes:
+            continue
+        ranked_authors.extend(sorted(component))
+
+    # Si incluso el componente más relevante por sí solo excede max_nodes,
+    # se recorta ESE componente por grado (autores más conectados dentro de
+    # su propio componente), en vez de recortar aristas entre componentes
+    # distintos como antes. Esto puede seguir fragmentando un componente
+    # gigantesco, pero solo en ese caso extremo, no en el caso general.
+    if len(ranked_authors) > max_nodes:
+        ranked_authors = sorted(
+            ranked_authors,
+            key=lambda n: (
+                full_graph.degree(n, weight="weight"),
+                author_papers[n],
+                author_citations[n],
+            ),
+            reverse=True,
+        )[:max_nodes]
+
+    if not ranked_authors:
+        return {"nodes": [], "links": [], "clusters": {}}
+
+    ranked_set = set(ranked_authors)
+    author_id_map = {
+        name: str(idx + 1) for idx, name in enumerate(ranked_authors)
+    }
+
+    adj: dict[str, set[str]] = defaultdict(set)
+    for (a1, a2), w in coauthorship_counts.items():
+        if a1 in ranked_set and a2 in ranked_set:
+            adj[a1].add(a2)
+            adj[a2].add(a1)
+
+    degree = {n: len(adj[n]) for n in ranked_authors}
+
+    # Detección de comunidades con el algoritmo de Louvain (maximiza
+    # modularidad), en vez de asignar un color por componente conexo con un
+    # ciclo de 3. Esto permite que un componente grande y denso (ej. el hub
+    # central) se divida en varios sub-grupos de colaboración reales si la
+    # estructura interna lo justifica, en vez de quedar todo del mismo color.
+    G = nx.Graph()
+    G.add_nodes_from(ranked_authors)
+    for (a1, a2), w in coauthorship_counts.items():
+        if a1 in ranked_set and a2 in ranked_set:
+            G.add_edge(a1, a2, weight=w)
+
+    if G.number_of_edges() > 0:
+        partition = community_louvain.best_partition(
+            G, weight="weight", resolution=resolution, random_state=42
+        )
+    else:
+        # Sin ningún enlace: cada autor es su propia comunidad.
+        partition = {n: i for i, n in enumerate(ranked_authors)}
+
+    # Louvain numera las comunidades en el orden en que las descubre, sin
+    # relación con su tamaño. Las reordenamos de mayor a menor cantidad de
+    # autores para que el id 1 siga siendo el "Primary Collaboration
+    # Cluster" (el grupo más grande), igual que en la versión anterior.
+    community_sizes: dict[int, int] = defaultdict(int)
+    for cid in partition.values():
+        community_sizes[cid] += 1
+    ordered_communities = sorted(
+        community_sizes.keys(), key=lambda c: community_sizes[c], reverse=True
+    )
+    remap = {old_cid: idx + 1 for idx, old_cid in enumerate(ordered_communities)}
+    visited: dict[str, int] = {n: remap[partition[n]] for n in ranked_authors}
+
+    cluster_nodes = defaultdict(list)
+    for name in ranked_authors:
+        cluster_nodes[visited[name]].append(name)
+
+    cluster_ids = sorted(cluster_nodes.keys())
+
+    nodes = []
+    for c_idx, cid in enumerate(cluster_ids):
+        c_names = cluster_nodes[cid]
+        c_names.sort(key=lambda n: degree[n], reverse=True)
+
+        for i, name in enumerate(c_names):
+            node_id = author_id_map[name]
+            papers = author_papers[name]
+            citations = author_citations[name]
+            years = author_years[name]
+            avg_year = sum(years) / len(years) if years else 2020.0
+
+            nodes.append({
+                "id": node_id,
+                "name": name,
+                "papers": papers,
+                "citations": citations,
+                "avgYear": round(avg_year, 1),
+                "group": cid,
+            })
+
+    links = []
+    for (a1, a2), w in coauthorship_counts.items():
+        if a1 in ranked_set and a2 in ranked_set:
+            links.append({
+                "source": author_id_map[a1],
+                "target": author_id_map[a2],
+                "weight": w,
+            })
+
+    # Paleta ampliada: Louvain puede encontrar más de 4 comunidades. Si hay
+    # más comunidades que colores, se repiten cíclicamente.
+    PALETTE = [
+        "#ef4444", "#3b82f6", "#10b981", "#06b6d4",
+        "#f59e0b", "#a855f7", "#ec4899", "#84cc16",
+    ]
+    CLUSTER_NAMES = [
+        "Primary Collaboration Cluster",
+        "Core Scientific Cluster",
+        "Emerging Research Cluster",
+        "Secondary Hub",
+    ]
+    clusters = {
+        cid: {
+            "name": CLUSTER_NAMES[i] if i < len(CLUSTER_NAMES) else f"Cluster {cid}",
+            "color": PALETTE[i % len(PALETTE)],
         }
-    });
-    return out;
-};
-
-const ensureLabels = (nodes, ctx, k) => {
-    if (cacheNodes === nodes && lastK === k) return;
-    try {
-        labelCache = layoutLabels(nodes, ctx, k);
-    } catch (e) {
-        console.error('layoutLabels error:', e);
-        labelCache = new Map();
-    }
-    cacheNodes = nodes;
-    lastK = k;
-};
-
-/**
- * Renders a highly stylized 3D-like sphere for a node using Canvas radial gradients.
- */
-export const drawNode = (node, ctx, globalScale) => {
-    const radius = calculateRadius(node);
-    const color = getNodeColor(node.group);
-
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-
-    // Create a 3D light-source effect (top-left offset)
-    const gradient = ctx.createRadialGradient(
-        node.x - radius / 3,
-        node.y - radius / 3,
-        radius / 10,
-        node.x,
-        node.y,
-        radius
-    );
-
-    const darken = (hex) => {
-        if (!hex || !hex.startsWith('#')) return '#1e293b';
-        const r = Math.floor(parseInt(hex.slice(1, 3), 16) * 0.5);
-        const g = Math.floor(parseInt(hex.slice(3, 5), 16) * 0.5);
-        const b = Math.floor(parseInt(hex.slice(5, 7), 16) * 0.5);
-        return `rgb(${r},${g},${b})`;
-    };
-
-    gradient.addColorStop(0, '#ffffff'); // Specular highlight
-    gradient.addColorStop(0.3, color);   // Base color
-    gradient.addColorStop(1, darken(color)); // Core shadow
-
-    const isLarge = (node.degree || 0) > 15 || radius > 8;
-    if (isLarge) {
-        ctx.shadowColor = 'rgba(0,0,0,0.25)';
-        ctx.shadowBlur = 6;
-        ctx.shadowOffsetY = 3;
-    } else {
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
+        for i, cid in enumerate(cluster_ids)
     }
 
-    ctx.fillStyle = gradient;
-    ctx.fill();
+    return {"nodes": nodes, "links": links, "clusters": clusters}
 
-    ctx.shadowColor = 'transparent'; // reset for strokes
-    ctx.lineWidth = isLarge ? 2 / (globalScale || 1) : 0.5 / (globalScale || 1);
-    ctx.strokeStyle = isLarge ? '#ffffff' : '#1e293b';
-    ctx.stroke();
-};
 
-/**
- * Pinta una etiqueta ya colocada por layoutLabels.
- */
-export const paintLabel = (node, pos, ctx) => {
-    ctx.font = `${pos.hub ? '600' : '500'} ${pos.fs}px Sans-Serif`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    const text = node.name || '';
+@router.get("/network/co-citation")
+def get_cocitation_network(
+    project_code: str | None = None,
+    max_nodes: int = 150,
+    resolution: float = 1.0,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Article)
+    if project_code and project_code.strip():
+        project = (
+            db.query(Project)
+            .filter(Project.name == project_code.strip())
+            .first()
+        )
+        if project:
+            links = (
+                db.query(ProjectArticle.article_id)
+                .filter(ProjectArticle.project_id == project.id)
+                .all()
+            )
+            article_ids = [l[0] for l in links]
+            query = query.filter(Article.id.in_(article_ids))
+        else:
+            return {"nodes": [], "links": [], "clusters": {}}
 
-    if (ctx.strokeText) {                       // halo blanco: legible sobre las aristas
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = pos.fs * 0.28;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.strokeText(text, pos.x, pos.y);
-    }
-    ctx.fillStyle = pos.hub ? '#0f172a' : '#334155';
-    ctx.fillText(text, pos.x, pos.y);
-};
+    articles = query.all()
+    if not articles:
+        return {"nodes": [], "links": [], "clusters": {}}
 
-/**
- * Etiqueta de un solo nodo (usa la caché registrada con setRenderNodes).
- */
-export const drawLabel = (node, ctx, globalScale) => {
-    if (graphNodes.length > 0) ensureLabels(graphNodes, ctx, globalScale);
-    const pos = labelCache.get(node.id);
-    if (!pos) return;
-    paintLabel(node, pos, ctx);
-};
+    ref_citations: dict[int, int] = defaultdict(int)
+    cocitation_counts: dict[tuple[int, int], int] = defaultdict(int)
+    ref_data = {}
 
-/**
- * Todas las etiquetas en una sola pasada, DESPUÉS de dibujar nodos y aristas,
- * para que ningún nodo tape un texto. Pensada para onRenderFramePost.
- */
-export const drawAllLabels = (nodes, ctx, globalScale) => {
-    if (!nodes || nodes.length === 0) return;
-    ensureLabels(nodes, ctx, globalScale);
-    nodes.forEach(n => {
-        const pos = labelCache.get(n.id);
-        if (pos) paintLabel(n, pos, ctx);
-    });
-};
+    for a in articles:
+        crs = getattr(a, "cited_references", [])
+        if not crs:
+            continue
 
-export const drawBranding = (ctx, width, height) => {
-    ctx.save();
-    ctx.font = 'bold 16px Sans-Serif';
-    ctx.fillStyle = 'rgba(156, 163, 175, 0.4)'; // Tailwind gray-400, 40% opacity
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('NOVASCOPE', width - 20, height - 20);
-    ctx.restore();
-};
+        valid_refs = []
+        for cr in crs:
+            if cr.id not in ref_data:
+                raw_auth = cr.author or "Unknown"
+                auth = format_author_name(raw_auth) or raw_auth
+                yr = str(cr.year) if cr.year else ""
+                label = f"{auth} ({yr})" if yr else auth
+                ref_data[cr.id] = {
+                    "id": str(cr.id),
+                    "name": label,
+                    "author": auth,
+                    "year": cr.year,
+                    "source": cr.source,
+                }
+            ref_citations[cr.id] += 1
+            valid_refs.append(cr.id)
 
-/**
- * Renders smooth bezier curves for links, mapping weight to opacity and thickness.
- */
-export const drawLink = (link, ctx, globalScale) => {
-    const { source, target, weight = 1 } = link;
-    if (!source || !target || source.x == null || target.x == null) return;
+        valid_refs = list(set(valid_refs))
+        for i in range(len(valid_refs)):
+            for j in range(i + 1, len(valid_refs)):
+                pair = tuple(sorted([valid_refs[i], valid_refs[j]]))
+                cocitation_counts[pair] += 1
 
-    // Focus mode: Check if edge connects to currently hovered/selected author
-    const isHoverActive = activeHoveredNodeId != null;
-    const isConnected = isHoverActive && (source.id === activeHoveredNodeId || target.id === activeHoveredNodeId);
-    const isHighlighted = Boolean(link.highlighted || link.hovered || isConnected);
+    ranked_refs = sorted(
+        ref_citations.keys(),
+        key=lambda k: ref_citations[k],
+        reverse=True,
+    )[:max_nodes]
 
-    // 2 + 4: Weight-driven opacity with extreme contrast separation in focus mode
-        const sourceGroup = String(source.group || source.cluster);
-        const targetGroup = String(target.group || target.cluster);
-        const isIntra = sourceGroup === targetGroup;
+    if not ranked_refs:
+        return {"nodes": [], "links": [], "clusters": {}}
 
-    const color = isHighlighted
-        ? getNodeColor(source.group)
-        : (isIntra ? '#64748b' : '#94a3b8');
+    ranked_set = set(ranked_refs)
 
-    let opacity;
-    if (isHighlighted) {
-        opacity = Math.min(0.95, 0.65 + weight * 0.10);
-    } else if (isHoverActive) {
-        opacity = 0.05; // Dim background edges when focusing on an author
-    } else {
-        if (isIntra) {
-            // Intra-cluster: clearly visible at max slider (0.35 - 0.85)
-            opacity = Math.min(0.85, 0.35 + weight * 0.10);
-        } else {
-            // Inter-cluster: visible structure without visual noise (0.18 - 0.50)
-            opacity = Math.min(0.50, 0.18 + weight * 0.05);
+    G = nx.Graph()
+    G.add_nodes_from(ranked_refs)
+    for (r1, r2), w in cocitation_counts.items():
+        if r1 in ranked_set and r2 in ranked_set:
+            G.add_edge(r1, r2, weight=w)
+
+    if G.number_of_edges() > 0:
+        partition = community_louvain.best_partition(
+            G, weight="weight", resolution=resolution, random_state=42
+        )
+    else:
+        partition = {n: i for i, n in enumerate(ranked_refs)}
+
+    community_sizes: dict[int, int] = defaultdict(int)
+    for cid in partition.values():
+        community_sizes[cid] += 1
+    ordered_communities = sorted(
+        community_sizes.keys(), key=lambda c: community_sizes[c], reverse=True
+    )
+    remap = {old_cid: idx + 1 for idx, old_cid in enumerate(ordered_communities)}
+    visited = {n: remap[partition[n]] for n in ranked_refs}
+
+    cluster_nodes = defaultdict(list)
+    for n in ranked_refs:
+        cluster_nodes[visited[n]].append(n)
+
+    cluster_ids = sorted(cluster_nodes.keys())
+
+    nodes = []
+    for c_idx, cid in enumerate(cluster_ids):
+        c_refs = cluster_nodes[cid]
+        c_refs.sort(key=lambda n: G.degree(n) if n in G else 0, reverse=True)
+
+        for n in c_refs:
+            data = ref_data[n]
+            nodes.append({
+                "id": str(n),
+                "name": data["name"],
+                "papers": ref_citations[n],
+                "citations": ref_citations[n],
+                "avgYear": float(data["year"]) if data["year"] else 2000.0,
+                "group": cid,
+                "fullSource": data["source"]
+            })
+
+    links = []
+    for (r1, r2), w in cocitation_counts.items():
+        if r1 in ranked_set and r2 in ranked_set:
+            links.append({
+                "source": str(r1),
+                "target": str(r2),
+                "weight": w,
+            })
+
+    PALETTE = [
+        "#ef4444", "#3b82f6", "#10b981", "#06b6d4",
+        "#f59e0b", "#a855f7", "#ec4899", "#84cc16",
+    ]
+    CLUSTER_NAMES = [
+        "Core Foundational",
+        "Methodology & Tools",
+        "Thematic Domain A",
+        "Thematic Domain B",
+    ]
+    clusters = {
+        cid: {
+            "name": CLUSTER_NAMES[i] if i < len(CLUSTER_NAMES) else f"Cluster {cid}",
+            "color": PALETTE[i % len(PALETTE)],
         }
+        for i, cid in enumerate(cluster_ids)
     }
 
-    opacity *= edgeOpacityMultiplier;
+    return {"nodes": nodes, "links": links, "clusters": clusters}
 
-    const thickness = (isHighlighted
-        ? Math.min(3.0, 1.2 + weight * 0.40)
-        : (isIntra
-            ? Math.min(2.0, 0.9 + weight * 0.25)
-            : Math.min(1.3, 0.6 + weight * 0.15))) / globalScale;
 
-    ctx.save();
-    // 6. Multiply composite prevents washed-out overlaps on white background
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.beginPath();
-    ctx.moveTo(source.x, source.y);
-
-    const dx = target.x - source.x;
-    const dy = target.y - source.y;
-    const cx1 = source.x + dx * 0.5 - dy * 0.04;
-    const cy1 = source.y + dy * 0.5 + dx * 0.04;
-
-    ctx.bezierCurveTo(cx1, cy1, cx1, cy1, target.x, target.y);
-
-    const hexToRgba = (hex, alpha) => {
-        if (!hex || !hex.startsWith('#')) return `rgba(148, 163, 184, ${alpha})`;
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r},${g},${b},${alpha})`;
-    };
-
-    ctx.strokeStyle = hexToRgba(color, opacity);
-    ctx.lineWidth = thickness;
-    ctx.stroke();
-    ctx.restore();
-};
+@router.post("/download-zip")
+async def download_zip(request: ZipDownloadRequest):
+    zip_io = create_zip_from_pdfs(request.batch_name, request.dois)
+    return StreamingResponse(
+        zip_io,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": (
+                f"attachment; filename={request.batch_name}.zip"
+            )
+        },
+    )
 
 
 
-// --- frontend/src/views/analysis/network/networkStyles.js ---
+// --- backend/src/database/models/core.py ---
 
-export const EXTENDED_PALETTE = [
-    '#ff1a2e', '#1a5cff', '#00c853', '#00b8d4', '#ff9800', 
-    '#9c27b0', '#ffeb3b', '#e91e63', '#795548', '#cddc39', 
-    '#673ab7', '#009688', '#ff5722', '#607d8b', '#8bc34a'
-];
+"""Core relational database models for projects and articles."""
+from datetime import datetime, timezone
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy.orm import relationship
+from ..session import Base
 
-export const CLUSTER_METADATA = {
-    1: { name: 'Primary Collaboration Cluster', color: EXTENDED_PALETTE[0] },
-    2: { name: 'Core Scientific Cluster', color: EXTENDED_PALETTE[1] },
-    3: { name: 'Emerging Research Cluster', color: EXTENDED_PALETTE[2] },
-    4: { name: 'Secondary Hub', color: EXTENDED_PALETTE[3] }
-};
+class Project(Base):
+    """..."""
 
-/**
- * Returns the hex color for a given node cluster group.
- */
-export const getNodeColor = (group) => {
-    const cluster = CLUSTER_METADATA[group];
-    if (cluster) return cluster.color;
-    
-    const numericGroup = parseInt(group, 10);
-    if (!isNaN(numericGroup)) {
-        const safeIndex = Math.max(0, numericGroup - 1);
-        return EXTENDED_PALETTE[safeIndex % EXTENDED_PALETTE.length];
-    }
-    return '#9ca3af';
-};
+class SourceDatabase(Base):
+    """..."""
 
-// Rango de radios general (en px de grafo, antes de aplicar `scale`).
-// Reducido respecto a la versión anterior (antes tope 30) para que la red
-// se vea menos "pesada" en general.
-export const RADIUS_RANGE = { min: 3, max: 13 };
+class Article(Base):
+    """..."""
 
-const getMetric = (node) =>
-node.degree !== undefined ? node.degree : (node.citations || node.papers || 1);
+class ProjectArticle(Base):
+    """..."""
 
-/**
- * Normaliza el radio de cada nodo en dos pasos:
- *
- * 1. Variación LOCAL: dentro de su propio grupo/color, el nodo más conectado
- *    se ve más grande que el menos conectado de ESE MISMO grupo.
- * 2. Techo GLOBAL: el tamaño máximo que puede alcanzar un grupo depende de
- *    qué tan conectado está su nodo más importante frente al nodo más
- *    conectado de TODA la red. Así, un clúster aislado y pequeño (ej. 4
- *    autores en Vietnam) nunca compite en tamaño con los hubs del clúster
- *    principal — pero sigue teniendo variación interna entre sus propios
- *    nodos.
- *
- * Sin el paso 2, cada color llenaría el mismo rango de tamaños sin importar
- * su importancia real, y un clúster de 3 personas se vería tan "grande" como
- * el clúster de colaboración primario — perdiendo esa jerarquía visual.
- *
- * Debe llamarse una vez, después de calcular `node.degree`, y antes de usar
- * `calculateRadius` para el layout (separación de islas, colisiones, etc.).
- * Guarda el resultado en `node.radius`.
- */
-let top4GroupsCache = new Set();
+class ArticleCountry(Base):
+    """..."""
 
-export const assignNodeRadii = (nodes) => {
-    const globalMax = Math.max(...nodes.map(getMetric), 1);
+class ArticleCitation(Base):
+    """..."""
 
-    // Radii normalization
+class Country(Base):
+    """..."""
 
-    const byGroup = new Map();
-    nodes.forEach(n => {
-        const list = byGroup.get(n.group) || [];
-        list.push(n);
-        byGroup.set(n.group, list);
-    });
+class CitedReference(Base):
+    """..."""
 
-    byGroup.forEach(list => {
-        const metrics = list.map(getMetric);
-        const groupMin = Math.min(...metrics);
-        const groupMax = Math.max(...metrics);
-
-        // Techo del grupo: proporcional a qué tan conectado está su nodo más
-        // importante frente al máximo global (nunca por debajo de RADIUS_RANGE.min).
-        const groupCeiling = RADIUS_RANGE.min +
-        (RADIUS_RANGE.max - RADIUS_RANGE.min) * (groupMax / globalMax);
-
-        list.forEach(n => {
-            const metric = getMetric(n);
-            // Si todos los nodos del grupo tienen el mismo grado (o el grupo
-            // tiene un solo nodo), no hay variación interna que mostrar: van
-            // directo al techo de su grupo.
-            const t = groupMax > groupMin ? (metric - groupMin) / (groupMax - groupMin) : 1;
-            n.radius = RADIUS_RANGE.min + t * (groupCeiling - RADIUS_RANGE.min);
-        });
-    });
-};
-
-/**
- * Calcula el radio final de un nodo. Usa `node.radius` (calculado por
- * `assignNodeRadii`) si ya está disponible; si no, cae a una fórmula
- * genérica por si algún nodo llega sin pasar por ese paso.
- */
-export const calculateRadius = (node, scale = 1) => {
-    if (!node) return RADIUS_RANGE.min * scale;
-    if (node.radius !== undefined) return node.radius * scale;
-    const value = Math.max(0, getMetric(node));
-    return Math.min(RADIUS_RANGE.max, RADIUS_RANGE.min + Math.sqrt(value) * 1.4) * scale;
-};
-
+class Journal(Base):
+    """..."""
