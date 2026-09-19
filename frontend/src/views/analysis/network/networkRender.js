@@ -219,7 +219,9 @@ export const drawLink = (link, ctx, globalScale) => {
 
     // Focus mode: Check if edge connects to currently hovered/selected author
     const isHoverActive = activeHoveredNodeId != null;
-    const isConnected = isHoverActive && (source.id === activeHoveredNodeId || target.id === activeHoveredNodeId);
+    // 🚀 FIX: Casting a String. El DOM pasa los IDs como cadenas ("12") mientras que 
+    // D3/Backend los maneja como enteros (12). Evitamos que la comparación estricta falle.
+    const isConnected = isHoverActive && (String(source.id) === String(activeHoveredNodeId) || String(target.id) === String(activeHoveredNodeId));
 
     // 🚀 RENDERING CULLING (Optimizador de Performance):
     // Abortamos la función instantáneamente si la arista no participa en el hover.
