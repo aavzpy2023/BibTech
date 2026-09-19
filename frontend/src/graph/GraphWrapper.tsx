@@ -8,7 +8,7 @@ import { GraphCanvas } from "./GraphCanvas";
  */
 export const GraphWrapper: React.FC = () => {
     return (
-        <div style={{ position: "relative", display: "inline-block" }}>
+        <div style={{ position: "relative", width: "100%", height: "100vh", overflow: "hidden", backgroundColor: "#ffffff" }}>
             <GraphCanvas />
             
             {/* Branding Overlay */}

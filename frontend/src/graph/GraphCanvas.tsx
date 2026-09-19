@@ -8,21 +8,26 @@ import { dummyNodes, dummyLinks } from "./dummyData";
  * Zero logic allowed inside the JSX.
  */
 export const GraphCanvas: React.FC = () => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    const canvasRef = React.useRef<HTMLCanvasElement>(null);
+    const [dim, setDim] = React.useState({ w: 800, h: 600 });
 
-    // State Fractality: Delegate all lifecycle and D3 execution to the custom hook
-    useForceSimulation({ nodes: dummyNodes, links: dummyLinks }, canvasRef);
+    // Responsive Listener: Binds canvas resolution strictly to its parent container
+    React.useEffect(() => {
+        if (!containerRef.current) return;
+        const obs = new ResizeObserver((entries) => {
+            setDim({ w: entries[0].contentRect.width, h: entries[0].contentRect.height });
+        });
+        obs.observe(containerRef.current);
+        return () => obs.disconnect();
+    }, []);
+
+    // State Fractality: Pass dynamic dimensions to the physics orchestrator
+    useForceSimulation({ nodes: dummyNodes, links: dummyLinks }, canvasRef, dim);
 
     return (
-        <canvas
-            ref={canvasRef}
-            width={800}
-            height={600}
-            style={{ 
-                border: "1px solid #e2e8f0", 
-                backgroundColor: "#ffffff",
-                borderRadius: "8px"
-            }}
-        />
+        <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
+            <canvas ref={canvasRef} width={dim.w} height={dim.h} style={{ display: "block" }} />
+        </div>
     );
 };
