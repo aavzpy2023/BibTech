@@ -41,8 +41,8 @@ export const useForceSimulation = (
     useEffect(() => {
         if (simRef.current) {
             simRef.current.force("center", d3.forceCenter(dim.w / 2, dim.h / 2));
-            simRef.current.force("x", d3.forceX(dim.w / 2).strength(0.05));
-            simRef.current.force("y", d3.forceY(dim.h / 2).strength(0.05));
+            simRef.current.force("x", d3.forceX(dim.w / 2).strength(0.15));
+            simRef.current.force("y", d3.forceY(dim.h / 2).strength(0.15));
             simRef.current.alpha(0.3).restart(); // Gentle wake-up to adjust to new bounds
         }
     }, [dim]);
