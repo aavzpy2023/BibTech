@@ -51,7 +51,8 @@ complexity_aggregate: "HARD"
   [ID-1.4.3] [CORE/LOGIC]: [1. Create renderLoop.ts. 2. Export executeRenderFrame(ctx, width, height, nodes, links). 3. Implement strict sequence: ctx.clearRect, drawLinks(ctx, links), drawNodes(ctx, nodes), drawLabels(ctx, nodes)]. Type: Task.
   [ID-1.4.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_1_novascope_d3.md and check - [x] for Story 1.4. 2. Append > Files touched: [files]. 3. Update global_backlog.md]. Type: Task.
 
-- [ ] Story 1.5: State Fractality (React Hook vs Dumb Canvas) | [MoSCoW: MUST] | [Complexity: HARD] (<-- Story 1.4)
+- [x] Story 1.5: State Fractality (React Hook vs Dumb Canvas) | [MoSCoW: MUST] | [Complexity: HARD] (<-- Story 1.4)
+  > Files touched: frontend/src/graph/dummyData.ts, frontend/src/graph/hooks/useForceSimulation.ts, frontend/src/graph/GraphCanvas.tsx
   Business Requirement: Connect the headless simulation to React lifecycle WITHOUT mutating the DOM directly, utilizing strict State/View separation.
   Story Context Radius: {"src/graph/hooks/useForceSimulation.ts": [""], "src/graph/GraphCanvas.tsx": [""], "src/graph/dummyData.ts": [""], "leai_docs/planning/roadmap_1_novascope_d3.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown:
