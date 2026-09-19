@@ -1,189 +1,164 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-19 16:21:56
+Date: 2026-09-19 16:25:42
 AST Mode: False
 Line Numbers: True
-Modules: networkLayout.js, useNetworkLayout.js
+Modules: analysisMenuConfig.js, App.jsx
 Processed Files: 2
 ===========================
 
 
 
-// --- frontend/src/views/analysis/network/networkLayout.js ---
+// --- frontend/src/config/analysisMenuConfig.js ---
 
-[L001, S0] import * as d3 from 'd3';
-[L002, S0] import { calculateRadius, assignNodeRadii } from './networkStyles';
-[L003, S0] 
-[L004, S0] /**
-[L005, S1]  * Pre-calculates network physics synchronously to freeze the layout.
-[L006, S1]  * Ensures the computationally heavy force simulation runs outside the render loop.
-[L007, S1]  */
-[L008, S0] export const calculateStaticLayout = (nodes, links, width = 800, height = 600) => {
-[L009, S4]     if (!nodes || nodes.length === 0) return { nodes: [], links: [] };
-[L010, S0] 
-[L011, S4]     // Deep copy nodes to avoid mutating React state directly before freezing
-[L012, S4]     const layoutNodes = nodes.map(n => ({ ...n }));
-[L013, S4]     // Normalize links mapping to ensure D3 interprets the source/target properly
-[L014, S4]     const layoutLinks = links.map(l => ({
-[L015, S8]         ...l,
-[L016, S8]         source: typeof l.source === 'object' ? l.source.id : l.source,
-[L017, S8]         target: typeof l.target === 'object' ? l.target.id : l.target
-[L018, S4]     }));
-[L019, S0] 
-[L020, S4]     // Stage A: Analyze graph data
-[L021, S4]     const degreeMap = {};
-[L022, S4]     layoutNodes.forEach(n => degreeMap[n.id] = 0);
-[L023, S4]     layoutLinks.forEach(l => {
-[L024, S8]         degreeMap[l.source] = (degreeMap[l.source] || 0) + 1;
-[L025, S8]         degreeMap[l.target] = (degreeMap[l.target] || 0) + 1;
-[L026, S4]     });
-[L027, S4]     layoutNodes.forEach(n => n.degree = degreeMap[n.id]);
-[L028, S0] 
-[L029, S4]     // Radio de cada nodo normalizado DENTRO de su propio grupo/color (ver
-[L030, S4]     // networkStyles.js). Debe hacerse antes de usar calculateRadius más abajo.
-[L031, S4]     assignNodeRadii(layoutNodes);
-[L032, S0] 
-[L033, S4]     const adjList = {};
-[L034, S4]     layoutNodes.forEach(n => adjList[n.id] = []);
-[L035, S4]     layoutLinks.forEach(l => {
-[L036, S8]         adjList[l.source].push(l.target);
-[L037, S8]         adjList[l.target].push(l.source);
-[L038, S4]     });
-[L039, S0] 
-[L040, S4]     const visited = new Set();
-[L041, S4]     const components = [];
-[L042, S4]     layoutNodes.forEach(n => {
-[L043, S8]         if (!visited.has(n.id)) {
-[L044, S12]             const comp = [];
-[L045, S12]             const queue = [n.id];
-[L046, S12]             visited.add(n.id);
-[L047, S12]             while (queue.length > 0) {
-[L048, S16]                 const curr = queue.shift();
-[L049, S16]                 comp.push(curr);
-[L050, S16]                 adjList[curr].forEach(neighbor => {
-[L051, S20]                     if (!visited.has(neighbor)) {
-[L052, S24]                         visited.add(neighbor);
-[L053, S24]                         queue.push(neighbor);
-[L054, S20]                     }
-[L055, S16]                 });
-[L056, S12]             }
-[L057, S12]             components.push(comp);
-[L058, S8]         }
-[L059, S4]     });
-[L060, S0] 
-[L061, S4]     components.sort((a, b) => b.length - a.length);
-[L062, S0] 
-[L063, S4]     const nodeToComp = {};
-[L064, S4]     components.forEach((comp, i) => {
-[L065, S8]         comp.forEach(nodeId => {
-[L066, S12]             nodeToComp[nodeId] = i;
-[L067, S8]         });
-[L068, S4]     });
-[L069, S0] 
-[L070, S4]     // Assign spatial centers to components to prevent vertical stacking
-[L071, S4]     const nodeById = Object.fromEntries(layoutNodes.map(n => [n.id, n]));
-[L072, S4]     const areaOf = comp => comp.reduce((s, id) => {
-[L073, S8]         const r = calculateRadius(nodeById[id]) + 6;
-[L074, S8]         return s + Math.PI * r * r;
-[L075, S4]     }, 0);
-[L076, S4]     const estRadius = comp => Math.sqrt(areaOf(comp) / 0.5 / Math.PI);
-[L077, S0] 
-[L078, S4]     const aspect = 1.25; // silueta más cuadrada/redondeada (antes 1.6, 16:10)
-[L079, S4]     const ex = Math.sqrt(aspect), ey = 1 / ex;
-[L080, S4]     const compCenters = [];
-[L081, S4]     const goldenAngle = 2.39996323; // radians
-[L082, S4]     const Rg = components.length > 0 ? estRadius(components[0]) : 0;
-[L083, S0] 
-[L084, S4]     components.forEach((comp, i) => {
-[L085, S8]         if (i === 0) return compCenters.push({ x: 0, y: 0 });
-[L086, S8]         // islas más pegadas entre sí (antes: 40 + Math.sqrt(i) * 30)
-[L087, S8]         const dist = Rg + estRadius(comp) + 15 + Math.sqrt(i) * 15;
-[L088, S8]         const a = i * goldenAngle;
-[L089, S8]         compCenters.push({ x: Math.cos(a) * dist * ex, y: Math.sin(a) * dist * ey });
-[L090, S4]     });
-[L091, S0] 
-[L092, S4]     // Initialize positions near their assigned centers
-[L093, S4]     const rnd = d3.randomLcg(42);
-[L094, S4]     layoutNodes.forEach(n => {
-[L095, S8]         const center = compCenters[nodeToComp[n.id]];
-[L096, S8]         n.x = center.x + (rnd() - 0.5) * 30;
-[L097, S8]         n.y = center.y + (rnd() - 0.5) * 30;
-[L098, S4]     });
-[L099, S0] 
-[L100, S4]     // Stage D: Force-directed refinement
-[L101, S4]     const simulation = d3.forceSimulation(layoutNodes)
-[L102, S4]     .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(38))          // antes 55: enlaces más cortos
-[L103, S4]     .force('charge', d3.forceManyBody().strength(d => -22 - calculateRadius(d) * 5))  // antes -40 - r*8: menos repulsión
-[L104, S4]     .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 2).iterations(4))  // antes +3
-[L105, S4]     .force('x', d3.forceX(d => compCenters[nodeToComp[d.id]].x)
-[L106, S4]     .strength(d => nodeToComp[d.id] === 0 ? 0.03 : 0.1))     // antes 0.02 / 0.15: más orgánico
-[L107, S4]     .force('y', d3.forceY(d => compCenters[nodeToComp[d.id]].y)
-[L108, S4]     .strength(d => nodeToComp[d.id] === 0 ? 0.03 : 0.1))
-[L109, S4]     .stop();
-[L110, S0] 
-[L111, S4]     simulation.tick(300);
-[L112, S0] 
-[L113, S4]     // Bounding box and position normalization
-[L114, S4]     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-[L115, S4]     layoutNodes.forEach(n => {
-[L116, S8]         const r = calculateRadius(n);
-[L117, S8]         if (n.x - r < minX) minX = n.x - r;
-[L118, S8]         if (n.x + r > maxX) maxX = n.x + r;
-[L119, S8]         if (n.y - r < minY) minY = n.y - r;
-[L120, S8]         if (n.y + r > maxY) maxY = n.y + r;
-[L121, S4]     });
-[L122, S0] 
-[L123, S8]         const cx = (minX + maxX) / 2;
-[L124, S8]         const cy = (minY + maxY) / 2;
-[L125, S0] 
-[L126, S8]         const cur = Math.max(0.1, (maxX - minX) / Math.max(1, maxY - minY));
-[L127, S8]         const target = 1.25; // Target aspect ratio (antes 1.6, debe coincidir con `aspect` de arriba)
-[L128, S8]         const stretch = Math.min(1.6, Math.max(target / cur, cur / target));
-[L129, S8]         const sx = cur < target ? stretch : 1;
-[L130, S8]         const sy = cur > target ? stretch : 1;
-[L131, S0] 
-[L132, S8]         layoutNodes.forEach(node => {
-[L133, S12]             node.x = (node.x - cx) * sx;
-[L134, S12]             node.y = (node.y - cy) * sy;
-[L135, S12]             node.fx = node.x;
-[L136, S12]             node.fy = node.y;
-[L137, S8]         });
-[L138, S0] 
-[L139, S8]         return { nodes: layoutNodes, links: layoutLinks };
-[L140, S0] };
+[L001, S0] export const ANALYSIS_MENU_CONFIG = [
+[L002, S4]     {
+[L003, S8]         id: 'overview',
+[L004, S8]         label: 'Overview',
+[L005, S8]         tabs: [
+[L006, S12]             { id: 'general-kpis', label: 'General KPIs' },
+[L007, S12]             { id: 'publication-citation-evolution', label: 'Publication & Citation Evolution' },
+[L008, S12]             { id: 'journal-distribution', label: 'Journal Distribution' },
+[L009, S12]             { id: 'research-snapshot', label: 'Research Snapshot' },
+[L010, S12]             { id: 'key-insights', label: 'Key Insights' }
+[L011, S8]         ]
+[L012, S4]     },
+[L013, S4]     {
+[L014, S8]         id: 'bibliometrics',
+[L015, S8]         label: 'Bibliometrics',
+[L016, S8]         tabs: [
+[L017, S12]             { id: 'publication-performance', label: 'Publication Performance' },
+[L018, S12]             { id: 'citation-analysis', label: 'Citation Analysis' },
+[L019, S12]             { id: 'author-productivity', label: 'Author Productivity' },
+[L020, S12]             { id: 'journal-analysis', label: 'Journal Analysis' },
+[L021, S12]             { id: 'document-impact', label: 'Document Impact' },
+[L022, S12]             { id: 'impact-indicators', label: 'Impact Indicators' }
+[L023, S8]         ]
+[L024, S4]     },
+[L025, S4]     {
+[L026, S8]         id: 'network-analysis',
+[L027, S8]         label: 'Network Analysis',
+[L028, S8]         tabs: [
+[L029, S12]             { id: 'co-authorship', label: 'Co-authorship' },
+[L030, S12]             { id: 'co-citation', label: 'Co-citation' },
+[L031, S12]             { id: 'bibliographic-coupling', label: 'Bibliographic Coupling' },
+[L032, S12]             { id: 'keyword-co-occurrence', label: 'Keyword Co-occurrence' }
+[L033, S8]         ]
+[L034, S4]     },
+[L035, S4]     {
+[L036, S8]         id: 'trends-evolution',
+[L037, S8]         label: 'Trends & Evolution',
+[L038, S8]         tabs: [
+[L039, S12]             { id: 'publication-evolution', label: 'Publication Evolution' },
+[L040, S12]             { id: 'citation-evolution', label: 'Citation Evolution' },
+[L041, S12]             { id: 'keyword-evolution', label: 'Keyword Evolution' },
+[L042, S12]             { id: 'thematic-evolution', label: 'Thematic Evolution' },
+[L043, S12]             { id: 'emerging-topics', label: 'Emerging Topics' }
+[L044, S8]         ]
+[L045, S4]     },
+[L046, S4]     {
+[L047, S8]         id: 'visualizations',
+[L048, S8]         label: 'Visualizations',
+[L049, S8]         tabs: [
+[L050, S12]             { id: 'visualization-builder', label: 'Visualization Builder' },
+[L051, S12]             { id: 'custom-charts', label: 'Custom Charts' },
+[L052, S12]             { id: 'network-maps', label: 'Network Maps' },
+[L053, S12]             { id: 'export-visualizations', label: 'Export Visualizations' }
+[L054, S8]         ]
+[L055, S4]     },
+[L056, S4]     {
+[L057, S8]         id: 'reports',
+[L058, S8]         label: 'Reports',
+[L059, S8]         tabs: [
+[L060, S12]             { id: 'generate-report', label: 'Generate Report' },
+[L061, S12]             { id: 'export-analysis', label: 'Export Analysis' }
+[L062, S8]         ]
+[L063, S4]     }
+[L064, S0] ];
 
 
-// --- frontend/src/hooks/useNetworkLayout.js ---
+// --- frontend/src/App.jsx ---
 
-[L001, S0] import { useState, useEffect } from 'react';
-[L002, S0] import { calculateStaticLayout } from '../views/analysis/network/networkLayout';
-[L003, S0] 
-[L004, S0] /**
-[L005, S1]  * State Fractality Hook: Pre-calculates physical graph forces asynchronously.
-[L006, S1]  * Prevents UI thread blocking while D3 ticks 300 times in the background.
-[L007, S1]  */
-[L008, S0] export default function useNetworkLayout(rawNodes, rawLinks) {
-[L009, S4]     const [frozenData, setFrozenData] = useState({ nodes: [], links: [] });
-[L010, S4]     const [isCalculating, setIsCalculating] = useState(true);
+[L001, S0] import React, { useState, useEffect } from 'react';
+[L002, S0] import { BrowserRouter, Routes, Route } from 'react-router-dom';
+[L003, S0] import Layout from './components/Layout';
+[L004, S0] import LoadView from './views/LoadView';
+[L005, S0] import QueueView from './views/QueueView';
+[L006, S0] import AnalysisView from './views/AnalysisView';
+[L007, S0] import ReferencesView from './views/ReferencesView';
+[L008, S0] import BibliographyUploader from './components/BibliographyUploader';
+[L009, S0] import ReferenceTable from './components/ReferenceTable';
+[L010, S0] import { useBibliography } from './hooks/useBibliography';
 [L011, S0] 
-[L012, S4]     useEffect(() => {
-[L013, S8]         if (!rawNodes || rawNodes.length === 0) {
-[L014, S12]             setFrozenData({ nodes: [], links: [] });
-[L015, S12]             setIsCalculating(false);
-[L016, S12]             return;
-[L017, S8]         }
-[L018, S0] 
-[L019, S8]         setIsCalculating(true);
-[L020, S8]         
-[L021, S8]         // Relieve the main thread rendering cycle by deferring the heavy math
-[L022, S8]         const timer = setTimeout(() => {
-[L023, S12]             const staticData = calculateStaticLayout(rawNodes, rawLinks);
-[L024, S12]             setFrozenData(staticData);
-[L025, S12]             setIsCalculating(false);
-[L026, S8]         }, 0);
-[L027, S0] 
-[L028, S8]         return () => clearTimeout(timer);
-[L029, S4]     }, [rawNodes, rawLinks]);
-[L030, S0] 
-[L031, S4]     return { frozenData, isCalculating };
-[L032, S0] }
+[L012, S0] export function DashboardView() {
+[L013, S2]   const [data, setData] = useState(null);
+[L014, S2]   const [error, setError] = useState(null);
+[L015, S2]   const { references, isLoading, error: uploadError, uploadFile } = useBibliography();
+[L016, S0] 
+[L017, S2]   useEffect(() => {
+[L018, S4]     fetch('/api/requirements')
+[L019, S6]       .then(res => {
+[L020, S8]         if (!res.ok) throw new Error('Error al conectar con el servidor');
+[L021, S8]         return res.json();
+[L022, S6]       })
+[L023, S6]       .then(data => setData(data))
+[L024, S6]       .catch(err => setError(err.message));
+[L025, S2]   }, []);
+[L026, S0] 
+[L027, S2]   const styles = {
+[L028, S4]     container: { fontFamily: 'system-ui, sans-serif', padding: '0', textAlign: 'center', color: '#f0f6fc' },
+[L029, S4]     card: { border: 'none', borderRadius: '12px', padding: '24px', backgroundColor: '#161b22', textAlign: 'left' },
+[L030, S4]     badge: { backgroundColor: '#1f6feb22', color: '#58a6ff', padding: '6px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: 'bold', display: 'inline-block', marginBottom: '15px' },
+[L031, S4]     title: { fontSize: '24px', fontWeight: 'bold', color: '#f0f6fc', margin: '0 0 8px 0' }
+[L032, S2]   };
+[L033, S0] 
+[L034, S2]   return (
+[L035, S4]     <div style={styles.container}>
+[L036, S6]       <h1 style={styles.title}>¡Proyecto bibtech Inicializado! 🎉</h1>
+[L037, S6]       <div style={styles.card}>
+[L038, S8]         <h3>Ingesta de Bibliografía</h3>
+[L039, S8]         {uploadError && <p style={{color: 'red', fontWeight: 'bold'}}>❌ {uploadError}</p>}
+[L040, S8]         {isLoading && <p style={{color: '#0366d6'}}>Procesando archivo...</p>}
+[L041, S8]         
+[L042, S8]         <BibliographyUploader onUpload={uploadFile} />
+[L043, S8]         <ReferenceTable references={references} />
+[L044, S8]         
+[L045, S8]         <hr style={{margin: '32px 0', border: 'none', borderTop: '1px solid #30363d'}} />
+[L046, S8]         
+[L047, S8]         <h3>Parámetros Modernos Detectados:</h3>
+[L048, S8]         {error && <p style={{color: 'red'}}>❌ {error}</p>}
+[L049, S8]         {!data && !error && <p>Cargando requerimientos...</p>}
+[L050, S8]         {data && (
+[L051, S10]           <div>
+[L052, S12]             <span style={styles.badge}>{data.status}</span>
+[L053, S12]             <ul>
+[L054, S14]               <li><strong>Estructura:</strong> bibtech</li>
+[L055, S14]               <li><strong>Configuración Backend:</strong> pyproject.toml (PEP 621)</li>
+[L056, S14]               <li><strong>Base de Datos:</strong> {data.database}</li>
+[L057, S14]               <li><strong>Ruteo/Proxy:</strong> {data.proxy}</li>
+[L058, S14]               <li><strong>Backend Framework:</strong> Python + {data.framework}</li>
+[L059, S12]             </ul>
+[L060, S10]           </div>
+[L061, S8]         )}
+[L062, S6]       </div>
+[L063, S4]     </div>
+[L064, S2]   );
+[L065, S0] }
+[L066, S0] 
+[L067, S0] function App() {
+[L068, S2]   return (
+[L069, S4]     <BrowserRouter>
+[L070, S6]       <Routes>
+[L071, S8]         <Route path="/" element={<Layout />}>
+[L072, S10]           <Route index element={<DashboardView />} />
+[L073, S10]           <Route path="load" element={<LoadView />} />
+[L074, S10]           <Route path="queue" element={<QueueView />} />
+[L075, S10]           <Route path="analysis" element={<AnalysisView />} />
+[L076, S10]           <Route path="references" element={<ReferencesView />} />
+[L077, S8]         </Route>
+[L078, S6]       </Routes>
+[L079, S4]     </BrowserRouter>
+[L080, S2]   );
+[L081, S0] }
+[L082, S0] 
+[L083, S0] export default App;
