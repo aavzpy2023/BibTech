@@ -220,6 +220,12 @@ export const drawLink = (link, ctx, globalScale) => {
     // Focus mode: Check if edge connects to currently hovered/selected author
     const isHoverActive = activeHoveredNodeId != null;
     const isConnected = isHoverActive && (source.id === activeHoveredNodeId || target.id === activeHoveredNodeId);
+
+    // 🚀 RENDERING CULLING (Optimizador de Performance):
+    // Abortamos la función instantáneamente si la arista no participa en el hover.
+    // Esto ahorra miles de cálculos de curvas Bezier (CPU) y rasterizados (GPU) por frame.
+    if (isHoverActive && !isConnected) return;
+
     const isHighlighted = Boolean(link.highlighted || link.hovered || isConnected);
 
     // 2 + 4: Weight-driven opacity with extreme contrast separation in focus mode
@@ -235,7 +241,7 @@ export const drawLink = (link, ctx, globalScale) => {
     if (isHighlighted) {
         opacity = Math.min(0.95, (0.65 + weight * 0.10) * edgeOpacityMultiplier);
     } else if (isHoverActive) {
-        opacity = 0.02; // IGNORAR SLIDER: forzar fondo tenue invariable
+        opacity = 0.00002; // IGNORAR SLIDER: forzar fondo tenue invariable
     } else {
         if (isIntra) {
             // Intra-cluster: clearly visible at max slider (0.35 - 0.85)
