@@ -63,14 +63,33 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
         });
     });
 
+    // Assign spatial centers to components to prevent vertical stacking
+    const compCenters = [];
+    const goldenAngle = 2.39996323; // radians
+    components.forEach((comp, i) => {
+        if (i === 0) {
+            compCenters.push({ x: 0, y: 0 });
+        } else {
+            const radius = 150 + i * 40;
+            const angle = i * goldenAngle;
+            compCenters.push({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
+        }
+    });
+
+    // Initialize positions near their assigned centers
+    layoutNodes.forEach(n => {
+        const center = compCenters[nodeToComp[n.id]];
+        n.x = center.x + (Math.random() - 0.5) * 30;
+        n.y = center.y + (Math.random() - 0.5) * 30;
+    });
+
     // Stage D: Force-directed refinement
     const simulation = d3.forceSimulation(layoutNodes)
         .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(45))
-        .force('charge', d3.forceManyBody().strength(-60))
-        .force('center', d3.forceCenter(0, 0).strength(0.05))
-        .force('collide', d3.forceCollide().radius(d => calculateRadius(d.papers) + 6).iterations(2))
-        .force('x', d3.forceX(0).strength(d => nodeToComp[d.id] === 0 ? 0.01 : 0.08))
-        .force('y', d3.forceY(0).strength(d => nodeToComp[d.id] === 0 ? 0.01 : 0.08))
+        .force('charge', d3.forceManyBody().strength(-80))
+        .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 6).iterations(2))
+        .force('x', d3.forceX(d => compCenters[nodeToComp[d.id]].x).strength(0.1))
+        .force('y', d3.forceY(d => compCenters[nodeToComp[d.id]].y).strength(0.1))
         .stop();
 
     simulation.tick(300);
@@ -78,10 +97,11 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
     // Bounding box and position normalization
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     layoutNodes.forEach(n => {
-        if (n.x < minX) minX = n.x;
-        if (n.x > maxX) maxX = n.x;
-        if (n.y < minY) minY = n.y;
-        if (n.y > maxY) maxY = n.y;
+        const r = calculateRadius(n);
+        if (n.x - r < minX) minX = n.x - r;
+        if (n.x + r > maxX) maxX = n.x + r;
+        if (n.y - r < minY) minY = n.y - r;
+        if (n.y + r > maxY) maxY = n.y + r;
     });
 
     const graphWidth = Math.max(1, maxX - minX);
@@ -93,14 +113,14 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
     
     const scaleX = targetWidth / graphWidth;
     const scaleY = targetHeight / graphHeight;
-    const scale = Math.min(scaleX, scaleY, 1.5);
+    const scale = Math.min(scaleX, scaleY, 2);
 
-    const offsetX = - (minX + maxX) / 2 * scale;
-    const offsetY = - (minY + maxY) / 2 * scale;
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
 
     layoutNodes.forEach(node => {
-        node.x = node.x * scale + offsetX;
-        node.y = node.y * scale + offsetY;
+        node.x = (node.x - cx) * scale;
+        node.y = (node.y - cy) * scale;
         node.fx = node.x;
         node.fy = node.y;
     });

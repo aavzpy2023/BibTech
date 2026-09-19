@@ -1,325 +1,12 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-19 12:21:38
+Date: 2026-09-19 12:30:26
 AST Mode: False
 Line Numbers: True
-Modules: CoAuthorshipNetwork.jsx, networkLayout.js, networkRender.js, networkStyles.js, GraphCanvas.tsx, drawNodes.ts
-Processed Files: 6
+Modules: networkLayout.js, networkRender.js, networkStyles.js
+Processed Files: 3
 ===========================
 
-
-
-// --- frontend/src/components/analysis/CoAuthorshipNetwork.jsx ---
-
-[L001, S0] import React, { useRef, useCallback, useMemo } from 'react';
-[L002, S0] import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
-[L003, S0] import useNetworkLayout from '../../hooks/useNetworkLayout';
-[L004, S0] import NetworkGraphTemplate from './NetworkGraphTemplate';
-[L005, S0] import AnalysisPageTemplate from './AnalysisPageTemplate';
-[L006, S0] import { exportCanvasToImage } from '../../views/analysis/network/exportNetwork';
-[L007, S0] import logoImg from '../../assets/logo.png';
-[L008, S0] 
-[L009, S0] const styles = {
-[L010, S4]     controlGroup: {
-[L011, S8]         display: 'flex',
-[L012, S8]         alignItems: 'center',
-[L013, S8]         gap: '8px'
-[L014, S4]     },
-[L015, S4]     label: {
-[L016, S8]         fontSize: '12px',
-[L017, S8]         color: '#c9d1d9',
-[L018, S8]         fontWeight: '600',
-[L019, S8]         textTransform: 'uppercase',
-[L020, S8]         letterSpacing: '0.5px'
-[L021, S4]     },
-[L022, S4]     input: {
-[L023, S8]         backgroundColor: '#0d1117',
-[L024, S8]         border: '1px solid #30363d',
-[L025, S8]         borderRadius: '6px',
-[L026, S8]         padding: '5px 10px',
-[L027, S8]         color: '#f0f6fc',
-[L028, S8]         fontSize: '12px',
-[L029, S8]         outline: 'none'
-[L030, S4]     },
-[L031, S4]     modeSwitchGroup: {
-[L032, S8]         display: 'inline-flex',
-[L033, S8]         borderRadius: '6px',
-[L034, S8]         border: '1px solid #30363d',
-[L035, S8]         overflow: 'hidden'
-[L036, S4]     },
-[L037, S4]     modeBtn: (isActive) => ({
-[L038, S8]         backgroundColor: isActive ? '#1f6feb' : '#0d1117',
-[L039, S8]         color: isActive ? '#ffffff' : '#8b949e',
-[L040, S8]         border: 'none',
-[L041, S8]         padding: '5px 12px',
-[L042, S8]         fontSize: '12px',
-[L043, S8]         fontWeight: '600',
-[L044, S8]         cursor: 'pointer',
-[L045, S8]         transition: 'all 0.2s'
-[L046, S4]     }),
-[L047, S4]     exportBtn: {
-[L048, S8]         backgroundColor: '#238636',
-[L049, S8]         color: '#ffffff',
-[L050, S8]         border: '1px solid #2ea043',
-[L051, S8]         borderRadius: '6px',
-[L052, S8]         padding: '5px 12px',
-[L053, S8]         fontSize: '12px',
-[L054, S8]         fontWeight: '600',
-[L055, S8]         cursor: 'pointer',
-[L056, S8]         display: 'flex',
-[L057, S8]         alignItems: 'center',
-[L058, S8]         gap: '6px'
-[L059, S4]     },
-[L060, S4]     fitBtn: {
-[L061, S8]         backgroundColor: '#21262d',
-[L062, S8]         color: '#f0f6fc',
-[L063, S8]         border: '1px solid #30363d',
-[L064, S8]         borderRadius: '6px',
-[L065, S8]         padding: '5px 10px',
-[L066, S8]         fontSize: '12px',
-[L067, S8]         cursor: 'pointer'
-[L068, S4]     },
-[L069, S4]     canvasWrapper: {
-[L070, S8]         position: 'relative',
-[L071, S8]         width: '100%',
-[L072, S8]         height: '520px',
-[L073, S8]         backgroundColor: '#ffffff',
-[L074, S8]         borderRadius: '6px',
-[L075, S8]         overflow: 'hidden'
-[L076, S4]     },
-[L077, S4]     watermark: {
-[L078, S8]         position: 'absolute',
-[L079, S8]         top: '12px',
-[L080, S8]         right: '12px',
-[L081, S8]         zIndex: 5,
-[L082, S8]         pointerEvents: 'none',
-[L083, S8]         display: 'flex',
-[L084, S8]         alignItems: 'center',
-[L085, S8]         padding: '6px',
-[L086, S8]         borderRadius: '8px',
-[L087, S8]         backgroundColor: 'rgba(255, 255, 255, 0.85)',
-[L088, S8]         border: '1px solid rgba(0, 0, 0, 0.1)',
-[L089, S8]         boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-[L090, S4]     },
-[L091, S4]     logoImage: {
-[L092, S8]         width: '32px',
-[L093, S8]         height: '32px',
-[L094, S8]         objectFit: 'contain'
-[L095, S4]     },
-[L096, S4]     legendPanel: {
-[L097, S8]         position: 'absolute',
-[L098, S8]         bottom: '12px',
-[L099, S8]         left: '12px',
-[L100, S8]         zIndex: 5,
-[L101, S8]         backgroundColor: 'rgba(255, 255, 255, 0.92)',
-[L102, S8]         border: '1px solid rgba(0, 0, 0, 0.12)',
-[L103, S8]         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-[L104, S8]         borderRadius: '6px',
-[L105, S8]         padding: '8px 12px',
-[L106, S8]         display: 'flex',
-[L107, S8]         flexDirection: 'column',
-[L108, S8]         gap: '6px',
-[L109, S8]         pointerEvents: 'none'
-[L110, S4]     },
-[L111, S4]     legendItem: {
-[L112, S8]         display: 'flex',
-[L113, S8]         alignItems: 'center',
-[L114, S8]         gap: '8px',
-[L115, S8]         fontSize: '11px',
-[L116, S8]         color: '#1e293b',
-[L117, S8]         fontWeight: '500'
-[L118, S4]     },
-[L119, S4]     legendDot: (color) => ({
-[L120, S8]         width: '10px',
-[L121, S8]         height: '10px',
-[L122, S8]         borderRadius: '50%',
-[L123, S8]         backgroundColor: color
-[L124, S4]     })
-[L125, S0] };
-[L126, S0] 
-[L127, S0] export default function CoAuthorshipNetwork() {
-[L128, S4]     const fgRef = useRef();
-[L129, S0] 
-[L130, S4]     const {
-[L131, S8]         nodes,
-[L132, S8]         links,
-[L133, S8]         minWeight,
-[L134, S8]         setMinWeight,
-[L135, S8]         searchQuery,
-[L136, S8]         setSearchQuery,
-[L137, S8]         selectedNodeId,
-[L138, S8]         setSelectedNodeId,
-[L139, S8]         hoveredNodeId,
-[L140, S8]         setHoveredNodeId,
-[L141, S8]         selectedNode,
-[L142, S8]         viewMode,
-[L143, S8]         setViewMode,
-[L144, S8]         clusters,
-[L145, S8]         nodeScale,
-[L146, S8]         setNodeScale
-[L147, S4]     } = useCoAuthorshipNetwork();
-[L148, S0] 
-[L149, S4]     // Offload heavy physics calculation to the state fractality hook
-[L150, S4]     const { frozenData, isCalculating } = useNetworkLayout(nodes, links);
-[L151, S0] 
-[L152, S4]     const toolbar = (
-[L153, S8]         <>
-[L154, S12]             <div style={styles.controlGroup}>
-[L155, S16]                 <span style={styles.label}>Mode:</span>
-[L156, S16]                 <div style={styles.modeSwitchGroup}>
-[L157, S20]                     <button
-[L158, S24]                         type="button"
-[L159, S24]                         style={styles.modeBtn(viewMode === 'network')}
-[L160, S24]                         onClick={() => setViewMode('network')}
-[L161, S20]                     >
-[L162, S24]                         Network
-[L163, S20]                     </button>
-[L164, S20]                     <button
-[L165, S24]                         type="button"
-[L166, S24]                         style={styles.modeBtn(viewMode === 'overlay')}
-[L167, S24]                         onClick={() => setViewMode('overlay')}
-[L168, S20]                     >
-[L169, S24]                         Overlay
-[L170, S20]                     </button>
-[L171, S16]                 </div>
-[L172, S12]             </div>
-[L173, S0] 
-[L174, S12]             <div style={styles.controlGroup}>
-[L175, S16]                 <label htmlFor="search-author" style={styles.label}>
-[L176, S20]                     Filter:
-[L177, S16]                 </label>
-[L178, S16]                 <input
-[L179, S20]                     id="search-author"
-[L180, S20]                     type="text"
-[L181, S20]                     placeholder="Search author..."
-[L182, S20]                     value={searchQuery}
-[L183, S20]                     onChange={e => setSearchQuery(e.target.value)}
-[L184, S20]                     style={styles.input}
-[L185, S16]                 />
-[L186, S12]             </div>
-[L187, S0] 
-[L188, S12]             <div style={styles.controlGroup}>
-[L189, S16]                 <label htmlFor="min-weight-slider" style={styles.label}>
-[L190, S20]                     Min Collab ({minWeight}):
-[L191, S16]                 </label>
-[L192, S16]                 <input
-[L193, S20]                     id="min-weight-slider"
-[L194, S20]                     type="range"
-[L195, S20]                     min="1"
-[L196, S20]                     max="7"
-[L197, S20]                     value={minWeight}
-[L198, S20]                     onChange={e => setMinWeight(Number(e.target.value))}
-[L199, S20]                     style={{ cursor: 'pointer', width: '60px' }}
-[L200, S16]                 />
-[L201, S12]             </div>
-[L202, S0] 
-[L203, S12]             <div style={styles.controlGroup}>
-[L204, S16]                 <label htmlFor="node-scale-slider" style={styles.label}>
-[L205, S20]                     Size:
-[L206, S16]                 </label>
-[L207, S16]                 <input
-[L208, S20]                     id="node-scale-slider"
-[L209, S20]                     type="range"
-[L210, S20]                     min="0.5"
-[L211, S20]                     max="2.5"
-[L212, S20]                     step="0.1"
-[L213, S20]                     value={nodeScale}
-[L214, S20]                     onChange={e => setNodeScale(Number(e.target.value))}
-[L215, S20]                     style={{ cursor: 'pointer', width: '60px' }}
-[L216, S16]                 />
-[L217, S12]             </div>
-[L218, S0] 
-[L219, S12]             <div style={styles.controlGroup}>
-[L220, S16]                 <button
-[L221, S20]                     type="button"
-[L222, S20]                     style={styles.fitBtn}
-[L223, S20]                     onClick={() => fgRef.current && fgRef.current.zoomToFit(400)}
-[L224, S16]                 >
-[L225, S20]                     Center
-[L226, S16]                 </button>
-[L227, S16]                 <button
-[L228, S20]                     type="button"
-[L229, S20]                     style={styles.exportBtn}
-[L230, S20]                     onClick={() => exportCanvasToImage(fgRef, 'co-authorship-novascope-hd.png')}
-[L231, S20]                     data-testid="export-hd-btn"
-[L232, S16]                 >
-[L233, S20]                     Download HD
-[L234, S16]                 </button>
-[L235, S12]             </div>
-[L236, S8]         </>
-[L237, S4]     );
-[L238, S0] 
-[L239, S4]     const footer = selectedNode ? (
-[L240, S8]         <div>
-[L241, S12]             <strong>Author:</strong> {selectedNode.name} |{' '}
-[L242, S12]             <strong>Citations:</strong> {selectedNode.citations?.toLocaleString() || 0} |{' '}
-[L243, S12]             <strong>Publications:</strong> {selectedNode.papers} |{' '}
-[L244, S12]             <strong>Cluster:</strong> {clusters[selectedNode.group]?.name || 'Collaboration Cluster'}
-[L245, S8]         </div>
-[L246, S4]     ) : null;
-[L247, S0] 
-[L248, S4]     return (
-[L249, S8]         <AnalysisPageTemplate
-[L250, S12]             title="Co-authorship Network"
-[L251, S12]             subtitle="Novascope D3 force simulation: Radial cluster dynamics and convex co-authorship relationships."
-[L252, S12]             toolbar={toolbar}
-[L253, S12]             footer={footer}
-[L254, S12]             dataTestId="coauthorship-network-view"
-[L255, S8]         >
-[L256, S12]             <div style={styles.canvasWrapper} data-testid="coauthorship-force-graph-wrapper">
-[L257, S16]                 <div style={styles.watermark}>
-[L258, S20]                     <img
-[L259, S24]                         src={logoImg}
-[L260, S24]                         alt="Logo Watermark"
-[L261, S24]                         style={styles.logoImage}
-[L262, S24]                         data-testid="corner-watermark-logo"
-[L263, S20]                     />
-[L264, S16]                 </div>
-[L265, S0] 
-[L266, S16]                 <div style={styles.legendPanel} data-testid="vosviewer-legend">
-[L267, S20]                     <span style={{ ...styles.label, fontSize: '10px', color: '#64748b' }}>
-[L268, S24]                         {viewMode === 'network' ? 'CLUSTERS' : 'AVG YEAR'}
-[L269, S20]                     </span>
-[L270, S20]                     {viewMode === 'network' ? (
-[L271, S24]                         Object.entries(clusters).map(([gid, c]) => (
-[L272, S28]                             <div key={gid} style={styles.legendItem}>
-[L273, S32]                                 <div style={styles.legendDot(c.color)} />
-[L274, S32]                                 <span>{c.name}</span>
-[L275, S28]                             </div>
-[L276, S24]                         ))
-[L277, S20]                     ) : (
-[L278, S24]                         <>
-[L279, S28]                             <div style={styles.legendItem}>
-[L280, S32]                                 <div style={styles.legendDot('#3b82f6')} />
-[L281, S32]                                 <span>&le; 2016</span>
-[L282, S28]                             </div>
-[L283, S28]                             <div style={styles.legendItem}>
-[L284, S32]                                 <div style={styles.legendDot('#10b981')} />
-[L285, S32]                                 <span>2017 - 2019</span>
-[L286, S28]                             </div>
-[L287, S28]                             <div style={styles.legendItem}>
-[L288, S32]                                 <div style={styles.legendDot('#facc15')} />
-[L289, S32]                                 <span>&ge; 2020</span>
-[L290, S28]                             </div>
-[L291, S24]                         </>
-[L292, S20]                     )}
-[L293, S16]                 </div>
-[L294, S0] 
-[L295, S16]                 {isCalculating ? (
-[L296, S20]                     <div style={{ padding: '20px', textAlign: 'center', color: '#8b949e' }}>
-[L297, S24]                         Calculating Network Physics...
-[L298, S20]                     </div>
-[L299, S16]                 ) : (
-[L300, S20]                     <NetworkGraphTemplate
-[L301, S24]                         ref={fgRef}
-[L302, S24]                         frozenData={frozenData}
-[L303, S24]                         onNodeClick={node => setSelectedNodeId(node.id)}
-[L304, S20]                     />
-[L305, S16]                 )}
-[L306, S12]             </div>
-[L307, S8]         </AnalysisPageTemplate>
-[L308, S4]     );
-[L309, S0] }
 
 
 // --- frontend/src/views/analysis/network/networkLayout.js ---
@@ -343,28 +30,96 @@ Processed Files: 6
 [L017, S8]         target: typeof l.target === 'object' ? l.target.id : l.target
 [L018, S4]     }));
 [L019, S0] 
-[L020, S4]     const simulation = d3.forceSimulation(layoutNodes)
-[L021, S8]         .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(45))
-[L022, S8]         .force('charge', d3.forceManyBody().strength(-150))
-[L023, S8]         .force('center', d3.forceCenter(width / 2, height / 2))
-[L024, S8]         .force('collide', d3.forceCollide().radius(d => calculateRadius(d.papers) + 4)
-[L025, S12]             .iterations(2))
-[L026, S8]         .stop(); // Prevent auto-running asynchronously
-[L027, S0] 
-[L028, S4]     // Run 300 ticks synchronously to resolve physics completely
-[L029, S4]     simulation.tick(300);
-[L030, S0] 
-[L031, S4]     // Freeze positions directly to fx/fy to lock the nodes statically
-[L032, S4]     layoutNodes.forEach(node => {
-[L033, S8]         node.fx = node.x;
-[L034, S8]         node.fy = node.y;
-[L035, S4]     });
-[L036, S0] 
-[L037, S4]     return {
-[L038, S8]         nodes: layoutNodes,
-[L039, S8]         links: layoutLinks
-[L040, S4]     };
-[L041, S0] };
+[L020, S4]     // Stage A: Analyze graph data
+[L021, S4]     const degreeMap = {};
+[L022, S4]     layoutNodes.forEach(n => degreeMap[n.id] = 0);
+[L023, S4]     layoutLinks.forEach(l => {
+[L024, S8]         degreeMap[l.source] = (degreeMap[l.source] || 0) + 1;
+[L025, S8]         degreeMap[l.target] = (degreeMap[l.target] || 0) + 1;
+[L026, S4]     });
+[L027, S4]     layoutNodes.forEach(n => n.degree = degreeMap[n.id]);
+[L028, S0] 
+[L029, S4]     const adjList = {};
+[L030, S4]     layoutNodes.forEach(n => adjList[n.id] = []);
+[L031, S4]     layoutLinks.forEach(l => {
+[L032, S8]         adjList[l.source].push(l.target);
+[L033, S8]         adjList[l.target].push(l.source);
+[L034, S4]     });
+[L035, S0] 
+[L036, S4]     const visited = new Set();
+[L037, S4]     const components = [];
+[L038, S4]     layoutNodes.forEach(n => {
+[L039, S8]         if (!visited.has(n.id)) {
+[L040, S12]             const comp = [];
+[L041, S12]             const queue = [n.id];
+[L042, S12]             visited.add(n.id);
+[L043, S12]             while (queue.length > 0) {
+[L044, S16]                 const curr = queue.shift();
+[L045, S16]                 comp.push(curr);
+[L046, S16]                 adjList[curr].forEach(neighbor => {
+[L047, S20]                     if (!visited.has(neighbor)) {
+[L048, S24]                         visited.add(neighbor);
+[L049, S24]                         queue.push(neighbor);
+[L050, S20]                     }
+[L051, S16]                 });
+[L052, S12]             }
+[L053, S12]             components.push(comp);
+[L054, S8]         }
+[L055, S4]     });
+[L056, S0] 
+[L057, S4]     components.sort((a, b) => b.length - a.length);
+[L058, S0] 
+[L059, S4]     const nodeToComp = {};
+[L060, S4]     components.forEach((comp, i) => {
+[L061, S8]         comp.forEach(nodeId => {
+[L062, S12]             nodeToComp[nodeId] = i;
+[L063, S8]         });
+[L064, S4]     });
+[L065, S0] 
+[L066, S4]     // Stage D: Force-directed refinement
+[L067, S4]     const simulation = d3.forceSimulation(layoutNodes)
+[L068, S8]         .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(45))
+[L069, S8]         .force('charge', d3.forceManyBody().strength(-60))
+[L070, S8]         .force('center', d3.forceCenter(0, 0).strength(0.05))
+[L071, S8]         .force('collide', d3.forceCollide().radius(d => calculateRadius(d.papers) + 6).iterations(2))
+[L072, S8]         .force('x', d3.forceX(0).strength(d => nodeToComp[d.id] === 0 ? 0.01 : 0.08))
+[L073, S8]         .force('y', d3.forceY(0).strength(d => nodeToComp[d.id] === 0 ? 0.01 : 0.08))
+[L074, S8]         .stop();
+[L075, S0] 
+[L076, S4]     simulation.tick(300);
+[L077, S0] 
+[L078, S4]     // Bounding box and position normalization
+[L079, S4]     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+[L080, S4]     layoutNodes.forEach(n => {
+[L081, S8]         if (n.x < minX) minX = n.x;
+[L082, S8]         if (n.x > maxX) maxX = n.x;
+[L083, S8]         if (n.y < minY) minY = n.y;
+[L084, S8]         if (n.y > maxY) maxY = n.y;
+[L085, S4]     });
+[L086, S0] 
+[L087, S4]     const graphWidth = Math.max(1, maxX - minX);
+[L088, S4]     const graphHeight = Math.max(1, maxY - minY);
+[L089, S4]     
+[L090, S4]     // Target dimensions (85% of canvas)
+[L091, S4]     const targetWidth = width * 0.85;
+[L092, S4]     const targetHeight = height * 0.85;
+[L093, S4]     
+[L094, S4]     const scaleX = targetWidth / graphWidth;
+[L095, S4]     const scaleY = targetHeight / graphHeight;
+[L096, S4]     const scale = Math.min(scaleX, scaleY, 1.5);
+[L097, S0] 
+[L098, S4]     const offsetX = - (minX + maxX) / 2 * scale;
+[L099, S4]     const offsetY = - (minY + maxY) / 2 * scale;
+[L100, S0] 
+[L101, S4]     layoutNodes.forEach(node => {
+[L102, S8]         node.x = node.x * scale + offsetX;
+[L103, S8]         node.y = node.y * scale + offsetY;
+[L104, S8]         node.fx = node.x;
+[L105, S8]         node.fy = node.y;
+[L106, S4]     });
+[L107, S0] 
+[L108, S4]     return { nodes: layoutNodes, links: layoutLinks };
+[L109, S0] };
 
 
 // --- frontend/src/views/analysis/network/networkRender.js ---
@@ -397,57 +152,61 @@ Processed Files: 6
 [L026, S4]     
 [L027, S4]     ctx.fillStyle = gradient;
 [L028, S4]     ctx.fill();
-[L029, S0] };
-[L030, S0] 
-[L031, S0] /**
-[L032, S1]  * Renders smooth bezier curves for links, mapping weight to opacity and thickness.
-[L033, S1]  */
-[L034, S0] export const drawLabel = (node, ctx, globalScale) => {
-[L035, S4]     const LABEL_SCALE_THRESHOLD = 1.2;
-[L036, S4]     if (globalScale < LABEL_SCALE_THRESHOLD) return;
-[L037, S0] 
-[L038, S4]     const radius = calculateRadius(node.papers);
-[L039, S4]     const fontSize = Math.max(3, 10 / globalScale);
-[L040, S4]     
-[L041, S4]     ctx.font = `${fontSize}px Sans-Serif`;
-[L042, S4]     ctx.textAlign = 'center';
-[L043, S4]     ctx.textBaseline = 'top';
-[L044, S4]     ctx.fillStyle = '#1e3a8a'; // Tailwind blue-900
-[L045, S4]     
-[L046, S4]     ctx.fillText(node.name, node.x, node.y + radius + (2 / globalScale));
-[L047, S0] };
-[L048, S0] 
-[L049, S0] export const drawBranding = (ctx, width, height) => {
-[L050, S4]     ctx.save();
-[L051, S4]     ctx.font = 'bold 16px Sans-Serif';
-[L052, S4]     ctx.fillStyle = 'rgba(156, 163, 175, 0.4)'; // Tailwind gray-400, 40% opacity
-[L053, S4]     ctx.textAlign = 'right';
-[L054, S4]     ctx.textBaseline = 'bottom';
-[L055, S4]     ctx.fillText('NOVASCOPE', width - 20, height - 20);
-[L056, S4]     ctx.restore();
-[L057, S0] };
-[L058, S0] 
-[L059, S0] export const drawLink = (link, ctx, globalScale) => {
-[L060, S4]     const { source, target, weight } = link;
-[L061, S4]     
-[L062, S4]     const opacity = Math.min(0.8, 0.1 + (weight * 0.08));
-[L063, S4]     const thickness = Math.min(4, Math.max(0.5, weight * 0.4)) / globalScale;
-[L064, S4]     
-[L065, S4]     ctx.beginPath();
-[L066, S4]     ctx.moveTo(source.x, source.y);
-[L067, S4]     
-[L068, S4]     // Quadratic-like Bezier control points to add a slight curve
-[L069, S4]     const dx = target.x - source.x;
-[L070, S4]     const dy = target.y - source.y;
-[L071, S4]     const cx1 = source.x + dx * 0.5 - dy * 0.15;
-[L072, S4]     const cy1 = source.y + dy * 0.5 + dx * 0.15;
-[L073, S4]     
-[L074, S4]     ctx.bezierCurveTo(cx1, cy1, cx1, cy1, target.x, target.y);
-[L075, S4]     
-[L076, S4]     ctx.strokeStyle = `rgba(156, 163, 175, ${opacity})`; // Tailwind gray-400
-[L077, S4]     ctx.lineWidth = thickness;
-[L078, S4]     ctx.stroke();
-[L079, S0] };
+[L029, S0] 
+[L030, S4]     ctx.lineWidth = 0.5 / globalScale;
+[L031, S4]     ctx.strokeStyle = '#111827';
+[L032, S4]     ctx.stroke();
+[L033, S0] };
+[L034, S0] 
+[L035, S0] /**
+[L036, S1]  * Renders smooth bezier curves for links, mapping weight to opacity and thickness.
+[L037, S1]  */
+[L038, S0] export const drawLabel = (node, ctx, globalScale) => {
+[L039, S4]     const LABEL_SCALE_THRESHOLD = 1.2;
+[L040, S4]     if (globalScale < LABEL_SCALE_THRESHOLD && (node.degree || 0) < 3) return;
+[L041, S0] 
+[L042, S4]     const radius = calculateRadius(node.papers);
+[L043, S4]     const fontSize = Math.max(4, 12 / globalScale);
+[L044, S4]     
+[L045, S4]     ctx.font = `500 ${fontSize}px Sans-Serif`;
+[L046, S4]     ctx.textAlign = 'center';
+[L047, S4]     ctx.textBaseline = 'top';
+[L048, S4]     ctx.fillStyle = '#1e293b'; // neutral dark-gray
+[L049, S4]     
+[L050, S4]     ctx.fillText(node.name, node.x, node.y + radius + (2 / globalScale));
+[L051, S0] };
+[L052, S0] 
+[L053, S0] export const drawBranding = (ctx, width, height) => {
+[L054, S4]     ctx.save();
+[L055, S4]     ctx.font = 'bold 16px Sans-Serif';
+[L056, S4]     ctx.fillStyle = 'rgba(156, 163, 175, 0.4)'; // Tailwind gray-400, 40% opacity
+[L057, S4]     ctx.textAlign = 'right';
+[L058, S4]     ctx.textBaseline = 'bottom';
+[L059, S4]     ctx.fillText('NOVASCOPE', width - 20, height - 20);
+[L060, S4]     ctx.restore();
+[L061, S0] };
+[L062, S0] 
+[L063, S0] export const drawLink = (link, ctx, globalScale) => {
+[L064, S4]     const { source, target, weight } = link;
+[L065, S4]     
+[L066, S4]     const opacity = Math.min(0.35, 0.12 + (weight * 0.05));
+[L067, S4]     const thickness = Math.min(1.5, Math.max(0.5, weight * 0.3)) / globalScale;
+[L068, S4]     
+[L069, S4]     ctx.beginPath();
+[L070, S4]     ctx.moveTo(source.x, source.y);
+[L071, S4]     
+[L072, S4]     // Quadratic-like Bezier control points to add a slight curve
+[L073, S4]     const dx = target.x - source.x;
+[L074, S4]     const dy = target.y - source.y;
+[L075, S4]     const cx1 = source.x + dx * 0.5 - dy * 0.1;
+[L076, S4]     const cy1 = source.y + dy * 0.5 + dx * 0.1;
+[L077, S4]     
+[L078, S4]     ctx.bezierCurveTo(cx1, cy1, cx1, cy1, target.x, target.y);
+[L079, S4]     
+[L080, S4]     ctx.strokeStyle = `rgba(148, 163, 184, ${opacity})`; // neutral light blue/gray
+[L081, S4]     ctx.lineWidth = thickness;
+[L082, S4]     ctx.stroke();
+[L083, S0] };
 
 
 // --- frontend/src/views/analysis/network/networkStyles.js ---
@@ -472,83 +231,5 @@ Processed Files: 6
 [L018, S1]  */
 [L019, S0] export const calculateRadius = (metric, scale = 1) => {
 [L020, S4]     const value = Math.max(0, metric || 0);
-[L021, S4]     return (7 + Math.sqrt(value) * 2.8) * scale;
+[L021, S4]     return Math.min(28, 5 + Math.sqrt(value) * 2.5) * scale;
 [L022, S0] };
-
-
-// --- frontend/src/graph/GraphCanvas.tsx ---
-
-[L001, S0] import React, { useRef } from "react";
-[L002, S0] import { useForceSimulation } from "./hooks/useForceSimulation";
-[L003, S0] import { dummyNodes, dummyLinks } from "./dummyData";
-[L004, S0] 
-[L005, S0] /**
-[L006, S1]  * 100% Dumb View component.
-[L007, S1]  * Responsible ONLY for providing the DOM node reference.
-[L008, S1]  * Zero logic allowed inside the JSX.
-[L009, S1]  */
-[L010, S0] export const GraphCanvas: React.FC = () => {
-[L011, S4]     const containerRef = React.useRef<HTMLDivElement>(null);
-[L012, S4]     const canvasRef = React.useRef<HTMLCanvasElement>(null);
-[L013, S4]     const [dim, setDim] = React.useState({ w: 800, h: 600 });
-[L014, S0] 
-[L015, S4]     // Responsive Listener: Binds canvas resolution strictly to its parent container
-[L016, S4]     React.useEffect(() => {
-[L017, S8]         if (!containerRef.current) return;
-[L018, S8]         const obs = new ResizeObserver((entries) => {
-[L019, S12]             setDim({ w: entries[0].contentRect.width, h: entries[0].contentRect.height });
-[L020, S8]         });
-[L021, S8]         obs.observe(containerRef.current);
-[L022, S8]         return () => obs.disconnect();
-[L023, S4]     }, []);
-[L024, S0] 
-[L025, S4]     // State Fractality: Pass dynamic dimensions to the physics orchestrator
-[L026, S4]     useForceSimulation({ nodes: dummyNodes, links: dummyLinks }, canvasRef, dim);
-[L027, S0] 
-[L028, S4]     return (
-[L029, S8]         <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
-[L030, S12]             <canvas ref={canvasRef} width={dim.w} height={dim.h} style={{ display: "block" }} />
-[L031, S8]         </div>
-[L032, S4]     );
-[L033, S0] };
-
-
-// --- frontend/src/graph/render/drawNodes.ts ---
-
-[L001, S0] import type { NetworkNode } from "../types";
-[L002, S0] 
-[L003, S0] const CLUSTER_PALETTE = {
-[L004, S4]     red: { start: "#ff6b6b", end: "#c92a2a" },
-[L005, S4]     blue: { start: "#4dabf7", end: "#1864ab" },
-[L006, S4]     green: { start: "#69db7c", end: "#2b8a3e" },
-[L007, S0] };
-[L008, S0] 
-[L009, S0] /**
-[L010, S1]  * Pure function to render spherical 3D nodes.
-[L011, S1]  * Iterates context drawing for individual radial gradients.
-[L012, S1]  */
-[L013, S0] export const drawNodes = (
-[L014, S4]     ctx: CanvasRenderingContext2D,
-[L015, S4]     nodes: NetworkNode[]
-[L016, S0] ) => {
-[L017, S4]     nodes.forEach((node) => {
-[L018, S8]         if (node.x == null || node.y == null) return;
-[L019, S0] 
-[L020, S8]         ctx.beginPath();
-[L021, S8]         ctx.arc(node.x, node.y, node.radius, 0, 2 * Math.PI);
-[L022, S0] 
-[L023, S8]         // Offset gradient origin to simulate top-left directional lighting
-[L024, S8]         const offset = node.radius / 3;
-[L025, S8]         const grad = ctx.createRadialGradient(
-[L026, S12]             node.x - offset, node.y - offset, 0,
-[L027, S12]             node.x, node.y, node.radius
-[L028, S8]         );
-[L029, S0] 
-[L030, S8]         const colors = CLUSTER_PALETTE[node.cluster];
-[L031, S8]         grad.addColorStop(0, colors.start);
-[L032, S8]         grad.addColorStop(1, colors.end);
-[L033, S0] 
-[L034, S8]         ctx.fillStyle = grad;
-[L035, S8]         ctx.fill();
-[L036, S4]     });
-[L037, S0] };

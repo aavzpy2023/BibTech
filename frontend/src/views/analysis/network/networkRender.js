@@ -4,7 +4,7 @@ import { getNodeColor, calculateRadius } from './networkStyles';
  * Renders a highly stylized 3D-like sphere for a node using Canvas radial gradients.
  */
 export const drawNode = (node, ctx, globalScale) => {
-    const radius = calculateRadius(node.papers);
+    const radius = calculateRadius(node);
     const color = getNodeColor(node.group);
     
     ctx.beginPath();
@@ -36,10 +36,11 @@ export const drawNode = (node, ctx, globalScale) => {
  * Renders smooth bezier curves for links, mapping weight to opacity and thickness.
  */
 export const drawLabel = (node, ctx, globalScale) => {
-    const LABEL_SCALE_THRESHOLD = 1.2;
-    if (globalScale < LABEL_SCALE_THRESHOLD && (node.degree || 0) < 3) return;
+    const isHub = (node.degree || 0) >= 5;
+    const LABEL_SCALE_THRESHOLD = isHub ? 0.6 : 1.5;
+    if (globalScale < LABEL_SCALE_THRESHOLD) return;
 
-    const radius = calculateRadius(node.papers);
+    const radius = calculateRadius(node);
     const fontSize = Math.max(4, 12 / globalScale);
     
     ctx.font = `500 ${fontSize}px Sans-Serif`;
