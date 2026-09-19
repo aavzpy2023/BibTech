@@ -1,12 +1,11 @@
 import React, { useRef, useState, useCallback, useMemo } from 'react';
 import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
 import useNetworkLayout from '../../hooks/useNetworkLayout';
-import { setEdgeOpacityMultiplier } from '../../graph/render/drawLinks';
 import useElementSize from '../../hooks/useElementSize';
 import NetworkGraphTemplate from './NetworkGraphTemplate';
 import AnalysisPageTemplate from './AnalysisPageTemplate';
 import { exportCanvasToImage } from '../../views/analysis/network/exportNetwork';
-import { setRenderNodes } from '../../views/analysis/network/networkRender';
+import { setRenderNodes, setEdgeOpacityMultiplier } from '../../views/analysis/network/networkRender';
 import { fitGraphView } from '../../views/analysis/network/networkFit';
 import logoImg from '../../assets/logo.png';
 
@@ -154,12 +153,22 @@ export default function CoAuthorshipNetwork() {
 
     const [edgeOpacity, setEdgeOpacity] = useState(1.0);
 
-    React.useEffect(() => {
-        setEdgeOpacityMultiplier(edgeOpacity);
-    }, [edgeOpacity]);
-
     // Offload heavy physics calculation to the state fractality hook
     const { frozenData, isCalculating } = useNetworkLayout(nodes, links);
+
+    // Force canvas repaint when opacity slider changes
+    React.useEffect(() => {
+        setEdgeOpacityMultiplier(edgeOpacity);
+        // Force the react-force-graph instance to redraw its canvas immediately
+        if (fgRef.current && !isCalculating) {
+            // react-force-graph doesn't have a direct redraw(), but manipulating zoom triggers it
+            const currentZoom = fgRef.current.zoom();
+            fgRef.current.zoom(currentZoom * 1.0001);
+            setTimeout(() => {
+                if (fgRef.current) fgRef.current.zoom(currentZoom);
+            }, 0);
+        }
+    }, [edgeOpacity, isCalculating]);
 
     React.useEffect(() => {
         if (!isCalculating && frozenData?.nodes?.length > 0) {

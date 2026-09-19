@@ -5,6 +5,11 @@ let cacheNodes = null;
 let lastK = -1;
 let graphNodes = [];
 let activeHoveredNodeId = null;
+let edgeOpacityMultiplier = 1.0;
+
+export const setEdgeOpacityMultiplier = (val) => {
+    edgeOpacityMultiplier = val;
+};
 
 export const setHoveredNodeId = (id) => {
     activeHoveredNodeId = id;
@@ -213,6 +218,8 @@ export const drawLink = (link, ctx, globalScale) => {
     } else {
         opacity = Math.min(0.20, 0.06 + weight * 0.025); // Subtle, clean idle background
     }
+
+    opacity *= edgeOpacityMultiplier;
 
     const thickness = (isHighlighted
         ? Math.min(2.5, 1.0 + weight * 0.35)
