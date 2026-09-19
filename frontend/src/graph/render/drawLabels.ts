@@ -8,16 +8,22 @@ export const drawLabels = (
     ctx: CanvasRenderingContext2D,
     nodes: NetworkNode[]
 ) => {
-    ctx.fillStyle = "#0f172a"; // Dark navy slate
-    ctx.font = "10px sans-serif";
+    ctx.font = "11px Inter, sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
     
     nodes.forEach((node) => {
         if (node.x == null || node.y == null) return;
         
-        // Offset label from the center, pushed slightly past the node radius
-        const offsetX = node.x + node.radius + 4;
-        const offsetY = node.y + 3; // Vertical center alignment adjustment
+        const offsetX = node.x + node.radius + 6;
+        const offsetY = node.y;
         
+        // Halo effect for readability over links/nodes
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+        ctx.lineWidth = 3;
+        ctx.strokeText(node.name, offsetX, offsetY);
+        
+        ctx.fillStyle = "#1e293b"; // Slate-800
         ctx.fillText(node.name, offsetX, offsetY);
     });
 };

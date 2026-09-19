@@ -18,7 +18,17 @@ export const drawLinks = (
 
         if (source.x != null && source.y != null && target.x != null && target.y != null) {
             ctx.moveTo(source.x, source.y);
-            ctx.lineTo(target.x, target.y);
+            
+            // Calculate midpoint and offset for a subtle bezier curve
+            const midX = (source.x + target.x) / 2;
+            const midY = (source.y + target.y) / 2;
+            const dx = target.x - source.x;
+            const dy = target.y - source.y;
+            
+            const cpX = midX - dy * 0.2;
+            const cpY = midY + dx * 0.2;
+            
+            ctx.quadraticCurveTo(cpX, cpY, target.x, target.y);
         }
     });
     

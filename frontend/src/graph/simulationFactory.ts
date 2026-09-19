@@ -17,12 +17,13 @@ export const createSimulation = (
     width: number = 800,
     height: number = 600
 ) => {
-    return d3
-        .forceSimulation<NetworkNode, NetworkLink>(nodes)
-        .force("charge", d3.forceManyBody().strength(-300))
-        .force(
-            "link",
-            d3.forceLink<NetworkNode, NetworkLink>(links).id((d) => d.id).distance(50)
-        )
-        .force("center", d3.forceCenter(width / 2, height / 2));
+        return d3
+            .forceSimulation<NetworkNode, NetworkLink>(nodes)
+            .force("charge", d3.forceManyBody().strength(-600))
+            .force(
+                "link",
+                d3.forceLink<NetworkNode, NetworkLink>(links).id((d) => d.id).distance(120)
+            )
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("collide", d3.forceCollide().radius((d) => (d as NetworkNode).radius + 15).iterations(2));
 };
