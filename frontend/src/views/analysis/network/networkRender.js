@@ -233,20 +233,18 @@ export const drawLink = (link, ctx, globalScale) => {
 
     let opacity;
     if (isHighlighted) {
-        opacity = Math.min(0.95, 0.65 + weight * 0.10);
+        opacity = Math.min(0.95, (0.65 + weight * 0.10) * edgeOpacityMultiplier);
     } else if (isHoverActive) {
-        opacity = 0.05; // Dim background edges when focusing on an author
+        opacity = 0.02; // IGNORAR SLIDER: forzar fondo tenue invariable
     } else {
         if (isIntra) {
             // Intra-cluster: clearly visible at max slider (0.35 - 0.85)
-            opacity = Math.min(0.85, 0.35 + weight * 0.10);
+            opacity = Math.min(0.85, (0.35 + weight * 0.10) * edgeOpacityMultiplier);
         } else {
             // Inter-cluster: visible structure without visual noise (0.18 - 0.50)
-            opacity = Math.min(0.50, 0.18 + weight * 0.05);
+            opacity = Math.min(0.50, (0.18 + weight * 0.05) * edgeOpacityMultiplier);
         }
     }
-
-    opacity *= edgeOpacityMultiplier;
 
     const thickness = (isHighlighted
         ? Math.min(3.0, 1.2 + weight * 0.40)

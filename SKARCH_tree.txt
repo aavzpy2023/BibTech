@@ -21,7 +21,6 @@
 │   │   │   ├── main.jsx
 │   │   │   ├── views/
 │   │   │   │   ├── AnalysisView.jsx
-│   │   │   │   ├── AnalysisView.test.jsx
 │   │   │   │   ├── LoadView.jsx
 │   │   │   │   ├── QueueView.jsx
 │   │   │   │   ├── QueueView.test.jsx
@@ -37,27 +36,18 @@
 │   │   │   │   │   │   ├── networkStyles.js
 │   │   │   ├── hooks/
 │   │   │   │   ├── useAnalysisNavigation.js
-│   │   │   │   ├── useAnalysisNavigation.test.js
 │   │   │   │   ├── useBatchLoad.js
-│   │   │   │   ├── useBatchLoad.test.js
 │   │   │   │   ├── useBibliography.js
-│   │   │   │   ├── useBibliography.test.js
 │   │   │   │   ├── useCoAuthorshipNetwork.js
-│   │   │   │   ├── useCoAuthorshipNetwork.test.js
 │   │   │   │   ├── useCoCitationNetwork.js
 │   │   │   │   ├── useElementSize.js
 │   │   │   │   ├── useHoverReveal.js
 │   │   │   │   ├── useHoverReveal.test.js
 │   │   │   │   ├── useNetworkLayout.js
-│   │   │   │   ├── useNetworkLayout.test.js
 │   │   │   │   ├── useQueueState.js
-│   │   │   │   ├── useQueueState.test.js
 │   │   │   │   ├── useReferenceDetails.js
-│   │   │   │   ├── useReferenceDetails.test.js
 │   │   │   │   ├── useReferencesTable.js
-│   │   │   │   ├── useReferencesTable.test.js
 │   │   │   │   ├── useReferencesUpload.js
-│   │   │   │   ├── useReferencesUpload.test.js
 │   │   │   │   ├── useTableResize.js
 │   │   │   │   ├── useTableResize.test.js
 │   │   │   ├── assets/
@@ -110,17 +100,12 @@
 │   │   │   │   │   ├── UploadReferencesModal.jsx
 │   │   │   │   ├── analysis/
 │   │   │   │   │   ├── AnalysisContent.jsx
-│   │   │   │   │   ├── AnalysisContent.test.jsx
 │   │   │   │   │   ├── AnalysisPageTemplate.jsx
-│   │   │   │   │   ├── AnalysisPageTemplate.test.jsx
 │   │   │   │   │   ├── AnalysisSidebar.jsx
-│   │   │   │   │   ├── AnalysisSidebar.test.jsx
 │   │   │   │   │   ├── CoAuthorshipNetwork.jsx
-│   │   │   │   │   ├── CoAuthorshipNetwork.test.jsx
 │   │   │   │   │   ├── CoCitationNetwork.jsx
 │   │   │   │   │   ├── NetworkGraphTemplate.jsx
 │   │   │   │   │   ├── OverviewViewTemplate.jsx
-│   │   │   │   │   ├── OverviewViewTemplate.test.jsx
 │   │   │   ├── config/
 │   │   │   │   ├── analysisMenuConfig.js
 │   ├── backend/
