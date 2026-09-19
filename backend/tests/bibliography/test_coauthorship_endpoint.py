@@ -1,11 +1,24 @@
+import sys
+from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from src.database.models.core import Article, Project, ProjectArticle
-from src.database.models.core import Base
-from src.database.session import get_db
-from src.bibliography.router import router
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+if str(BACKEND_DIR / "src") not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR / "src"))
+
+try:
+    from src.database.models.core import Article, Project, ProjectArticle, Base
+    from src.database.session import get_db
+    from src.bibliography.router import router
+except ImportError:
+    from database.models.core import Article, Project, ProjectArticle, Base
+    from database.session import get_db
+    from bibliography.router import router
 
 @pytest.fixture
 def in_memory_db():
