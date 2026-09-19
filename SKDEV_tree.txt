@@ -34,6 +34,8 @@
 │   │   │   │   ├── useBatchLoad.test.js
 │   │   │   │   ├── useBibliography.js
 │   │   │   │   ├── useBibliography.test.js
+│   │   │   │   ├── useCoAuthorshipNetwork.js
+│   │   │   │   ├── useCoAuthorshipNetwork.test.js
 │   │   │   │   ├── useHoverReveal.js
 │   │   │   │   ├── useHoverReveal.test.js
 │   │   │   │   ├── useQueueState.js
@@ -80,8 +82,12 @@
 │   │   │   │   ├── analysis/
 │   │   │   │   │   ├── AnalysisContent.jsx
 │   │   │   │   │   ├── AnalysisContent.test.jsx
+│   │   │   │   │   ├── AnalysisPageTemplate.jsx
+│   │   │   │   │   ├── AnalysisPageTemplate.test.jsx
 │   │   │   │   │   ├── AnalysisSidebar.jsx
 │   │   │   │   │   ├── AnalysisSidebar.test.jsx
+│   │   │   │   │   ├── CoAuthorshipNetwork.jsx
+│   │   │   │   │   ├── CoAuthorshipNetwork.test.jsx
 │   │   │   │   │   ├── OverviewViewTemplate.jsx
 │   │   │   │   │   ├── OverviewViewTemplate.test.jsx
 │   │   │   ├── config/

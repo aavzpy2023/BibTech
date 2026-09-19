@@ -166,43 +166,7 @@ export default function CoAuthorshipNetwork() {
             footer={footer}
             dataTestId="coauthorship-network-view"
         >
-                <div style={styles.controlGroup}>
-                    <label htmlFor="search-author" style={styles.label}>
-                        Filter:
-                    </label>
-                    <input
-                        id="search-author"
-                        type="text"
-                        placeholder="Search author..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        style={styles.input}
-                    />
-                </div>
-
-                <div style={styles.controlGroup}>
-                    <label htmlFor="min-weight-slider" style={styles.label}>
-                        Min Collaborations ({minWeight}):
-                    </label>
-                    <input
-                        id="min-weight-slider"
-                        type="range"
-                        min="1"
-                        max="7"
-                        value={minWeight}
-                        onChange={e => setMinWeight(Number(e.target.value))}
-                        style={{ cursor: 'pointer' }}
-                    />
-                </div>
-
-                <div style={styles.stats}>
-                    Nodes: <strong>{nodes.length}</strong> | Links:{' '}
-                    <strong>{links.length}</strong>
-                </div>
-            </div>
-
-            <div style={styles.canvasCard}>
-                <svg
+            <svg
                     data-testid="coauthorship-svg"
                     width="100%"
                     height="420"
