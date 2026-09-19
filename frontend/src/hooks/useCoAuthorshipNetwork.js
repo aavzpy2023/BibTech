@@ -160,11 +160,12 @@ const CLUSTER_METADATA = {
     4: { name: 'Secondary Hub', color: '#06b6d4' }
 };
 
-const INITIAL_ROTATION = { rotX: 15, rotY: 25 };
+
+
+import { filterNetworkData } from '../views/analysis/network/networkData';
 
 export default function useCoAuthorshipNetwork() {
     const [nodeScale, setNodeScale] = useState(1);
-    const [is3DMode, setIs3DMode] = useState(true);
     const [dynamicNodes, setDynamicNodes] = useState(null);
     const [dynamicLinks, setDynamicLinks] = useState(null);
     const [dynamicClusters, setDynamicClusters] = useState(null);
@@ -173,9 +174,7 @@ export default function useCoAuthorshipNetwork() {
     const [selectedNodeId, setSelectedNodeId] = useState(null);
     const [hoveredNodeId, setHoveredNodeId] = useState(null);
     const [viewMode, setViewMode] = useState('network');
-    const [rotation, setRotation] = useState(INITIAL_ROTATION);
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
 
     React.useEffect(() => {
         let isMounted = true;
@@ -198,9 +197,7 @@ export default function useCoAuthorshipNetwork() {
         };
     }, []);
 
-    const resetRotation = useCallback(() => {
-        setRotation(INITIAL_ROTATION);
-    }, []);
+
 
     const sourceNodes = dynamicNodes || DEFAULT_NODES_3D;
     const sourceLinks = dynamicLinks || DEFAULT_LINKS;
@@ -210,108 +207,17 @@ export default function useCoAuthorshipNetwork() {
         return sourceLinks.filter(link => link.weight >= minWeight);
     }, [sourceLinks, minWeight]);
 
-    const activeNodeIds = useMemo(() => {
-        const set = new Set();
-        filteredLinks.forEach(l => {
-            set.add(l.source);
-            set.add(l.target);
-        });
-        return set;
-    }, [filteredLinks]);
-
-    const projectedNodes = useMemo(() => {
-        const radX = is3DMode ? (rotation.rotX * Math.PI) / 180 : 0;
-        const radY = is3DMode ? (rotation.rotY * Math.PI) / 180 : 0;
-        const focalLength = 460;
-        const cx = 390;
-        const cy = 250;
-
-        const projected = sourceNodes
-            .filter(n => activeNodeIds.has(n.id))
-            .map(n => {
-                if (!is3DMode) {
-                    // Depth-layered 2D: Central hubs in crisp foreground, peripheral in subtle depth
-                    const scale2D = 0.82;
-                    const px = cx + n.x * scale2D;
-                    const py = cy + n.y * scale2D;
-                    const depthScale = 1.0 + (n.z / 500);
-                    const baseRadius =
-                        (7 + Math.sqrt(n.papers) * 2.8) * nodeScale * depthScale;
-                    const depthOpacity = Math.max(
-                        0.7,
-                        Math.min(1.0, (n.z + 180) / 300)
-                    );
-
-                    return {
-                        ...n,
-                        px,
-                        py,
-                        z2: n.z,
-                        scale: depthScale,
-                        radius: baseRadius,
-                        depthOpacity
-                    };
-                }
-
-                // 3D Perspective Mode
-                const x1 = n.x * Math.cos(radY) + n.z * Math.sin(radY);
-                const z1 = -n.x * Math.sin(radY) + n.z * Math.cos(radY);
-                const y2 = n.y * Math.cos(radX) - z1 * Math.sin(radX);
-                const z2 = n.y * Math.sin(radX) + z1 * Math.cos(radX);
-
-                const scale = focalLength / (focalLength + z2);
-                const px = cx + x1 * scale * 0.82;
-                const py = cy + y2 * scale * 0.82;
-                const baseRadius = (7 + Math.sqrt(n.papers) * 2.8) * nodeScale;
-                const radius = baseRadius * scale;
-                const depthOpacity = Math.max(0.4, Math.min(1.0, (z2 + 200) / 360));
-
-                return {
-                    ...n,
-                    px,
-                    py,
-                    z2,
-                    scale,
-                    radius,
-                    depthOpacity
-                };
-            });
-
-        return is3DMode ? projected.sort((a, b) => a.z2 - b.z2) : projected;
-    }, [rotation, activeNodeIds, sourceNodes, is3DMode, nodeScale]);
-
-    const handleMouseDown = useCallback((e) => {
-        if (!is3DMode) return;
-        setIsDragging(true);
-        setDragStart({ x: e.clientX, y: e.clientY });
-    }, [is3DMode]);
-
-    const handleMouseMove = useCallback(
-        (e) => {
-            if (!isDragging || !is3DMode) return;
-            const deltaX = e.clientX - dragStart.x;
-            const deltaY = e.clientY - dragStart.y;
-            setDragStart({ x: e.clientX, y: e.clientY });
-
-            setRotation(prev => ({
-                rotX: Math.max(-65, Math.min(65, prev.rotX - deltaY * 0.45)),
-                rotY: (prev.rotY + deltaX * 0.45) % 360
-            }));
-        },
-        [isDragging, dragStart, is3DMode]
-    );
-
-    const handleMouseUp = useCallback(() => {
-        setIsDragging(false);
-    }, []);
+    const { nodes: finalNodes, links: finalLinks } = useMemo(() => {
+        return filterNetworkData(sourceNodes, sourceLinks, minWeight);
+    }, [sourceNodes, sourceLinks, minWeight]);
 
     const selectedNode = useMemo(() => {
         return sourceNodes.find(n => n.id === selectedNodeId) || null;
     }, [selectedNodeId, sourceNodes]);
 
     return {
-        nodes: projectedNodes,
-        links: filteredLinks,
+        nodes: finalNodes,
+        links: finalLinks,
         minWeight,
         setMinWeight,
         searchQuery,
@@ -324,16 +230,7 @@ export default function useCoAuthorshipNetwork() {
         viewMode,
         setViewMode,
         clusters: sourceClusters,
-        rotation,
-        setRotation,
-        resetRotation,
         nodeScale,
-        setNodeScale,
-        is3DMode,
-        setIs3DMode,
-        isDragging,
-        handleMouseDown,
-        handleMouseMove,
-        handleMouseUp
+        setNodeScale
     };
 }

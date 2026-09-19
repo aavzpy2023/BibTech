@@ -1,51 +1,544 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-18 19:09:32
+Date: 2026-09-19 12:05:07
 AST Mode: False
 Line Numbers: True
-Modules: __init__.py
-Processed Files: 1
+Modules: CoAuthorshipNetwork.jsx, CoAuthorshipNetwork.test.jsx
+Processed Files: 2
 ===========================
 
 
 
-// --- backend/src/database/models/__init__.py ---
+// --- frontend/src/components/analysis/CoAuthorshipNetwork.jsx ---
 
-[L001, S0] """Database models package."""
-[L002, S0] from .core import (
-[L003, S4]     Article,
-[L004, S4]     ArticleCitation,
-[L005, S4]     ArticleCountry,
-[L006, S4]     CitedReference,
-[L007, S4]     Country,
-[L008, S4]     Journal,
-[L009, S4]     Project,
-[L010, S4]     ProjectArticle,
-[L011, S0] )
-[L012, S0] from .identity import (
-[L013, S4]     Affiliation,
-[L014, S4]     Author,
-[L015, S4]     AuthorArticle,
-[L016, S4]     Keyword,
-[L017, S4]     KeywordArticle,
-[L018, S0] from .tracking import (
-[L019, S4]     Download,
-[L020, S4]     Funding,
-[L021, S0] )
-[L022, S0] __all__ = [
-[L023, S4]     "Affiliation",
-[L024, S4]     "Article",
-[L025, S4]     "ArticleCitation",
-[L026, S4]     "ArticleCountry",
-[L027, S4]     "CitedReference",
-[L028, S4]     "Country",
-[L029, S4]     "Journal",
-[L030, S4]     "Author",
-[L031, S4]     "AuthorArticle",
-[L032, S4]     "Keyword",
-[L033, S4]     "KeywordArticle",
-[L034, S4]     "Project",
-[L035, S4]     "ProjectArticle",
-[L036, S4]     "Funding",
-[L037, S4]     "Download",
-[L038, S0] ]
+[L001, S0] import React, { useRef, useCallback, useMemo } from 'react';
+[L002, S0] import ForceGraph2D from 'react-force-graph-2d';
+[L003, S0] import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
+[L004, S0] import AnalysisPageTemplate from './AnalysisPageTemplate';
+[L005, S0] import logoImg from '../../assets/logo.png';
+[L006, S0] 
+[L007, S0] // Novascope vibrant cluster palette
+[L008, S0] const CLUSTER_COLORS = {
+[L009, S4]     1: { base: '#ef4444', light: '#fca5a5', dark: '#991b1b' },
+[L010, S4]     2: { base: '#3b82f6', light: '#93c5fd', dark: '#1e40af' },
+[L011, S4]     3: { base: '#10b981', light: '#6ee7b7', dark: '#065f46' },
+[L012, S4]     4: { base: '#06b6d4', light: '#67e8f9', dark: '#155e75' }
+[L013, S0] };
+[L014, S0] 
+[L015, S0] function getOverlayColor(year) {
+[L016, S4]     if (year <= 2016) return '#3b82f6';
+[L017, S4]     if (year <= 2018) return '#06b6d4';
+[L018, S4]     if (year <= 2019.5) return '#10b981';
+[L019, S4]     return '#facc15';
+[L020, S0] }
+[L021, S0] 
+[L022, S0] const styles = {
+[L023, S4]     controlGroup: {
+[L024, S8]         display: 'flex',
+[L025, S8]         alignItems: 'center',
+[L026, S8]         gap: '8px'
+[L027, S4]     },
+[L028, S4]     label: {
+[L029, S8]         fontSize: '12px',
+[L030, S8]         color: '#c9d1d9',
+[L031, S8]         fontWeight: '600',
+[L032, S8]         textTransform: 'uppercase',
+[L033, S8]         letterSpacing: '0.5px'
+[L034, S4]     },
+[L035, S4]     input: {
+[L036, S8]         backgroundColor: '#0d1117',
+[L037, S8]         border: '1px solid #30363d',
+[L038, S8]         borderRadius: '6px',
+[L039, S8]         padding: '5px 10px',
+[L040, S8]         color: '#f0f6fc',
+[L041, S8]         fontSize: '12px',
+[L042, S8]         outline: 'none'
+[L043, S4]     },
+[L044, S4]     modeSwitchGroup: {
+[L045, S8]         display: 'inline-flex',
+[L046, S8]         borderRadius: '6px',
+[L047, S8]         border: '1px solid #30363d',
+[L048, S8]         overflow: 'hidden'
+[L049, S4]     },
+[L050, S4]     modeBtn: (isActive) => ({
+[L051, S8]         backgroundColor: isActive ? '#1f6feb' : '#0d1117',
+[L052, S8]         color: isActive ? '#ffffff' : '#8b949e',
+[L053, S8]         border: 'none',
+[L054, S8]         padding: '5px 12px',
+[L055, S8]         fontSize: '12px',
+[L056, S8]         fontWeight: '600',
+[L057, S8]         cursor: 'pointer',
+[L058, S8]         transition: 'all 0.2s'
+[L059, S4]     }),
+[L060, S4]     exportBtn: {
+[L061, S8]         backgroundColor: '#238636',
+[L062, S8]         color: '#ffffff',
+[L063, S8]         border: '1px solid #2ea043',
+[L064, S8]         borderRadius: '6px',
+[L065, S8]         padding: '5px 12px',
+[L066, S8]         fontSize: '12px',
+[L067, S8]         fontWeight: '600',
+[L068, S8]         cursor: 'pointer',
+[L069, S8]         display: 'flex',
+[L070, S8]         alignItems: 'center',
+[L071, S8]         gap: '6px'
+[L072, S4]     },
+[L073, S4]     fitBtn: {
+[L074, S8]         backgroundColor: '#21262d',
+[L075, S8]         color: '#f0f6fc',
+[L076, S8]         border: '1px solid #30363d',
+[L077, S8]         borderRadius: '6px',
+[L078, S8]         padding: '5px 10px',
+[L079, S8]         fontSize: '12px',
+[L080, S8]         cursor: 'pointer'
+[L081, S4]     },
+[L082, S4]     canvasWrapper: {
+[L083, S8]         position: 'relative',
+[L084, S8]         width: '100%',
+[L085, S8]         height: '520px',
+[L086, S8]         backgroundColor: '#ffffff',
+[L087, S8]         borderRadius: '6px',
+[L088, S8]         overflow: 'hidden'
+[L089, S4]     },
+[L090, S4]     watermark: {
+[L091, S8]         position: 'absolute',
+[L092, S8]         top: '12px',
+[L093, S8]         right: '12px',
+[L094, S8]         zIndex: 5,
+[L095, S8]         pointerEvents: 'none',
+[L096, S8]         display: 'flex',
+[L097, S8]         alignItems: 'center',
+[L098, S8]         padding: '6px',
+[L099, S8]         borderRadius: '8px',
+[L100, S8]         backgroundColor: 'rgba(255, 255, 255, 0.85)',
+[L101, S8]         border: '1px solid rgba(0, 0, 0, 0.1)',
+[L102, S8]         boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+[L103, S4]     },
+[L104, S4]     logoImage: {
+[L105, S8]         width: '32px',
+[L106, S8]         height: '32px',
+[L107, S8]         objectFit: 'contain'
+[L108, S4]     },
+[L109, S4]     legendPanel: {
+[L110, S8]         position: 'absolute',
+[L111, S8]         bottom: '12px',
+[L112, S8]         left: '12px',
+[L113, S8]         zIndex: 5,
+[L114, S8]         backgroundColor: 'rgba(255, 255, 255, 0.92)',
+[L115, S8]         border: '1px solid rgba(0, 0, 0, 0.12)',
+[L116, S8]         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+[L117, S8]         borderRadius: '6px',
+[L118, S8]         padding: '8px 12px',
+[L119, S8]         display: 'flex',
+[L120, S8]         flexDirection: 'column',
+[L121, S8]         gap: '6px',
+[L122, S8]         pointerEvents: 'none'
+[L123, S4]     },
+[L124, S4]     legendItem: {
+[L125, S8]         display: 'flex',
+[L126, S8]         alignItems: 'center',
+[L127, S8]         gap: '8px',
+[L128, S8]         fontSize: '11px',
+[L129, S8]         color: '#1e293b',
+[L130, S8]         fontWeight: '500'
+[L131, S4]     },
+[L132, S4]     legendDot: (color) => ({
+[L133, S8]         width: '10px',
+[L134, S8]         height: '10px',
+[L135, S8]         borderRadius: '50%',
+[L136, S8]         backgroundColor: color
+[L137, S4]     })
+[L138, S0] };
+[L139, S0] 
+[L140, S0] export default function CoAuthorshipNetwork() {
+[L141, S4]     const fgRef = useRef();
+[L142, S0] 
+[L143, S4]     const {
+[L144, S8]         nodes,
+[L145, S8]         links,
+[L146, S8]         minWeight,
+[L147, S8]         setMinWeight,
+[L148, S8]         searchQuery,
+[L149, S8]         setSearchQuery,
+[L150, S8]         selectedNodeId,
+[L151, S8]         setSelectedNodeId,
+[L152, S8]         hoveredNodeId,
+[L153, S8]         setHoveredNodeId,
+[L154, S8]         selectedNode,
+[L155, S8]         viewMode,
+[L156, S8]         setViewMode,
+[L157, S8]         clusters,
+[L158, S8]         nodeScale,
+[L159, S8]         setNodeScale
+[L160, S4]     } = useCoAuthorshipNetwork();
+[L161, S0] 
+[L162, S4]     // Prepare immutable graphData payload for react-force-graph
+[L163, S4]     const graphData = useMemo(() => {
+[L164, S8]         return {
+[L165, S12]             nodes: nodes.map(n => ({ ...n })),
+[L166, S12]             links: links.map(l => ({ ...l }))
+[L167, S8]         };
+[L168, S4]     }, [nodes, links]);
+[L169, S0] 
+[L170, S4]     // Custom 3D bubble painting on 2D HTML5 canvas
+[L171, S4]     const paintNode = useCallback((node, ctx, globalScale) => {
+[L172, S8]         const baseR = 7 + Math.sqrt(node.papers || 1) * 3;
+[L173, S8]         const r = Math.max(3, baseR * nodeScale);
+[L174, S8]         const isMatch =
+[L175, S12]             !searchQuery.trim() ||
+[L176, S12]             node.name.toLowerCase().includes(searchQuery.toLowerCase());
+[L177, S8]         const isHovered = hoveredNodeId === node.id;
+[L178, S8]         const isSelected = selectedNodeId === node.id;
+[L179, S0] 
+[L180, S8]         const pal = CLUSTER_COLORS[node.group] || CLUSTER_COLORS[1];
+[L181, S8]         const fillColor =
+[L182, S12]             viewMode === 'overlay' ? getOverlayColor(node.avgYear) : pal.base;
+[L183, S8]         const lightColor =
+[L184, S12]             viewMode === 'overlay' ? '#ffffff' : pal.light;
+[L185, S8]         const darkColor =
+[L186, S12]             viewMode === 'overlay' ? '#1e293b' : pal.dark;
+[L187, S0] 
+[L188, S8]         ctx.save();
+[L189, S8]         ctx.globalAlpha = isMatch ? 1.0 : 0.15;
+[L190, S0] 
+[L191, S8]         // Floating ambient drop shadow
+[L192, S8]         ctx.shadowColor = 'rgba(15, 23, 42, 0.18)';
+[L193, S8]         ctx.shadowBlur = 6 * globalScale;
+[L194, S8]         ctx.shadowOffsetX = 1 * globalScale;
+[L195, S8]         ctx.shadowOffsetY = 3 * globalScale;
+[L196, S0] 
+[L197, S8]         // Spherical radial gradient for glossy 3D bubble look
+[L198, S8]         const grad = ctx.createRadialGradient(
+[L199, S12]             node.x - r * 0.35,
+[L200, S12]             node.y - r * 0.35,
+[L201, S12]             r * 0.08,
+[L202, S12]             node.x,
+[L203, S12]             node.y,
+[L204, S12]             r
+[L205, S8]         );
+[L206, S8]         grad.addColorStop(0, lightColor);
+[L207, S8]         grad.addColorStop(0.45, fillColor);
+[L208, S8]         grad.addColorStop(1, darkColor);
+[L209, S0] 
+[L210, S8]         ctx.fillStyle = grad;
+[L211, S8]         ctx.beginPath();
+[L212, S8]         ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
+[L213, S8]         ctx.fill();
+[L214, S0] 
+[L215, S8]         // Selection highlight ring
+[L216, S8]         if (isSelected || isHovered) {
+[L217, S12]             ctx.shadowColor = 'transparent';
+[L218, S12]             ctx.strokeStyle = '#0f172a';
+[L219, S12]             ctx.lineWidth = 2.5 / globalScale;
+[L220, S12]             ctx.stroke();
+[L221, S8]         }
+[L222, S0] 
+[L223, S8]         // Crisp navy labels beside nodes with white stroke halo
+[L224, S8]         ctx.shadowColor = 'transparent';
+[L225, S8]         const fontSize = Math.max(10, Math.min(14, 11 * nodeScale));
+[L226, S8]         ctx.font = `${node.papers > 10 || isSelected ? '600' : '400'} ${fontSize}px sans-serif`;
+[L227, S0] 
+[L228, S8]         ctx.strokeStyle = '#ffffff';
+[L229, S8]         ctx.lineWidth = 3;
+[L230, S8]         ctx.strokeText(node.name, node.x + r + 4, node.y + 4);
+[L231, S0] 
+[L232, S8]         ctx.fillStyle = isSelected || isHovered ? '#000000' : '#1e3a8a';
+[L233, S8]         ctx.fillText(node.name, node.x + r + 4, node.y + 4);
+[L234, S0] 
+[L235, S8]         ctx.restore();
+[L236, S4]     }, [nodeScale, searchQuery, hoveredNodeId, selectedNodeId, viewMode]);
+[L237, S0] 
+[L238, S4]     const handleExportHD = useCallback(() => {
+[L239, S8]         try {
+[L240, S12]             const fgEl = fgRef.current;
+[L241, S12]             const fgCanvas = fgEl ? fgEl.canvas : document.querySelector('canvas');
+[L242, S12]             if (!fgCanvas) return;
+[L243, S0] 
+[L244, S12]             const scale = 2.5;
+[L245, S12]             const exportCanvas = document.createElement('canvas');
+[L246, S12]             exportCanvas.width = fgCanvas.width * scale;
+[L247, S12]             exportCanvas.height = fgCanvas.height * scale;
+[L248, S12]             const ctx = exportCanvas.getContext('2d');
+[L249, S12]             if (!ctx) return;
+[L250, S0] 
+[L251, S12]             // White background
+[L252, S12]             ctx.fillStyle = '#ffffff';
+[L253, S12]             ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+[L254, S0] 
+[L255, S12]             // Draw ForceGraph canvas
+[L256, S12]             ctx.drawImage(
+[L257, S16]                 fgCanvas,
+[L258, S16]                 0,
+[L259, S16]                 0,
+[L260, S16]                 exportCanvas.width,
+[L261, S16]                 exportCanvas.height
+[L262, S12]             );
+[L263, S0] 
+[L264, S12]             // Draw corner watermark logo
+[L265, S12]             const watermark = new Image();
+[L266, S12]             watermark.onload = () => {
+[L267, S16]                 const logoSize = 38 * scale;
+[L268, S16]                 const margin = 18 * scale;
+[L269, S16]                 const x = exportCanvas.width - logoSize - margin;
+[L270, S16]                 const y = margin;
+[L271, S0] 
+[L272, S16]                 ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+[L273, S16]                 ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+[L274, S16]                 ctx.lineWidth = 1 * scale;
+[L275, S16]                 ctx.fillRect(
+[L276, S20]                     x - 6 * scale,
+[L277, S20]                     y - 6 * scale,
+[L278, S20]                     logoSize + 12 * scale,
+[L279, S20]                     logoSize + 12 * scale
+[L280, S16]                 );
+[L281, S16]                 ctx.strokeRect(
+[L282, S20]                     x - 6 * scale,
+[L283, S20]                     y - 6 * scale,
+[L284, S20]                     logoSize + 12 * scale,
+[L285, S20]                     logoSize + 12 * scale
+[L286, S16]                 );
+[L287, S16]                 ctx.drawImage(watermark, x, y, logoSize, logoSize);
+[L288, S0] 
+[L289, S16]                 const a = document.createElement('a');
+[L290, S16]                 a.href = exportCanvas.toDataURL('image/png');
+[L291, S16]                 a.download = 'co-authorship-novascope-hd.png';
+[L292, S16]                 a.click();
+[L293, S12]             };
+[L294, S12]             watermark.src = logoImg;
+[L295, S8]         } catch (err) {
+[L296, S12]             console.error('HD Export Error:', err);
+[L297, S8]         }
+[L298, S4]     }, []);
+[L299, S0] 
+[L300, S4]     const toolbar = (
+[L301, S8]         <>
+[L302, S12]             <div style={styles.controlGroup}>
+[L303, S16]                 <span style={styles.label}>Mode:</span>
+[L304, S16]                 <div style={styles.modeSwitchGroup}>
+[L305, S20]                     <button
+[L306, S24]                         type="button"
+[L307, S24]                         style={styles.modeBtn(viewMode === 'network')}
+[L308, S24]                         onClick={() => setViewMode('network')}
+[L309, S20]                     >
+[L310, S24]                         Network
+[L311, S20]                     </button>
+[L312, S20]                     <button
+[L313, S24]                         type="button"
+[L314, S24]                         style={styles.modeBtn(viewMode === 'overlay')}
+[L315, S24]                         onClick={() => setViewMode('overlay')}
+[L316, S20]                     >
+[L317, S24]                         Overlay
+[L318, S20]                     </button>
+[L319, S16]                 </div>
+[L320, S12]             </div>
+[L321, S0] 
+[L322, S12]             <div style={styles.controlGroup}>
+[L323, S16]                 <label htmlFor="search-author" style={styles.label}>
+[L324, S20]                     Filter:
+[L325, S16]                 </label>
+[L326, S16]                 <input
+[L327, S20]                     id="search-author"
+[L328, S20]                     type="text"
+[L329, S20]                     placeholder="Search author..."
+[L330, S20]                     value={searchQuery}
+[L331, S20]                     onChange={e => setSearchQuery(e.target.value)}
+[L332, S20]                     style={styles.input}
+[L333, S16]                 />
+[L334, S12]             </div>
+[L335, S0] 
+[L336, S12]             <div style={styles.controlGroup}>
+[L337, S16]                 <label htmlFor="min-weight-slider" style={styles.label}>
+[L338, S20]                     Min Collab ({minWeight}):
+[L339, S16]                 </label>
+[L340, S16]                 <input
+[L341, S20]                     id="min-weight-slider"
+[L342, S20]                     type="range"
+[L343, S20]                     min="1"
+[L344, S20]                     max="7"
+[L345, S20]                     value={minWeight}
+[L346, S20]                     onChange={e => setMinWeight(Number(e.target.value))}
+[L347, S20]                     style={{ cursor: 'pointer', width: '60px' }}
+[L348, S16]                 />
+[L349, S12]             </div>
+[L350, S0] 
+[L351, S12]             <div style={styles.controlGroup}>
+[L352, S16]                 <label htmlFor="node-scale-slider" style={styles.label}>
+[L353, S20]                     Size:
+[L354, S16]                 </label>
+[L355, S16]                 <input
+[L356, S20]                     id="node-scale-slider"
+[L357, S20]                     type="range"
+[L358, S20]                     min="0.5"
+[L359, S20]                     max="2.5"
+[L360, S20]                     step="0.1"
+[L361, S20]                     value={nodeScale}
+[L362, S20]                     onChange={e => setNodeScale(Number(e.target.value))}
+[L363, S20]                     style={{ cursor: 'pointer', width: '60px' }}
+[L364, S16]                 />
+[L365, S12]             </div>
+[L366, S0] 
+[L367, S12]             <div style={styles.controlGroup}>
+[L368, S16]                 <button
+[L369, S20]                     type="button"
+[L370, S20]                     style={styles.fitBtn}
+[L371, S20]                     onClick={() => fgRef.current && fgRef.current.zoomToFit(400)}
+[L372, S16]                 >
+[L373, S20]                     Center
+[L374, S16]                 </button>
+[L375, S16]                 <button
+[L376, S20]                     type="button"
+[L377, S20]                     style={styles.exportBtn}
+[L378, S20]                     onClick={handleExportHD}
+[L379, S20]                     data-testid="export-hd-btn"
+[L380, S16]                 >
+[L381, S20]                     Download HD
+[L382, S16]                 </button>
+[L383, S12]             </div>
+[L384, S8]         </>
+[L385, S4]     );
+[L386, S0] 
+[L387, S4]     const footer = selectedNode ? (
+[L388, S8]         <div>
+[L389, S12]             <strong>Author:</strong> {selectedNode.name} |{' '}
+[L390, S12]             <strong>Citations:</strong> {selectedNode.citations?.toLocaleString() || 0} |{' '}
+[L391, S12]             <strong>Publications:</strong> {selectedNode.papers} |{' '}
+[L392, S12]             <strong>Cluster:</strong> {clusters[selectedNode.group]?.name || 'Collaboration Cluster'}
+[L393, S8]         </div>
+[L394, S4]     ) : null;
+[L395, S0] 
+[L396, S4]     return (
+[L397, S8]         <AnalysisPageTemplate
+[L398, S12]             title="Co-authorship Network"
+[L399, S12]             subtitle="Novascope D3 force simulation: Radial cluster dynamics and convex co-authorship relationships."
+[L400, S12]             toolbar={toolbar}
+[L401, S12]             footer={footer}
+[L402, S12]             dataTestId="coauthorship-network-view"
+[L403, S8]         >
+[L404, S12]             <div style={styles.canvasWrapper} data-testid="coauthorship-force-graph-wrapper">
+[L405, S16]                 <div style={styles.watermark}>
+[L406, S20]                     <img
+[L407, S24]                         src={logoImg}
+[L408, S24]                         alt="Logo Watermark"
+[L409, S24]                         style={styles.logoImage}
+[L410, S24]                         data-testid="corner-watermark-logo"
+[L411, S20]                     />
+[L412, S16]                 </div>
+[L413, S0] 
+[L414, S16]                 <div style={styles.legendPanel} data-testid="vosviewer-legend">
+[L415, S20]                     <span style={{ ...styles.label, fontSize: '10px', color: '#64748b' }}>
+[L416, S24]                         {viewMode === 'network' ? 'CLUSTERS' : 'AVG YEAR'}
+[L417, S20]                     </span>
+[L418, S20]                     {viewMode === 'network' ? (
+[L419, S24]                         Object.entries(clusters).map(([gid, c]) => (
+[L420, S28]                             <div key={gid} style={styles.legendItem}>
+[L421, S32]                                 <div style={styles.legendDot(c.color)} />
+[L422, S32]                                 <span>{c.name}</span>
+[L423, S28]                             </div>
+[L424, S24]                         ))
+[L425, S20]                     ) : (
+[L426, S24]                         <>
+[L427, S28]                             <div style={styles.legendItem}>
+[L428, S32]                                 <div style={styles.legendDot('#3b82f6')} />
+[L429, S32]                                 <span>&le; 2016</span>
+[L430, S28]                             </div>
+[L431, S28]                             <div style={styles.legendItem}>
+[L432, S32]                                 <div style={styles.legendDot('#10b981')} />
+[L433, S32]                                 <span>2017 - 2019</span>
+[L434, S28]                             </div>
+[L435, S28]                             <div style={styles.legendItem}>
+[L436, S32]                                 <div style={styles.legendDot('#facc15')} />
+[L437, S32]                                 <span>&ge; 2020</span>
+[L438, S28]                             </div>
+[L439, S24]                         </>
+[L440, S20]                     )}
+[L441, S16]                 </div>
+[L442, S0] 
+[L443, S16]                 <ForceGraph2D
+[L444, S20]                     ref={fgRef}
+[L445, S20]                     graphData={graphData}
+[L446, S20]                     backgroundColor="#ffffff"
+[L447, S20]                     nodeCanvasObject={paintNode}
+[L448, S20]                     nodePointerAreaPaint={(node, color, ctx) => {
+[L449, S24]                         const r = Math.max(3, (7 + Math.sqrt(node.papers || 1) * 3) * nodeScale);
+[L450, S24]                         ctx.fillStyle = color;
+[L451, S24]                         ctx.beginPath();
+[L452, S24]                         ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
+[L453, S24]                         ctx.fill();
+[L454, S20]                     }}
+[L455, S20]                     linkCurvature={0.22}
+[L456, S20]                     linkColor={link => {
+[L457, S24]                         const sGroup =
+[L458, S28]                             typeof link.source === 'object'
+[L459, S32]                                 ? link.source.group
+[L460, S32]                                 : 1;
+[L461, S24]                         const pal = CLUSTER_COLORS[sGroup] || CLUSTER_COLORS[1];
+[L462, S24]                         return pal.base;
+[L463, S20]                     }}
+[L464, S20]                     linkWidth={link => Math.max(1, (link.weight || 1) * 0.7)}
+[L465, S20]                     linkDirectionalParticles={0}
+[L466, S20]                     onNodeClick={node => setSelectedNodeId(node.id)}
+[L467, S20]                     onNodeHover={node => setHoveredNodeId(node ? node.id : null)}
+[L468, S20]                     cooldownTicks={120}
+[L469, S20]                     d3AlphaDecay={0.02}
+[L470, S20]                     d3VelocityDecay={0.3}
+[L471, S16]                 />
+[L472, S12]             </div>
+[L473, S8]         </AnalysisPageTemplate>
+[L474, S4]     );
+[L475, S0] }
+
+
+// --- frontend/src/components/analysis/CoAuthorshipNetwork.test.jsx ---
+
+[L001, S0] import React from 'react';
+[L002, S0] import { describe, it, expect, vi } from 'vitest';
+[L003, S0] import { render, screen, fireEvent } from '@testing-library/react';
+[L004, S0] import CoAuthorshipNetwork from './CoAuthorshipNetwork';
+[L005, S0] 
+[L006, S0] // Hexagonal Mock for react-force-graph-2d to ensure zero-IO JSDOM execution
+[L007, S0] vi.mock('react-force-graph-2d', () => ({
+[L008, S4]     default: (props) => (
+[L009, S8]         <div data-testid="coauthorship-force-graph">
+[L010, S12]             <canvas data-testid="mock-fg-canvas" />
+[L011, S8]         </div>
+[L012, S4]     )
+[L013, S0] }));
+[L014, S0] 
+[L015, S0] describe('CoAuthorshipNetwork with react-force-graph', () => {
+[L016, S4]     it('renders header, controls and force-graph canvas container', () => {
+[L017, S8]         render(<CoAuthorshipNetwork />);
+[L018, S0] 
+[L019, S8]         expect(
+[L020, S12]             screen.getByRole('heading', {
+[L021, S16]                 level: 2,
+[L022, S16]                 name: 'Co-authorship Network'
+[L023, S12]             })
+[L024, S8]         ).toBeInTheDocument();
+[L025, S8]         expect(
+[L026, S12]             screen.getByTestId('coauthorship-force-graph')
+[L027, S8]         ).toBeInTheDocument();
+[L028, S8]         expect(
+[L029, S12]             screen.getByPlaceholderText('Search author...')
+[L030, S8]         ).toBeInTheDocument();
+[L031, S8]         expect(screen.getByTestId('corner-watermark-logo')).toBeInTheDocument();
+[L032, S4]     });
+[L033, S0] 
+[L034, S4]     it('supports mode toggling and node size slider interactions', () => {
+[L035, S8]         render(<CoAuthorshipNetwork />);
+[L036, S0] 
+[L037, S8]         const overlayBtn = screen.getByRole('button', { name: /Overlay/i });
+[L038, S8]         fireEvent.click(overlayBtn);
+[L039, S0] 
+[L040, S8]         const sizeSlider = screen.getByLabelText(/Size:/i);
+[L041, S8]         fireEvent.change(sizeSlider, { target: { value: '1.8' } });
+[L042, S8]         expect(sizeSlider.value).toBe('1.8');
+[L043, S4]     });
+[L044, S0] 
+[L045, S4]     it('triggers HD download button safely', () => {
+[L046, S8]         render(<CoAuthorshipNetwork />);
+[L047, S0] 
+[L048, S8]         const downloadBtn = screen.getByRole('button', { name: /Download HD/i });
+[L049, S8]         expect(downloadBtn).toBeInTheDocument();
+[L050, S8]         fireEvent.click(downloadBtn);
+[L051, S4]     });
+[L052, S0] });

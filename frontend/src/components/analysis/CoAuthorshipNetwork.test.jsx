@@ -3,8 +3,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CoAuthorshipNetwork from './CoAuthorshipNetwork';
 
-// Hexagonal Mock for react-force-graph-2d to ensure zero-IO JSDOM execution
-vi.mock('react-force-graph-2d', () => ({
+// Mock the dumb view template to avoid canvas rendering in JSDOM
+vi.mock('./NetworkGraphTemplate', () => ({
     default: (props) => (
         <div data-testid="coauthorship-force-graph">
             <canvas data-testid="mock-fg-canvas" />

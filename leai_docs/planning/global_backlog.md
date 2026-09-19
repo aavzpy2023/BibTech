@@ -121,7 +121,7 @@
 - [x] [REQ-062] Canvas Micro-Rendering (Nodes & Links)
 - [x] [REQ-063] Canvas Micro-Rendering (Labels & Branding)
 - [x] [REQ-064] Network Template State Fractality
-- [ ] [REQ-065] CoAuthorship Integration (State Fractality & Export)
+- [x] [REQ-065] CoAuthorship Integration (State Fractality & Export)
 
 ## Active Roadmaps
 - [Roadmap 21: Professional Network Visualization](roadmap_21_professional_network_visualization.md)

@@ -68,7 +68,8 @@ complexity_aggregate: "HARD"
     - [ID-21.6.3] [UI/VIEW]: [1. Create NetworkGraphTemplate.jsx. 2. Accept frozenData as prop. 3. Render ForceGraph2D passing frozenData, cooldownTicks={0}, and injecting drawNode, drawLink, and drawLabel into nodeCanvasObject and linkCanvasObject. 4. Inject drawBranding into onRenderFramePost]. Type: Task.
     - [ID-21.6.4] [PLANNING/SYNC]: [1. Open roadmap_21_professional_network_visualization.md and check - [x] for Story 21.6. 2. Append > Files touched: frontend/src/hooks/useNetworkLayout.js, frontend/src/components/analysis/NetworkGraphTemplate.jsx under the story. 3. Open global_backlog.md and check - [x] for [REQ-064]]. Type: Task.
 
-- [ ] Story 21.7: CoAuthorship Integration (State Fractality & Export) | [MoSCoW: MUST] | [Complexity: HARD] (<-- REQ-065)
+- [x] Story 21.7: CoAuthorship Integration (State Fractality & Export) | [MoSCoW: MUST] | [Complexity: HARD] (<-- REQ-065)
+  > Files touched: frontend/src/hooks/useCoAuthorshipNetwork.js, frontend/src/components/analysis/CoAuthorshipNetwork.jsx, frontend/src/views/analysis/network/exportNetwork.js
   - Business Requirement: Wire the new template to the CoAuthorship view, strip old 3D logic, and implement high-res export.
   - Story Context Radius: {"frontend/src/hooks/useCoAuthorshipNetwork.js": [""], "frontend/src/views/analysis/CoAuthorshipNetwork.jsx": [""], "frontend/src/views/analysis/network/exportNetwork.js": ["*"]}
   - Layered Technical Breakdown:

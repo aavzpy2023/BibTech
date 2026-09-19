@@ -35,30 +35,12 @@ describe('useCoAuthorshipNetwork', () => {
         expect(result.current.hoveredNodeId).toBe('2');
     });
 
-    it('calculates 3D coordinates and updates rotation angles', () => {
+    it('returns raw topology without any spatial geometry logic', () => {
         const { result } = renderHook(() => useCoAuthorshipNetwork());
-
-        expect(result.current.nodes[0]).toHaveProperty('z2');
-        expect(result.current.nodes[0]).toHaveProperty('scale');
-
-        act(() => {
-            result.current.setRotation({ rotX: 45, rotY: 90 });
-        });
-
-        expect(result.current.rotation.rotX).toBe(45);
-        expect(result.current.rotation.rotY).toBe(90);
-    });
-
-    it('resets 3D rotation back to initial orientation', () => {
-        const { result } = renderHook(() => useCoAuthorshipNetwork());
-
-        act(() => {
-            result.current.setRotation({ rotX: 30, rotY: 60 });
-            result.current.resetRotation();
-        });
-
-        expect(result.current.rotation.rotX).toBe(15);
-        expect(result.current.rotation.rotY).toBe(25);
+        
+        expect(result.current.nodes[0]).not.toHaveProperty('z2');
+        expect(result.current.nodes[0]).not.toHaveProperty('scale');
+        expect(result.current.rotation).toBeUndefined();
     });
 
     it('supports VOSviewer view mode toggling between network and overlay', () => {
@@ -73,23 +55,16 @@ describe('useCoAuthorshipNetwork', () => {
         expect(result.current.viewMode).toBe('overlay');
     });
 
-    it('supports 2D/3D mode toggling and node scaling', () => {
+    it('supports node scaling state management', () => {
         const { result } = renderHook(() => useCoAuthorshipNetwork());
 
-        expect(result.current.is3DMode).toBe(true);
         expect(result.current.nodeScale).toBe(1);
 
         act(() => {
-            result.current.setIs3DMode(false);
             result.current.setNodeScale(1.5);
         });
 
-        expect(result.current.is3DMode).toBe(false);
         expect(result.current.nodeScale).toBe(1.5);
-
-        // In 2D, all nodes are on the flat foreground plane with full opacity
-        expect(result.current.nodes[0].z2).toBe(0);
-        expect(result.current.nodes[0].scale).toBe(1.0);
-        expect(result.current.nodes[0].depthOpacity).toBe(1.0);
+        expect(result.current.is3DMode).toBeUndefined();
     });
 });
