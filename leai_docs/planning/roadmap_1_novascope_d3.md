@@ -22,7 +22,8 @@ complexity_aggregate: "HARD"
   [ID-1.1.2] [DOCUMENTATION/SYNC]: [1. Open context.md at root. 2. Document architectural rule: "All rendering must be done via Canvas 2D pure functions; UI components must be dumb"]. Type: Task.
   [ID-1.1.3] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_1_novascope_d3.md and check - [x] for Story 1.1. 2. Append > Files touched: package.json, types.ts, context.md. 3. Check corresponding REQ in global_backlog.md]. Type: Task.
 
-- [ ] Story 1.2: Physics Simulation Engine (Isolated Logic) | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- Story 1.1)
+- [x] Story 1.2: Physics Simulation Engine (Isolated Logic) | [MoSCoW: MUST] | [Complexity: MEDIUM] (<-- Story 1.1)
+  > Files touched: frontend/src/graph/simulationFactory.ts, frontend/src/graph/simulationFactory.test.ts
   Business Requirement: Construct the D3 force simulation decoupled from any UI rendering.
   Story Context Radius: {"src/graph/simulationFactory.ts": [""], "src/graph/simulationFactory.test.ts": [""], "src/graph/types.ts": ["NetworkNode", "NetworkLink"], "leai_docs/planning/roadmap_1_novascope_d3.md": [""], "leai_docs/planning/global_backlog.md": [""]}
   Layered Technical Breakdown:
