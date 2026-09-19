@@ -83,8 +83,8 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
 
     components.forEach((comp, i) => {
         if (i === 0) return compCenters.push({ x: 0, y: 0 });
-        // islas más pegadas entre sí (antes: 40 + Math.sqrt(i) * 30)
-        const dist = Rg + estRadius(comp) + 15 + Math.sqrt(i) * 15;
+        // Compactar islas satélite hacia los huecos del hub central
+        const dist = (Rg + estRadius(comp)) * 0.82 + 3 + Math.sqrt(i) * 5;
         const a = i * goldenAngle;
         compCenters.push({ x: Math.cos(a) * dist * ex, y: Math.sin(a) * dist * ey });
     });
@@ -99,9 +99,10 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
 
     // Stage D: Force-directed refinement
     const simulation = d3.forceSimulation(layoutNodes)
-    .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(38))          // antes 55: enlaces más cortos
-    .force('charge', d3.forceManyBody().strength(d => -22 - calculateRadius(d) * 5))  // antes -40 - r*8: menos repulsión
-    .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 2).iterations(4))  // antes +3
+    .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(28))
+    .force('charge', d3.forceManyBody().strength(d => -16 - calculateRadius(d) * 3.5))
+    .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 2).iterations(4))
+    .force('radial', d3.forceRadial(0, 0, 0).strength(0.035))
     .force('x', d3.forceX(d => compCenters[nodeToComp[d.id]].x)
     .strength(d => nodeToComp[d.id] === 0 ? 0.03 : 0.1))     // antes 0.02 / 0.15: más orgánico
     .force('y', d3.forceY(d => compCenters[nodeToComp[d.id]].y)
@@ -125,7 +126,7 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
 
         const cur = Math.max(0.1, (maxX - minX) / Math.max(1, maxY - minY));
         const target = 1.25; // Target aspect ratio (antes 1.6, debe coincidir con `aspect` de arriba)
-        const stretch = Math.min(1.6, Math.max(target / cur, cur / target));
+        const stretch = Math.min(1.18, Math.max(target / cur, cur / target));
         const sx = cur < target ? stretch : 1;
         const sy = cur > target ? stretch : 1;
 

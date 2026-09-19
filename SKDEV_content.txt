@@ -1,116 +1,189 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-19 16:13:22
+Date: 2026-09-19 16:21:56
 AST Mode: False
 Line Numbers: True
-Modules: networkStyles.js
-Processed Files: 1
+Modules: networkLayout.js, useNetworkLayout.js
+Processed Files: 2
 ===========================
 
 
 
-// --- frontend/src/views/analysis/network/networkStyles.js ---
+// --- frontend/src/views/analysis/network/networkLayout.js ---
 
-[L001, S0] export const EXTENDED_PALETTE = [
-[L002, S4]     '#ff1a2e', '#1a5cff', '#00c853', '#00b8d4', '#ff9800', 
-[L003, S4]     '#9c27b0', '#ffeb3b', '#e91e63', '#795548', '#cddc39', 
-[L004, S4]     '#673ab7', '#009688', '#ff5722', '#607d8b', '#8bc34a'
-[L005, S0] ];
-[L006, S0] 
-[L007, S0] export const CLUSTER_METADATA = {
-[L008, S4]     1: { name: 'Primary Collaboration Cluster', color: EXTENDED_PALETTE[0] },
-[L009, S4]     2: { name: 'Core Scientific Cluster', color: EXTENDED_PALETTE[1] },
-[L010, S4]     3: { name: 'Emerging Research Cluster', color: EXTENDED_PALETTE[2] },
-[L011, S4]     4: { name: 'Secondary Hub', color: EXTENDED_PALETTE[3] }
-[L012, S0] };
-[L013, S0] 
-[L014, S0] /**
-[L015, S1]  * Returns the hex color for a given node cluster group.
-[L016, S1]  */
-[L017, S0] export const getNodeColor = (group) => {
-[L018, S4]     const cluster = CLUSTER_METADATA[group];
-[L019, S4]     if (cluster) return cluster.color;
-[L020, S4]     
-[L021, S4]     const numericGroup = parseInt(group, 10);
-[L022, S4]     if (!isNaN(numericGroup)) {
-[L023, S8]         const safeIndex = Math.max(0, numericGroup - 1);
-[L024, S8]         return EXTENDED_PALETTE[safeIndex % EXTENDED_PALETTE.length];
-[L025, S4]     }
-[L026, S4]     return '#9ca3af';
-[L027, S0] };
+[L001, S0] import * as d3 from 'd3';
+[L002, S0] import { calculateRadius, assignNodeRadii } from './networkStyles';
+[L003, S0] 
+[L004, S0] /**
+[L005, S1]  * Pre-calculates network physics synchronously to freeze the layout.
+[L006, S1]  * Ensures the computationally heavy force simulation runs outside the render loop.
+[L007, S1]  */
+[L008, S0] export const calculateStaticLayout = (nodes, links, width = 800, height = 600) => {
+[L009, S4]     if (!nodes || nodes.length === 0) return { nodes: [], links: [] };
+[L010, S0] 
+[L011, S4]     // Deep copy nodes to avoid mutating React state directly before freezing
+[L012, S4]     const layoutNodes = nodes.map(n => ({ ...n }));
+[L013, S4]     // Normalize links mapping to ensure D3 interprets the source/target properly
+[L014, S4]     const layoutLinks = links.map(l => ({
+[L015, S8]         ...l,
+[L016, S8]         source: typeof l.source === 'object' ? l.source.id : l.source,
+[L017, S8]         target: typeof l.target === 'object' ? l.target.id : l.target
+[L018, S4]     }));
+[L019, S0] 
+[L020, S4]     // Stage A: Analyze graph data
+[L021, S4]     const degreeMap = {};
+[L022, S4]     layoutNodes.forEach(n => degreeMap[n.id] = 0);
+[L023, S4]     layoutLinks.forEach(l => {
+[L024, S8]         degreeMap[l.source] = (degreeMap[l.source] || 0) + 1;
+[L025, S8]         degreeMap[l.target] = (degreeMap[l.target] || 0) + 1;
+[L026, S4]     });
+[L027, S4]     layoutNodes.forEach(n => n.degree = degreeMap[n.id]);
 [L028, S0] 
-[L029, S0] // Rango de radios general (en px de grafo, antes de aplicar `scale`).
-[L030, S0] // Reducido respecto a la versión anterior (antes tope 30) para que la red
-[L031, S0] // se vea menos "pesada" en general.
-[L032, S0] export const RADIUS_RANGE = { min: 3, max: 13 };
-[L033, S0] 
-[L034, S0] const getMetric = (node) =>
-[L035, S0] node.degree !== undefined ? node.degree : (node.citations || node.papers || 1);
-[L036, S0] 
-[L037, S0] /**
-[L038, S1]  * Normaliza el radio de cada nodo en dos pasos:
-[L039, S1]  *
-[L040, S1]  * 1. Variación LOCAL: dentro de su propio grupo/color, el nodo más conectado
-[L041, S1]  *    se ve más grande que el menos conectado de ESE MISMO grupo.
-[L042, S1]  * 2. Techo GLOBAL: el tamaño máximo que puede alcanzar un grupo depende de
-[L043, S1]  *    qué tan conectado está su nodo más importante frente al nodo más
-[L044, S1]  *    conectado de TODA la red. Así, un clúster aislado y pequeño (ej. 4
-[L045, S1]  *    autores en Vietnam) nunca compite en tamaño con los hubs del clúster
-[L046, S1]  *    principal — pero sigue teniendo variación interna entre sus propios
-[L047, S1]  *    nodos.
-[L048, S1]  *
-[L049, S1]  * Sin el paso 2, cada color llenaría el mismo rango de tamaños sin importar
-[L050, S1]  * su importancia real, y un clúster de 3 personas se vería tan "grande" como
-[L051, S1]  * el clúster de colaboración primario — perdiendo esa jerarquía visual.
-[L052, S1]  *
-[L053, S1]  * Debe llamarse una vez, después de calcular `node.degree`, y antes de usar
-[L054, S1]  * `calculateRadius` para el layout (separación de islas, colisiones, etc.).
-[L055, S1]  * Guarda el resultado en `node.radius`.
-[L056, S1]  */
-[L057, S0] export const assignNodeRadii = (nodes) => {
-[L058, S4]     const globalMax = Math.max(...nodes.map(getMetric), 1);
-[L059, S0] 
-[L060, S4]     const counts = new Map();
-[L061, S4]     nodes.forEach(n => counts.set(n.group, (counts.get(n.group) || 0) + 1));
-[L062, S4]     const sortedGroups = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
-[L063, S4]     top4GroupsCache = new Set(sortedGroups.slice(0, 4).map(e => String(e[0])));
-[L064, S0] 
-[L065, S4]     const byGroup = new Map();
-[L066, S4]     nodes.forEach(n => {
-[L067, S8]         const list = byGroup.get(n.group) || [];
-[L068, S8]         list.push(n);
-[L069, S8]         byGroup.set(n.group, list);
-[L070, S4]     });
-[L071, S0] 
-[L072, S4]     byGroup.forEach(list => {
-[L073, S8]         const metrics = list.map(getMetric);
-[L074, S8]         const groupMin = Math.min(...metrics);
-[L075, S8]         const groupMax = Math.max(...metrics);
-[L076, S0] 
-[L077, S8]         // Techo del grupo: proporcional a qué tan conectado está su nodo más
-[L078, S8]         // importante frente al máximo global (nunca por debajo de RADIUS_RANGE.min).
-[L079, S8]         const groupCeiling = RADIUS_RANGE.min +
-[L080, S8]         (RADIUS_RANGE.max - RADIUS_RANGE.min) * (groupMax / globalMax);
-[L081, S0] 
-[L082, S8]         list.forEach(n => {
-[L083, S12]             const metric = getMetric(n);
-[L084, S12]             // Si todos los nodos del grupo tienen el mismo grado (o el grupo
-[L085, S12]             // tiene un solo nodo), no hay variación interna que mostrar: van
-[L086, S12]             // directo al techo de su grupo.
-[L087, S12]             const t = groupMax > groupMin ? (metric - groupMin) / (groupMax - groupMin) : 1;
-[L088, S12]             n.radius = RADIUS_RANGE.min + t * (groupCeiling - RADIUS_RANGE.min);
-[L089, S8]         });
+[L029, S4]     // Radio de cada nodo normalizado DENTRO de su propio grupo/color (ver
+[L030, S4]     // networkStyles.js). Debe hacerse antes de usar calculateRadius más abajo.
+[L031, S4]     assignNodeRadii(layoutNodes);
+[L032, S0] 
+[L033, S4]     const adjList = {};
+[L034, S4]     layoutNodes.forEach(n => adjList[n.id] = []);
+[L035, S4]     layoutLinks.forEach(l => {
+[L036, S8]         adjList[l.source].push(l.target);
+[L037, S8]         adjList[l.target].push(l.source);
+[L038, S4]     });
+[L039, S0] 
+[L040, S4]     const visited = new Set();
+[L041, S4]     const components = [];
+[L042, S4]     layoutNodes.forEach(n => {
+[L043, S8]         if (!visited.has(n.id)) {
+[L044, S12]             const comp = [];
+[L045, S12]             const queue = [n.id];
+[L046, S12]             visited.add(n.id);
+[L047, S12]             while (queue.length > 0) {
+[L048, S16]                 const curr = queue.shift();
+[L049, S16]                 comp.push(curr);
+[L050, S16]                 adjList[curr].forEach(neighbor => {
+[L051, S20]                     if (!visited.has(neighbor)) {
+[L052, S24]                         visited.add(neighbor);
+[L053, S24]                         queue.push(neighbor);
+[L054, S20]                     }
+[L055, S16]                 });
+[L056, S12]             }
+[L057, S12]             components.push(comp);
+[L058, S8]         }
+[L059, S4]     });
+[L060, S0] 
+[L061, S4]     components.sort((a, b) => b.length - a.length);
+[L062, S0] 
+[L063, S4]     const nodeToComp = {};
+[L064, S4]     components.forEach((comp, i) => {
+[L065, S8]         comp.forEach(nodeId => {
+[L066, S12]             nodeToComp[nodeId] = i;
+[L067, S8]         });
+[L068, S4]     });
+[L069, S0] 
+[L070, S4]     // Assign spatial centers to components to prevent vertical stacking
+[L071, S4]     const nodeById = Object.fromEntries(layoutNodes.map(n => [n.id, n]));
+[L072, S4]     const areaOf = comp => comp.reduce((s, id) => {
+[L073, S8]         const r = calculateRadius(nodeById[id]) + 6;
+[L074, S8]         return s + Math.PI * r * r;
+[L075, S4]     }, 0);
+[L076, S4]     const estRadius = comp => Math.sqrt(areaOf(comp) / 0.5 / Math.PI);
+[L077, S0] 
+[L078, S4]     const aspect = 1.25; // silueta más cuadrada/redondeada (antes 1.6, 16:10)
+[L079, S4]     const ex = Math.sqrt(aspect), ey = 1 / ex;
+[L080, S4]     const compCenters = [];
+[L081, S4]     const goldenAngle = 2.39996323; // radians
+[L082, S4]     const Rg = components.length > 0 ? estRadius(components[0]) : 0;
+[L083, S0] 
+[L084, S4]     components.forEach((comp, i) => {
+[L085, S8]         if (i === 0) return compCenters.push({ x: 0, y: 0 });
+[L086, S8]         // islas más pegadas entre sí (antes: 40 + Math.sqrt(i) * 30)
+[L087, S8]         const dist = Rg + estRadius(comp) + 15 + Math.sqrt(i) * 15;
+[L088, S8]         const a = i * goldenAngle;
+[L089, S8]         compCenters.push({ x: Math.cos(a) * dist * ex, y: Math.sin(a) * dist * ey });
 [L090, S4]     });
-[L091, S0] };
-[L092, S0] 
-[L093, S0] /**
-[L094, S1]  * Calcula el radio final de un nodo. Usa `node.radius` (calculado por
-[L095, S1]  * `assignNodeRadii`) si ya está disponible; si no, cae a una fórmula
-[L096, S1]  * genérica por si algún nodo llega sin pasar por ese paso.
-[L097, S1]  */
-[L098, S0] export const calculateRadius = (node, scale = 1) => {
-[L099, S4]     if (!node) return RADIUS_RANGE.min * scale;
-[L100, S4]     if (node.radius !== undefined) return node.radius * scale;
-[L101, S4]     const value = Math.max(0, getMetric(node));
-[L102, S4]     return Math.min(RADIUS_RANGE.max, RADIUS_RANGE.min + Math.sqrt(value) * 1.4) * scale;
-[L103, S0] };
+[L091, S0] 
+[L092, S4]     // Initialize positions near their assigned centers
+[L093, S4]     const rnd = d3.randomLcg(42);
+[L094, S4]     layoutNodes.forEach(n => {
+[L095, S8]         const center = compCenters[nodeToComp[n.id]];
+[L096, S8]         n.x = center.x + (rnd() - 0.5) * 30;
+[L097, S8]         n.y = center.y + (rnd() - 0.5) * 30;
+[L098, S4]     });
+[L099, S0] 
+[L100, S4]     // Stage D: Force-directed refinement
+[L101, S4]     const simulation = d3.forceSimulation(layoutNodes)
+[L102, S4]     .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(38))          // antes 55: enlaces más cortos
+[L103, S4]     .force('charge', d3.forceManyBody().strength(d => -22 - calculateRadius(d) * 5))  // antes -40 - r*8: menos repulsión
+[L104, S4]     .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 2).iterations(4))  // antes +3
+[L105, S4]     .force('x', d3.forceX(d => compCenters[nodeToComp[d.id]].x)
+[L106, S4]     .strength(d => nodeToComp[d.id] === 0 ? 0.03 : 0.1))     // antes 0.02 / 0.15: más orgánico
+[L107, S4]     .force('y', d3.forceY(d => compCenters[nodeToComp[d.id]].y)
+[L108, S4]     .strength(d => nodeToComp[d.id] === 0 ? 0.03 : 0.1))
+[L109, S4]     .stop();
+[L110, S0] 
+[L111, S4]     simulation.tick(300);
+[L112, S0] 
+[L113, S4]     // Bounding box and position normalization
+[L114, S4]     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+[L115, S4]     layoutNodes.forEach(n => {
+[L116, S8]         const r = calculateRadius(n);
+[L117, S8]         if (n.x - r < minX) minX = n.x - r;
+[L118, S8]         if (n.x + r > maxX) maxX = n.x + r;
+[L119, S8]         if (n.y - r < minY) minY = n.y - r;
+[L120, S8]         if (n.y + r > maxY) maxY = n.y + r;
+[L121, S4]     });
+[L122, S0] 
+[L123, S8]         const cx = (minX + maxX) / 2;
+[L124, S8]         const cy = (minY + maxY) / 2;
+[L125, S0] 
+[L126, S8]         const cur = Math.max(0.1, (maxX - minX) / Math.max(1, maxY - minY));
+[L127, S8]         const target = 1.25; // Target aspect ratio (antes 1.6, debe coincidir con `aspect` de arriba)
+[L128, S8]         const stretch = Math.min(1.6, Math.max(target / cur, cur / target));
+[L129, S8]         const sx = cur < target ? stretch : 1;
+[L130, S8]         const sy = cur > target ? stretch : 1;
+[L131, S0] 
+[L132, S8]         layoutNodes.forEach(node => {
+[L133, S12]             node.x = (node.x - cx) * sx;
+[L134, S12]             node.y = (node.y - cy) * sy;
+[L135, S12]             node.fx = node.x;
+[L136, S12]             node.fy = node.y;
+[L137, S8]         });
+[L138, S0] 
+[L139, S8]         return { nodes: layoutNodes, links: layoutLinks };
+[L140, S0] };
+
+
+// --- frontend/src/hooks/useNetworkLayout.js ---
+
+[L001, S0] import { useState, useEffect } from 'react';
+[L002, S0] import { calculateStaticLayout } from '../views/analysis/network/networkLayout';
+[L003, S0] 
+[L004, S0] /**
+[L005, S1]  * State Fractality Hook: Pre-calculates physical graph forces asynchronously.
+[L006, S1]  * Prevents UI thread blocking while D3 ticks 300 times in the background.
+[L007, S1]  */
+[L008, S0] export default function useNetworkLayout(rawNodes, rawLinks) {
+[L009, S4]     const [frozenData, setFrozenData] = useState({ nodes: [], links: [] });
+[L010, S4]     const [isCalculating, setIsCalculating] = useState(true);
+[L011, S0] 
+[L012, S4]     useEffect(() => {
+[L013, S8]         if (!rawNodes || rawNodes.length === 0) {
+[L014, S12]             setFrozenData({ nodes: [], links: [] });
+[L015, S12]             setIsCalculating(false);
+[L016, S12]             return;
+[L017, S8]         }
+[L018, S0] 
+[L019, S8]         setIsCalculating(true);
+[L020, S8]         
+[L021, S8]         // Relieve the main thread rendering cycle by deferring the heavy math
+[L022, S8]         const timer = setTimeout(() => {
+[L023, S12]             const staticData = calculateStaticLayout(rawNodes, rawLinks);
+[L024, S12]             setFrozenData(staticData);
+[L025, S12]             setIsCalculating(false);
+[L026, S8]         }, 0);
+[L027, S0] 
+[L028, S8]         return () => clearTimeout(timer);
+[L029, S4]     }, [rawNodes, rawLinks]);
+[L030, S0] 
+[L031, S4]     return { frozenData, isCalculating };
+[L032, S0] }
