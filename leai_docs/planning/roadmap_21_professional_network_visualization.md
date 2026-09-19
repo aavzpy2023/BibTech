@@ -40,7 +40,8 @@ complexity_aggregate: "HARD"
     - [ID-21.3.2] [LOGIC/CORE]: [1. Create networkLayout.js. 2. Import d3-force. 3. Implement calculateStaticLayout(nodes, links, width, height). 4. Initialize forceSimulation(nodes), apply forceCenter, forceManyBody (repulsion), forceLink(links), and forceCollide. 5. Run simulation.tick(300) synchronously. 6. Map resulting x, y to fx, fy to freeze positions and return the mutated arrays]. Type: Task.
     - [ID-21.3.3] [PLANNING/SYNC]: [1. Open roadmap_21_professional_network_visualization.md and check - [x] for Story 21.3. 2. Append > Files touched: frontend/src/views/analysis/network/networkLayout.js under the story. 3. Open global_backlog.md and check - [x] for [REQ-062]]. Type: Task.
 
-- [ ] Story 21.4: Canvas Micro-Rendering (Nodes & Links) | [MoSCoW: MUST] | [Complexity: HARD] (<-- REQ-062)
+- [x] Story 21.4: Canvas Micro-Rendering (Nodes & Links) | [MoSCoW: MUST] | [Complexity: HARD] (<-- REQ-062)
+  > Files touched: frontend/src/views/analysis/network/networkRender.js, frontend/src/views/analysis/network/networkRender.test.js
   - Business Requirement: Override default canvas drawing to implement radial gradients and smooth bezier curves.
   - Story Context Radius: {"frontend/src/views/analysis/network/networkRender.js": [""], "frontend/src/views/analysis/network/networkStyles.js": [""]}
   - Layered Technical Breakdown:
