@@ -22,7 +22,8 @@ complexity_aggregate: "HARD"
     - [ID-21.1.2] [LOGIC/CORE]: [1. Open router.py. 2. In get_coauthorship_network, delete all lines calculating r_2d, angle_offset, jitter, theta, x, y, z. 3. Update the nodes.append dictionary to yield only primitive DTOs: id, name, papers, citations, avgYear, group]. Type: Task.
     - [ID-21.1.3] [PLANNING/SYNC]: [1. Open roadmap_21_professional_network_visualization.md and check - [x] for Story 21.1. 2. Append > Files touched: backend/src/bibliography/router.py, backend/tests/bibliography/test_router.py under the story. 3. Open global_backlog.md and check - [x] for [REQ-060]]. Type: Task.
 
-- [ ] Story 21.2: Frontend Semantic Primitives & Styles | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-060)
+- [x] Story 21.2: Frontend Semantic Primitives & Styles | [MoSCoW: MUST] | [Complexity: EASY] (<-- REQ-060)
+  > Files touched: frontend/src/views/analysis/network/networkStyles.js, frontend/src/views/analysis/network/networkData.js
   - Business Requirement: Establish isolated, pure functions for network aesthetics and data validation.
   - Story Context Radius: {"frontend/src/views/analysis/network/networkStyles.js": [""], "frontend/src/views/analysis/network/networkData.js": [""]}
   - Layered Technical Breakdown:

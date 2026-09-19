@@ -117,7 +117,7 @@
 
 ## EPIC 21: PROFESSIONAL NETWORK VISUALIZATION & TEMPLATING
 - [x] [REQ-060] Frontend Semantic Primitives & Styles
-- [ ] [REQ-061] Static D3 Force Layout Engine
+- [x] [REQ-061] Static D3 Force Layout Engine
 - [ ] [REQ-062] Canvas Micro-Rendering (Nodes & Links)
 - [ ] [REQ-063] Canvas Micro-Rendering (Labels & Branding)
 - [ ] [REQ-064] Network Template State Fractality
