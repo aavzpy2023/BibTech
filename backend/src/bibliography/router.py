@@ -541,13 +541,11 @@ def get_coauthorship_network(
         cluster_nodes[visited.get(name, 1)].append(name)
         
     cluster_ids = sorted(cluster_nodes.keys())
-    num_clusters = len(cluster_ids)
     
     nodes = []
     for c_idx, cid in enumerate(cluster_ids):
         c_names = cluster_nodes[cid]
         c_names.sort(key=lambda n: degree[n], reverse=True)
-        base_angle = c_idx * (2 * math.pi / max(1, num_clusters))
         
         for i, name in enumerate(c_names):
             node_id = author_id_map[name]
@@ -555,21 +553,6 @@ def get_coauthorship_network(
             citations = author_citations[name]
             years = author_years[name]
             avg_year = sum(years) / len(years) if years else 2020.0
-            
-            rank_pct = i / max(1, len(c_names) - 1)
-            
-            # Radial Core-Periphery Layout: High degree at center (10px), low at edge (250px)
-            r_2d = 10.0 + 240.0 * (rank_pct ** 0.85)
-            
-            angle_offset = (math.pi * 0.9 / max(1, num_clusters)) * rank_pct * (1 if i % 2 == 0 else -1)
-            jitter = (math.sin((i + c_idx) * 1234.5) * 0.25) * rank_pct
-            theta = base_angle + angle_offset + jitter
-            
-            x = r_2d * math.cos(theta)
-            y = r_2d * math.sin(theta)
-
-            # Degree-depth mapping: hubs in foreground (z > 0), low-degree in depth (z < 0)
-            z = (1.0 - 2.0 * rank_pct) * 140.0 + (math.sin(i * 3.7) * 15.0)
 
             nodes.append({
                 "id": node_id,
@@ -578,9 +561,6 @@ def get_coauthorship_network(
                 "citations": citations,
                 "avgYear": round(avg_year, 1),
                 "group": cid,
-                "x": round(x, 1),
-                "y": round(y, 1),
-                "z": round(z, 1),
             })
 
     links = []

@@ -13,7 +13,8 @@ complexity_aggregate: "HARD"
   - Layered Technical Breakdown:
     - [ID-21.0.1] [PLANNING/INIT]: [1. Create leai_docs/planning/ directory if missing. 2. Append EPIC 21, its [REQ-060] to [REQ-065] list, and the Roadmap link to leai_docs/planning/global_backlog.md. 3. Write THIS ENTIRE raw markdown response (INCLUDING the YAML Frontmatter block above) into leai_docs/planning/roadmap_21_professional_network_visualization.md]. Type: Task.
 
-- [ ] Story 21.1: Backend Topology Refactor & Boundary Marshal | [MoSCoW: MUST] | [Complexity: EASY]
+- [x] Story 21.1: Backend Topology Refactor & Boundary Marshal | [MoSCoW: MUST] | [Complexity: EASY]
+  > Files touched: backend/src/bibliography/router.py, backend/tests/bibliography/test_router.py
   - Business Requirement: Strip presentation logic from backend. API must return strict topological primitives.
   - Story Context Radius: {"backend/src/bibliography/router.py": ["def get_coauthorship_network"], "backend/tests/bibliography/test_router.py": ["*"]}
   - Layered Technical Breakdown:

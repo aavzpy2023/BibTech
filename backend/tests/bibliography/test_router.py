@@ -438,3 +438,59 @@ def test_get_project_references_metadata_expansion():
 
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.mark.skipif(not HAS_TESTCLIENT, reason="httpx not installed")
+def test_get_coauthorship_network_boundary_marshal():
+    from backend.src.bibliography.router import get_db
+
+    mock_db = MagicMock()
+    app.dependency_overrides[get_db] = lambda: mock_db
+    try:
+        mock_proj = MagicMock()
+        mock_proj.id = 1
+
+        mock_link = MagicMock()
+        mock_link.article_id = 1
+        mock_link.status = "processed"
+
+        mock_art = MagicMock()
+        mock_art.id = 1
+        mock_art.title = "Test Paper"
+        mock_art.author = "Author A and Author B"
+        mock_art.authors = []
+        mock_art.raw_data = None
+        mock_art.year = 2024
+        mock_art.times_cited = 10
+        mock_art.author_articles = []
+
+        def query_side_effect(model):
+            m = MagicMock()
+            if "ProjectArticle" in str(model):
+                m.filter.return_value.all.return_value = [mock_link]
+            elif "Article" in str(model):
+                m.filter.return_value.all.return_value = [mock_art]
+            elif "Project" in str(model):
+                m.filter.return_value.first.return_value = mock_proj
+            return m
+
+        mock_db.query.side_effect = query_side_effect
+
+        response = client.get("/api/bibliography/network/co-authorship?project_code=TEST")
+        assert response.status_code == 200
+        data = response.json()
+        assert "nodes" in data
+        assert len(data["nodes"]) > 0
+        node = data["nodes"][0]
+        
+        # Boundary Marshal Assertions
+        assert "id" in node
+        assert "name" in node
+        assert "group" in node
+        assert "x" not in node
+        assert "y" not in node
+        assert "z" not in node
+        assert "r_2d" not in node
+        assert "theta" not in node
+    finally:
+        app.dependency_overrides.pop(get_db, None)
