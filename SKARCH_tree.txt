@@ -145,6 +145,7 @@
 │   │   │   ├── __init__.py
 │   │   │   ├── bibliography/
 │   │   │   │   ├── __init__.py
+│   │   │   │   ├── test_coauthorship_endpoint.py
 │   │   │   │   ├── test_download.py
 │   │   │   │   ├── test_injection.py
 │   │   │   │   ├── test_parser.py

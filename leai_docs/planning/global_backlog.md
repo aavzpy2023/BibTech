@@ -106,7 +106,17 @@
 - [x] [REQ-059] Dynamic Content Renderer Dumb View
 - [x] [REQ-056] View Wiring & Container Architecture
 
+## EPIC 20: NOVASCOPE D3 VISUALIZATION
+- [x] Story 1.0: Roadmap & Planning Initialization
+- [ ] Story 1.1: Core Infrastructure & Semantic Primitives
+- [ ] Story 1.2: Physics Simulation Engine (Isolated Logic)
+- [ ] Story 1.3: Render Micro-Surgery (Links & Nodes Utilities)
+- [ ] Story 1.4: Render Micro-Surgery (Labels & Orchestrator)
+- [ ] Story 1.5: State Fractality (React Hook vs Dumb Canvas)
+- [ ] Story 1.6: Boundary Layer UI (Branding Overlay)
+
 ## Active Roadmaps
+- [Roadmap 20: Novascope D3](roadmap_1_novascope_d3.md)
 - [Roadmap 1: Bibliography Ingestion &amp; Display](roadmap_1_bibliography_ingestion.md)
 - [Roadmap 2: Batch Load Interface](roadmap_2_batch_load.md)
 - [Roadmap 3: Batch Download Execution](roadmap_3_batch_download_execution.md)
