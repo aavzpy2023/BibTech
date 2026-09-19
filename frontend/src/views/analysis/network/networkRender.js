@@ -4,6 +4,11 @@ let labelCache = new Map();
 let cacheNodes = null;
 let lastK = -1;
 let graphNodes = [];
+let activeHoveredNodeId = null;
+
+export const setHoveredNodeId = (id) => {
+    activeHoveredNodeId = id;
+};
 
 export const setRenderNodes = (nodes) => {
     graphNodes = nodes || [];
@@ -188,16 +193,37 @@ export const drawBranding = (ctx, width, height) => {
  * Renders smooth bezier curves for links, mapping weight to opacity and thickness.
  */
 export const drawLink = (link, ctx, globalScale) => {
-    const { source, target, weight } = link;
+    const { source, target, weight = 1 } = link;
+    if (!source || !target || source.x == null || target.x == null) return;
 
-    const opacity = Math.min(0.7, 0.25 + (weight * 0.08));
-    const thickness = Math.min(2.0, Math.max(0.5, weight * 0.4)) / globalScale;
-    const color = getNodeColor(source.group);
+    // Focus mode: Check if edge connects to currently hovered/selected author
+    const isHoverActive = activeHoveredNodeId != null;
+    const isConnected = isHoverActive && (source.id === activeHoveredNodeId || target.id === activeHoveredNodeId);
+    const isHighlighted = Boolean(link.highlighted || link.hovered || isConnected);
 
+    // 1 + 3: Neutral desaturated gray by default, community color only on highlight
+    const color = isHighlighted ? getNodeColor(source.group) : '#94a3b8';
+
+    // 2 + 4: Weight-driven opacity with extreme contrast separation in focus mode
+    let opacity;
+    if (isHighlighted) {
+        opacity = Math.min(0.85, 0.55 + weight * 0.08);
+    } else if (isHoverActive) {
+        opacity = 0.03; // Dim background edges when focusing on an author
+    } else {
+        opacity = Math.min(0.20, 0.06 + weight * 0.025); // Subtle, clean idle background
+    }
+
+    const thickness = (isHighlighted
+        ? Math.min(2.5, 1.0 + weight * 0.35)
+        : Math.min(1.2, Math.max(0.4, weight * 0.2))) / globalScale;
+
+    ctx.save();
+    // 6. Multiply composite prevents washed-out overlaps on white background
+    ctx.globalCompositeOperation = 'multiply';
     ctx.beginPath();
     ctx.moveTo(source.x, source.y);
 
-    // Quadratic-like Bezier control points to add a slight curve
     const dx = target.x - source.x;
     const dy = target.y - source.y;
     const cx1 = source.x + dx * 0.5 - dy * 0.04;
@@ -216,4 +242,5 @@ export const drawLink = (link, ctx, globalScale) => {
     ctx.strokeStyle = hexToRgba(color, opacity);
     ctx.lineWidth = thickness;
     ctx.stroke();
+    ctx.restore();
 };
