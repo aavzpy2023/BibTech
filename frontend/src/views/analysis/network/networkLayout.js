@@ -71,6 +71,8 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
     }, 0);
     const estRadius = comp => Math.sqrt(areaOf(comp) / 0.5 / Math.PI);
 
+    const aspect = 1.6; // 16:10 aspect ratio
+    const ex = Math.sqrt(aspect), ey = 1 / ex;
     const compCenters = [];
     const goldenAngle = 2.39996323; // radians
     const Rg = components.length > 0 ? estRadius(components[0]) : 0;
@@ -79,7 +81,7 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
         if (i === 0) return compCenters.push({ x: 0, y: 0 });
         const dist = Rg + estRadius(comp) + 40 + Math.sqrt(i) * 30;
         const a = i * goldenAngle;
-        compCenters.push({ x: Math.cos(a) * dist, y: Math.sin(a) * dist });
+        compCenters.push({ x: Math.cos(a) * dist * ex, y: Math.sin(a) * dist * ey });
     });
 
     // Initialize positions near their assigned centers
@@ -115,10 +117,16 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
 
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
+    
+    const cur = Math.max(0.1, (maxX - minX) / Math.max(1, maxY - minY));
+    const target = 1.6; // Target aspect ratio
+    const stretch = Math.min(1.6, Math.max(target / cur, cur / target));
+    const sx = cur < target ? stretch : 1;
+    const sy = cur > target ? stretch : 1;
 
     layoutNodes.forEach(node => {
-        node.x -= cx;
-        node.y -= cy;
+        node.x = (node.x - cx) * sx;
+        node.y = (node.y - cy) * sy;
         node.fx = node.x;
         node.fy = node.y;
     });

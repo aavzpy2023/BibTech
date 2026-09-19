@@ -25,8 +25,15 @@ export const layoutLabels = (nodes, ctx, k) => {
             { x: n.x - r - g - w, y: n.y - h / 2 },
             { x: n.x - w / 2,     y: n.y + r + g },
             { x: n.x - w / 2,     y: n.y - r - g - h },
+            { x: n.x + r + g * 3, y: n.y - h / 2 }
         ];
-        const pick = cands.find(c => !placed.some(p => hit({ ...c, w, h }, p)));
+        let pick = cands.find(c => !placed.some(p => hit({ ...c, w, h }, p)));
+        
+        if (!pick && (n.degree || 0) >= 5) {
+            pick = cands[0];
+            fs = fs * 0.85;
+        }
+
         if (pick) { placed.push({ ...pick, w, h }); out.set(n.id, { ...pick, fs }); }
     });
     return out;

@@ -70,14 +70,16 @@ const styles = {
     canvasWrapper: {
         position: 'relative',
         width: '100%',
-        height: '520px',
+        aspectRatio: '16 / 10',
+        maxHeight: '75vh',
+        minHeight: '500px',
         backgroundColor: '#ffffff',
         borderRadius: '6px',
         overflow: 'hidden'
     },
     watermark: {
         position: 'absolute',
-        top: '12px',
+        bottom: '12px',
         right: '12px',
         zIndex: 5,
         pointerEvents: 'none',
@@ -127,6 +129,7 @@ const styles = {
 
 export default function CoAuthorshipNetwork() {
     const fgRef = useRef();
+    const wrapperRef = useRef();
 
     const {
         nodes,
@@ -155,9 +158,20 @@ export default function CoAuthorshipNetwork() {
             setRenderNodes(frozenData.nodes);
             const t = setTimeout(() => {
                 if (fgRef.current) fgRef.current.zoomToFit(400, 60);
-            }, 50);
+            }, 100);
             return () => clearTimeout(t);
         }
+    }, [isCalculating, frozenData]);
+
+    React.useEffect(() => {
+        if (!wrapperRef.current) return;
+        const ro = new ResizeObserver(() => {
+            if (!isCalculating && frozenData?.nodes?.length > 0 && fgRef.current) {
+                fgRef.current.zoomToFit(0, 60);
+            }
+        });
+        ro.observe(wrapperRef.current);
+        return () => ro.disconnect();
     }, [isCalculating, frozenData]);
 
     const toolbar = (
@@ -264,7 +278,7 @@ export default function CoAuthorshipNetwork() {
             footer={footer}
             dataTestId="coauthorship-network-view"
         >
-            <div style={styles.canvasWrapper} data-testid="coauthorship-force-graph-wrapper">
+            <div ref={wrapperRef} style={styles.canvasWrapper} data-testid="coauthorship-force-graph-wrapper">
                 <div style={styles.watermark}>
                     <img
                         src={logoImg}
