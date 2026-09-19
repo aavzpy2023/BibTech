@@ -27,11 +27,16 @@ export const drawNodes = (
             node.x, node.y, node.radius
         );
 
-        const colors = CLUSTER_PALETTE[node.cluster];
-        grad.addColorStop(0, colors.start);
-        grad.addColorStop(1, colors.end);
+        const colors = CLUSTER_PALETTE[node.cluster as keyof typeof CLUSTER_PALETTE] || { start: "#9ca3af", end: "#4b5563" };
+        grad.addColorStop(0, "#ffffff");
+        grad.addColorStop(0.3, colors.start);
+        grad.addColorStop(1, "#1f2937");
 
         ctx.fillStyle = grad;
         ctx.fill();
+        
+        ctx.lineWidth = 0.5;
+        ctx.strokeStyle = '#111827';
+        ctx.stroke();
     });
 };

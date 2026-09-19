@@ -26,6 +26,10 @@ export const drawNode = (node, ctx, globalScale) => {
     
     ctx.fillStyle = gradient;
     ctx.fill();
+
+    ctx.lineWidth = 0.5 / globalScale;
+    ctx.strokeStyle = '#111827';
+    ctx.stroke();
 };
 
 /**
@@ -33,15 +37,15 @@ export const drawNode = (node, ctx, globalScale) => {
  */
 export const drawLabel = (node, ctx, globalScale) => {
     const LABEL_SCALE_THRESHOLD = 1.2;
-    if (globalScale < LABEL_SCALE_THRESHOLD) return;
+    if (globalScale < LABEL_SCALE_THRESHOLD && (node.degree || 0) < 3) return;
 
     const radius = calculateRadius(node.papers);
-    const fontSize = Math.max(3, 10 / globalScale);
+    const fontSize = Math.max(4, 12 / globalScale);
     
-    ctx.font = `${fontSize}px Sans-Serif`;
+    ctx.font = `500 ${fontSize}px Sans-Serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillStyle = '#1e3a8a'; // Tailwind blue-900
+    ctx.fillStyle = '#1e293b'; // neutral dark-gray
     
     ctx.fillText(node.name, node.x, node.y + radius + (2 / globalScale));
 };
@@ -59,8 +63,8 @@ export const drawBranding = (ctx, width, height) => {
 export const drawLink = (link, ctx, globalScale) => {
     const { source, target, weight } = link;
     
-    const opacity = Math.min(0.8, 0.1 + (weight * 0.08));
-    const thickness = Math.min(4, Math.max(0.5, weight * 0.4)) / globalScale;
+    const opacity = Math.min(0.35, 0.12 + (weight * 0.05));
+    const thickness = Math.min(1.5, Math.max(0.5, weight * 0.3)) / globalScale;
     
     ctx.beginPath();
     ctx.moveTo(source.x, source.y);
@@ -68,12 +72,12 @@ export const drawLink = (link, ctx, globalScale) => {
     // Quadratic-like Bezier control points to add a slight curve
     const dx = target.x - source.x;
     const dy = target.y - source.y;
-    const cx1 = source.x + dx * 0.5 - dy * 0.15;
-    const cy1 = source.y + dy * 0.5 + dx * 0.15;
+    const cx1 = source.x + dx * 0.5 - dy * 0.1;
+    const cy1 = source.y + dy * 0.5 + dx * 0.1;
     
     ctx.bezierCurveTo(cx1, cy1, cx1, cy1, target.x, target.y);
     
-    ctx.strokeStyle = `rgba(156, 163, 175, ${opacity})`; // Tailwind gray-400
+    ctx.strokeStyle = `rgba(148, 163, 184, ${opacity})`; // neutral light blue/gray
     ctx.lineWidth = thickness;
     ctx.stroke();
 };

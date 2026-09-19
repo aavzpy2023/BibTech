@@ -18,5 +18,5 @@ export const getNodeColor = (group) => {
  */
 export const calculateRadius = (metric, scale = 1) => {
     const value = Math.max(0, metric || 0);
-    return (7 + Math.sqrt(value) * 2.8) * scale;
+    return Math.min(28, 5 + Math.sqrt(value) * 2.5) * scale;
 };
