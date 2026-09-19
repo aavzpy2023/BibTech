@@ -5,7 +5,7 @@ let cacheNodes = null;
 let lastK = -1;
 let graphNodes = [];
 let activeHoveredNodeId = null;
-let edgeOpacityMultiplier = 1.0;
+let edgeOpacityMultiplier = 0.35;
 
 export const setEdgeOpacityMultiplier = (val) => {
     edgeOpacityMultiplier = val;

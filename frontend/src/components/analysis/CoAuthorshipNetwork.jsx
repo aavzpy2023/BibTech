@@ -151,7 +151,7 @@ export default function CoAuthorshipNetwork() {
         isLoading
     } = useCoAuthorshipNetwork();
 
-    const [edgeOpacity, setEdgeOpacity] = useState(1.0);
+    const [edgeOpacity, setEdgeOpacity] = useState(0.35);
 
     // Offload heavy physics calculation to the state fractality hook
     const { frozenData, isCalculating } = useNetworkLayout(nodes, links);
