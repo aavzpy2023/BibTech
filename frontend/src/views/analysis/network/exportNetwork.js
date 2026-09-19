@@ -1,5 +1,6 @@
 import { drawNode, drawLink, layoutLabels, paintLabel } from './networkRender';
 import { fitTransform } from './networkFit';
+import { getNodeColor } from './networkStyles';
 
 const EXPORT_W = 3200;
 const EXPORT_H = 2000;          // 16:10, como la maqueta y el contenedor de pantalla
@@ -53,11 +54,65 @@ export const drawExportBranding = (ctx, W, H, logo = null) => {
     ctx.restore();
 };
 
+export const drawExportLegend = (ctx, W, H, clusters, nodes) => {
+    let items = [];
+    if (clusters && Object.keys(clusters).length > 0) {
+        items = Object.values(clusters);
+    } else if (nodes) {
+        const groups = [...new Set(nodes.map(n => n.group))].filter(Boolean).sort();
+        items = groups.map(g => ({ name: `Cluster ${g}`, color: getNodeColor(g) }));
+    }
+    if (items.length === 0) return;
+
+    const s = W / REFERENCE_W;
+    const padX = 40 * s;
+    const padY = 40 * s;
+    const itemH = 35 * s;
+    const radius = 10 * s;
+
+    ctx.save();
+    ctx.font = `600 ${16 * s}px Sans-Serif`;
+
+    let maxW = 0;
+    items.forEach(item => {
+        const w = ctx.measureText(item.name || '').width;
+        if (w > maxW) maxW = w;
+    });
+
+    const boxW = maxW + 70 * s;
+    const boxH = items.length * itemH + 20 * s;
+    const x = padX;
+    const y = H - padY - boxH;
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.shadowColor = 'rgba(0,0,0,0.1)';
+    ctx.shadowBlur = 15 * s;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, boxW, boxH, 12 * s);
+    else ctx.rect(x, y, boxW, boxH);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    items.forEach((item, i) => {
+        const cy = y + 10 * s + itemH / 2 + i * itemH;
+        ctx.beginPath();
+        ctx.arc(x + 25 * s, cy, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = item.color || '#9ca3af';
+        ctx.fill();
+        
+        ctx.fillStyle = '#334155';
+        ctx.fillText(item.name || '', x + 45 * s, cy);
+    });
+    ctx.restore();
+};
+
 /**
  * Dibuja la red completa en `canvas` (fondo blanco, ajustada al lienzo, etiquetas al final).
  * No toca el canvas de pantalla ni la caché de etiquetas de pantalla.
  */
-export const renderNetworkToCanvas = (canvas, { nodes, links = [], logo = null }) => {
+export const renderNetworkToCanvas = (canvas, { nodes, links = [], clusters = null, logo = null }) => {
     const W = canvas.width;
     const H = canvas.height;
     const ctx = canvas.getContext('2d');
@@ -90,6 +145,7 @@ export const renderNetworkToCanvas = (canvas, { nodes, links = [], logo = null }
     });
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    drawExportLegend(ctx, W, H, clusters, nodes);
     drawExportBranding(ctx, W, H, logo);
     return canvas;
 };
@@ -115,14 +171,14 @@ const saveCanvas = (canvas, filename) => new Promise((resolve) => {
     }
 });
 
-const exportOffscreen = async (filename, { nodes, links, logoSrc = null, width = EXPORT_W, height = EXPORT_H }) => {
+const exportOffscreen = async (filename, { nodes, links, clusters = null, logoSrc = null, width = EXPORT_W, height = EXPORT_H }) => {
     try {
         const logo = await loadImage(logoSrc);
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
         if (!canvas.getContext('2d')) return;
-        renderNetworkToCanvas(canvas, { nodes, links, logo });
+        renderNetworkToCanvas(canvas, { nodes, links, clusters, logo });
         await saveCanvas(canvas, filename);
     } catch (err) {
         console.error('HD Export Error:', err);
