@@ -4,6 +4,7 @@ import useNetworkLayout from '../../hooks/useNetworkLayout';
 import NetworkGraphTemplate from './NetworkGraphTemplate';
 import AnalysisPageTemplate from './AnalysisPageTemplate';
 import { exportCanvasToImage } from '../../views/analysis/network/exportNetwork';
+import { setRenderNodes } from '../../views/analysis/network/networkRender';
 import logoImg from '../../assets/logo.png';
 
 const styles = {
@@ -148,6 +149,16 @@ export default function CoAuthorshipNetwork() {
 
     // Offload heavy physics calculation to the state fractality hook
     const { frozenData, isCalculating } = useNetworkLayout(nodes, links);
+
+    React.useEffect(() => {
+        if (!isCalculating && frozenData?.nodes?.length > 0) {
+            setRenderNodes(frozenData.nodes);
+            const t = setTimeout(() => {
+                if (fgRef.current) fgRef.current.zoomToFit(400, 60);
+            }, 50);
+            return () => clearTimeout(t);
+        }
+    }, [isCalculating, frozenData]);
 
     const toolbar = (
         <>

@@ -64,32 +64,41 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
     });
 
     // Assign spatial centers to components to prevent vertical stacking
+    const nodeById = Object.fromEntries(layoutNodes.map(n => [n.id, n]));
+    const areaOf = comp => comp.reduce((s, id) => {
+        const r = calculateRadius(nodeById[id]) + 6;
+        return s + Math.PI * r * r;
+    }, 0);
+    const estRadius = comp => Math.sqrt(areaOf(comp) / 0.5 / Math.PI);
+
     const compCenters = [];
     const goldenAngle = 2.39996323; // radians
+    const Rg = components.length > 0 ? estRadius(components[0]) : 0;
+    
     components.forEach((comp, i) => {
-        if (i === 0) {
-            compCenters.push({ x: 0, y: 0 });
-        } else {
-            const radius = 220 + i * 55;
-            const angle = i * goldenAngle;
-            compCenters.push({ x: Math.cos(angle) * radius, y: Math.sin(angle) * radius });
-        }
+        if (i === 0) return compCenters.push({ x: 0, y: 0 });
+        const dist = Rg + estRadius(comp) + 40 + Math.sqrt(i) * 30;
+        const a = i * goldenAngle;
+        compCenters.push({ x: Math.cos(a) * dist, y: Math.sin(a) * dist });
     });
 
     // Initialize positions near their assigned centers
+    const rnd = d3.randomLcg(42);
     layoutNodes.forEach(n => {
         const center = compCenters[nodeToComp[n.id]];
-        n.x = center.x + (Math.random() - 0.5) * 30;
-        n.y = center.y + (Math.random() - 0.5) * 30;
+        n.x = center.x + (rnd() - 0.5) * 30;
+        n.y = center.y + (rnd() - 0.5) * 30;
     });
 
     // Stage D: Force-directed refinement
     const simulation = d3.forceSimulation(layoutNodes)
         .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(55))
-        .force('charge', d3.forceManyBody().strength(-120))
+        .force('charge', d3.forceManyBody().strength(d => -40 - calculateRadius(d) * 8))
         .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 3).iterations(4))
-        .force('x', d3.forceX(d => compCenters[nodeToComp[d.id]].x).strength(0.15))
-        .force('y', d3.forceY(d => compCenters[nodeToComp[d.id]].y).strength(0.15))
+        .force('x', d3.forceX(d => compCenters[nodeToComp[d.id]].x)
+            .strength(d => nodeToComp[d.id] === 0 ? 0.02 : 0.15))
+        .force('y', d3.forceY(d => compCenters[nodeToComp[d.id]].y)
+            .strength(d => nodeToComp[d.id] === 0 ? 0.02 : 0.15))
         .stop();
 
     simulation.tick(300);
@@ -104,23 +113,12 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
         if (n.y + r > maxY) maxY = n.y + r;
     });
 
-    const graphWidth = Math.max(1, maxX - minX);
-    const graphHeight = Math.max(1, maxY - minY);
-    
-    // Target dimensions (75% of canvas to guarantee margins)
-    const targetWidth = width * 0.75;
-    const targetHeight = height * 0.75;
-    
-    const scaleX = targetWidth / graphWidth;
-    const scaleY = targetHeight / graphHeight;
-    const scale = Math.min(scaleX, scaleY, 2);
-
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
 
     layoutNodes.forEach(node => {
-        node.x = (node.x - cx) * scale;
-        node.y = (node.y - cy) * scale;
+        node.x -= cx;
+        node.y -= cy;
         node.fx = node.x;
         node.fy = node.y;
     });
