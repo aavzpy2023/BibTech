@@ -239,7 +239,10 @@ export const drawLink = (link, ctx, globalScale) => {
 
     let opacity;
     if (isHighlighted) {
-        opacity = Math.min(0.95, (0.65 + weight * 0.10) * edgeOpacityMultiplier);
+        // 🚀 INMUNIDAD AL SLIDER: Las aristas enfocadas brillan siempre con su
+        // opacidad natural (65% al 95%). Permite el modo "Solo mostrar en hover"
+        // si el usuario baja el slider global a 0.
+        opacity = Math.min(0.95, 0.65 + weight * 0.10);
     } else if (isHoverActive) {
         opacity = 0.00002; // IGNORAR SLIDER: forzar fondo tenue invariable
     } else {
@@ -251,6 +254,9 @@ export const drawLink = (link, ctx, globalScale) => {
             opacity = Math.min(0.50, (0.18 + weight * 0.05) * edgeOpacityMultiplier);
         }
     }
+
+    // 🚀 RENDERING CULLING GLOBAL (Si Slider = 0): No dibujamos lo invisible.
+    if (opacity <= 0.01) return;
 
     const thickness = (isHighlighted
         ? Math.min(3.0, 1.2 + weight * 0.40)
