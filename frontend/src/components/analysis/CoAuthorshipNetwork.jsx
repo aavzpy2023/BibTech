@@ -121,18 +121,62 @@ export default function CoAuthorshipNetwork() {
             canvas.width = 780 * scale;
             canvas.height = 460 * scale;
 
+            const triggerDownload = (dataUrl) => {
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = 'co-authorship-network-hd.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
             const img = new Image();
             img.onload = () => {
                 ctx.fillStyle = '#0a0d12';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                const pngUrl = canvas.toDataURL('image/png');
-                const a = document.createElement('a');
-                a.href = pngUrl;
-                a.download = 'co-authorship-network-hd.png';
-                a.click();
-                URL.revokeObjectURL(url);
+                // Draw logo watermark directly onto exported canvas in HD
+                const watermark = new Image();
+                watermark.onload = () => {
+                    const logoSize = 32 * scale;
+                    const margin = 16 * scale;
+                    const badgePad = 6 * scale;
+                    const x = canvas.width - logoSize - margin;
+                    const y = margin;
+
+                    ctx.fillStyle = 'rgba(13, 17, 23, 0.85)';
+                    ctx.strokeStyle = 'rgba(48, 54, 61, 0.7)';
+                    ctx.lineWidth = 1 * scale;
+
+                    if (ctx.roundRect) {
+                        ctx.beginPath();
+                        ctx.roundRect(
+                            x - badgePad,
+                            y - badgePad,
+                            logoSize + badgePad * 2,
+                            logoSize + badgePad * 2,
+                            6 * scale
+                        );
+                        ctx.fill();
+                        ctx.stroke();
+                    } else {
+                        ctx.fillRect(
+                            x - badgePad,
+                            y - badgePad,
+                            logoSize + badgePad * 2,
+                            logoSize + badgePad * 2
+                        );
+                    }
+
+                    ctx.drawImage(watermark, x, y, logoSize, logoSize);
+                    triggerDownload(canvas.toDataURL('image/png'));
+                };
+
+                watermark.onerror = () => {
+                    triggerDownload(canvas.toDataURL('image/png'));
+                };
+
+                watermark.src = logoImg;
             };
             img.src = url;
         } catch (err) {
