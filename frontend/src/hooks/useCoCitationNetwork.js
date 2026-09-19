@@ -5,12 +5,23 @@ const DEFAULT_NODES_3D = [];
 const DEFAULT_LINKS = [];
 const CLUSTER_METADATA = {};
 
+let cacheCoCitation = {
+    gamma: null,
+    data: null,
+};
+
 export default function useCoCitationNetwork() {
     const [louvainGamma, setLouvainGamma] = useState(1.0);
     const [debouncedGamma, setDebouncedGamma] = useState(1.0);
-    const [dynamicNodes, setDynamicNodes] = useState(null);
-    const [dynamicLinks, setDynamicLinks] = useState(null);
-    const [dynamicClusters, setDynamicClusters] = useState(null);
+    const [dynamicNodes, setDynamicNodes] = useState(
+        () => cacheCoCitation.data?.nodes || null
+    );
+    const [dynamicLinks, setDynamicLinks] = useState(
+        () => cacheCoCitation.data?.links || null
+    );
+    const [dynamicClusters, setDynamicClusters] = useState(
+        () => cacheCoCitation.data?.clusters || null
+    );
     const [minWeight, setMinWeight] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedNodeId, setSelectedNodeId] = useState(null);
@@ -26,12 +37,26 @@ export default function useCoCitationNetwork() {
     }, [louvainGamma]);
 
     React.useEffect(() => {
+        if (
+            cacheCoCitation.gamma === debouncedGamma &&
+            cacheCoCitation.data
+        ) {
+            setDynamicNodes(cacheCoCitation.data.nodes);
+            setDynamicLinks(cacheCoCitation.data.links);
+            setDynamicClusters(cacheCoCitation.data.clusters);
+            return;
+        }
+
         let isMounted = true;
         setIsLoading(true);
         fetch(`/api/bibliography/network/co-citation?resolution=${debouncedGamma}`)
             .then(res => (res.ok ? res.json() : null))
             .then(data => {
                 if (isMounted && data && data.nodes && data.nodes.length > 0) {
+                    cacheCoCitation = {
+                        gamma: debouncedGamma,
+                        data: data,
+                    };
                     setDynamicNodes(data.nodes);
                     setDynamicLinks(data.links);
                     if (data.clusters) {

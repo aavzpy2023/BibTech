@@ -1,1558 +1,391 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKARCH
-Date: 2026-09-19 16:48:08
+Date: 2026-09-19 16:56:12
 AST Mode: True
 Line Numbers: False
-Modules: ReferencesDataTable.jsx, useReferencesTable.js, ReferencesView.jsx, router.py
-Processed Files: 4
+Modules: useNetworkLayout.js, useCoAuthorshipNetwork.js, useCoCitationNetwork.js
+Processed Files: 3
 ===========================
 
 
 
-// --- frontend/src/components/references/ReferencesDataTable.jsx ---
-
-import React, { useState } from 'react';
-import { useReferencesTable } from '../../hooks/useReferencesTable';
-import { useTableResize } from '../../hooks/useTableResize';
-import ReferenceDetailsModal from './ReferenceDetailsModal';
-
-function getDoiUrl(doi) {
-  if (!doi) return '';
-  const clean = String(doi).trim();
-  if (clean.startsWith('http://') || clean.startsWith('https://')) {
-    return clean;
-  }
-  return `https://doi.org/${clean.replace(/^doi:\s*/i, '')}`;
-}
-
-const styles = {
-  controls: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '16px',
-  },
-  searchInput: {
-    padding: '8px 12px',
-    borderRadius: '6px',
-    border: '1px solid #30363d',
-    backgroundColor: '#0d1117',
-    color: '#f0f6fc',
-    width: '300px',
-    outline: 'none',
-  },
-  pagination: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: '16px',
-    padding: '8px 0',
-  },
-  pageBtn: {
-    padding: '6px 12px',
-    backgroundColor: '#21262d',
-    border: '1px solid #30363d',
-    color: '#f0f6fc',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '13px',
-  },
-  pageBtnDisabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed',
-  },
-  container: {
-    width: '100%',
-    overflowX: 'auto',
-    marginTop: '20px',
-    position: 'relative',
-  },
-  table: {
-    width: '100%',
-    tableLayout: 'fixed',
-    borderCollapse: 'collapse',
-    textAlign: 'left',
-    fontSize: '14px',
-    fontFamily: 'system-ui, sans-serif',
-  },
-  th: {
-    backgroundColor: '#161b22',
-    borderBottom: '1px solid #30363d',
-    borderRight: '1px solid #30363d',
-    padding: '10px 14px',
-    fontWeight: '600',
-    color: '#f0f6fc',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  },
-  tr: {
-    borderBottom: '1px solid #30363d',
-    cursor: 'pointer',
-    transition: 'background-color 0.15s ease',
-  },
-  selectedTr: {
-    backgroundColor: '#1c2128',
-    outline: '1px solid #388bfd',
-  },
-  detailsBtn: {
-    padding: '8px 14px',
-    backgroundColor: '#21262d',
-    color: '#f0f6fc',
-    border: '1px solid #30363d',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '13px',
-    fontWeight: '500',
-    whiteSpace: 'nowrap',
-    transition: 'all 0.15s ease',
-  },
-  detailsBtnDisabled: {
-    opacity: 0.45,
-    cursor: 'not-allowed',
-  },
-
-  td: {
-    padding: '10px 14px',
-    color: '#f0f6fc',
-    borderRight: '1px solid #30363d',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  },
-  empty: {
-    padding: '24px',
-    textAlign: 'center',
-    color: '#8b949e',
-    fontSize: '14px',
-    fontStyle: 'italic',
-  },
-
-};
-
-let globalSelectedRows = [];
-let globalIsDetailsOpen = false;
-
-export function ReferencesDataTable({ data = [] }) {
-  const [selectedRows, setSelectedRows] = useState(() => {
-    if (globalSelectedRows.length === 0) return [];
-    if (!data || data.length === 0) return globalSelectedRows;
-    const currentIds = new Set(data.map((d) => (d.id != null ? d.id : d)));
-    const valid = globalSelectedRows.filter((r) =>
-      currentIds.has(r.id != null ? r.id : r)
-    );
-    return valid.length > 0 ? valid : globalSelectedRows;
-  });
-  const [isDetailsOpen, setIsDetailsOpen] = useState(globalIsDetailsOpen);
-
-  const updateSelectedRows = (newRowsOrUpdater) => {
-    setSelectedRows((prev) => {
-      const next =
-        typeof newRowsOrUpdater === 'function'
-          ? newRowsOrUpdater(prev)
-          : newRowsOrUpdater;
-      globalSelectedRows = next;
-      return next;
-    });
-  };
-
-  const updateIsDetailsOpen = (isOpen) => {
-    globalIsDetailsOpen = isOpen;
-    setIsDetailsOpen(isOpen);
-  };
-
-  const {
-    searchQuery,
-    setSearchQuery,
-    currentPage,
-    setCurrentPage,
-    paginatedData,
-    totalPages,
-  } = useReferencesTable(data, 13);
-
-  const { colWidths, handleMouseDown } = useTableResize();
-
-  const isSingleSelected = selectedRows.length === 1;
-  const singleSelectedRow = isSingleSelected ? selectedRows[0] : null;
-
-  const isRowSelected = (row) =>
-    selectedRows.some((r) =>
-      r.id != null && row.id != null ? r.id === row.id : r === row
-    );
-
-  const handleCheckboxChange = (row, e) => {
-    e.stopPropagation();
-    updateSelectedRows((prev) => {
-      const exists = prev.some((r) =>
-        r.id != null && row.id != null ? r.id === row.id : r === row
-      );
-      if (exists) {
-        return prev.filter((r) =>
-          r.id != null && row.id != null ? r.id !== row.id : r !== row
-        );
-      }
-      return [...prev, row];
-    });
-  };
-
-  const handleRowClick = (row, e) => {
-    if (e.target.type === 'checkbox') return;
-    if (e.ctrlKey || e.metaKey) {
-      handleCheckboxChange(row, e);
-    } else {
-      updateSelectedRows((prev) => {
-        const isOnlyThis =
-          prev.length === 1 &&
-          (prev[0].id != null && row.id != null
-            ? prev[0].id === row.id
-            : prev[0] === row);
-        if (isOnlyThis) {
-          return [];
-        }
-        return [row];
-      });
-    }
-  };
-
-  const allVisibleSelected =
-    paginatedData.length > 0 &&
-    paginatedData.every((r) => isRowSelected(r));
-
-  const handleSelectAll = (e) => {
-    e.stopPropagation();
-    if (allVisibleSelected) {
-      const visibleKeys = new Set(
-        paginatedData.map((r) => (r.id != null ? r.id : r))
-      );
-      updateSelectedRows((prev) =>
-        prev.filter((r) => !visibleKeys.has(r.id != null ? r.id : r))
-      );
-    } else {
-      const currentKeys = new Set(
-        selectedRows.map((r) => (r.id != null ? r.id : r))
-      );
-      const toAdd = paginatedData.filter(
-        (r) => !currentKeys.has(r.id != null ? r.id : r)
-      );
-      updateSelectedRows((prev) => [...prev, ...toAdd]);
-    }
-  };
-
-  if (!data || data.length === 0) {
-    return (
-      <div style={styles.container}>
-        <div style={styles.empty}>
-          No references available to display.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={styles.container}>
-      <div style={styles.controls}>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <input
-            type="text"
-            placeholder="Search by title or author..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={styles.searchInput}
-          />
-          <button
-            type="button"
-            style={{
-              ...styles.detailsBtn,
-              ...(!isSingleSelected ? styles.detailsBtnDisabled : {}),
-            }}
-            disabled={!isSingleSelected}
-            onClick={() => updateIsDetailsOpen(true)}
-          >
-            View Details
-          </button>
-        </div>
-        <span style={{ fontSize: '13px', color: '#8b949e' }}>
-          Total References: {data.length}
-          {selectedRows.length > 0 ? ` (${selectedRows.length} selected)` : ''}
-        </span>
-      </div>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={{ ...styles.th, width: '40px', textAlign: 'center' }}>
-              <input
-                type="checkbox"
-                aria-label="Select all references on this page"
-                checked={allVisibleSelected}
-                onChange={handleSelectAll}
-                style={{ cursor: 'pointer' }}
-              />
-            </th>
-            <th style={{ ...styles.th, width: `${colWidths.title}%`, position: 'relative' }}>
-              Title
-              <div
-                style={{
-                  cursor: 'col-resize', width: '5px', position: 'absolute',
-                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
-                }}
-                onMouseDown={(e) => handleMouseDown(e, 'title')}
-              />
-            </th>
-            <th style={{ ...styles.th, width: `${colWidths.author}%`, position: 'relative' }}>
-              Author
-              <div
-                style={{
-                  cursor: 'col-resize', width: '5px', position: 'absolute',
-                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
-                }}
-                onMouseDown={(e) => handleMouseDown(e, 'author')}
-              />
-            </th>
-            <th style={{ ...styles.th, width: `${colWidths.year}%`, position: 'relative' }}>
-              Year
-              <div
-                style={{
-                  cursor: 'col-resize', width: '5px', position: 'absolute',
-                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
-                }}
-                onMouseDown={(e) => handleMouseDown(e, 'year')}
-              />
-            </th>
-            <th style={{ ...styles.th, width: `${colWidths.journal}%`, position: 'relative' }}>
-              Journal
-              <div
-                style={{
-                  cursor: 'col-resize', width: '5px', position: 'absolute',
-                  right: 0, top: 0, bottom: 0, backgroundColor: 'transparent'
-                }}
-                onMouseDown={(e) => handleMouseDown(e, 'journal')}
-              />
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedData.map((row, index) => {
-            const isSelected = isRowSelected(row);
-            return (
-              <tr
-                key={row.id || index}
-                style={{
-                  ...styles.tr,
-                  ...(isSelected ? styles.selectedTr : {}),
-                }}
-                onClick={(e) => handleRowClick(row, e)}
-              >
-              <td
-                style={{ ...styles.td, width: '40px', textAlign: 'center' }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <input
-                  type="checkbox"
-                  aria-label={`Select reference ${row.title || ''}`}
-                  checked={isSelected}
-                  onChange={(e) => handleCheckboxChange(row, e)}
-                  style={{ cursor: 'pointer' }}
-                />
-              </td>
-              <td style={styles.td} title={row.title || 'N/A'}>
-                {row.title || 'N/A'}
-              </td>
-              <td style={styles.td} title={row.author || 'N/A'}>
-                {row.author || 'N/A'}
-              </td>
-              <td style={styles.td} title={String(row.year || 'N/A')}>
-                {row.year || 'N/A'}
-              </td>
-              <td style={styles.td} title={row.journal || 'N/A'}>
-                {row.journal || 'N/A'}
-              </td>
-            </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      {totalPages > 1 && (
-        <div style={styles.pagination}>
-          <button
-            style={{ ...styles.pageBtn, ...(currentPage === 1 ? styles.pageBtnDisabled : {}) }}
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </button>
-          <span style={{ fontSize: '14px', color: '#8b949e' }}>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            style={{ ...styles.pageBtn, ...(currentPage === totalPages ? styles.pageBtnDisabled : {}) }}
-            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </button>
-        </div>
-      )}
-
-      <ReferenceDetailsModal
-        isOpen={isDetailsOpen && isSingleSelected}
-        onClose={() => updateIsDetailsOpen(false)}
-        article={singleSelectedRow}
-      />
-    </div>
-  );
-}
-
-export default ReferencesDataTable;
-
-
-
-// --- frontend/src/hooks/useReferencesTable.js ---
-
-import { useState, useMemo } from 'react';
-
-let globalSearchQuery = '';
-let globalCurrentPage = 1;
-
-export function useReferencesTable(data = [], pageSize = 13) {
-    const [currentPage, setCurrentPage] = useState(globalCurrentPage);
-    const [searchQuery, setSearchQuery] = useState(globalSearchQuery);
-
-    const handleSetSearchQuery = (query) => {
-        globalSearchQuery = query;
-        setSearchQuery(query);
-        globalCurrentPage = 1;
-        setCurrentPage(1);
-    };
-
-    const handleSetCurrentPage = (updater) => {
-        setCurrentPage((prev) => {
-            const next = typeof updater === 'function' ? updater(prev) : updater;
-            globalCurrentPage = next;
-            return next;
-        });
-    };
-
-    const filteredData = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return data;
-        }
-        const query = searchQuery.toLowerCase();
-        return data.filter((item) => {
-            return Object.values(item).some((val) => {
-                if (val === null || val === undefined) return false;
-                if (typeof val === 'object') {
-                    return JSON.stringify(val).toLowerCase().includes(query);
-                }
-                return String(val).toLowerCase().includes(query);
-            });
-        });
-    }, [data, searchQuery]);
-
-    const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
-
-    const paginatedData = useMemo(() => {
-        const startIndex = (currentPage - 1) * pageSize;
-        return filteredData.slice(startIndex, startIndex + pageSize);
-    }, [filteredData, currentPage, pageSize]);
-
-    return {
-        searchQuery,
-        setSearchQuery: handleSetSearchQuery,
-        currentPage,
-        setCurrentPage: handleSetCurrentPage,
-        paginatedData,
-        totalPages,
-    };
-}
-
-
-// --- frontend/src/views/ReferencesView.jsx ---
-
-import React, { useState } from 'react';
-import { useReferencesUpload } from '../hooks/useReferencesUpload';
-import ReferencesDataTable from '../components/references/ReferencesDataTable';
-import UploadReferencesModal from '../components/references/UploadReferencesModal';
-
-const styles = {
-  container: {
-    padding: '0',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '20px',
-    flexWrap: 'wrap',
-    gap: '12px',
-  },
-  modalBtn: {
-    backgroundColor: '#0366d6',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '6px',
-    padding: '10px 18px',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-  },
-  card: {
-    border: 'none',
-    borderRadius: '10px',
-    padding: '24px',
-    backgroundColor: '#161b22',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-    marginBottom: '24px',
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#f0f6fc',
-    margin: '0 0 8px 0'
-  },
-  subtitle: {
-    fontSize: '14px',
-    color: '#8b949e',
-    margin: 0,
-  },
-  description: {
-    fontSize: '14px',
-    color: '#8b949e',
-    marginBottom: '20px',
-  },
-  formGroup: {
-    marginBottom: '20px',
-  },
-  label: {
-    display: 'block',
-    fontWeight: '500',
-    marginBottom: '8px',
-    fontSize: '14px',
-  },
-  input: {
-    width: '100%',
-    maxWidth: '380px',
-    padding: '10px 12px',
-    fontSize: '14px',
-    border: '1px solid #d1d5da',
-    borderRadius: '6px',
-    boxSizing: 'border-box',
-    outline: 'none',
-  },
-  hint: {
-    fontSize: '12px',
-    color: '#6a737d',
-    marginTop: '6px',
-  },
-  uploaderWrapper: {
-    transition: 'opacity 0.2s ease',
-  },
-  errorBox: {
-    backgroundColor: '#ffeef0',
-    color: '#cb2431',
-    border: '1px solid #f97583',
-    padding: '12px 16px',
-    borderRadius: '6px',
-    marginBottom: '16px',
-    fontSize: '14px',
-  },
-  successBox: {
-    backgroundColor: '#dcffe4',
-    color: '#165c26',
-    border: '1px solid #85e89d',
-    padding: '16px',
-    borderRadius: '6px',
-    marginTop: '24px',
-  },
-  successTitle: {
-    fontWeight: '600',
-    margin: '0 0 8px 0',
-    fontSize: '16px',
-  },
-  badge: {
-    display: 'inline-block',
-    backgroundColor: '#2ea44f',
-    color: '#ffffff',
-    padding: '4px 10px',
-    borderRadius: '12px',
-    fontSize: '12px',
-    fontWeight: '600',
-    marginTop: '4px',
-  },
-};
-
-let cachedTableData = [];
-
-export function ReferencesView() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [tableData, setTableData] = useState(cachedTableData);
-  const [_dummyState, _setDummy] = useState([
-    {
-      id: 1,
-      title: 'Attention Is All You Need',
-      author: 'Vaswani, A. et al.',
-      year: 2017,
-      journal: 'NeurIPS',
-    },
-    {
-      id: 2,
-      title: 'Deep Residual Learning for Image Recognition',
-      author: 'He, K. et al.',
-      year: 2016,
-      journal: 'CVPR',
-    },
-  ]);
-
-  const {
-    projectCode,
-    setProjectCode,
-    isLoading,
-    isSuccess,
-    error,
-    insertedCount,
-    uploadAndInject,
-    resetStatus,
-  } = useReferencesUpload();
-
-  const fetchProjectReferences = React.useCallback(async (code) => {
-    if (!code || !code.trim()) {
-      setTableData([]);
-      return;
-    }
-    try {
-      const res = await fetch(
-        `/api/bibliography/references?project_code=${encodeURIComponent(code.trim())}`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        cachedTableData = data;
-        setTableData(data);
-      }
-    } catch {
-      // Ignorado si falla la red
-    }
-  }, []);
-
-  React.useEffect(() => {
-    if (projectCode) {
-      fetchProjectReferences(projectCode);
-    }
-  }, [projectCode, fetchProjectReferences]);
-
-  return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <div>
-      <h2 style={styles.title}>Bibliographic References</h2>
-      <p style={styles.subtitle}>
-        View and manage persisted publications.
-        {projectCode && (
-          <span> Active project: <strong>{projectCode}</strong></span>
-        )}
-          </p>
-        </div>
-        <button
-          style={styles.modalBtn}
-      onClick={() => {
-        if (resetStatus) resetStatus();
-        setIsModalOpen(true);
-      }}
-    >
-      + Add
-    </button>
-      </div>
-
-      <div style={styles.card}>
-        <ReferencesDataTable data={tableData} />
-      </div>
-
-      <UploadReferencesModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        projectCode={projectCode}
-        setProjectCode={setProjectCode}
-        uploadAndInject={async (files) => {
-          const parsed = await uploadAndInject(files);
-          if (parsed) {
-            fetchProjectReferences(projectCode);
-          }
-        }}
-        isLoading={isLoading}
-        isSuccess={isSuccess}
-        error={error}
-        insertedCount={insertedCount}
-      />
-    </div>
-  );
-}
-
-function _legacyUnused() {
-  return (
-    <div>
-      <div>
-        <h2>Ingesta</h2>
-        <p style={styles.description}>
-          Asocie archivos bibliográficos (.ris o .bib) a un proyecto de
-          investigación para persistir sus artículos.
-        </p>
-
-        <div style={styles.formGroup}>
-          <label htmlFor="project-code-input" style={styles.label}>
-            Código del Proyecto *
-          </label>
-          <input
-            id="project-code-input"
-            type="text"
-            placeholder="Ej: PROJ-AI-2026"
-            value={projectCode}
-            onChange={(e) => setProjectCode(e.target.value)}
-            style={styles.input}
-          />
-          {!isProjectReady && (
-            <p style={styles.hint}>
-              Debe ingresar un código de proyecto para habilitar el cargador.
-            </p>
-          )}
-        </div>
-
-        {error && <div style={styles.errorBox}>❌ {error}</div>}
-        {isLoading && (
-          <p style={{ color: '#0366d6', fontWeight: '500' }}>
-            Inyectando referencias en base de datos...
-          </p>
-        )}
-
-        <div
-          style={{
-            ...styles.uploaderWrapper,
-            opacity: isProjectReady ? 1 : 0.45,
-            pointerEvents: isProjectReady ? 'auto' : 'none',
-          }}
-        >
-          <BibliographyUploader
-            onUpload={(file) => {
-              if (isProjectReady) {
-                uploadAndInject(file);
-              }
-            }}
-          />
-        </div>
-
-        {isSuccess && (
-          <div style={styles.successBox}>
-            <p style={styles.successTitle}>
-              ¡Ingesta completada con éxito!
-            </p>
-            <p style={{ margin: '4px 0' }}>
-              Proyecto:{' '}
-              <strong>{projectCode}</strong>
-            </p>
-            <p style={{ margin: '4px 0' }}>
-              Total de artículos registrados:{' '}
-              <strong>{insertedCount}</strong>
-            </p>
-            <span style={styles.badge}>Persistido en DB</span>
-            <ReferencesDataTable
-              data={[
-                {
-                  id: 1,
-                  title: `Artículos asociados a ${projectCode}`,
-                  author: 'Verificado',
-                  year: new Date().getFullYear(),
-                  journal: 'Repositorio Local',
-                },
-              ]}
-            />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default ReferencesView;
-
-
-
-// --- backend/src/bibliography/router.py ---
-
-import os
-import re
-from datetime import datetime, timezone
-from typing import List, Dict, Any
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-from .schemas import (
-    ParsedReference,
-    BatchDownloadRequest,
-    ZipDownloadRequest,
-    LocalBatchDownloadRequest,
-)
-from .parser_service import parse_bibliography_content
-from .download_service import execute_batch_download
-from .zip_service import create_zip_from_pdfs
-import math
-from collections import defaultdict
-import networkx as nx
-import community as community_louvain
-from .injection_service import (
-    inject_references_to_db,
-    backfill_funding_from_articles,
-    clean_duplicate_fundings,
-)
-
-try:
-    from ..database.session import get_db
-    from ..database.models.core import Article, Project, ProjectArticle
-except (ImportError, ValueError):
-    try:
-        from src.database.session import get_db
-        from src.database.models.core import (
-            Article,
-            Project,
-            ProjectArticle,
-        )
-    except ImportError:
-        from backend.src.database.session import get_db
-        from backend.src.database.models.core import (
-            Article,
-            Project,
-            ProjectArticle,
-        )
-    try:
-        from src.database.session import get_db
-    except ImportError:
-        from backend.src.database.session import get_db
-
-router = APIRouter()
-
-try:
-    import multipart
-    HAS_MULTIPART = True
-except ImportError:
-    HAS_MULTIPART = False
-
-async def _process_upload(file: UploadFile) -> List[ParsedReference]:
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-
-    _, ext = os.path.splitext(file.filename)
-    if ext.lower() not in [".bib"]:
-        raise HTTPException(status_code=400, detail="Unsupported file extension")
-
-    try:
-        content_bytes = await file.read()
-        try:
-            content_str = content_bytes.decode("utf-8")
-        except UnicodeDecodeError:
-            content_str = content_bytes.decode("latin-1")
-        refs = parse_bibliography_content(content_str, ext)
-        return refs
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error during parsing"
-        )
-
-
-async def _process_inject(
-    file: UploadFile, project_code: str, db: Session
-) -> dict:
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-
-    _, ext = os.path.splitext(file.filename)
-    if ext.lower() not in [".bib"]:
-        raise HTTPException(
-            status_code=400, detail="Unsupported file extension"
-        )
-
-    try:
-        content_bytes = await file.read()
-        content_str = content_bytes.decode("utf-8")
-        refs = parse_bibliography_content(content_str, ext)
-        try:
-            inserted = inject_references_to_db(db, refs, project_code)
-        except RuntimeError:
-            raise HTTPException(
-                status_code=503,
-                detail="Error de conexión a la base de datos. Intente nuevamente."
-            )
-        return {"message": "Success", "inserted": inserted}
-    except HTTPException:
-        raise
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as exc:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal server error during injection: {str(exc)}",
-        )
-
-if HAS_MULTIPART:
-    @router.post("/upload", response_model=List[ParsedReference])
-    async def upload_bibliography(file: UploadFile = File(...)):
-        return await _process_upload(file)
-
-    @router.post("/inject")
-    async def inject_bibliography(
-        file: UploadFile = File(...),
-        project_code: str = Form(...),
-        db: Session = Depends(get_db),
-    ):
-        return await _process_inject(file, project_code, db)
-
-    @router.get("/references", response_model=List[Dict[str, Any]])
-    def get_project_references(
-        project_code: str,
-        db: Session = Depends(get_db),
-    ):
-        project = (
-            db.query(Project).filter(Project.name == project_code).first()
-        )
-        if not project:
-            return []
-        links = (
-            db.query(ProjectArticle)
-            .filter(ProjectArticle.project_id == project.id)
-            .all()
-        )
-        if not links:
-            return []
-
-        status_map = {
-            link.article_id: {
-                "status": link.status,
-                "added_at": (
-                    link.added_at.isoformat() if link.added_at else None
-                ),
-            }
-            for link in links
+// --- frontend/src/hooks/useNetworkLayout.js ---
+
+import { useState, useEffect } from 'react';
+import { calculateStaticLayout } from '../views/analysis/network/networkLayout';
+
+/**
+ * State Fractality Hook: Pre-calculates physical graph forces asynchronously.
+ * Prevents UI thread blocking while D3 ticks 300 times in the background.
+ */
+export default function useNetworkLayout(rawNodes, rawLinks) {
+    const [frozenData, setFrozenData] = useState({ nodes: [], links: [] });
+    const [isCalculating, setIsCalculating] = useState(true);
+
+    useEffect(() => {
+        if (!rawNodes || rawNodes.length === 0) {
+            setFrozenData({ nodes: [], links: [] });
+            setIsCalculating(false);
+            return;
         }
 
-        article_ids = list(status_map.keys())
-        articles = (
-            db.query(Article).filter(Article.id.in_(article_ids)).all()
-        )
-
-        def _to_str(val):
-            return str(val) if isinstance(val, (str, int, float)) else None
-
-        def _is_mock(val):
-            return hasattr(val, "_mock_return_value") or hasattr(
-                val, "_mock_name"
-            )
-
-        def _to_int(val):
-            if val is not None and not _is_mock(val):
-                try:
-                    return int(val)
-                except (ValueError, TypeError):
-                    pass
-            return None
-
-        def _safe_list(val):
-            if val is None or _is_mock(val):
-                return []
-            if isinstance(val, (list, tuple, set)):
-                return [x for x in val if not _is_mock(x)]
-            return []
-
-        # Purge physical duplicates in database if any exist
-        clean_duplicate_fundings(db)
-
-        now_iso = datetime.now(timezone.utc).isoformat()
-        result = []
-        for a in articles:
-            authors_detail = []
-            for aa in sorted(
-                _safe_list(getattr(a, "author_articles", None)),
-                key=lambda x: getattr(x, "author_order", 1) or 1,
-            ):
-                auth = getattr(aa, "author", None)
-                if auth and not _is_mock(auth):
-                    aff = getattr(auth, "affiliation", None)
-                    aff_str = None
-                    if aff and not _is_mock(aff):
-                        inst = getattr(aff, "institution", None)
-                        dept = getattr(aff, "department", None)
-                        country = getattr(aff, "country", None)
-                        parts = []
-                        if inst and isinstance(inst, str):
-                            parts.append(inst.strip().rstrip("."))
-                        if dept and isinstance(dept, str):
-                            dept_clean = dept.strip().rstrip(".")
-                            if not inst or dept_clean.lower() not in inst.lower():
-                                parts.append(dept_clean)
-                        if country and isinstance(country, str):
-                            c_clean = country.strip().rstrip(".")
-                            if not inst or c_clean.lower() not in inst.lower():
-                                parts.append(c_clean)
-                        aff_str = ", ".join(parts) if parts else None
-                    authors_detail.append({
-                        "name": getattr(auth, "name", "N/A"),
-                        "orcid": getattr(auth, "orcid", None),
-                        "email": getattr(auth, "email", None),
-                        "author_order": getattr(aa, "author_order", 1),
-                        "is_corresponding": bool(
-                            getattr(aa, "is_corresponding", False)
-                        ),
-                        "affiliation": aff_str,
-                    })
-
-            author_val = _to_str(getattr(a, "author", None))
-            if authors_detail:
-                author_str = " and ".join(
-                    [ad["name"] for ad in authors_detail]
-                )
-            elif author_val:
-                author_str = author_val
-            elif getattr(a, "authors", None) and not _is_mock(a.authors):
-                names = [
-                    getattr(x, "name", str(x))
-                    for x in _safe_list(a.authors)
-                    if getattr(x, "name", str(x)) and not _is_mock(x)
-                ]
-                author_str = " and ".join(names) if names else "N/A"
-            elif getattr(a, "raw_data", None):
-                author_str = str(a.raw_data)[:100]
-            else:
-                author_str = "N/A"
-
-            keywords_list = [
-                {
-                    "name": getattr(k, "name", ""),
-                    "type": getattr(k, "type", "author"),
-                }
-                for k in _safe_list(getattr(a, "keywords", None))
-            ]
-
-            cr_items = _safe_list(getattr(a, "cited_references", None))
-
-            references_list = [
-                {
-                    "id": getattr(r, "id", None),
-                    "author": getattr(r, "author", None),
-                    "title": (
-                        getattr(r, "source", None)
-                        or getattr(r, "title", None)
-                    ),
-                    "source": getattr(r, "source", None),
-                    "doi": getattr(r, "doi", None),
-                    "year": (
-                        str(getattr(r, "year", ""))
-                        if getattr(r, "year", None)
-                        else None
-                    ),
-                    "raw_citation": (
-                        getattr(r, "raw_string", None)
-                        or getattr(r, "raw_citation", None)
-                    ),
-                }
-                for r in cr_items
-            ]
-
-            seen_f_keys = set()
-            funding_list = []
-            for f in _safe_list(getattr(a, "funding", None)):
-                f_key = (
-                    (getattr(f, "agency", "") or "").strip().lower(),
-                    (getattr(f, "grant_number", "") or "").strip().lower(),
-                )
-                if f_key not in seen_f_keys:
-                    seen_f_keys.add(f_key)
-                    funding_list.append({
-                        "id": getattr(f, "id", None),
-                        "agency": getattr(f, "agency", None),
-                        "grant_number": getattr(f, "grant_number", None),
-                        "country": getattr(f, "country", None),
-                    })
-
-            downloads_list = [
-                {
-                    "id": getattr(d, "id", None),
-                    "source": getattr(d, "source", None),
-                    "status": getattr(d, "status", None),
-                    "file_path": getattr(d, "file_path", None),
-                    "file_size_bytes": getattr(d, "file_size_bytes", None),
-                    "downloaded_at": (
-                        d.downloaded_at.isoformat()
-                        if getattr(d, "downloaded_at", None)
-                        and not _is_mock(d.downloaded_at)
-                        else None
-                    ),
-                }
-                for d in _safe_list(getattr(a, "downloads", None))
-            ]
-
-            p_info = status_map.get(a.id, {})
-
-            result.append({
-                "id": a.id,
-                "title": _to_str(getattr(a, "title", None)) or "Untitled",
-                "author": author_str,
-                "year": _to_str(getattr(a, "year", None)),
-                "journal": _to_str(getattr(a, "journal", None)),
-                "doi": _to_str(getattr(a, "doi", None)),
-                "volume": _to_str(getattr(a, "volume", None)),
-                "issue": _to_str(getattr(a, "issue", None)),
-                "pages": _to_str(getattr(a, "pages", None)),
-                "abstract": _to_str(getattr(a, "abstract", None)),
-                "publisher": _to_str(getattr(a, "publisher", None)),
-                "language": _to_str(getattr(a, "language", None)),
-                "research_areas": _to_str(getattr(a, "research_areas", None)),
-                "web_of_science_categories": _to_str(getattr(a, "web_of_science_categories", None)),
-                "funding_text": _to_str(getattr(a, "funding_text", None)),
-                "journal_iso": _to_str(getattr(a, "journal_iso", None)),
-                "oa_status": _to_str(getattr(a, "oa_status", None)),
-                "issn": _to_str(getattr(a, "issn", None)),
-                "times_cited": _to_int(getattr(a, "times_cited", None)),
-                "cited_references_count": _to_int(getattr(a, "cited_references_count", None)),
-                "raw_data": _to_str(getattr(a, "raw_data", None)),
-                "created_at": (
-                    a.created_at.isoformat()
-                    if getattr(a, "created_at", None)
-                    else None
-                ),
-                "updated_at": (
-                    a.updated_at.isoformat()
-                    if getattr(a, "updated_at", None)
-                    else None
-                ),
-                "project_status": p_info.get("status", "pending"),
-                "project_added_at": p_info.get("added_at"),
-                "upload_datetime": now_iso,
-                "authors_detail": authors_detail,
-                "keywords": keywords_list,
-                "references_list": references_list,
-                "funding_list": funding_list,
-                "downloads_list": downloads_list,
-            })
-        return result
-else:
-    async def upload_bibliography(file: UploadFile):
-        return await _process_upload(file)
-
-    async def inject_bibliography(
-        file: UploadFile,
-        project_code: str,
-        db: Session,
-    ):
-        return await _process_inject(file, project_code, db)
-
-
-@router.post("/backfill-funding")
-def trigger_backfill_funding(db: Session = Depends(get_db)):
-    """API endpoint to trigger parsing of funding_text into the funding table."""
-    count = backfill_funding_from_articles(db)
-    return {
-        "message": f"Successfully parsed and stored {count} funding records",
-        "inserted": count,
-    }
-
-
-@router.post("/batch-download")
-async def batch_download(request: BatchDownloadRequest):
-    async def sse_generator():
-        async for event in execute_batch_download(
-            request.dois,
-            request.destination,
-            request.email,
-            request.delay,
-            request.cookies,
-        ):
-            yield f"data: {event}\n\n"
-
-    return StreamingResponse(
-        sse_generator(),
-        media_type="text/event-stream"
-    )
-
-
-@router.post("/batch-download-local")
-async def batch_download_local(request: LocalBatchDownloadRequest):
-    try:
-        with open(request.file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
-
-    _, ext = os.path.splitext(request.file_path)
-    try:
-        refs = parse_bibliography_content(content, ext)
-        dois = list(set(ref.doi for ref in refs if ref.doi))
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Parse error: {str(e)}")
-
-    async def sse_generator():
-        async for event in execute_batch_download(
-            dois,
-            request.destination,
-            request.email,
-            request.delay,
-            request.cookies,
-        ):
-            yield f"data: {event}\n\n"
-
-    return StreamingResponse(sse_generator(), media_type="text/event-stream")
-
-
-@router.get("/network/co-authorship")
-def get_coauthorship_network(
-    project_code: str | None = None,
-    max_nodes: int = 150,
-    resolution: float = 1.0,
-    db: Session = Depends(get_db),
-):
-    query = db.query(Article)
-    if project_code and project_code.strip():
-        project = (
-            db.query(Project)
-            .filter(Project.name == project_code.strip())
-            .first()
-        )
-        if project:
-            links = (
-                db.query(ProjectArticle.article_id)
-                .filter(ProjectArticle.project_id == project.id)
-                .all()
-            )
-            article_ids = [l[0] for l in links]
-            query = query.filter(Article.id.in_(article_ids))
-        else:
-            return {"nodes": [], "links": [], "clusters": {}}
-
-    articles = query.all()
-    if not articles:
-        return {"nodes": [], "links": [], "clusters": {}}
-
-    author_papers: dict[str, int] = defaultdict(int)
-    author_citations: dict[str, int] = defaultdict(int)
-    author_years: dict[str, list[float]] = defaultdict(list)
-    coauthorship_counts: dict[tuple[str, str], int] = defaultdict(int)
-
-    for a in articles:
-        names = []
-        if getattr(a, "author_articles", None):
-            for aa in a.author_articles:
-                auth = getattr(aa, "author", None)
-                if auth and getattr(auth, "name", None):
-                    names.append(auth.name.strip())
-
-        if not names and getattr(a, "author", None):
-            raw = str(a.author)
-            if " and " in raw:
-                names = [p.strip() for p in raw.split(" and ") if p.strip()]
-            elif ";" in raw:
-                names = [p.strip() for p in raw.split(";") if p.strip()]
-            else:
-                names = [raw.strip()]
-
-        names = list(dict.fromkeys(names))
-        if not names:
-            continue
-
-        year_val = None
-        if getattr(a, "year", None):
-            try:
-                year_val = float(str(a.year).strip())
-            except (ValueError, TypeError):
-                pass
-
-        cites_val = 0
-        if getattr(a, "times_cited", None):
-            try:
-                cites_val = int(a.times_cited)
-            except (ValueError, TypeError):
-                pass
-
-        for name in names:
-            author_papers[name] += 1
-            author_citations[name] += cites_val
-            if year_val:
-                author_years[name].append(year_val)
-
-        for i in range(len(names)):
-            for j in range(i + 1, len(names)):
-                pair = tuple(sorted([names[i], names[j]]))
-                coauthorship_counts[pair] += 1
-
-    ranked_authors = sorted(
-        author_papers.keys(),
-        key=lambda k: (author_papers[k], author_citations[k]),
-        reverse=True,
-    )[:max_nodes]
-
-    if not ranked_authors:
-        return {"nodes": [], "links": [], "clusters": {}}
-
-    ranked_set = set(ranked_authors)
-    author_id_map = {
-        name: str(idx + 1) for idx, name in enumerate(ranked_authors)
-    }
-
-    adj: dict[str, set[str]] = defaultdict(set)
-    for (a1, a2), w in coauthorship_counts.items():
-        if a1 in ranked_set and a2 in ranked_set:
-            adj[a1].add(a2)
-            adj[a2].add(a1)
-
-    degree = {n: len(adj[n]) for n in ranked_authors}
-
-    # Detección de comunidades con el algoritmo de Louvain (maximiza
-    # modularidad), en vez de asignar un color por componente conexo con un
-    # ciclo de 3. Esto permite que un componente grande y denso (ej. el hub
-    # central) se divida en varios sub-grupos de colaboración reales si la
-    # estructura interna lo justifica, en vez de quedar todo del mismo color.
-    G = nx.Graph()
-    G.add_nodes_from(ranked_authors)
-    for (a1, a2), w in coauthorship_counts.items():
-        if a1 in ranked_set and a2 in ranked_set:
-            G.add_edge(a1, a2, weight=w)
-
-    if G.number_of_edges() > 0:
-        partition = community_louvain.best_partition(
-            G, weight="weight", resolution=resolution, random_state=42
-        )
-    else:
-        # Sin ningún enlace: cada autor es su propia comunidad.
-        partition = {n: i for i, n in enumerate(ranked_authors)}
-
-    # Louvain numera las comunidades en el orden en que las descubre, sin
-    # relación con su tamaño. Las reordenamos de mayor a menor cantidad de
-    # autores para que el id 1 siga siendo el "Primary Collaboration
-    # Cluster" (el grupo más grande), igual que en la versión anterior.
-    community_sizes: dict[int, int] = defaultdict(int)
-    for cid in partition.values():
-        community_sizes[cid] += 1
-    ordered_communities = sorted(
-        community_sizes.keys(), key=lambda c: community_sizes[c], reverse=True
-    )
-    remap = {old_cid: idx + 1 for idx, old_cid in enumerate(ordered_communities)}
-    visited: dict[str, int] = {n: remap[partition[n]] for n in ranked_authors}
-
-    cluster_nodes = defaultdict(list)
-    for name in ranked_authors:
-        cluster_nodes[visited[name]].append(name)
-
-    cluster_ids = sorted(cluster_nodes.keys())
-
-    nodes = []
-    for c_idx, cid in enumerate(cluster_ids):
-        c_names = cluster_nodes[cid]
-        c_names.sort(key=lambda n: degree[n], reverse=True)
-
-        for i, name in enumerate(c_names):
-            node_id = author_id_map[name]
-            papers = author_papers[name]
-            citations = author_citations[name]
-            years = author_years[name]
-            avg_year = sum(years) / len(years) if years else 2020.0
-
-            nodes.append({
-                "id": node_id,
-                "name": name,
-                "papers": papers,
-                "citations": citations,
-                "avgYear": round(avg_year, 1),
-                "group": cid,
-            })
-
-    links = []
-    for (a1, a2), w in coauthorship_counts.items():
-        if a1 in ranked_set and a2 in ranked_set:
-            links.append({
-                "source": author_id_map[a1],
-                "target": author_id_map[a2],
-                "weight": w,
-            })
-
-    # Paleta ampliada: Louvain puede encontrar más de 4 comunidades. Si hay
-    # más comunidades que colores, se repiten cíclicamente.
-    PALETTE = [
-        "#ef4444", "#3b82f6", "#10b981", "#06b6d4",
-        "#f59e0b", "#a855f7", "#ec4899", "#84cc16",
-    ]
-    CLUSTER_NAMES = [
-        "Primary Collaboration Cluster",
-        "Core Scientific Cluster",
-        "Emerging Research Cluster",
-        "Secondary Hub",
-    ]
-    clusters = {
-        cid: {
-            "name": CLUSTER_NAMES[i] if i < len(CLUSTER_NAMES) else f"Cluster {cid}",
-            "color": PALETTE[i % len(PALETTE)],
-        }
-        for i, cid in enumerate(cluster_ids)
-    }
-
-    return {"nodes": nodes, "links": links, "clusters": clusters}
-
-
-@router.get("/network/co-citation")
-def get_cocitation_network(
-    project_code: str | None = None,
-    max_nodes: int = 150,
-    resolution: float = 1.0,
-    db: Session = Depends(get_db),
-):
-    query = db.query(Article)
-    if project_code and project_code.strip():
-        project = (
-            db.query(Project)
-            .filter(Project.name == project_code.strip())
-            .first()
-        )
-        if project:
-            links = (
-                db.query(ProjectArticle.article_id)
-                .filter(ProjectArticle.project_id == project.id)
-                .all()
-            )
-            article_ids = [l[0] for l in links]
-            query = query.filter(Article.id.in_(article_ids))
-        else:
-            return {"nodes": [], "links": [], "clusters": {}}
-
-    articles = query.all()
-    if not articles:
-        return {"nodes": [], "links": [], "clusters": {}}
-
-    ref_citations: dict[int, int] = defaultdict(int)
-    cocitation_counts: dict[tuple[int, int], int] = defaultdict(int)
-    ref_data = {}
-
-    for a in articles:
-        crs = getattr(a, "cited_references", [])
-        if not crs:
-            continue
+        setIsCalculating(true);
         
-        valid_refs = []
-        for cr in crs:
-            if cr.id not in ref_data:
-                auth = cr.author or "Unknown"
-                auth = auth.split(",")[0].strip() if "," in auth else auth.split(" ")[0].strip()
-                yr = str(cr.year) if cr.year else ""
-                label = f"{auth} ({yr})" if yr else auth
-                ref_data[cr.id] = {
-                    "id": str(cr.id),
-                    "name": label,
-                    "author": cr.author,
-                    "year": cr.year,
-                    "source": cr.source,
-                }
-            ref_citations[cr.id] += 1
-            valid_refs.append(cr.id)
-            
-        valid_refs = list(set(valid_refs))
-        for i in range(len(valid_refs)):
-            for j in range(i + 1, len(valid_refs)):
-                pair = tuple(sorted([valid_refs[i], valid_refs[j]]))
-                cocitation_counts[pair] += 1
+        // Relieve the main thread rendering cycle by deferring the heavy math
+        const timer = setTimeout(() => {
+            const staticData = calculateStaticLayout(rawNodes, rawLinks);
+            setFrozenData(staticData);
+            setIsCalculating(false);
+        }, 0);
 
-    ranked_refs = sorted(
-        ref_citations.keys(),
-        key=lambda k: ref_citations[k],
-        reverse=True,
-    )[:max_nodes]
+        return () => clearTimeout(timer);
+    }, [rawNodes, rawLinks]);
 
-    if not ranked_refs:
-        return {"nodes": [], "links": [], "clusters": {}}
+    return { frozenData, isCalculating };
+}
 
-    ranked_set = set(ranked_refs)
-    
-    G = nx.Graph()
-    G.add_nodes_from(ranked_refs)
-    for (r1, r2), w in cocitation_counts.items():
-        if r1 in ranked_set and r2 in ranked_set:
-            G.add_edge(r1, r2, weight=w)
 
-    if G.number_of_edges() > 0:
-        partition = community_louvain.best_partition(
-            G, weight="weight", resolution=resolution, random_state=42
-        )
-    else:
-        partition = {n: i for i, n in enumerate(ranked_refs)}
+// --- frontend/src/hooks/useCoAuthorshipNetwork.js ---
 
-    community_sizes: dict[int, int] = defaultdict(int)
-    for cid in partition.values():
-        community_sizes[cid] += 1
-    ordered_communities = sorted(
-        community_sizes.keys(), key=lambda c: community_sizes[c], reverse=True
-    )
-    remap = {old_cid: idx + 1 for idx, old_cid in enumerate(ordered_communities)}
-    visited = {n: remap[partition[n]] for n in ranked_refs}
+import React, { useState, useMemo, useCallback } from 'react';
 
-    cluster_nodes = defaultdict(list)
-    for n in ranked_refs:
-        cluster_nodes[visited[n]].append(n)
-
-    cluster_ids = sorted(cluster_nodes.keys())
-
-    nodes = []
-    for c_idx, cid in enumerate(cluster_ids):
-        c_refs = cluster_nodes[cid]
-        c_refs.sort(key=lambda n: G.degree(n) if n in G else 0, reverse=True)
-
-        for n in c_refs:
-            data = ref_data[n]
-            nodes.append({
-                "id": str(n),
-                "name": data["name"],
-                "papers": ref_citations[n],
-                "citations": ref_citations[n],
-                "avgYear": float(data["year"]) if data["year"] else 2000.0,
-                "group": cid,
-                "fullSource": data["source"]
-            })
-
-    links = []
-    for (r1, r2), w in cocitation_counts.items():
-        if r1 in ranked_set and r2 in ranked_set:
-            links.append({
-                "source": str(r1),
-                "target": str(r2),
-                "weight": w,
-            })
-
-    PALETTE = [
-        "#ef4444", "#3b82f6", "#10b981", "#06b6d4",
-        "#f59e0b", "#a855f7", "#ec4899", "#84cc16",
-    ]
-    CLUSTER_NAMES = [
-        "Core Foundational",
-        "Methodology & Tools",
-        "Thematic Domain A",
-        "Thematic Domain B",
-    ]
-    clusters = {
-        cid: {
-            "name": CLUSTER_NAMES[i] if i < len(CLUSTER_NAMES) else f"Cluster {cid}",
-            "color": PALETTE[i % len(PALETTE)],
-        }
-        for i, cid in enumerate(cluster_ids)
+const DEFAULT_NODES_3D = [
+    {
+        id: '1',
+        name: 'Vaswani, A.',
+        papers: 14,
+        citations: 12400,
+        avgYear: 2018.5,
+        group: 1,
+        x: -110,
+        y: -20,
+        z: 90
+    },
+    {
+        id: '2',
+        name: 'Shazeer, N.',
+        papers: 12,
+        citations: 9800,
+        avgYear: 2019.2,
+        group: 1,
+        x: -40,
+        y: -70,
+        z: 50
+    },
+    {
+        id: '3',
+        name: 'Parmar, N.',
+        papers: 10,
+        citations: 7500,
+        avgYear: 2019.0,
+        group: 1,
+        x: -130,
+        y: -90,
+        z: -20
+    },
+    {
+        id: '4',
+        name: 'Uszkoreit, J.',
+        papers: 9,
+        citations: 6900,
+        avgYear: 2018.2,
+        group: 1,
+        x: -20,
+        y: 30,
+        z: 80
+    },
+    {
+        id: '5',
+        name: 'Jones, L.',
+        papers: 8,
+        citations: 5400,
+        avgYear: 2017.9,
+        group: 1,
+        x: -70,
+        y: 80,
+        z: 30
+    },
+    {
+        id: '6',
+        name: 'Gomez, A. N.',
+        papers: 7,
+        citations: 4900,
+        avgYear: 2019.8,
+        group: 1,
+        x: -160,
+        y: 40,
+        z: -50
+    },
+    {
+        id: '7',
+        name: 'Kaiser, L.',
+        papers: 11,
+        citations: 8600,
+        avgYear: 2020.1,
+        group: 1,
+        x: -110,
+        y: 110,
+        z: -10
+    },
+    {
+        id: '8',
+        name: 'Polosukhin, I.',
+        papers: 6,
+        citations: 4100,
+        avgYear: 2017.5,
+        group: 1,
+        x: -190,
+        y: -30,
+        z: 20
+    },
+    {
+        id: '9',
+        name: 'Bengio, Y.',
+        papers: 24,
+        citations: 28900,
+        avgYear: 2016.4,
+        group: 2,
+        x: 130,
+        y: -10,
+        z: -60
+    },
+    {
+        id: '10',
+        name: 'LeCun, Y.',
+        papers: 21,
+        citations: 24500,
+        avgYear: 2015.8,
+        group: 2,
+        x: 190,
+        y: -60,
+        z: 60
+    },
+    {
+        id: '11',
+        name: 'Hinton, G.',
+        papers: 19,
+        citations: 26100,
+        avgYear: 2015.2,
+        group: 2,
+        x: 150,
+        y: 90,
+        z: 70
+    },
+    {
+        id: '12',
+        name: 'Goodfellow, I.',
+        papers: 15,
+        citations: 19200,
+        avgYear: 2017.1,
+        group: 2,
+        x: 80,
+        y: 50,
+        z: -70
     }
+];
 
-    return {"nodes": nodes, "links": links, "clusters": clusters}
+const DEFAULT_LINKS = [
+    { source: '1', target: '2', weight: 6 },
+    { source: '1', target: '3', weight: 5 },
+    { source: '1', target: '4', weight: 4 },
+    { source: '1', target: '5', weight: 4 },
+    { source: '1', target: '6', weight: 3 },
+    { source: '1', target: '7', weight: 5 },
+    { source: '1', target: '8', weight: 3 },
+    { source: '2', target: '3', weight: 4 },
+    { source: '2', target: '4', weight: 5 },
+    { source: '3', target: '7', weight: 4 },
+    { source: '9', target: '10', weight: 6 },
+    { source: '9', target: '11', weight: 4 },
+    { source: '9', target: '12', weight: 7 },
+    { source: '10', target: '11', weight: 5 },
+    { source: '1', target: '9', weight: 2 }
+];
+
+const CLUSTER_METADATA = {
+    1: { name: 'Attention & Transformers', color: '#ef4444' },
+    2: { name: 'Deep Learning Foundations', color: '#3b82f6' },
+    3: { name: 'Emerging Research', color: '#10b981' },
+    4: { name: 'Secondary Hub', color: '#06b6d4' }
+};
 
 
-@router.post("/download-zip")
-async def download_zip(request: ZipDownloadRequest):
-    zip_io = create_zip_from_pdfs(request.batch_name, request.dois)
-    return StreamingResponse(
-        zip_io,
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": (
-                f"attachment; filename={request.batch_name}.zip"
-            )
-        },
-    )
 
+import { filterNetworkData } from '../views/analysis/network/networkData';
+
+export default function useCoAuthorshipNetwork() {
+    const [louvainGamma, setLouvainGamma] = useState(1.0);
+    const [debouncedGamma, setDebouncedGamma] = useState(1.0);
+    const [dynamicNodes, setDynamicNodes] = useState(null);
+    const [dynamicLinks, setDynamicLinks] = useState(null);
+    const [dynamicClusters, setDynamicClusters] = useState(null);
+    const [minWeight, setMinWeight] = useState(1);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedNodeId, setSelectedNodeId] = useState(null);
+    const [hoveredNodeId, setHoveredNodeId] = useState(null);
+    const [viewMode, setViewMode] = useState('network');
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Debounce the Gamma slider to prevent backend DDoS
+    React.useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedGamma(louvainGamma);
+        }, 1000);
+        return () => clearTimeout(handler);
+    }, [louvainGamma]);
+
+    React.useEffect(() => {
+        let isMounted = true;
+        setIsLoading(true);
+        fetch(`/api/bibliography/network/co-authorship?resolution=${debouncedGamma}`)
+            .then(res => (res.ok ? res.json() : null))
+            .then(data => {
+                if (isMounted && data && data.nodes && data.nodes.length > 0) {
+                    setDynamicNodes(data.nodes);
+                    setDynamicLinks(data.links);
+                    if (data.clusters) {
+                        setDynamicClusters(data.clusters);
+                    }
+                }
+            })
+            .catch(() => {
+                // Fallback to static distribution on failure or testing
+            })
+            .finally(() => {
+                if (isMounted) setIsLoading(false);
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, [debouncedGamma]);
+
+
+
+    const sourceNodes = dynamicNodes || DEFAULT_NODES_3D;
+    const sourceLinks = dynamicLinks || DEFAULT_LINKS;
+    const sourceClusters = dynamicClusters || CLUSTER_METADATA;
+
+    const filteredLinks = useMemo(() => {
+        return sourceLinks.filter(link => link.weight >= minWeight);
+    }, [sourceLinks, minWeight]);
+
+    const { nodes: finalNodes, links: finalLinks } = useMemo(() => {
+        return filterNetworkData(sourceNodes, sourceLinks, minWeight);
+    }, [sourceNodes, sourceLinks, minWeight]);
+
+    const selectedNode = useMemo(() => {
+        return sourceNodes.find(n => n.id === selectedNodeId) || null;
+    }, [selectedNodeId, sourceNodes]);
+
+    return {
+        nodes: finalNodes,
+        links: finalLinks,
+        minWeight,
+        setMinWeight,
+        searchQuery,
+        setSearchQuery,
+        selectedNodeId,
+        setSelectedNodeId,
+        hoveredNodeId,
+        setHoveredNodeId,
+        selectedNode,
+        viewMode,
+        setViewMode,
+        clusters: sourceClusters,
+        louvainGamma,
+        setLouvainGamma,
+        isLoading
+    };
+}
+
+
+// --- frontend/src/hooks/useCoCitationNetwork.js ---
+
+import React, { useState, useMemo, useCallback } from 'react';
+import { filterNetworkData } from '../views/analysis/network/networkData';
+
+const DEFAULT_NODES_3D = [];
+const DEFAULT_LINKS = [];
+const CLUSTER_METADATA = {};
+
+export default function useCoCitationNetwork() {
+    const [louvainGamma, setLouvainGamma] = useState(1.0);
+    const [debouncedGamma, setDebouncedGamma] = useState(1.0);
+    const [dynamicNodes, setDynamicNodes] = useState(null);
+    const [dynamicLinks, setDynamicLinks] = useState(null);
+    const [dynamicClusters, setDynamicClusters] = useState(null);
+    const [minWeight, setMinWeight] = useState(1);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedNodeId, setSelectedNodeId] = useState(null);
+    const [hoveredNodeId, setHoveredNodeId] = useState(null);
+    const [viewMode, setViewMode] = useState('network');
+    const [isLoading, setIsLoading] = useState(false);
+
+    React.useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedGamma(louvainGamma);
+        }, 1000);
+        return () => clearTimeout(handler);
+    }, [louvainGamma]);
+
+    React.useEffect(() => {
+        let isMounted = true;
+        setIsLoading(true);
+        fetch(`/api/bibliography/network/co-citation?resolution=${debouncedGamma}`)
+            .then(res => (res.ok ? res.json() : null))
+            .then(data => {
+                if (isMounted && data && data.nodes && data.nodes.length > 0) {
+                    setDynamicNodes(data.nodes);
+                    setDynamicLinks(data.links);
+                    if (data.clusters) {
+                        setDynamicClusters(data.clusters);
+                    }
+                }
+            })
+            .catch(() => {
+                // Fallback handled
+            })
+            .finally(() => {
+                if (isMounted) setIsLoading(false);
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, [debouncedGamma]);
+
+    const sourceNodes = dynamicNodes || DEFAULT_NODES_3D;
+    const sourceLinks = dynamicLinks || DEFAULT_LINKS;
+    const sourceClusters = dynamicClusters || CLUSTER_METADATA;
+
+    const filteredLinks = useMemo(() => {
+        return sourceLinks.filter(link => link.weight >= minWeight);
+    }, [sourceLinks, minWeight]);
+
+    const { nodes: finalNodes, links: finalLinks } = useMemo(() => {
+        return filterNetworkData(sourceNodes, sourceLinks, minWeight);
+    }, [sourceNodes, sourceLinks, minWeight]);
+
+    const selectedNode = useMemo(() => {
+        return sourceNodes.find(n => n.id === selectedNodeId) || null;
+    }, [selectedNodeId, sourceNodes]);
+
+    return {
+        nodes: finalNodes,
+        links: finalLinks,
+        minWeight,
+        setMinWeight,
+        searchQuery,
+        setSearchQuery,
+        selectedNodeId,
+        setSelectedNodeId,
+        hoveredNodeId,
+        setHoveredNodeId,
+        selectedNode,
+        viewMode,
+        setViewMode,
+        clusters: sourceClusters,
+        louvainGamma,
+        setLouvainGamma,
+        isLoading
+    };
+}
