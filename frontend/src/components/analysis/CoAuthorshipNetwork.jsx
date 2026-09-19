@@ -150,8 +150,9 @@ export default function CoAuthorshipNetwork() {
         viewMode,
         setViewMode,
         clusters,
-        nodeScale,
-        setNodeScale
+        louvainGamma,
+        setLouvainGamma,
+        isLoading
     } = useCoAuthorshipNetwork();
 
     // Offload heavy physics calculation to the state fractality hook
@@ -224,18 +225,19 @@ export default function CoAuthorshipNetwork() {
             </div>
 
             <div style={styles.controlGroup}>
-                <label htmlFor="node-scale-slider" style={styles.label}>
-                    Size:
+                <label htmlFor="gamma-slider" style={styles.label}>
+                    Louvain &gamma; ({louvainGamma.toFixed(1)}):
                 </label>
                 <input
-                    id="node-scale-slider"
+                    id="gamma-slider"
                     type="range"
-                    min="0.5"
-                    max="2.5"
+                    min="0.1"
+                    max="3.0"
                     step="0.1"
-                    value={nodeScale}
-                    onChange={e => setNodeScale(Number(e.target.value))}
-                    style={{ cursor: 'pointer', width: '60px' }}
+                    value={louvainGamma}
+                    onChange={e => setLouvainGamma(Number(e.target.value))}
+                    style={{ cursor: 'pointer', width: '70px', accentColor: '#3b82f6' }}
+                    title="Bajo: Macro-Comunidades (Instituciones). Alto: Micro-Comunidades (Laboratorios)."
                 />
             </div>
 
@@ -319,9 +321,9 @@ export default function CoAuthorshipNetwork() {
                     )}
                 </div>
 
-                {isCalculating ? (
+                {(isCalculating || isLoading) ? (
                     <div style={{ padding: '20px', textAlign: 'center', color: '#8b949e' }}>
-                        Calculating Network Physics...
+                        {isLoading ? "Recalculating Community Modularity..." : "Calculating Network Physics..."}
                     </div>
                 ) : (
                     <NetworkGraphTemplate

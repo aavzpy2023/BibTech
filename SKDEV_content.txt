@@ -1,144 +1,1315 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-19 14:56:37
+Date: 2026-09-19 15:04:32
 AST Mode: False
 Line Numbers: True
-Modules: networkStyles.js, drawNodes.ts
-Processed Files: 2
+Modules: AnalysisSidebar.jsx, CoAuthorshipNetwork.jsx, useCoAuthorshipNetwork.js, router.py
+Processed Files: 4
 ===========================
 
 
 
-// --- frontend/src/views/analysis/network/networkStyles.js ---
+// --- frontend/src/components/analysis/AnalysisSidebar.jsx ---
 
-[L001, S0] export const CLUSTER_METADATA = {
-[L002, S4]     1: { name: 'Primary Collaboration Cluster', color: '#ff1a2e' },
-[L003, S4]     2: { name: 'Core Scientific Cluster', color: '#1a5cff' },
-[L004, S4]     3: { name: 'Emerging Research Cluster', color: '#00c853' },
-[L005, S4]     4: { name: 'Secondary Hub', color: '#00b8d4' }
-[L006, S0] };
-[L007, S0] 
-[L008, S0] /**
-[L009, S1]  * Returns the hex color for a given node cluster group.
-[L010, S1]  */
-[L011, S0] export const getNodeColor = (group) => {
-[L012, S4]     const cluster = CLUSTER_METADATA[group];
-[L013, S4]     return cluster ? cluster.color : '#9ca3af';
-[L014, S0] };
-[L015, S0] 
-[L016, S0] // Rango de radios general (en px de grafo, antes de aplicar `scale`).
-[L017, S0] // Reducido respecto a la versión anterior (antes tope 30) para que la red
-[L018, S0] // se vea menos "pesada" en general.
-[L019, S0] export const RADIUS_RANGE = { min: 3, max: 13 };
-[L020, S0] 
-[L021, S0] const getMetric = (node) =>
-[L022, S0] node.degree !== undefined ? node.degree : (node.citations || node.papers || 1);
-[L023, S0] 
-[L024, S0] /**
-[L025, S1]  * Normaliza el radio de cada nodo en dos pasos:
-[L026, S1]  *
-[L027, S1]  * 1. Variación LOCAL: dentro de su propio grupo/color, el nodo más conectado
-[L028, S1]  *    se ve más grande que el menos conectado de ESE MISMO grupo.
-[L029, S1]  * 2. Techo GLOBAL: el tamaño máximo que puede alcanzar un grupo depende de
-[L030, S1]  *    qué tan conectado está su nodo más importante frente al nodo más
-[L031, S1]  *    conectado de TODA la red. Así, un clúster aislado y pequeño (ej. 4
-[L032, S1]  *    autores en Vietnam) nunca compite en tamaño con los hubs del clúster
-[L033, S1]  *    principal — pero sigue teniendo variación interna entre sus propios
-[L034, S1]  *    nodos.
-[L035, S1]  *
-[L036, S1]  * Sin el paso 2, cada color llenaría el mismo rango de tamaños sin importar
-[L037, S1]  * su importancia real, y un clúster de 3 personas se vería tan "grande" como
-[L038, S1]  * el clúster de colaboración primario — perdiendo esa jerarquía visual.
-[L039, S1]  *
-[L040, S1]  * Debe llamarse una vez, después de calcular `node.degree`, y antes de usar
-[L041, S1]  * `calculateRadius` para el layout (separación de islas, colisiones, etc.).
-[L042, S1]  * Guarda el resultado en `node.radius`.
-[L043, S1]  */
-[L044, S0] export const assignNodeRadii = (nodes) => {
-[L045, S4]     const globalMax = Math.max(...nodes.map(getMetric), 1);
-[L046, S0] 
-[L047, S4]     const byGroup = new Map();
-[L048, S4]     nodes.forEach(n => {
-[L049, S8]         const list = byGroup.get(n.group) || [];
-[L050, S8]         list.push(n);
-[L051, S8]         byGroup.set(n.group, list);
-[L052, S4]     });
-[L053, S0] 
-[L054, S4]     byGroup.forEach(list => {
-[L055, S8]         const metrics = list.map(getMetric);
-[L056, S8]         const groupMin = Math.min(...metrics);
-[L057, S8]         const groupMax = Math.max(...metrics);
-[L058, S0] 
-[L059, S8]         // Techo del grupo: proporcional a qué tan conectado está su nodo más
-[L060, S8]         // importante frente al máximo global (nunca por debajo de RADIUS_RANGE.min).
-[L061, S8]         const groupCeiling = RADIUS_RANGE.min +
-[L062, S8]         (RADIUS_RANGE.max - RADIUS_RANGE.min) * (groupMax / globalMax);
-[L063, S0] 
-[L064, S8]         list.forEach(n => {
-[L065, S12]             const metric = getMetric(n);
-[L066, S12]             // Si todos los nodos del grupo tienen el mismo grado (o el grupo
-[L067, S12]             // tiene un solo nodo), no hay variación interna que mostrar: van
-[L068, S12]             // directo al techo de su grupo.
-[L069, S12]             const t = groupMax > groupMin ? (metric - groupMin) / (groupMax - groupMin) : 1;
-[L070, S12]             n.radius = RADIUS_RANGE.min + t * (groupCeiling - RADIUS_RANGE.min);
-[L071, S8]         });
-[L072, S4]     });
-[L073, S0] };
-[L074, S0] 
-[L075, S0] /**
-[L076, S1]  * Calcula el radio final de un nodo. Usa `node.radius` (calculado por
-[L077, S1]  * `assignNodeRadii`) si ya está disponible; si no, cae a una fórmula
-[L078, S1]  * genérica por si algún nodo llega sin pasar por ese paso.
-[L079, S1]  */
-[L080, S0] export const calculateRadius = (node, scale = 1) => {
-[L081, S4]     if (!node) return RADIUS_RANGE.min * scale;
-[L082, S4]     if (node.radius !== undefined) return node.radius * scale;
-[L083, S4]     const value = Math.max(0, getMetric(node));
-[L084, S4]     return Math.min(RADIUS_RANGE.max, RADIUS_RANGE.min + Math.sqrt(value) * 1.4) * scale;
-[L085, S0] };
-
-
-// --- frontend/src/graph/render/drawNodes.ts ---
-
-[L001, S0] import type { NetworkNode } from "../types";
+[L001, S0] import React from 'react';
 [L002, S0] 
-[L003, S0] const CLUSTER_PALETTE = {
-[L004, S4]     red: { start: "#ff6b6b", end: "#c92a2a" },
-[L005, S4]     blue: { start: "#4dabf7", end: "#1864ab" },
-[L006, S4]     green: { start: "#69db7c", end: "#2b8a3e" },
-[L007, S0] };
-[L008, S0] 
-[L009, S0] /**
-[L010, S1]  * Pure function to render spherical 3D nodes.
-[L011, S1]  * Iterates context drawing for individual radial gradients.
-[L012, S1]  */
-[L013, S0] export const drawNodes = (
-[L014, S4]     ctx: CanvasRenderingContext2D,
-[L015, S4]     nodes: NetworkNode[]
-[L016, S0] ) => {
-[L017, S4]     nodes.forEach((node) => {
-[L018, S8]         if (node.x == null || node.y == null) return;
-[L019, S0] 
-[L020, S8]         ctx.beginPath();
-[L021, S8]         ctx.arc(node.x, node.y, node.radius, 0, 2 * Math.PI);
-[L022, S0] 
-[L023, S8]         // Offset gradient origin to simulate top-left directional lighting
-[L024, S8]         const offset = node.radius / 3;
-[L025, S8]         const grad = ctx.createRadialGradient(
-[L026, S12]             node.x - offset, node.y - offset, 0,
-[L027, S12]             node.x, node.y, node.radius
-[L028, S8]         );
-[L029, S0] 
-[L030, S8]         const colors = CLUSTER_PALETTE[node.cluster as keyof typeof CLUSTER_PALETTE] || { start: "#9ca3af", end: "#4b5563" };
-[L031, S8]         grad.addColorStop(0, "#ffffff");
-[L032, S8]         grad.addColorStop(0.3, colors.start);
-[L033, S8]         grad.addColorStop(1, "#1f2937");
-[L034, S0] 
-[L035, S8]         ctx.fillStyle = grad;
-[L036, S8]         ctx.fill();
-[L037, S8]         
-[L038, S8]         ctx.lineWidth = 0.5;
-[L039, S8]         ctx.strokeStyle = '#111827';
-[L040, S8]         ctx.stroke();
-[L041, S4]     });
-[L042, S0] };
+[L003, S0] export default function AnalysisSidebar({
+[L004, S4]     config,
+[L005, S4]     activeCategory,
+[L006, S4]     activeTab,
+[L007, S4]     onSelectCategory,
+[L008, S4]     onSelectTab
+[L009, S0] }) {
+[L010, S4]     const styles = {
+[L011, S8]         container: {
+[L012, S12]             width: '260px',
+[L013, S12]             borderRight: '1px solid #30363d',
+[L014, S12]             backgroundColor: '#0d1117',
+[L015, S12]             height: '100%',
+[L016, S12]             overflowY: 'auto',
+[L017, S12]             display: 'flex',
+[L018, S12]             flexDirection: 'column',
+[L019, S12]             padding: '16px 0'
+[L020, S8]         },
+[L021, S8]         categoryButton: (isActive) => ({
+[L022, S12]             width: '100%',
+[L023, S12]             textAlign: 'left',
+[L024, S12]             padding: '10px 16px',
+[L025, S12]             backgroundColor: isActive ? '#1f2428' : 'transparent',
+[L026, S12]             color: isActive ? '#f0f6fc' : '#8b949e',
+[L027, S12]             border: 'none',
+[L028, S12]             fontWeight: isActive ? '600' : 'normal',
+[L029, S12]             cursor: 'pointer',
+[L030, S12]             fontSize: '14px',
+[L031, S12]             outline: 'none',
+[L032, S12]             transition: 'background-color 0.2s'
+[L033, S8]         }),
+[L034, S8]         tabList: {
+[L035, S12]             listStyle: 'none',
+[L036, S12]             padding: '0',
+[L037, S12]             margin: '4px 0 16px 0'
+[L038, S8]         },
+[L039, S8]         tabButton: (isActive) => ({
+[L040, S12]             width: '100%',
+[L041, S12]             textAlign: 'left',
+[L042, S12]             padding: '8px 16px 8px 32px',
+[L043, S12]             backgroundColor: isActive ? '#161b22' : 'transparent',
+[L044, S12]             color: isActive ? '#58a6ff' : '#8b949e',
+[L045, S12]             border: 'none',
+[L046, S12]             borderLeft: isActive ? '3px solid #58a6ff' : '3px solid transparent',
+[L047, S12]             cursor: 'pointer',
+[L048, S12]             fontSize: '13px',
+[L049, S12]             outline: 'none',
+[L050, S12]             transition: 'all 0.2s'
+[L051, S8]         })
+[L052, S4]     };
+[L053, S0] 
+[L054, S4]     return (
+[L055, S8]         <div style={styles.container} data-testid="analysis-sidebar">
+[L056, S12]             {config.map(category => (
+[L057, S16]                 <div key={category.id}>
+[L058, S20]                     <button
+[L059, S24]                         style={styles.categoryButton(activeCategory === category.id)}
+[L060, S24]                         onClick={() => onSelectCategory(category.id)}
+[L061, S24]                         data-testid={`cat-${category.id}`}
+[L062, S20]                     >
+[L063, S24]                         {category.label}
+[L064, S20]                     </button>
+[L065, S20]                     
+[L066, S20]                     {activeCategory === category.id && (
+[L067, S24]                         <ul style={styles.tabList}>
+[L068, S28]                             {category.tabs.map(tab => (
+[L069, S32]                                 <li key={tab.id}>
+[L070, S36]                                     <button
+[L071, S40]                                         style={styles.tabButton(activeTab === tab.id)}
+[L072, S40]                                         onClick={() => onSelectTab(tab.id)}
+[L073, S40]                                         data-testid={`tab-${tab.id}`}
+[L074, S36]                                     >
+[L075, S40]                                         {tab.label}
+[L076, S36]                                     </button>
+[L077, S32]                                 </li>
+[L078, S28]                             ))}
+[L079, S24]                         </ul>
+[L080, S20]                     )}
+[L081, S16]                 </div>
+[L082, S12]             ))}
+[L083, S8]         </div>
+[L084, S4]     );
+[L085, S0] }
+
+
+// --- frontend/src/components/analysis/CoAuthorshipNetwork.jsx ---
+
+[L001, S0] import React, { useRef, useCallback, useMemo } from 'react';
+[L002, S0] import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
+[L003, S0] import useNetworkLayout from '../../hooks/useNetworkLayout';
+[L004, S0] import useElementSize from '../../hooks/useElementSize';
+[L005, S0] import NetworkGraphTemplate from './NetworkGraphTemplate';
+[L006, S0] import AnalysisPageTemplate from './AnalysisPageTemplate';
+[L007, S0] import { exportCanvasToImage } from '../../views/analysis/network/exportNetwork';
+[L008, S0] import { setRenderNodes } from '../../views/analysis/network/networkRender';
+[L009, S0] import { fitGraphView } from '../../views/analysis/network/networkFit';
+[L010, S0] import logoImg from '../../assets/logo.png';
+[L011, S0] 
+[L012, S0] const styles = {
+[L013, S4]     controlGroup: {
+[L014, S8]         display: 'flex',
+[L015, S8]         alignItems: 'center',
+[L016, S8]         gap: '8px'
+[L017, S4]     },
+[L018, S4]     label: {
+[L019, S8]         fontSize: '12px',
+[L020, S8]         color: '#c9d1d9',
+[L021, S8]         fontWeight: '600',
+[L022, S8]         textTransform: 'uppercase',
+[L023, S8]         letterSpacing: '0.5px'
+[L024, S4]     },
+[L025, S4]     input: {
+[L026, S8]         backgroundColor: '#0d1117',
+[L027, S8]         border: '1px solid #30363d',
+[L028, S8]         borderRadius: '6px',
+[L029, S8]         padding: '5px 10px',
+[L030, S8]         color: '#f0f6fc',
+[L031, S8]         fontSize: '12px',
+[L032, S8]         outline: 'none'
+[L033, S4]     },
+[L034, S4]     modeSwitchGroup: {
+[L035, S8]         display: 'inline-flex',
+[L036, S8]         borderRadius: '6px',
+[L037, S8]         border: '1px solid #30363d',
+[L038, S8]         overflow: 'hidden'
+[L039, S4]     },
+[L040, S4]     modeBtn: (isActive) => ({
+[L041, S8]         backgroundColor: isActive ? '#1f6feb' : '#0d1117',
+[L042, S8]         color: isActive ? '#ffffff' : '#8b949e',
+[L043, S8]         border: 'none',
+[L044, S8]         padding: '5px 12px',
+[L045, S8]         fontSize: '12px',
+[L046, S8]         fontWeight: '600',
+[L047, S8]         cursor: 'pointer',
+[L048, S8]         transition: 'all 0.2s'
+[L049, S4]     }),
+[L050, S4]     exportBtn: {
+[L051, S8]         backgroundColor: '#238636',
+[L052, S8]         color: '#ffffff',
+[L053, S8]         border: '1px solid #2ea043',
+[L054, S8]         borderRadius: '6px',
+[L055, S8]         padding: '5px 12px',
+[L056, S8]         fontSize: '12px',
+[L057, S8]         fontWeight: '600',
+[L058, S8]         cursor: 'pointer',
+[L059, S8]         display: 'flex',
+[L060, S8]         alignItems: 'center',
+[L061, S8]         gap: '6px'
+[L062, S4]     },
+[L063, S4]     fitBtn: {
+[L064, S8]         backgroundColor: '#21262d',
+[L065, S8]         color: '#f0f6fc',
+[L066, S8]         border: '1px solid #30363d',
+[L067, S8]         borderRadius: '6px',
+[L068, S8]         padding: '5px 10px',
+[L069, S8]         fontSize: '12px',
+[L070, S8]         cursor: 'pointer'
+[L071, S4]     },
+[L072, S4]     canvasWrapper: {
+[L073, S8]         position: 'relative',
+[L074, S8]         width: 'min(100%, calc(75vh * 1.6))',
+[L075, S8]         aspectRatio: '16 / 10',
+[L076, S8]         margin: '0 auto',
+[L077, S8]         backgroundColor: '#ffffff',
+[L078, S8]         borderRadius: '6px',
+[L079, S8]         overflow: 'hidden'
+[L080, S4]     },
+[L081, S4]     watermark: {
+[L082, S8]         position: 'absolute',
+[L083, S8]         bottom: '12px',
+[L084, S8]         right: '12px',
+[L085, S8]         zIndex: 5,
+[L086, S8]         pointerEvents: 'none',
+[L087, S8]         display: 'flex',
+[L088, S8]         alignItems: 'center',
+[L089, S8]         padding: '6px',
+[L090, S8]         borderRadius: '8px',
+[L091, S8]         backgroundColor: 'rgba(255, 255, 255, 0.85)',
+[L092, S8]         border: '1px solid rgba(0, 0, 0, 0.1)',
+[L093, S8]         boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+[L094, S4]     },
+[L095, S4]     logoImage: {
+[L096, S8]         width: '32px',
+[L097, S8]         height: '32px',
+[L098, S8]         objectFit: 'contain'
+[L099, S4]     },
+[L100, S4]     legendPanel: {
+[L101, S8]         position: 'absolute',
+[L102, S8]         bottom: '12px',
+[L103, S8]         left: '12px',
+[L104, S8]         zIndex: 5,
+[L105, S8]         backgroundColor: 'rgba(255, 255, 255, 0.92)',
+[L106, S8]         border: '1px solid rgba(0, 0, 0, 0.12)',
+[L107, S8]         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+[L108, S8]         borderRadius: '6px',
+[L109, S8]         padding: '8px 12px',
+[L110, S8]         display: 'flex',
+[L111, S8]         flexDirection: 'column',
+[L112, S8]         gap: '6px',
+[L113, S8]         pointerEvents: 'none'
+[L114, S4]     },
+[L115, S4]     legendItem: {
+[L116, S8]         display: 'flex',
+[L117, S8]         alignItems: 'center',
+[L118, S8]         gap: '8px',
+[L119, S8]         fontSize: '11px',
+[L120, S8]         color: '#1e293b',
+[L121, S8]         fontWeight: '500'
+[L122, S4]     },
+[L123, S4]     legendDot: (color) => ({
+[L124, S8]         width: '10px',
+[L125, S8]         height: '10px',
+[L126, S8]         borderRadius: '50%',
+[L127, S8]         backgroundColor: color
+[L128, S4]     })
+[L129, S0] };
+[L130, S0] 
+[L131, S0] const FIT_PADDING = 24; // px de margen; el ajuste ya cuenta las etiquetas
+[L132, S0] 
+[L133, S0] export default function CoAuthorshipNetwork() {
+[L134, S4]     const fgRef = useRef();
+[L135, S4]     const wrapperRef = useRef();
+[L136, S4]     const size = useElementSize(wrapperRef);
+[L137, S0] 
+[L138, S4]     const {
+[L139, S8]         nodes,
+[L140, S8]         links,
+[L141, S8]         minWeight,
+[L142, S8]         setMinWeight,
+[L143, S8]         searchQuery,
+[L144, S8]         setSearchQuery,
+[L145, S8]         selectedNodeId,
+[L146, S8]         setSelectedNodeId,
+[L147, S8]         hoveredNodeId,
+[L148, S8]         setHoveredNodeId,
+[L149, S8]         selectedNode,
+[L150, S8]         viewMode,
+[L151, S8]         setViewMode,
+[L152, S8]         clusters,
+[L153, S8]         nodeScale,
+[L154, S8]         setNodeScale
+[L155, S4]     } = useCoAuthorshipNetwork();
+[L156, S0] 
+[L157, S4]     // Offload heavy physics calculation to the state fractality hook
+[L158, S4]     const { frozenData, isCalculating } = useNetworkLayout(nodes, links);
+[L159, S0] 
+[L160, S4]     React.useEffect(() => {
+[L161, S8]         if (!isCalculating && frozenData?.nodes?.length > 0) {
+[L162, S12]             setRenderNodes(frozenData.nodes);
+[L163, S8]         }
+[L164, S4]     }, [isCalculating, frozenData]);
+[L165, S0] 
+[L166, S4]     // Ajusta al cargar y cada vez que cambia el tamaño REAL del contenedor.
+[L167, S4]     React.useEffect(() => {
+[L168, S8]         if (isCalculating || !frozenData?.nodes?.length || !size.width || !size.height) return undefined;
+[L169, S8]         const t = setTimeout(() => {
+[L170, S12]             fitGraphView(fgRef.current, frozenData.nodes, size.width, size.height, FIT_PADDING);
+[L171, S8]         }, 100);
+[L172, S8]         return () => clearTimeout(t);
+[L173, S4]     }, [isCalculating, frozenData, size.width, size.height]);
+[L174, S0] 
+[L175, S4]     const toolbar = (
+[L176, S8]         <>
+[L177, S12]             <div style={styles.controlGroup}>
+[L178, S16]                 <span style={styles.label}>Mode:</span>
+[L179, S16]                 <div style={styles.modeSwitchGroup}>
+[L180, S20]                     <button
+[L181, S24]                         type="button"
+[L182, S24]                         style={styles.modeBtn(viewMode === 'network')}
+[L183, S24]                         onClick={() => setViewMode('network')}
+[L184, S20]                     >
+[L185, S24]                         Network
+[L186, S20]                     </button>
+[L187, S20]                     <button
+[L188, S24]                         type="button"
+[L189, S24]                         style={styles.modeBtn(viewMode === 'overlay')}
+[L190, S24]                         onClick={() => setViewMode('overlay')}
+[L191, S20]                     >
+[L192, S24]                         Overlay
+[L193, S20]                     </button>
+[L194, S16]                 </div>
+[L195, S12]             </div>
+[L196, S0] 
+[L197, S12]             <div style={styles.controlGroup}>
+[L198, S16]                 <label htmlFor="search-author" style={styles.label}>
+[L199, S20]                     Filter:
+[L200, S16]                 </label>
+[L201, S16]                 <input
+[L202, S20]                     id="search-author"
+[L203, S20]                     type="text"
+[L204, S20]                     placeholder="Search author..."
+[L205, S20]                     value={searchQuery}
+[L206, S20]                     onChange={e => setSearchQuery(e.target.value)}
+[L207, S20]                     style={styles.input}
+[L208, S16]                 />
+[L209, S12]             </div>
+[L210, S0] 
+[L211, S12]             <div style={styles.controlGroup}>
+[L212, S16]                 <label htmlFor="min-weight-slider" style={styles.label}>
+[L213, S20]                     Min Collab ({minWeight}):
+[L214, S16]                 </label>
+[L215, S16]                 <input
+[L216, S20]                     id="min-weight-slider"
+[L217, S20]                     type="range"
+[L218, S20]                     min="1"
+[L219, S20]                     max="7"
+[L220, S20]                     value={minWeight}
+[L221, S20]                     onChange={e => setMinWeight(Number(e.target.value))}
+[L222, S20]                     style={{ cursor: 'pointer', width: '60px' }}
+[L223, S16]                 />
+[L224, S12]             </div>
+[L225, S0] 
+[L226, S12]             <div style={styles.controlGroup}>
+[L227, S16]                 <label htmlFor="node-scale-slider" style={styles.label}>
+[L228, S20]                     Size:
+[L229, S16]                 </label>
+[L230, S16]                 <input
+[L231, S20]                     id="node-scale-slider"
+[L232, S20]                     type="range"
+[L233, S20]                     min="0.5"
+[L234, S20]                     max="2.5"
+[L235, S20]                     step="0.1"
+[L236, S20]                     value={nodeScale}
+[L237, S20]                     onChange={e => setNodeScale(Number(e.target.value))}
+[L238, S20]                     style={{ cursor: 'pointer', width: '60px' }}
+[L239, S16]                 />
+[L240, S12]             </div>
+[L241, S0] 
+[L242, S12]             <div style={styles.controlGroup}>
+[L243, S16]                 <button
+[L244, S20]                     type="button"
+[L245, S20]                     style={styles.fitBtn}
+[L246, S20]                     onClick={() => fitGraphView(fgRef.current, frozenData.nodes, size.width, size.height, FIT_PADDING)}
+[L247, S16]                 >
+[L248, S20]                     Center
+[L249, S16]                 </button>
+[L250, S16]                 <button
+[L251, S20]                     type="button"
+[L252, S20]                     style={styles.exportBtn}
+[L253, S20]                     onClick={() => exportCanvasToImage(fgRef, 'co-authorship-novascope-hd.png', {
+[L254, S24]                         nodes: frozenData.nodes,
+[L255, S24]                         links: frozenData.links,
+[L256, S24]                         logoSrc: logoImg
+[L257, S20]                     })}
+[L258, S20]                     data-testid="export-hd-btn"
+[L259, S16]                 >
+[L260, S20]                     Download HD
+[L261, S16]                 </button>
+[L262, S12]             </div>
+[L263, S8]         </>
+[L264, S4]     );
+[L265, S0] 
+[L266, S4]     const footer = selectedNode ? (
+[L267, S8]         <div>
+[L268, S12]             <strong>Author:</strong> {selectedNode.name} |{' '}
+[L269, S12]             <strong>Citations:</strong> {selectedNode.citations?.toLocaleString() || 0} |{' '}
+[L270, S12]             <strong>Publications:</strong> {selectedNode.papers} |{' '}
+[L271, S12]             <strong>Cluster:</strong> {clusters[selectedNode.group]?.name || 'Collaboration Cluster'}
+[L272, S8]         </div>
+[L273, S4]     ) : null;
+[L274, S0] 
+[L275, S4]     return (
+[L276, S8]         <AnalysisPageTemplate
+[L277, S12]             title="Co-authorship Network"
+[L278, S12]             subtitle="Novascope D3 force simulation: Radial cluster dynamics and convex co-authorship relationships."
+[L279, S12]             toolbar={toolbar}
+[L280, S12]             footer={footer}
+[L281, S12]             dataTestId="coauthorship-network-view"
+[L282, S8]         >
+[L283, S12]             <div ref={wrapperRef} style={styles.canvasWrapper} data-testid="coauthorship-force-graph-wrapper">
+[L284, S16]                 <div style={styles.watermark}>
+[L285, S20]                     <img
+[L286, S24]                         src={logoImg}
+[L287, S24]                         alt="Logo Watermark"
+[L288, S24]                         style={styles.logoImage}
+[L289, S24]                         data-testid="corner-watermark-logo"
+[L290, S20]                     />
+[L291, S16]                 </div>
+[L292, S0] 
+[L293, S16]                 <div style={styles.legendPanel} data-testid="vosviewer-legend">
+[L294, S20]                     <span style={{ ...styles.label, fontSize: '10px', color: '#64748b' }}>
+[L295, S24]                         {viewMode === 'network' ? 'CLUSTERS' : 'AVG YEAR'}
+[L296, S20]                     </span>
+[L297, S20]                     {viewMode === 'network' ? (
+[L298, S24]                         Object.entries(clusters).map(([gid, c]) => (
+[L299, S28]                             <div key={gid} style={styles.legendItem}>
+[L300, S32]                                 <div style={styles.legendDot(c.color)} />
+[L301, S32]                                 <span>{c.name}</span>
+[L302, S28]                             </div>
+[L303, S24]                         ))
+[L304, S20]                     ) : (
+[L305, S24]                         <>
+[L306, S28]                             <div style={styles.legendItem}>
+[L307, S32]                                 <div style={styles.legendDot('#3b82f6')} />
+[L308, S32]                                 <span>&le; 2016</span>
+[L309, S28]                             </div>
+[L310, S28]                             <div style={styles.legendItem}>
+[L311, S32]                                 <div style={styles.legendDot('#10b981')} />
+[L312, S32]                                 <span>2017 - 2019</span>
+[L313, S28]                             </div>
+[L314, S28]                             <div style={styles.legendItem}>
+[L315, S32]                                 <div style={styles.legendDot('#facc15')} />
+[L316, S32]                                 <span>&ge; 2020</span>
+[L317, S28]                             </div>
+[L318, S24]                         </>
+[L319, S20]                     )}
+[L320, S16]                 </div>
+[L321, S0] 
+[L322, S16]                 {isCalculating ? (
+[L323, S20]                     <div style={{ padding: '20px', textAlign: 'center', color: '#8b949e' }}>
+[L324, S24]                         Calculating Network Physics...
+[L325, S20]                     </div>
+[L326, S16]                 ) : (
+[L327, S20]                     <NetworkGraphTemplate
+[L328, S24]                         ref={fgRef}
+[L329, S24]                         frozenData={frozenData}
+[L330, S24]                         width={size.width || undefined}
+[L331, S24]                         height={size.height || undefined}
+[L332, S24]                         onNodeClick={node => setSelectedNodeId(node.id)}
+[L333, S20]                     />
+[L334, S16]                 )}
+[L335, S12]             </div>
+[L336, S8]         </AnalysisPageTemplate>
+[L337, S4]     );
+[L338, S0] }
+
+
+// --- frontend/src/hooks/useCoAuthorshipNetwork.js ---
+
+[L001, S0] import React, { useState, useMemo, useCallback } from 'react';
+[L002, S0] 
+[L003, S0] const DEFAULT_NODES_3D = [
+[L004, S4]     {
+[L005, S8]         id: '1',
+[L006, S8]         name: 'Vaswani, A.',
+[L007, S8]         papers: 14,
+[L008, S8]         citations: 12400,
+[L009, S8]         avgYear: 2018.5,
+[L010, S8]         group: 1,
+[L011, S8]         x: -110,
+[L012, S8]         y: -20,
+[L013, S8]         z: 90
+[L014, S4]     },
+[L015, S4]     {
+[L016, S8]         id: '2',
+[L017, S8]         name: 'Shazeer, N.',
+[L018, S8]         papers: 12,
+[L019, S8]         citations: 9800,
+[L020, S8]         avgYear: 2019.2,
+[L021, S8]         group: 1,
+[L022, S8]         x: -40,
+[L023, S8]         y: -70,
+[L024, S8]         z: 50
+[L025, S4]     },
+[L026, S4]     {
+[L027, S8]         id: '3',
+[L028, S8]         name: 'Parmar, N.',
+[L029, S8]         papers: 10,
+[L030, S8]         citations: 7500,
+[L031, S8]         avgYear: 2019.0,
+[L032, S8]         group: 1,
+[L033, S8]         x: -130,
+[L034, S8]         y: -90,
+[L035, S8]         z: -20
+[L036, S4]     },
+[L037, S4]     {
+[L038, S8]         id: '4',
+[L039, S8]         name: 'Uszkoreit, J.',
+[L040, S8]         papers: 9,
+[L041, S8]         citations: 6900,
+[L042, S8]         avgYear: 2018.2,
+[L043, S8]         group: 1,
+[L044, S8]         x: -20,
+[L045, S8]         y: 30,
+[L046, S8]         z: 80
+[L047, S4]     },
+[L048, S4]     {
+[L049, S8]         id: '5',
+[L050, S8]         name: 'Jones, L.',
+[L051, S8]         papers: 8,
+[L052, S8]         citations: 5400,
+[L053, S8]         avgYear: 2017.9,
+[L054, S8]         group: 1,
+[L055, S8]         x: -70,
+[L056, S8]         y: 80,
+[L057, S8]         z: 30
+[L058, S4]     },
+[L059, S4]     {
+[L060, S8]         id: '6',
+[L061, S8]         name: 'Gomez, A. N.',
+[L062, S8]         papers: 7,
+[L063, S8]         citations: 4900,
+[L064, S8]         avgYear: 2019.8,
+[L065, S8]         group: 1,
+[L066, S8]         x: -160,
+[L067, S8]         y: 40,
+[L068, S8]         z: -50
+[L069, S4]     },
+[L070, S4]     {
+[L071, S8]         id: '7',
+[L072, S8]         name: 'Kaiser, L.',
+[L073, S8]         papers: 11,
+[L074, S8]         citations: 8600,
+[L075, S8]         avgYear: 2020.1,
+[L076, S8]         group: 1,
+[L077, S8]         x: -110,
+[L078, S8]         y: 110,
+[L079, S8]         z: -10
+[L080, S4]     },
+[L081, S4]     {
+[L082, S8]         id: '8',
+[L083, S8]         name: 'Polosukhin, I.',
+[L084, S8]         papers: 6,
+[L085, S8]         citations: 4100,
+[L086, S8]         avgYear: 2017.5,
+[L087, S8]         group: 1,
+[L088, S8]         x: -190,
+[L089, S8]         y: -30,
+[L090, S8]         z: 20
+[L091, S4]     },
+[L092, S4]     {
+[L093, S8]         id: '9',
+[L094, S8]         name: 'Bengio, Y.',
+[L095, S8]         papers: 24,
+[L096, S8]         citations: 28900,
+[L097, S8]         avgYear: 2016.4,
+[L098, S8]         group: 2,
+[L099, S8]         x: 130,
+[L100, S8]         y: -10,
+[L101, S8]         z: -60
+[L102, S4]     },
+[L103, S4]     {
+[L104, S8]         id: '10',
+[L105, S8]         name: 'LeCun, Y.',
+[L106, S8]         papers: 21,
+[L107, S8]         citations: 24500,
+[L108, S8]         avgYear: 2015.8,
+[L109, S8]         group: 2,
+[L110, S8]         x: 190,
+[L111, S8]         y: -60,
+[L112, S8]         z: 60
+[L113, S4]     },
+[L114, S4]     {
+[L115, S8]         id: '11',
+[L116, S8]         name: 'Hinton, G.',
+[L117, S8]         papers: 19,
+[L118, S8]         citations: 26100,
+[L119, S8]         avgYear: 2015.2,
+[L120, S8]         group: 2,
+[L121, S8]         x: 150,
+[L122, S8]         y: 90,
+[L123, S8]         z: 70
+[L124, S4]     },
+[L125, S4]     {
+[L126, S8]         id: '12',
+[L127, S8]         name: 'Goodfellow, I.',
+[L128, S8]         papers: 15,
+[L129, S8]         citations: 19200,
+[L130, S8]         avgYear: 2017.1,
+[L131, S8]         group: 2,
+[L132, S8]         x: 80,
+[L133, S8]         y: 50,
+[L134, S8]         z: -70
+[L135, S4]     }
+[L136, S0] ];
+[L137, S0] 
+[L138, S0] const DEFAULT_LINKS = [
+[L139, S4]     { source: '1', target: '2', weight: 6 },
+[L140, S4]     { source: '1', target: '3', weight: 5 },
+[L141, S4]     { source: '1', target: '4', weight: 4 },
+[L142, S4]     { source: '1', target: '5', weight: 4 },
+[L143, S4]     { source: '1', target: '6', weight: 3 },
+[L144, S4]     { source: '1', target: '7', weight: 5 },
+[L145, S4]     { source: '1', target: '8', weight: 3 },
+[L146, S4]     { source: '2', target: '3', weight: 4 },
+[L147, S4]     { source: '2', target: '4', weight: 5 },
+[L148, S4]     { source: '3', target: '7', weight: 4 },
+[L149, S4]     { source: '9', target: '10', weight: 6 },
+[L150, S4]     { source: '9', target: '11', weight: 4 },
+[L151, S4]     { source: '9', target: '12', weight: 7 },
+[L152, S4]     { source: '10', target: '11', weight: 5 },
+[L153, S4]     { source: '1', target: '9', weight: 2 }
+[L154, S0] ];
+[L155, S0] 
+[L156, S0] const CLUSTER_METADATA = {
+[L157, S4]     1: { name: 'Attention & Transformers', color: '#ef4444' },
+[L158, S4]     2: { name: 'Deep Learning Foundations', color: '#3b82f6' },
+[L159, S4]     3: { name: 'Emerging Research', color: '#10b981' },
+[L160, S4]     4: { name: 'Secondary Hub', color: '#06b6d4' }
+[L161, S0] };
+[L162, S0] 
+[L163, S0] 
+[L164, S0] 
+[L165, S0] import { filterNetworkData } from '../views/analysis/network/networkData';
+[L166, S0] 
+[L167, S0] export default function useCoAuthorshipNetwork() {
+[L168, S4]     const [nodeScale, setNodeScale] = useState(1);
+[L169, S4]     const [dynamicNodes, setDynamicNodes] = useState(null);
+[L170, S4]     const [dynamicLinks, setDynamicLinks] = useState(null);
+[L171, S4]     const [dynamicClusters, setDynamicClusters] = useState(null);
+[L172, S4]     const [minWeight, setMinWeight] = useState(1);
+[L173, S4]     const [searchQuery, setSearchQuery] = useState('');
+[L174, S4]     const [selectedNodeId, setSelectedNodeId] = useState(null);
+[L175, S4]     const [hoveredNodeId, setHoveredNodeId] = useState(null);
+[L176, S4]     const [viewMode, setViewMode] = useState('network');
+[L177, S0] 
+[L178, S0] 
+[L179, S4]     React.useEffect(() => {
+[L180, S8]         let isMounted = true;
+[L181, S8]         fetch('/api/bibliography/network/co-authorship')
+[L182, S12]             .then(res => (res.ok ? res.json() : null))
+[L183, S12]             .then(data => {
+[L184, S16]                 if (isMounted && data && data.nodes && data.nodes.length > 0) {
+[L185, S20]                     setDynamicNodes(data.nodes);
+[L186, S20]                     setDynamicLinks(data.links);
+[L187, S20]                     if (data.clusters) {
+[L188, S24]                         setDynamicClusters(data.clusters);
+[L189, S20]                     }
+[L190, S16]                 }
+[L191, S12]             })
+[L192, S12]             .catch(() => {
+[L193, S16]                 // Fallback to static distribution on failure or testing
+[L194, S12]             });
+[L195, S8]         return () => {
+[L196, S12]             isMounted = false;
+[L197, S8]         };
+[L198, S4]     }, []);
+[L199, S0] 
+[L200, S0] 
+[L201, S0] 
+[L202, S4]     const sourceNodes = dynamicNodes || DEFAULT_NODES_3D;
+[L203, S4]     const sourceLinks = dynamicLinks || DEFAULT_LINKS;
+[L204, S4]     const sourceClusters = dynamicClusters || CLUSTER_METADATA;
+[L205, S0] 
+[L206, S4]     const filteredLinks = useMemo(() => {
+[L207, S8]         return sourceLinks.filter(link => link.weight >= minWeight);
+[L208, S4]     }, [sourceLinks, minWeight]);
+[L209, S0] 
+[L210, S4]     const { nodes: finalNodes, links: finalLinks } = useMemo(() => {
+[L211, S8]         return filterNetworkData(sourceNodes, sourceLinks, minWeight);
+[L212, S4]     }, [sourceNodes, sourceLinks, minWeight]);
+[L213, S0] 
+[L214, S4]     const selectedNode = useMemo(() => {
+[L215, S8]         return sourceNodes.find(n => n.id === selectedNodeId) || null;
+[L216, S4]     }, [selectedNodeId, sourceNodes]);
+[L217, S0] 
+[L218, S4]     return {
+[L219, S8]         nodes: finalNodes,
+[L220, S8]         links: finalLinks,
+[L221, S8]         minWeight,
+[L222, S8]         setMinWeight,
+[L223, S8]         searchQuery,
+[L224, S8]         setSearchQuery,
+[L225, S8]         selectedNodeId,
+[L226, S8]         setSelectedNodeId,
+[L227, S8]         hoveredNodeId,
+[L228, S8]         setHoveredNodeId,
+[L229, S8]         selectedNode,
+[L230, S8]         viewMode,
+[L231, S8]         setViewMode,
+[L232, S8]         clusters: sourceClusters,
+[L233, S8]         nodeScale,
+[L234, S8]         setNodeScale
+[L235, S4]     };
+[L236, S0] }
+
+
+// --- backend/src/bibliography/router.py ---
+
+[L001, S0] import os
+[L002, S0] import re
+[L003, S0] from datetime import datetime, timezone
+[L004, S0] from typing import List, Dict, Any
+[L005, S0] from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+[L006, S0] from fastapi.responses import StreamingResponse
+[L007, S0] from sqlalchemy.orm import Session
+[L008, S0] from .schemas import (
+[L009, S4]     ParsedReference,
+[L010, S4]     BatchDownloadRequest,
+[L011, S4]     ZipDownloadRequest,
+[L012, S4]     LocalBatchDownloadRequest,
+[L013, S0] )
+[L014, S0] from .parser_service import parse_bibliography_content
+[L015, S0] from .download_service import execute_batch_download
+[L016, S0] from .zip_service import create_zip_from_pdfs
+[L017, S0] import math
+[L018, S0] from collections import defaultdict
+[L019, S0] import networkx as nx
+[L020, S0] import community as community_louvain
+[L021, S0] from .injection_service import (
+[L022, S4]     inject_references_to_db,
+[L023, S4]     backfill_funding_from_articles,
+[L024, S4]     clean_duplicate_fundings,
+[L025, S0] )
+[L026, S0] 
+[L027, S0] try:
+[L028, S4]     from ..database.session import get_db
+[L029, S4]     from ..database.models.core import Article, Project, ProjectArticle
+[L030, S0] except (ImportError, ValueError):
+[L031, S4]     try:
+[L032, S8]         from src.database.session import get_db
+[L033, S8]         from src.database.models.core import (
+[L034, S12]             Article,
+[L035, S12]             Project,
+[L036, S12]             ProjectArticle,
+[L037, S8]         )
+[L038, S4]     except ImportError:
+[L039, S8]         from backend.src.database.session import get_db
+[L040, S8]         from backend.src.database.models.core import (
+[L041, S12]             Article,
+[L042, S12]             Project,
+[L043, S12]             ProjectArticle,
+[L044, S8]         )
+[L045, S4]     try:
+[L046, S8]         from src.database.session import get_db
+[L047, S4]     except ImportError:
+[L048, S8]         from backend.src.database.session import get_db
+[L049, S0] 
+[L050, S0] router = APIRouter()
+[L051, S0] 
+[L052, S0] try:
+[L053, S4]     import multipart
+[L054, S4]     HAS_MULTIPART = True
+[L055, S0] except ImportError:
+[L056, S4]     HAS_MULTIPART = False
+[L057, S0] 
+[L058, S0] async def _process_upload(file: UploadFile) -> List[ParsedReference]:
+[L059, S4]     if not file.filename:
+[L060, S8]         raise HTTPException(status_code=400, detail="No file provided")
+[L061, S0] 
+[L062, S4]     _, ext = os.path.splitext(file.filename)
+[L063, S4]     if ext.lower() not in [".bib"]:
+[L064, S8]         raise HTTPException(status_code=400, detail="Unsupported file extension")
+[L065, S0] 
+[L066, S4]     try:
+[L067, S8]         content_bytes = await file.read()
+[L068, S8]         try:
+[L069, S12]             content_str = content_bytes.decode("utf-8")
+[L070, S8]         except UnicodeDecodeError:
+[L071, S12]             content_str = content_bytes.decode("latin-1")
+[L072, S8]         refs = parse_bibliography_content(content_str, ext)
+[L073, S8]         return refs
+[L074, S4]     except ValueError as ve:
+[L075, S8]         raise HTTPException(status_code=400, detail=str(ve))
+[L076, S4]     except Exception as e:
+[L077, S8]         raise HTTPException(
+[L078, S12]             status_code=500,
+[L079, S12]             detail="Internal server error during parsing"
+[L080, S8]         )
+[L081, S0] 
+[L082, S0] 
+[L083, S0] async def _process_inject(
+[L084, S4]     file: UploadFile, project_code: str, db: Session
+[L085, S0] ) -> dict:
+[L086, S4]     if not file.filename:
+[L087, S8]         raise HTTPException(status_code=400, detail="No file provided")
+[L088, S0] 
+[L089, S4]     _, ext = os.path.splitext(file.filename)
+[L090, S4]     if ext.lower() not in [".bib"]:
+[L091, S8]         raise HTTPException(
+[L092, S12]             status_code=400, detail="Unsupported file extension"
+[L093, S8]         )
+[L094, S0] 
+[L095, S4]     try:
+[L096, S8]         content_bytes = await file.read()
+[L097, S8]         content_str = content_bytes.decode("utf-8")
+[L098, S8]         refs = parse_bibliography_content(content_str, ext)
+[L099, S8]         try:
+[L100, S12]             inserted = inject_references_to_db(db, refs, project_code)
+[L101, S8]         except RuntimeError:
+[L102, S12]             raise HTTPException(
+[L103, S16]                 status_code=503,
+[L104, S16]                 detail="Error de conexión a la base de datos. Intente nuevamente."
+[L105, S12]             )
+[L106, S8]         return {"message": "Success", "inserted": inserted}
+[L107, S4]     except HTTPException:
+[L108, S8]         raise
+[L109, S4]     except ValueError as ve:
+[L110, S8]         raise HTTPException(status_code=400, detail=str(ve))
+[L111, S4]     except Exception as exc:
+[L112, S8]         import traceback
+[L113, S8]         traceback.print_exc()
+[L114, S8]         raise HTTPException(
+[L115, S12]             status_code=500,
+[L116, S12]             detail=f"Internal server error during injection: {str(exc)}",
+[L117, S8]         )
+[L118, S0] 
+[L119, S0] if HAS_MULTIPART:
+[L120, S4]     @router.post("/upload", response_model=List[ParsedReference])
+[L121, S4]     async def upload_bibliography(file: UploadFile = File(...)):
+[L122, S8]         return await _process_upload(file)
+[L123, S0] 
+[L124, S4]     @router.post("/inject")
+[L125, S4]     async def inject_bibliography(
+[L126, S8]         file: UploadFile = File(...),
+[L127, S8]         project_code: str = Form(...),
+[L128, S8]         db: Session = Depends(get_db),
+[L129, S4]     ):
+[L130, S8]         return await _process_inject(file, project_code, db)
+[L131, S0] 
+[L132, S4]     @router.get("/references", response_model=List[Dict[str, Any]])
+[L133, S4]     def get_project_references(
+[L134, S8]         project_code: str,
+[L135, S8]         db: Session = Depends(get_db),
+[L136, S4]     ):
+[L137, S8]         project = (
+[L138, S12]             db.query(Project).filter(Project.name == project_code).first()
+[L139, S8]         )
+[L140, S8]         if not project:
+[L141, S12]             return []
+[L142, S8]         links = (
+[L143, S12]             db.query(ProjectArticle)
+[L144, S12]             .filter(ProjectArticle.project_id == project.id)
+[L145, S12]             .all()
+[L146, S8]         )
+[L147, S8]         if not links:
+[L148, S12]             return []
+[L149, S0] 
+[L150, S8]         status_map = {
+[L151, S12]             link.article_id: {
+[L152, S16]                 "status": link.status,
+[L153, S16]                 "added_at": (
+[L154, S20]                     link.added_at.isoformat() if link.added_at else None
+[L155, S16]                 ),
+[L156, S12]             }
+[L157, S12]             for link in links
+[L158, S8]         }
+[L159, S0] 
+[L160, S8]         article_ids = list(status_map.keys())
+[L161, S8]         articles = (
+[L162, S12]             db.query(Article).filter(Article.id.in_(article_ids)).all()
+[L163, S8]         )
+[L164, S0] 
+[L165, S8]         def _to_str(val):
+[L166, S12]             return str(val) if isinstance(val, (str, int, float)) else None
+[L167, S0] 
+[L168, S8]         def _is_mock(val):
+[L169, S12]             return hasattr(val, "_mock_return_value") or hasattr(
+[L170, S16]                 val, "_mock_name"
+[L171, S12]             )
+[L172, S0] 
+[L173, S8]         def _to_int(val):
+[L174, S12]             if val is not None and not _is_mock(val):
+[L175, S16]                 try:
+[L176, S20]                     return int(val)
+[L177, S16]                 except (ValueError, TypeError):
+[L178, S20]                     pass
+[L179, S12]             return None
+[L180, S0] 
+[L181, S8]         def _safe_list(val):
+[L182, S12]             if val is None or _is_mock(val):
+[L183, S16]                 return []
+[L184, S12]             if isinstance(val, (list, tuple, set)):
+[L185, S16]                 return [x for x in val if not _is_mock(x)]
+[L186, S12]             return []
+[L187, S0] 
+[L188, S8]         # Purge physical duplicates in database if any exist
+[L189, S8]         clean_duplicate_fundings(db)
+[L190, S0] 
+[L191, S8]         now_iso = datetime.now(timezone.utc).isoformat()
+[L192, S8]         result = []
+[L193, S8]         for a in articles:
+[L194, S12]             authors_detail = []
+[L195, S12]             for aa in sorted(
+[L196, S16]                 _safe_list(getattr(a, "author_articles", None)),
+[L197, S16]                 key=lambda x: getattr(x, "author_order", 1) or 1,
+[L198, S12]             ):
+[L199, S16]                 auth = getattr(aa, "author", None)
+[L200, S16]                 if auth and not _is_mock(auth):
+[L201, S20]                     aff = getattr(auth, "affiliation", None)
+[L202, S20]                     aff_str = None
+[L203, S20]                     if aff and not _is_mock(aff):
+[L204, S24]                         inst = getattr(aff, "institution", None)
+[L205, S24]                         dept = getattr(aff, "department", None)
+[L206, S24]                         country = getattr(aff, "country", None)
+[L207, S24]                         parts = []
+[L208, S24]                         if inst and isinstance(inst, str):
+[L209, S28]                             parts.append(inst.strip().rstrip("."))
+[L210, S24]                         if dept and isinstance(dept, str):
+[L211, S28]                             dept_clean = dept.strip().rstrip(".")
+[L212, S28]                             if not inst or dept_clean.lower() not in inst.lower():
+[L213, S32]                                 parts.append(dept_clean)
+[L214, S24]                         if country and isinstance(country, str):
+[L215, S28]                             c_clean = country.strip().rstrip(".")
+[L216, S28]                             if not inst or c_clean.lower() not in inst.lower():
+[L217, S32]                                 parts.append(c_clean)
+[L218, S24]                         aff_str = ", ".join(parts) if parts else None
+[L219, S20]                     authors_detail.append({
+[L220, S24]                         "name": getattr(auth, "name", "N/A"),
+[L221, S24]                         "orcid": getattr(auth, "orcid", None),
+[L222, S24]                         "email": getattr(auth, "email", None),
+[L223, S24]                         "author_order": getattr(aa, "author_order", 1),
+[L224, S24]                         "is_corresponding": bool(
+[L225, S28]                             getattr(aa, "is_corresponding", False)
+[L226, S24]                         ),
+[L227, S24]                         "affiliation": aff_str,
+[L228, S20]                     })
+[L229, S0] 
+[L230, S12]             author_val = _to_str(getattr(a, "author", None))
+[L231, S12]             if authors_detail:
+[L232, S16]                 author_str = " and ".join(
+[L233, S20]                     [ad["name"] for ad in authors_detail]
+[L234, S16]                 )
+[L235, S12]             elif author_val:
+[L236, S16]                 author_str = author_val
+[L237, S12]             elif getattr(a, "authors", None) and not _is_mock(a.authors):
+[L238, S16]                 names = [
+[L239, S20]                     getattr(x, "name", str(x))
+[L240, S20]                     for x in _safe_list(a.authors)
+[L241, S20]                     if getattr(x, "name", str(x)) and not _is_mock(x)
+[L242, S16]                 ]
+[L243, S16]                 author_str = " and ".join(names) if names else "N/A"
+[L244, S12]             elif getattr(a, "raw_data", None):
+[L245, S16]                 author_str = str(a.raw_data)[:100]
+[L246, S12]             else:
+[L247, S16]                 author_str = "N/A"
+[L248, S0] 
+[L249, S12]             keywords_list = [
+[L250, S16]                 {
+[L251, S20]                     "name": getattr(k, "name", ""),
+[L252, S20]                     "type": getattr(k, "type", "author"),
+[L253, S16]                 }
+[L254, S16]                 for k in _safe_list(getattr(a, "keywords", None))
+[L255, S12]             ]
+[L256, S0] 
+[L257, S12]             cr_items = _safe_list(getattr(a, "cited_references", None))
+[L258, S0] 
+[L259, S12]             references_list = [
+[L260, S16]                 {
+[L261, S20]                     "id": getattr(r, "id", None),
+[L262, S20]                     "author": getattr(r, "author", None),
+[L263, S20]                     "title": (
+[L264, S24]                         getattr(r, "source", None)
+[L265, S24]                         or getattr(r, "title", None)
+[L266, S20]                     ),
+[L267, S20]                     "source": getattr(r, "source", None),
+[L268, S20]                     "doi": getattr(r, "doi", None),
+[L269, S20]                     "year": (
+[L270, S24]                         str(getattr(r, "year", ""))
+[L271, S24]                         if getattr(r, "year", None)
+[L272, S24]                         else None
+[L273, S20]                     ),
+[L274, S20]                     "raw_citation": (
+[L275, S24]                         getattr(r, "raw_string", None)
+[L276, S24]                         or getattr(r, "raw_citation", None)
+[L277, S20]                     ),
+[L278, S16]                 }
+[L279, S16]                 for r in cr_items
+[L280, S12]             ]
+[L281, S0] 
+[L282, S12]             seen_f_keys = set()
+[L283, S12]             funding_list = []
+[L284, S12]             for f in _safe_list(getattr(a, "funding", None)):
+[L285, S16]                 f_key = (
+[L286, S20]                     (getattr(f, "agency", "") or "").strip().lower(),
+[L287, S20]                     (getattr(f, "grant_number", "") or "").strip().lower(),
+[L288, S16]                 )
+[L289, S16]                 if f_key not in seen_f_keys:
+[L290, S20]                     seen_f_keys.add(f_key)
+[L291, S20]                     funding_list.append({
+[L292, S24]                         "id": getattr(f, "id", None),
+[L293, S24]                         "agency": getattr(f, "agency", None),
+[L294, S24]                         "grant_number": getattr(f, "grant_number", None),
+[L295, S24]                         "country": getattr(f, "country", None),
+[L296, S20]                     })
+[L297, S0] 
+[L298, S12]             downloads_list = [
+[L299, S16]                 {
+[L300, S20]                     "id": getattr(d, "id", None),
+[L301, S20]                     "source": getattr(d, "source", None),
+[L302, S20]                     "status": getattr(d, "status", None),
+[L303, S20]                     "file_path": getattr(d, "file_path", None),
+[L304, S20]                     "file_size_bytes": getattr(d, "file_size_bytes", None),
+[L305, S20]                     "downloaded_at": (
+[L306, S24]                         d.downloaded_at.isoformat()
+[L307, S24]                         if getattr(d, "downloaded_at", None)
+[L308, S24]                         and not _is_mock(d.downloaded_at)
+[L309, S24]                         else None
+[L310, S20]                     ),
+[L311, S16]                 }
+[L312, S16]                 for d in _safe_list(getattr(a, "downloads", None))
+[L313, S12]             ]
+[L314, S0] 
+[L315, S12]             p_info = status_map.get(a.id, {})
+[L316, S0] 
+[L317, S12]             result.append({
+[L318, S16]                 "id": a.id,
+[L319, S16]                 "title": _to_str(getattr(a, "title", None)) or "Untitled",
+[L320, S16]                 "author": author_str,
+[L321, S16]                 "year": _to_str(getattr(a, "year", None)),
+[L322, S16]                 "journal": _to_str(getattr(a, "journal", None)),
+[L323, S16]                 "doi": _to_str(getattr(a, "doi", None)),
+[L324, S16]                 "volume": _to_str(getattr(a, "volume", None)),
+[L325, S16]                 "issue": _to_str(getattr(a, "issue", None)),
+[L326, S16]                 "pages": _to_str(getattr(a, "pages", None)),
+[L327, S16]                 "abstract": _to_str(getattr(a, "abstract", None)),
+[L328, S16]                 "publisher": _to_str(getattr(a, "publisher", None)),
+[L329, S16]                 "language": _to_str(getattr(a, "language", None)),
+[L330, S16]                 "research_areas": _to_str(getattr(a, "research_areas", None)),
+[L331, S16]                 "web_of_science_categories": _to_str(getattr(a, "web_of_science_categories", None)),
+[L332, S16]                 "funding_text": _to_str(getattr(a, "funding_text", None)),
+[L333, S16]                 "journal_iso": _to_str(getattr(a, "journal_iso", None)),
+[L334, S16]                 "oa_status": _to_str(getattr(a, "oa_status", None)),
+[L335, S16]                 "issn": _to_str(getattr(a, "issn", None)),
+[L336, S16]                 "times_cited": _to_int(getattr(a, "times_cited", None)),
+[L337, S16]                 "cited_references_count": _to_int(getattr(a, "cited_references_count", None)),
+[L338, S16]                 "raw_data": _to_str(getattr(a, "raw_data", None)),
+[L339, S16]                 "created_at": (
+[L340, S20]                     a.created_at.isoformat()
+[L341, S20]                     if getattr(a, "created_at", None)
+[L342, S20]                     else None
+[L343, S16]                 ),
+[L344, S16]                 "updated_at": (
+[L345, S20]                     a.updated_at.isoformat()
+[L346, S20]                     if getattr(a, "updated_at", None)
+[L347, S20]                     else None
+[L348, S16]                 ),
+[L349, S16]                 "project_status": p_info.get("status", "pending"),
+[L350, S16]                 "project_added_at": p_info.get("added_at"),
+[L351, S16]                 "upload_datetime": now_iso,
+[L352, S16]                 "authors_detail": authors_detail,
+[L353, S16]                 "keywords": keywords_list,
+[L354, S16]                 "references_list": references_list,
+[L355, S16]                 "funding_list": funding_list,
+[L356, S16]                 "downloads_list": downloads_list,
+[L357, S12]             })
+[L358, S8]         return result
+[L359, S0] else:
+[L360, S4]     async def upload_bibliography(file: UploadFile):
+[L361, S8]         return await _process_upload(file)
+[L362, S0] 
+[L363, S4]     async def inject_bibliography(
+[L364, S8]         file: UploadFile,
+[L365, S8]         project_code: str,
+[L366, S8]         db: Session,
+[L367, S4]     ):
+[L368, S8]         return await _process_inject(file, project_code, db)
+[L369, S0] 
+[L370, S0] 
+[L371, S0] @router.post("/backfill-funding")
+[L372, S0] def trigger_backfill_funding(db: Session = Depends(get_db)):
+[L373, S4]     """API endpoint to trigger parsing of funding_text into the funding table."""
+[L374, S4]     count = backfill_funding_from_articles(db)
+[L375, S4]     return {
+[L376, S8]         "message": f"Successfully parsed and stored {count} funding records",
+[L377, S8]         "inserted": count,
+[L378, S4]     }
+[L379, S0] 
+[L380, S0] 
+[L381, S0] @router.post("/batch-download")
+[L382, S0] async def batch_download(request: BatchDownloadRequest):
+[L383, S4]     async def sse_generator():
+[L384, S8]         async for event in execute_batch_download(
+[L385, S12]             request.dois,
+[L386, S12]             request.destination,
+[L387, S12]             request.email,
+[L388, S12]             request.delay,
+[L389, S12]             request.cookies,
+[L390, S8]         ):
+[L391, S12]             yield f"data: {event}\n\n"
+[L392, S0] 
+[L393, S4]     return StreamingResponse(
+[L394, S8]         sse_generator(),
+[L395, S8]         media_type="text/event-stream"
+[L396, S4]     )
+[L397, S0] 
+[L398, S0] 
+[L399, S0] @router.post("/batch-download-local")
+[L400, S0] async def batch_download_local(request: LocalBatchDownloadRequest):
+[L401, S4]     try:
+[L402, S8]         with open(request.file_path, "r", encoding="utf-8") as f:
+[L403, S12]             content = f.read()
+[L404, S4]     except Exception as e:
+[L405, S8]         raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
+[L406, S0] 
+[L407, S4]     _, ext = os.path.splitext(request.file_path)
+[L408, S4]     try:
+[L409, S8]         refs = parse_bibliography_content(content, ext)
+[L410, S8]         dois = list(set(ref.doi for ref in refs if ref.doi))
+[L411, S4]     except Exception as e:
+[L412, S8]         raise HTTPException(status_code=400, detail=f"Parse error: {str(e)}")
+[L413, S0] 
+[L414, S4]     async def sse_generator():
+[L415, S8]         async for event in execute_batch_download(
+[L416, S12]             dois,
+[L417, S12]             request.destination,
+[L418, S12]             request.email,
+[L419, S12]             request.delay,
+[L420, S12]             request.cookies,
+[L421, S8]         ):
+[L422, S12]             yield f"data: {event}\n\n"
+[L423, S0] 
+[L424, S4]     return StreamingResponse(sse_generator(), media_type="text/event-stream")
+[L425, S0] 
+[L426, S0] 
+[L427, S0] @router.get("/network/co-authorship")
+[L428, S0] def get_coauthorship_network(
+[L429, S4]     project_code: str | None = None,
+[L430, S4]     max_nodes: int = 150,
+[L431, S4]     resolution: float = 1.0,
+[L432, S4]     db: Session = Depends(get_db),
+[L433, S0] ):
+[L434, S4]     query = db.query(Article)
+[L435, S4]     if project_code and project_code.strip():
+[L436, S8]         project = (
+[L437, S12]             db.query(Project)
+[L438, S12]             .filter(Project.name == project_code.strip())
+[L439, S12]             .first()
+[L440, S8]         )
+[L441, S8]         if project:
+[L442, S12]             links = (
+[L443, S16]                 db.query(ProjectArticle.article_id)
+[L444, S16]                 .filter(ProjectArticle.project_id == project.id)
+[L445, S16]                 .all()
+[L446, S12]             )
+[L447, S12]             article_ids = [l[0] for l in links]
+[L448, S12]             query = query.filter(Article.id.in_(article_ids))
+[L449, S8]         else:
+[L450, S12]             return {"nodes": [], "links": [], "clusters": {}}
+[L451, S0] 
+[L452, S4]     articles = query.all()
+[L453, S4]     if not articles:
+[L454, S8]         return {"nodes": [], "links": [], "clusters": {}}
+[L455, S0] 
+[L456, S4]     author_papers: dict[str, int] = defaultdict(int)
+[L457, S4]     author_citations: dict[str, int] = defaultdict(int)
+[L458, S4]     author_years: dict[str, list[float]] = defaultdict(list)
+[L459, S4]     coauthorship_counts: dict[tuple[str, str], int] = defaultdict(int)
+[L460, S0] 
+[L461, S4]     for a in articles:
+[L462, S8]         names = []
+[L463, S8]         if getattr(a, "author_articles", None):
+[L464, S12]             for aa in a.author_articles:
+[L465, S16]                 auth = getattr(aa, "author", None)
+[L466, S16]                 if auth and getattr(auth, "name", None):
+[L467, S20]                     names.append(auth.name.strip())
+[L468, S0] 
+[L469, S8]         if not names and getattr(a, "author", None):
+[L470, S12]             raw = str(a.author)
+[L471, S12]             if " and " in raw:
+[L472, S16]                 names = [p.strip() for p in raw.split(" and ") if p.strip()]
+[L473, S12]             elif ";" in raw:
+[L474, S16]                 names = [p.strip() for p in raw.split(";") if p.strip()]
+[L475, S12]             else:
+[L476, S16]                 names = [raw.strip()]
+[L477, S0] 
+[L478, S8]         names = list(dict.fromkeys(names))
+[L479, S8]         if not names:
+[L480, S12]             continue
+[L481, S0] 
+[L482, S8]         year_val = None
+[L483, S8]         if getattr(a, "year", None):
+[L484, S12]             try:
+[L485, S16]                 year_val = float(str(a.year).strip())
+[L486, S12]             except (ValueError, TypeError):
+[L487, S16]                 pass
+[L488, S0] 
+[L489, S8]         cites_val = 0
+[L490, S8]         if getattr(a, "times_cited", None):
+[L491, S12]             try:
+[L492, S16]                 cites_val = int(a.times_cited)
+[L493, S12]             except (ValueError, TypeError):
+[L494, S16]                 pass
+[L495, S0] 
+[L496, S8]         for name in names:
+[L497, S12]             author_papers[name] += 1
+[L498, S12]             author_citations[name] += cites_val
+[L499, S12]             if year_val:
+[L500, S16]                 author_years[name].append(year_val)
+[L501, S0] 
+[L502, S8]         for i in range(len(names)):
+[L503, S12]             for j in range(i + 1, len(names)):
+[L504, S16]                 pair = tuple(sorted([names[i], names[j]]))
+[L505, S16]                 coauthorship_counts[pair] += 1
+[L506, S0] 
+[L507, S4]     ranked_authors = sorted(
+[L508, S8]         author_papers.keys(),
+[L509, S8]         key=lambda k: (author_papers[k], author_citations[k]),
+[L510, S8]         reverse=True,
+[L511, S4]     )[:max_nodes]
+[L512, S0] 
+[L513, S4]     if not ranked_authors:
+[L514, S8]         return {"nodes": [], "links": [], "clusters": {}}
+[L515, S0] 
+[L516, S4]     ranked_set = set(ranked_authors)
+[L517, S4]     author_id_map = {
+[L518, S8]         name: str(idx + 1) for idx, name in enumerate(ranked_authors)
+[L519, S4]     }
+[L520, S0] 
+[L521, S4]     adj: dict[str, set[str]] = defaultdict(set)
+[L522, S4]     for (a1, a2), w in coauthorship_counts.items():
+[L523, S8]         if a1 in ranked_set and a2 in ranked_set:
+[L524, S12]             adj[a1].add(a2)
+[L525, S12]             adj[a2].add(a1)
+[L526, S0] 
+[L527, S4]     degree = {n: len(adj[n]) for n in ranked_authors}
+[L528, S0] 
+[L529, S4]     # Detección de comunidades con el algoritmo de Louvain (maximiza
+[L530, S4]     # modularidad), en vez de asignar un color por componente conexo con un
+[L531, S4]     # ciclo de 3. Esto permite que un componente grande y denso (ej. el hub
+[L532, S4]     # central) se divida en varios sub-grupos de colaboración reales si la
+[L533, S4]     # estructura interna lo justifica, en vez de quedar todo del mismo color.
+[L534, S4]     G = nx.Graph()
+[L535, S4]     G.add_nodes_from(ranked_authors)
+[L536, S4]     for (a1, a2), w in coauthorship_counts.items():
+[L537, S8]         if a1 in ranked_set and a2 in ranked_set:
+[L538, S12]             G.add_edge(a1, a2, weight=w)
+[L539, S0] 
+[L540, S4]     if G.number_of_edges() > 0:
+[L541, S8]         partition = community_louvain.best_partition(
+[L542, S12]             G, weight="weight", resolution=resolution, random_state=42
+[L543, S8]         )
+[L544, S4]     else:
+[L545, S8]         # Sin ningún enlace: cada autor es su propia comunidad.
+[L546, S8]         partition = {n: i for i, n in enumerate(ranked_authors)}
+[L547, S0] 
+[L548, S4]     # Louvain numera las comunidades en el orden en que las descubre, sin
+[L549, S4]     # relación con su tamaño. Las reordenamos de mayor a menor cantidad de
+[L550, S4]     # autores para que el id 1 siga siendo el "Primary Collaboration
+[L551, S4]     # Cluster" (el grupo más grande), igual que en la versión anterior.
+[L552, S4]     community_sizes: dict[int, int] = defaultdict(int)
+[L553, S4]     for cid in partition.values():
+[L554, S8]         community_sizes[cid] += 1
+[L555, S4]     ordered_communities = sorted(
+[L556, S8]         community_sizes.keys(), key=lambda c: community_sizes[c], reverse=True
+[L557, S4]     )
+[L558, S4]     remap = {old_cid: idx + 1 for idx, old_cid in enumerate(ordered_communities)}
+[L559, S4]     visited: dict[str, int] = {n: remap[partition[n]] for n in ranked_authors}
+[L560, S0] 
+[L561, S4]     cluster_nodes = defaultdict(list)
+[L562, S4]     for name in ranked_authors:
+[L563, S8]         cluster_nodes[visited[name]].append(name)
+[L564, S0] 
+[L565, S4]     cluster_ids = sorted(cluster_nodes.keys())
+[L566, S0] 
+[L567, S4]     nodes = []
+[L568, S4]     for c_idx, cid in enumerate(cluster_ids):
+[L569, S8]         c_names = cluster_nodes[cid]
+[L570, S8]         c_names.sort(key=lambda n: degree[n], reverse=True)
+[L571, S0] 
+[L572, S8]         for i, name in enumerate(c_names):
+[L573, S12]             node_id = author_id_map[name]
+[L574, S12]             papers = author_papers[name]
+[L575, S12]             citations = author_citations[name]
+[L576, S12]             years = author_years[name]
+[L577, S12]             avg_year = sum(years) / len(years) if years else 2020.0
+[L578, S0] 
+[L579, S12]             nodes.append({
+[L580, S16]                 "id": node_id,
+[L581, S16]                 "name": name,
+[L582, S16]                 "papers": papers,
+[L583, S16]                 "citations": citations,
+[L584, S16]                 "avgYear": round(avg_year, 1),
+[L585, S16]                 "group": cid,
+[L586, S12]             })
+[L587, S0] 
+[L588, S4]     links = []
+[L589, S4]     for (a1, a2), w in coauthorship_counts.items():
+[L590, S8]         if a1 in ranked_set and a2 in ranked_set:
+[L591, S12]             links.append({
+[L592, S16]                 "source": author_id_map[a1],
+[L593, S16]                 "target": author_id_map[a2],
+[L594, S16]                 "weight": w,
+[L595, S12]             })
+[L596, S0] 
+[L597, S4]     # Paleta ampliada: Louvain puede encontrar más de 4 comunidades. Si hay
+[L598, S4]     # más comunidades que colores, se repiten cíclicamente.
+[L599, S4]     PALETTE = [
+[L600, S8]         "#ef4444", "#3b82f6", "#10b981", "#06b6d4",
+[L601, S8]         "#f59e0b", "#a855f7", "#ec4899", "#84cc16",
+[L602, S4]     ]
+[L603, S4]     CLUSTER_NAMES = [
+[L604, S8]         "Primary Collaboration Cluster",
+[L605, S8]         "Core Scientific Cluster",
+[L606, S8]         "Emerging Research Cluster",
+[L607, S8]         "Secondary Hub",
+[L608, S4]     ]
+[L609, S4]     clusters = {
+[L610, S8]         cid: {
+[L611, S12]             "name": CLUSTER_NAMES[i] if i < len(CLUSTER_NAMES) else f"Cluster {cid}",
+[L612, S12]             "color": PALETTE[i % len(PALETTE)],
+[L613, S8]         }
+[L614, S8]         for i, cid in enumerate(cluster_ids)
+[L615, S4]     }
+[L616, S0] 
+[L617, S4]     return {"nodes": nodes, "links": links, "clusters": clusters}
+[L618, S0] 
+[L619, S0] 
+[L620, S0] @router.post("/download-zip")
+[L621, S0] async def download_zip(request: ZipDownloadRequest):
+[L622, S4]     zip_io = create_zip_from_pdfs(request.batch_name, request.dois)
+[L623, S4]     return StreamingResponse(
+[L624, S8]         zip_io,
+[L625, S8]         media_type="application/zip",
+[L626, S8]         headers={
+[L627, S12]             "Content-Disposition": (
+[L628, S16]                 f"attachment; filename={request.batch_name}.zip"
+[L629, S12]             )
+[L630, S8]         },
+[L631, S4]     )

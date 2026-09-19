@@ -165,7 +165,8 @@ const CLUSTER_METADATA = {
 import { filterNetworkData } from '../views/analysis/network/networkData';
 
 export default function useCoAuthorshipNetwork() {
-    const [nodeScale, setNodeScale] = useState(1);
+    const [louvainGamma, setLouvainGamma] = useState(1.0);
+    const [debouncedGamma, setDebouncedGamma] = useState(1.0);
     const [dynamicNodes, setDynamicNodes] = useState(null);
     const [dynamicLinks, setDynamicLinks] = useState(null);
     const [dynamicClusters, setDynamicClusters] = useState(null);
@@ -174,11 +175,20 @@ export default function useCoAuthorshipNetwork() {
     const [selectedNodeId, setSelectedNodeId] = useState(null);
     const [hoveredNodeId, setHoveredNodeId] = useState(null);
     const [viewMode, setViewMode] = useState('network');
+    const [isLoading, setIsLoading] = useState(false);
 
+    // Debounce the Gamma slider to prevent backend DDoS
+    React.useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedGamma(louvainGamma);
+        }, 1000);
+        return () => clearTimeout(handler);
+    }, [louvainGamma]);
 
     React.useEffect(() => {
         let isMounted = true;
-        fetch('/api/bibliography/network/co-authorship')
+        setIsLoading(true);
+        fetch(`/api/bibliography/network/co-authorship?resolution=${debouncedGamma}`)
             .then(res => (res.ok ? res.json() : null))
             .then(data => {
                 if (isMounted && data && data.nodes && data.nodes.length > 0) {
@@ -191,11 +201,14 @@ export default function useCoAuthorshipNetwork() {
             })
             .catch(() => {
                 // Fallback to static distribution on failure or testing
+            })
+            .finally(() => {
+                if (isMounted) setIsLoading(false);
             });
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [debouncedGamma]);
 
 
 
@@ -230,7 +243,8 @@ export default function useCoAuthorshipNetwork() {
         viewMode,
         setViewMode,
         clusters: sourceClusters,
-        nodeScale,
-        setNodeScale
+        louvainGamma,
+        setLouvainGamma,
+        isLoading
     };
 }
