@@ -31,6 +31,7 @@
 │   │   │   │   │   ├── network/
 │   │   │   │   │   │   ├── exportNetwork.js
 │   │   │   │   │   │   ├── networkData.js
+│   │   │   │   │   │   ├── networkFit.js
 │   │   │   │   │   │   ├── networkLayout.js
 │   │   │   │   │   │   ├── networkRender.js
 │   │   │   │   │   │   ├── networkStyles.js
@@ -43,6 +44,7 @@
 │   │   │   │   ├── useBibliography.test.js
 │   │   │   │   ├── useCoAuthorshipNetwork.js
 │   │   │   │   ├── useCoAuthorshipNetwork.test.js
+│   │   │   │   ├── useElementSize.js
 │   │   │   │   ├── useHoverReveal.js
 │   │   │   │   ├── useHoverReveal.test.js
 │   │   │   │   ├── useNetworkLayout.js

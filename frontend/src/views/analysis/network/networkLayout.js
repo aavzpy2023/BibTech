@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import { calculateRadius } from './networkStyles';
+import { calculateRadius, assignNodeRadii } from './networkStyles';
 
 /**
  * Pre-calculates network physics synchronously to freeze the layout.
@@ -25,6 +25,10 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
         degreeMap[l.target] = (degreeMap[l.target] || 0) + 1;
     });
     layoutNodes.forEach(n => n.degree = degreeMap[n.id]);
+
+    // Radio de cada nodo normalizado DENTRO de su propio grupo/color (ver
+    // networkStyles.js). Debe hacerse antes de usar calculateRadius más abajo.
+    assignNodeRadii(layoutNodes);
 
     const adjList = {};
     layoutNodes.forEach(n => adjList[n.id] = []);
@@ -71,15 +75,16 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
     }, 0);
     const estRadius = comp => Math.sqrt(areaOf(comp) / 0.5 / Math.PI);
 
-    const aspect = 1.6; // 16:10 aspect ratio
+    const aspect = 1.25; // silueta más cuadrada/redondeada (antes 1.6, 16:10)
     const ex = Math.sqrt(aspect), ey = 1 / ex;
     const compCenters = [];
     const goldenAngle = 2.39996323; // radians
     const Rg = components.length > 0 ? estRadius(components[0]) : 0;
-    
+
     components.forEach((comp, i) => {
         if (i === 0) return compCenters.push({ x: 0, y: 0 });
-        const dist = Rg + estRadius(comp) + 40 + Math.sqrt(i) * 30;
+        // islas más pegadas entre sí (antes: 40 + Math.sqrt(i) * 30)
+        const dist = Rg + estRadius(comp) + 15 + Math.sqrt(i) * 15;
         const a = i * goldenAngle;
         compCenters.push({ x: Math.cos(a) * dist * ex, y: Math.sin(a) * dist * ey });
     });
@@ -94,14 +99,14 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
 
     // Stage D: Force-directed refinement
     const simulation = d3.forceSimulation(layoutNodes)
-        .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(55))
-        .force('charge', d3.forceManyBody().strength(d => -40 - calculateRadius(d) * 8))
-        .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 3).iterations(4))
-        .force('x', d3.forceX(d => compCenters[nodeToComp[d.id]].x)
-            .strength(d => nodeToComp[d.id] === 0 ? 0.02 : 0.15))
-        .force('y', d3.forceY(d => compCenters[nodeToComp[d.id]].y)
-            .strength(d => nodeToComp[d.id] === 0 ? 0.02 : 0.15))
-        .stop();
+    .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(38))          // antes 55: enlaces más cortos
+    .force('charge', d3.forceManyBody().strength(d => -22 - calculateRadius(d) * 5))  // antes -40 - r*8: menos repulsión
+    .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 2).iterations(4))  // antes +3
+    .force('x', d3.forceX(d => compCenters[nodeToComp[d.id]].x)
+    .strength(d => nodeToComp[d.id] === 0 ? 0.03 : 0.1))     // antes 0.02 / 0.15: más orgánico
+    .force('y', d3.forceY(d => compCenters[nodeToComp[d.id]].y)
+    .strength(d => nodeToComp[d.id] === 0 ? 0.03 : 0.1))
+    .stop();
 
     simulation.tick(300);
 
@@ -115,21 +120,21 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
         if (n.y + r > maxY) maxY = n.y + r;
     });
 
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-    
-    const cur = Math.max(0.1, (maxX - minX) / Math.max(1, maxY - minY));
-    const target = 1.6; // Target aspect ratio
-    const stretch = Math.min(1.6, Math.max(target / cur, cur / target));
-    const sx = cur < target ? stretch : 1;
-    const sy = cur > target ? stretch : 1;
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
 
-    layoutNodes.forEach(node => {
-        node.x = (node.x - cx) * sx;
-        node.y = (node.y - cy) * sy;
-        node.fx = node.x;
-        node.fy = node.y;
-    });
+        const cur = Math.max(0.1, (maxX - minX) / Math.max(1, maxY - minY));
+        const target = 1.25; // Target aspect ratio (antes 1.6, debe coincidir con `aspect` de arriba)
+        const stretch = Math.min(1.6, Math.max(target / cur, cur / target));
+        const sx = cur < target ? stretch : 1;
+        const sy = cur > target ? stretch : 1;
 
-    return { nodes: layoutNodes, links: layoutLinks };
+        layoutNodes.forEach(node => {
+            node.x = (node.x - cx) * sx;
+            node.y = (node.y - cy) * sy;
+            node.fx = node.x;
+            node.fy = node.y;
+        });
+
+        return { nodes: layoutNodes, links: layoutLinks };
 };

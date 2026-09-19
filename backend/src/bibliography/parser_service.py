@@ -1,6 +1,7 @@
 import datetime
 from typing import List, Optional
 import re
+import json
 import bibtexparser
 from .schemas import ParsedReference
 from .wos_parser import (
@@ -441,6 +442,7 @@ def parse_bibliography_content(content: str, ext: str) -> List[ParsedReference]:
             cited_references_count=_extract_bib_int(
                 entry, "cited_references_count"
             ),
+            raw_data=json.dumps(entry, default=str) if isinstance(entry, dict) else str(entry),
             authors_detail=_parse_bib_authors_detail(
                 entry if isinstance(entry, dict) else getattr(entry, "fields_dict", {})
             ),

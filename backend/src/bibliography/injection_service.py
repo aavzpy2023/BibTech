@@ -1,5 +1,6 @@
 """Service for persisting bibliographic references into the database."""
 import re
+import unicodedata
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError
@@ -62,6 +63,14 @@ def _get_insert_stmt(table_or_model, db: Session):
     from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
     return sqlite_insert(table_or_model).on_conflict_do_nothing()
+
+
+def _normalize_author_name(name: str) -> str:
+    """Normalizes author name by removing diacritics, lowering case, and stripping non-alphanumeric chars."""
+    if not name:
+        return ""
+    n = unicodedata.normalize("NFKD", name).encode("ASCII", "ignore").decode("utf-8")
+    return re.sub(r"[^a-z0-9]", "", n.lower())
 
 
 def _infer_source_db_id(ref) -> Optional[int]:
@@ -306,119 +315,145 @@ def _bulk_inject_references(
                 existing_affils[aff.institution] = aff.id
 
     # 2. Extract author metadata map (ORCID, email, affiliation_id)
-    author_info_map = {}
-    all_authors_raw = set()
+    raw_authors_list = []
     for ref in refs:
         if getattr(ref, "authors_detail", None):
             for ad in ref.authors_detail:
                 name = (ad.get("name") or "").strip()[:255]
                 if name:
-                    all_authors_raw.add(name)
                     aff_str = (ad.get("affiliation") or "").strip().rstrip(".")[:255]
-                    aff_id = existing_affils.get(aff_str)
-                    author_info_map[name] = {
+                    raw_authors_list.append({
                         "name": name,
+                        "norm_name": _normalize_author_name(name),
                         "orcid": (ad.get("orcid") or "")[:50] or None,
                         "email": (ad.get("email") or "")[:255] or None,
-                        "affiliation_id": aff_id,
-                    }
+                        "affiliation_id": existing_affils.get(aff_str),
+                        "is_corr": bool(ad.get("is_corresponding", False))
+                    })
         elif ref.author:
             for a_name in re.split(r"\s+and\s+", str(ref.author), flags=re.I):
                 clean = a_name.strip()[:255]
                 if clean:
-                    all_authors_raw.add(clean)
-                    if clean not in author_info_map:
-                        author_info_map[clean] = {
-                            "name": clean,
-                            "orcid": None,
-                            "email": None,
-                            "affiliation_id": None,
-                        }
+                    raw_authors_list.append({
+                        "name": clean,
+                        "norm_name": _normalize_author_name(clean),
+                        "orcid": None,
+                        "email": None,
+                        "affiliation_id": None,
+                        "is_corr": False
+                    })
 
-    # 3. Bulk inject authors
-    if all_authors_raw:
-        existing_authors = {
-            auth.name: auth
-            for auth in db.query(Author)
-            .filter(Author.name.in_(all_authors_raw))
-            .all()
-        }
-        
-        for a_name, auth_obj in existing_authors.items():
-            new_data = author_info_map.get(a_name)
-            if new_data:
-                if not auth_obj.orcid and new_data.get("orcid"):
-                    auth_obj.orcid = new_data["orcid"]
-                if not auth_obj.email and new_data.get("email"):
-                    auth_obj.email = new_data["email"]
-                if not auth_obj.affiliation_id and new_data.get("affiliation_id"):
-                    auth_obj.affiliation_id = new_data["affiliation_id"]
+    incoming_authors = {}
+    for item in raw_authors_list:
+        n_key = item["norm_name"]
+        if not n_key:
+            continue
+        if n_key not in incoming_authors:
+            incoming_authors[n_key] = item.copy()
+        else:
+            existing = incoming_authors[n_key]
+            if not existing["orcid"] and item["orcid"]:
+                existing["orcid"] = item["orcid"]
+            if not existing["email"] and item["email"]:
+                existing["email"] = item["email"]
+            if not existing["affiliation_id"] and item["affiliation_id"]:
+                existing["affiliation_id"] = item["affiliation_id"]
 
-        new_authors = [
-            author_info_map.get(name, {"name": name})
-            for name in all_authors_raw
-            if name not in existing_authors
-        ]
-        if new_authors:
-            stmt_auth = _get_insert_stmt(Author, db).values(new_authors)
-            db.execute(stmt_auth)
-            existing_authors = {
-                auth.name: auth
-                for auth in db.query(Author)
-                .filter(Author.name.in_(all_authors_raw))
-                .all()
+    # 3. Bulk inject authors and match existing
+    all_db_authors = db.query(Author).all()
+    db_authors_by_orcid = {a.orcid: a for a in all_db_authors if a.orcid}
+    db_authors_by_norm = {_normalize_author_name(a.name): a for a in all_db_authors}
+
+    matched_authors = {}
+    new_authors_data = {}
+
+    for n_key, data in incoming_authors.items():
+        match = None
+        if data["orcid"] and data["orcid"] in db_authors_by_orcid:
+            match = db_authors_by_orcid[data["orcid"]]
+        elif n_key in db_authors_by_norm:
+            match = db_authors_by_norm[n_key]
+
+        if match:
+            if not match.orcid and data["orcid"]:
+                match.orcid = data["orcid"]
+            if not match.email and data["email"]:
+                match.email = data["email"]
+            if not match.affiliation_id and data["affiliation_id"]:
+                match.affiliation_id = data["affiliation_id"]
+            matched_authors[n_key] = match
+        else:
+            new_authors_data[n_key] = {
+                "name": data["name"],
+                "orcid": data["orcid"],
+                "email": data["email"],
+                "affiliation_id": data["affiliation_id"],
             }
 
-        # 4. Link authors to articles with corresponding flag
-        author_articles_data = []
-        seen_auth_links = set()
-        for ref in refs:
-            doi_val = (ref.doi or "").strip() or None
-            title_val = (ref.title or "").strip() or "Untitled"
-            art = existing_by_doi.get(doi_val) if doi_val else None
-            if not art:
-                art = existing_by_title.get(title_val)
-            if not art:
-                continue
+    if new_authors_data:
+        stmt_auth = _get_insert_stmt(Author, db).values(list(new_authors_data.values()))
+        db.execute(stmt_auth)
+        db.flush()
+        new_names = [d["name"] for d in new_authors_data.values()]
+        fresh_authors = db.query(Author).filter(Author.name.in_(new_names)).all()
+        for fa in fresh_authors:
+            n_key = _normalize_author_name(fa.name)
+            matched_authors[n_key] = fa
+            db_authors_by_norm[n_key] = fa
+            if fa.orcid:
+                db_authors_by_orcid[fa.orcid] = fa
 
-            author_items = []
-            if getattr(ref, "authors_detail", None):
-                author_items = [
-                    (
-                        (ad.get("name") or "").strip()[:255],
-                        bool(ad.get("is_corresponding", False)),
-                    )
-                    for ad in ref.authors_detail
-                    if (ad.get("name") or "").strip()
-                ]
-            elif ref.author:
-                author_items = [
-                    (a.strip()[:255], False)
-                    for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
-                    if a.strip()
-                ]
+    # 4. Link authors to articles with corresponding flag
+    author_articles_data = []
+    seen_auth_links = set()
+    for ref in refs:
+        doi_val = (ref.doi or "").strip() or None
+        title_val = (ref.title or "").strip() or "Untitled"
+        art = existing_by_doi.get(doi_val) if doi_val else None
+        if not art:
+            art = existing_by_title.get(title_val)
+        if not art:
+            continue
 
-            for idx, (a_name, is_corr) in enumerate(author_items):
-                auth_obj = existing_authors.get(a_name)
-                if (
-                    auth_obj
-                    and (auth_obj.id, art.id) not in seen_auth_links
-                ):
-                    author_articles_data.append(
-                        {
-                            "author_id": auth_obj.id,
-                            "article_id": art.id,
-                            "author_order": idx + 1,
-                            "is_corresponding": is_corr,
-                        }
-                    )
-                    seen_auth_links.add((auth_obj.id, art.id))
+        author_items = []
+        if getattr(ref, "authors_detail", None):
+            author_items = [
+                (
+                    (ad.get("name") or "").strip()[:255],
+                    bool(ad.get("is_corresponding", False)),
+                )
+                for ad in ref.authors_detail
+                if (ad.get("name") or "").strip()
+            ]
+        elif ref.author:
+            author_items = [
+                (a.strip()[:255], False)
+                for a in re.split(r"\s+and\s+", str(ref.author), flags=re.I)
+                if a.strip()
+            ]
 
-        if author_articles_data:
-            stmt_aa = _get_insert_stmt(AuthorArticle, db).values(
-                author_articles_data
-            )
-            db.execute(stmt_aa)
+        for idx, (a_name, is_corr) in enumerate(author_items):
+            n_key = _normalize_author_name(a_name)
+            auth_obj = matched_authors.get(n_key) or db_authors_by_norm.get(n_key)
+            if (
+                auth_obj
+                and (auth_obj.id, art.id) not in seen_auth_links
+            ):
+                author_articles_data.append(
+                    {
+                        "author_id": auth_obj.id,
+                        "article_id": art.id,
+                        "author_order": idx + 1,
+                        "is_corresponding": is_corr,
+                    }
+                )
+                seen_auth_links.add((auth_obj.id, art.id))
+
+    if author_articles_data:
+        stmt_aa = _get_insert_stmt(AuthorArticle, db).values(
+            author_articles_data
+        )
+        db.execute(stmt_aa)
 
     # 5. Bulk inject keywords (Author Keywords and Keywords-Plus)
     all_keywords_to_process = set()

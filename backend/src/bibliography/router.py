@@ -16,6 +16,8 @@ from .download_service import execute_batch_download
 from .zip_service import create_zip_from_pdfs
 import math
 from collections import defaultdict
+import networkx as nx
+import community as community_louvain
 from .injection_service import (
     inject_references_to_db,
     backfill_funding_from_articles,
@@ -56,11 +58,11 @@ except ImportError:
 async def _process_upload(file: UploadFile) -> List[ParsedReference]:
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
-    
+
     _, ext = os.path.splitext(file.filename)
     if ext.lower() not in [".bib"]:
         raise HTTPException(status_code=400, detail="Unsupported file extension")
-    
+
     try:
         content_bytes = await file.read()
         try:
@@ -401,7 +403,7 @@ async def batch_download_local(request: LocalBatchDownloadRequest):
             content = f.read()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
-    
+
     _, ext = os.path.splitext(request.file_path)
     try:
         refs = parse_bibliography_content(content, ext)
@@ -426,6 +428,7 @@ async def batch_download_local(request: LocalBatchDownloadRequest):
 def get_coauthorship_network(
     project_code: str | None = None,
     max_nodes: int = 150,
+    resolution: float = 1.0,
     db: Session = Depends(get_db),
 ):
     query = db.query(Article)
@@ -521,32 +524,51 @@ def get_coauthorship_network(
             adj[a1].add(a2)
             adj[a2].add(a1)
 
-    visited: dict[str, int] = {}
-    curr_cluster = 1
-    for author in ranked_authors:
-        if author not in visited:
-            queue = [author]
-            visited[author] = curr_cluster
-            while queue:
-                curr = queue.pop(0)
-                for neighbor in adj[curr]:
-                    if neighbor not in visited:
-                        visited[neighbor] = curr_cluster
-                        queue.append(neighbor)
-            curr_cluster = (curr_cluster % 3) + 1
-
     degree = {n: len(adj[n]) for n in ranked_authors}
+
+    # Detección de comunidades con el algoritmo de Louvain (maximiza
+    # modularidad), en vez de asignar un color por componente conexo con un
+    # ciclo de 3. Esto permite que un componente grande y denso (ej. el hub
+    # central) se divida en varios sub-grupos de colaboración reales si la
+    # estructura interna lo justifica, en vez de quedar todo del mismo color.
+    G = nx.Graph()
+    G.add_nodes_from(ranked_authors)
+    for (a1, a2), w in coauthorship_counts.items():
+        if a1 in ranked_set and a2 in ranked_set:
+            G.add_edge(a1, a2, weight=w)
+
+    if G.number_of_edges() > 0:
+        partition = community_louvain.best_partition(
+            G, weight="weight", resolution=resolution, random_state=42
+        )
+    else:
+        # Sin ningún enlace: cada autor es su propia comunidad.
+        partition = {n: i for i, n in enumerate(ranked_authors)}
+
+    # Louvain numera las comunidades en el orden en que las descubre, sin
+    # relación con su tamaño. Las reordenamos de mayor a menor cantidad de
+    # autores para que el id 1 siga siendo el "Primary Collaboration
+    # Cluster" (el grupo más grande), igual que en la versión anterior.
+    community_sizes: dict[int, int] = defaultdict(int)
+    for cid in partition.values():
+        community_sizes[cid] += 1
+    ordered_communities = sorted(
+        community_sizes.keys(), key=lambda c: community_sizes[c], reverse=True
+    )
+    remap = {old_cid: idx + 1 for idx, old_cid in enumerate(ordered_communities)}
+    visited: dict[str, int] = {n: remap[partition[n]] for n in ranked_authors}
+
     cluster_nodes = defaultdict(list)
     for name in ranked_authors:
-        cluster_nodes[visited.get(name, 1)].append(name)
-        
+        cluster_nodes[visited[name]].append(name)
+
     cluster_ids = sorted(cluster_nodes.keys())
-    
+
     nodes = []
     for c_idx, cid in enumerate(cluster_ids):
         c_names = cluster_nodes[cid]
         c_names.sort(key=lambda n: degree[n], reverse=True)
-        
+
         for i, name in enumerate(c_names):
             node_id = author_id_map[name]
             papers = author_papers[name]
@@ -572,11 +594,24 @@ def get_coauthorship_network(
                 "weight": w,
             })
 
+    # Paleta ampliada: Louvain puede encontrar más de 4 comunidades. Si hay
+    # más comunidades que colores, se repiten cíclicamente.
+    PALETTE = [
+        "#ef4444", "#3b82f6", "#10b981", "#06b6d4",
+        "#f59e0b", "#a855f7", "#ec4899", "#84cc16",
+    ]
+    CLUSTER_NAMES = [
+        "Primary Collaboration Cluster",
+        "Core Scientific Cluster",
+        "Emerging Research Cluster",
+        "Secondary Hub",
+    ]
     clusters = {
-        1: {"name": "Primary Collaboration Cluster", "color": "#ef4444"},
-        2: {"name": "Core Scientific Cluster", "color": "#3b82f6"},
-        3: {"name": "Emerging Research Cluster", "color": "#10b981"},
-        4: {"name": "Secondary Hub", "color": "#06b6d4"},
+        cid: {
+            "name": CLUSTER_NAMES[i] if i < len(CLUSTER_NAMES) else f"Cluster {cid}",
+            "color": PALETTE[i % len(PALETTE)],
+        }
+        for i, cid in enumerate(cluster_ids)
     }
 
     return {"nodes": nodes, "links": links, "clusters": clusters}

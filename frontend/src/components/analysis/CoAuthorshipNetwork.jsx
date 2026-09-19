@@ -1,10 +1,12 @@
 import React, { useRef, useCallback, useMemo } from 'react';
 import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
 import useNetworkLayout from '../../hooks/useNetworkLayout';
+import useElementSize from '../../hooks/useElementSize';
 import NetworkGraphTemplate from './NetworkGraphTemplate';
 import AnalysisPageTemplate from './AnalysisPageTemplate';
 import { exportCanvasToImage } from '../../views/analysis/network/exportNetwork';
 import { setRenderNodes } from '../../views/analysis/network/networkRender';
+import { fitGraphView } from '../../views/analysis/network/networkFit';
 import logoImg from '../../assets/logo.png';
 
 const styles = {
@@ -69,10 +71,9 @@ const styles = {
     },
     canvasWrapper: {
         position: 'relative',
-        width: '100%',
+        width: 'min(100%, calc(75vh * 1.6))',
         aspectRatio: '16 / 10',
-        maxHeight: '75vh',
-        minHeight: '500px',
+        margin: '0 auto',
         backgroundColor: '#ffffff',
         borderRadius: '6px',
         overflow: 'hidden'
@@ -127,9 +128,12 @@ const styles = {
     })
 };
 
+const FIT_PADDING = 24; // px de margen; el ajuste ya cuenta las etiquetas
+
 export default function CoAuthorshipNetwork() {
     const fgRef = useRef();
     const wrapperRef = useRef();
+    const size = useElementSize(wrapperRef);
 
     const {
         nodes,
@@ -156,23 +160,17 @@ export default function CoAuthorshipNetwork() {
     React.useEffect(() => {
         if (!isCalculating && frozenData?.nodes?.length > 0) {
             setRenderNodes(frozenData.nodes);
-            const t = setTimeout(() => {
-                if (fgRef.current) fgRef.current.zoomToFit(400, 60);
-            }, 100);
-            return () => clearTimeout(t);
         }
     }, [isCalculating, frozenData]);
 
+    // Ajusta al cargar y cada vez que cambia el tamaño REAL del contenedor.
     React.useEffect(() => {
-        if (!wrapperRef.current) return;
-        const ro = new ResizeObserver(() => {
-            if (!isCalculating && frozenData?.nodes?.length > 0 && fgRef.current) {
-                fgRef.current.zoomToFit(0, 60);
-            }
-        });
-        ro.observe(wrapperRef.current);
-        return () => ro.disconnect();
-    }, [isCalculating, frozenData]);
+        if (isCalculating || !frozenData?.nodes?.length || !size.width || !size.height) return undefined;
+        const t = setTimeout(() => {
+            fitGraphView(fgRef.current, frozenData.nodes, size.width, size.height, FIT_PADDING);
+        }, 100);
+        return () => clearTimeout(t);
+    }, [isCalculating, frozenData, size.width, size.height]);
 
     const toolbar = (
         <>
@@ -245,14 +243,18 @@ export default function CoAuthorshipNetwork() {
                 <button
                     type="button"
                     style={styles.fitBtn}
-                    onClick={() => fgRef.current && fgRef.current.zoomToFit(400)}
+                    onClick={() => fitGraphView(fgRef.current, frozenData.nodes, size.width, size.height, FIT_PADDING)}
                 >
                     Center
                 </button>
                 <button
                     type="button"
                     style={styles.exportBtn}
-                    onClick={() => exportCanvasToImage(fgRef, 'co-authorship-novascope-hd.png')}
+                    onClick={() => exportCanvasToImage(fgRef, 'co-authorship-novascope-hd.png', {
+                        nodes: frozenData.nodes,
+                        links: frozenData.links,
+                        logoSrc: logoImg
+                    })}
                     data-testid="export-hd-btn"
                 >
                     Download HD
@@ -325,6 +327,8 @@ export default function CoAuthorshipNetwork() {
                     <NetworkGraphTemplate
                         ref={fgRef}
                         frozenData={frozenData}
+                        width={size.width || undefined}
+                        height={size.height || undefined}
                         onNodeClick={node => setSelectedNodeId(node.id)}
                     />
                 )}

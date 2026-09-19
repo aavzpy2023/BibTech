@@ -1,4 +1,143 @@
-export const exportCanvasToImage = (canvasRef, filename = 'network-export.png') => {
+import { drawNode, drawLink, layoutLabels, paintLabel } from './networkRender';
+import { fitTransform } from './networkFit';
+
+const EXPORT_W = 3200;
+const EXPORT_H = 2000;          // 16:10, como la maqueta y el contenedor de pantalla
+const REFERENCE_W = 1600;       // ancho para el que están pensados los tamaños base (fuentes, trazos)
+
+const loadImage = (src) => new Promise((resolve) => {
+    if (!src) return resolve(null);
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+});
+
+/**
+ * Logo + separador + "NOVA" (azul marino) + "SCOPE" (degradado violeta), abajo a la derecha.
+ * Se dibuja en píxeles de lienzo, sin transformación de zoom.
+ */
+export const drawExportBranding = (ctx, W, H, logo = null) => {
+    const s = W / REFERENCE_W;
+    const pad = 40 * s;
+    const icon = 52 * s;
+    const cy = H - pad - icon / 2;
+
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = `600 ${28 * s}px Sans-Serif`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = `${3 * s}px`;
+
+    const novaW = ctx.measureText('NOVA').width;
+    const scopeW = ctx.measureText('SCOPE').width;
+    const x = W - pad - novaW - scopeW;
+
+    ctx.fillStyle = '#1e2a5c';
+    ctx.fillText('NOVA', x, cy);
+    const grad = ctx.createLinearGradient(x + novaW, 0, x + novaW + scopeW, 0);
+    grad.addColorStop(0, '#6366f1');
+    grad.addColorStop(1, '#a855f7');
+    ctx.fillStyle = grad;
+    ctx.fillText('SCOPE', x + novaW, cy);
+
+    const sepX = x - 16 * s;
+    ctx.strokeStyle = 'rgba(30, 42, 92, 0.45)';
+    ctx.lineWidth = 2 * s;
+    ctx.beginPath();
+    ctx.moveTo(sepX, cy - icon / 2 + 4 * s);
+    ctx.lineTo(sepX, cy + icon / 2 - 4 * s);
+    ctx.stroke();
+
+    if (logo) ctx.drawImage(logo, sepX - 16 * s - icon, cy - icon / 2, icon, icon);
+    ctx.restore();
+};
+
+/**
+ * Dibuja la red completa en `canvas` (fondo blanco, ajustada al lienzo, etiquetas al final).
+ * No toca el canvas de pantalla ni la caché de etiquetas de pantalla.
+ */
+export const renderNetworkToCanvas = (canvas, { nodes, links = [], logo = null }) => {
+    const W = canvas.width;
+    const H = canvas.height;
+    const ctx = canvas.getContext('2d');
+    const labelScale = W / REFERENCE_W;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+
+    const { k, x, y } = fitTransform(nodes, W, H, ctx, { pad: 50 * labelScale, labelScale });
+    // Todo lo que en pantalla se define en px de pantalla (trazos, fuentes) se
+    // escala igual: se dibuja como si el zoom de pantalla fuese k / labelScale.
+    const kEff = k / labelScale;
+
+    const byId = new Map(nodes.map(n => [n.id, n]));
+    const resolve = (e) => (e && typeof e === 'object' ? e : byId.get(e));
+
+    ctx.setTransform(k, 0, 0, k, x, y);
+    links.forEach(l => {
+        const source = resolve(l.source);
+        const target = resolve(l.target);
+        if (source && target) drawLink({ ...l, source, target }, ctx, kEff);
+    });
+    nodes.forEach(n => drawNode(n, ctx, kEff));
+
+    const labels = layoutLabels(nodes, ctx, kEff);
+    nodes.forEach(n => {
+        const pos = labels.get(n.id);
+        if (pos) paintLabel(n, pos, ctx);
+    });
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    drawExportBranding(ctx, W, H, logo);
+    return canvas;
+};
+
+const saveCanvas = (canvas, filename) => new Promise((resolve) => {
+    const save = (href, revoke) => {
+        const a = document.createElement('a');
+        a.href = href;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        if (revoke) setTimeout(() => URL.revokeObjectURL(href), 1000);
+        resolve();
+    };
+    if (canvas.toBlob) {
+        canvas.toBlob(
+            blob => (blob ? save(URL.createObjectURL(blob), true) : save(canvas.toDataURL('image/png'), false)),
+            'image/png'
+        );
+    } else {
+        save(canvas.toDataURL('image/png'), false);
+    }
+});
+
+const exportOffscreen = async (filename, { nodes, links, logoSrc = null, width = EXPORT_W, height = EXPORT_H }) => {
+    try {
+        const logo = await loadImage(logoSrc);
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        if (!canvas.getContext('2d')) return;
+        renderNetworkToCanvas(canvas, { nodes, links, logo });
+        await saveCanvas(canvas, filename);
+    } catch (err) {
+        console.error('HD Export Error:', err);
+    }
+};
+
+/**
+ * Con `options.nodes` re-renderiza la red en un canvas offscreen de alta resolución.
+ * Sin ellas conserva el comportamiento anterior (copia ampliada del canvas de pantalla).
+ */
+export const exportCanvasToImage = (canvasRef, filename = 'network-export.png', options = null) => {
+    if (options && options.nodes && options.nodes.length > 0) {
+        return exportOffscreen(filename, options);
+    }
+
     try {
         const fgEl = canvasRef.current;
         // react-force-graph exposes its internal canvas via the canvas property on the ref
