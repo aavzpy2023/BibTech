@@ -1,8 +1,14 @@
+export const EXTENDED_PALETTE = [
+    '#ff1a2e', '#1a5cff', '#00c853', '#00b8d4', '#ff9800', 
+    '#9c27b0', '#ffeb3b', '#e91e63', '#795548', '#cddc39', 
+    '#673ab7', '#009688', '#ff5722', '#607d8b', '#8bc34a'
+];
+
 export const CLUSTER_METADATA = {
-    1: { name: 'Primary Collaboration Cluster', color: '#ff1a2e' },
-    2: { name: 'Core Scientific Cluster', color: '#1a5cff' },
-    3: { name: 'Emerging Research Cluster', color: '#00c853' },
-    4: { name: 'Secondary Hub', color: '#00b8d4' }
+    1: { name: 'Primary Collaboration Cluster', color: EXTENDED_PALETTE[0] },
+    2: { name: 'Core Scientific Cluster', color: EXTENDED_PALETTE[1] },
+    3: { name: 'Emerging Research Cluster', color: EXTENDED_PALETTE[2] },
+    4: { name: 'Secondary Hub', color: EXTENDED_PALETTE[3] }
 };
 
 /**
@@ -10,7 +16,14 @@ export const CLUSTER_METADATA = {
  */
 export const getNodeColor = (group) => {
     const cluster = CLUSTER_METADATA[group];
-    return cluster ? cluster.color : '#9ca3af';
+    if (cluster) return cluster.color;
+    
+    const numericGroup = parseInt(group, 10);
+    if (!isNaN(numericGroup)) {
+        const safeIndex = Math.max(0, numericGroup - 1);
+        return EXTENDED_PALETTE[safeIndex % EXTENDED_PALETTE.length];
+    }
+    return '#9ca3af';
 };
 
 // Rango de radios general (en px de grafo, antes de aplicar `scale`).

@@ -1,9 +1,34 @@
 import type { NetworkNode } from "../types";
 
-const CLUSTER_PALETTE = {
-    red: { start: "#ff6b6b", end: "#c92a2a" },
-    blue: { start: "#4dabf7", end: "#1864ab" },
-    green: { start: "#69db7c", end: "#2b8a3e" },
+const GRADIENT_PALETTE = [
+    { start: "#ff6b6b", end: "#c92a2a" }, // 1: Red
+    { start: "#4dabf7", end: "#1864ab" }, // 2: Blue
+    { start: "#69db7c", end: "#2b8a3e" }, // 3: Green
+    { start: "#4dd0e1", end: "#0097a7" }, // 4: Cyan
+    { start: "#ffb74d", end: "#f57c00" }, // 5: Orange
+    { start: "#ba68c8", end: "#7b1fa2" }, // 6: Purple
+    { start: "#fff176", end: "#fbc02d" }, // 7: Yellow
+    { start: "#f06292", end: "#c2185b" }, // 8: Pink
+    { start: "#a1887f", end: "#5d4037" }, // 9: Brown
+    { start: "#dce775", end: "#afb42b" }, // 10: Lime
+    { start: "#9575cd", end: "#512da8" }, // 11: Deep Purple
+    { start: "#4db6ac", end: "#00796b" }, // 12: Teal
+    { start: "#ff8a65", end: "#e64a19" }, // 13: Deep Orange
+    { start: "#90a4ae", end: "#455a64" }, // 14: Blue Grey
+    { start: "#aed581", end: "#689f38" }, // 15: Light Green
+];
+
+const getGradientColors = (clusterId: string | number | undefined) => {
+    if (clusterId === 'red') return GRADIENT_PALETTE[0];
+    if (clusterId === 'blue') return GRADIENT_PALETTE[1];
+    if (clusterId === 'green') return GRADIENT_PALETTE[2];
+
+    const idx = parseInt(String(clusterId), 10);
+    if (!isNaN(idx)) {
+        const safeIdx = Math.max(0, idx - 1);
+        return GRADIENT_PALETTE[safeIdx % GRADIENT_PALETTE.length];
+    }
+    return { start: "#9ca3af", end: "#4b5563" }; // Fallback
 };
 
 /**
@@ -27,7 +52,8 @@ export const drawNodes = (
             node.x, node.y, node.radius
         );
 
-        const colors = CLUSTER_PALETTE[node.cluster as keyof typeof CLUSTER_PALETTE] || { start: "#9ca3af", end: "#4b5563" };
+        const clusterId = node.cluster ?? (node as any).group;
+        const colors = getGradientColors(clusterId);
         grad.addColorStop(0, "#ffffff");
         grad.addColorStop(0.3, colors.start);
         grad.addColorStop(1, "#1f2937");

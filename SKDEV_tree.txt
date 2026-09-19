@@ -194,6 +194,7 @@
 │   │   │   ├── cli.py
 │   │   │   ├── compression.py
 │   │   │   ├── config.py
+│   │   │   ├── deduplicate_authors.py
 │   │   │   ├── discovery.py
 │   │   │   ├── export_project.py
 │   │   │   ├── export_project_old.py
