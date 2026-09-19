@@ -113,7 +113,7 @@
 - [x] Story 1.3: Render Micro-Surgery (Links & Nodes Utilities)
 - [x] Story 1.4: Render Micro-Surgery (Labels & Orchestrator)
 - [x] Story 1.5: State Fractality (React Hook vs Dumb Canvas)
-- [ ] Story 1.6: Boundary Layer UI (Branding Overlay)
+- [x] Story 1.6: Boundary Layer UI (Branding Overlay)
 
 ## Active Roadmaps
 - [Roadmap 20: Novascope D3](roadmap_1_novascope_d3.md)

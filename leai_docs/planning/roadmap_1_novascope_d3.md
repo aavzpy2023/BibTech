@@ -61,7 +61,8 @@ complexity_aggregate: "HARD"
   [ID-1.5.3] [UI/COMPONENT]: [1. Create GraphCanvas.tsx. 2. Implement a 100% dumb view: instantiate <canvas ref={canvasRef} />. 3. Call useForceSimulation({ nodes: dummyNodes, links: dummyLinks }, canvasRef). No logic rendering allowed in JSX]. Type: Task.
   [ID-1.5.4] [PLANNING/SYNC]: [1. Open leai_docs/planning/roadmap_1_novascope_d3.md and check - [x] for Story 1.5. 2. Append > Files touched: [files]. 3. Update global_backlog.md]. Type: Task.
 
-- [ ] Story 1.6: Boundary Layer UI (Branding Overlay) | [MoSCoW: MUST] | [Complexity: EASY] (<-- Story 1.5)
+- [x] Story 1.6: Boundary Layer UI (Branding Overlay) | [MoSCoW: MUST] | [Complexity: EASY] (<-- Story 1.5)
+  > Files touched: frontend/src/graph/GraphWrapper.tsx
   Business Requirement: Position the static "NOVASCOPE" branding overlay over the canvas layer without interfering with the physics.
   Story Context Radius: {"src/graph/GraphWrapper.tsx": [""], "leai_docs/planning/roadmap_1_novascope_d3.md": [""], "leai_docs/planning/global_backlog.md": ["*"]}
   Layered Technical Breakdown:
