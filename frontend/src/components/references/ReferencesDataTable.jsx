@@ -120,7 +120,7 @@ const styles = {
 let globalSelectedRows = [];
 let globalIsDetailsOpen = false;
 
-export function ReferencesDataTable({ data = [] }) {
+export function ReferencesDataTable({ data = [], onSelectionChange }) {
   const [selectedRows, setSelectedRows] = useState(() => {
     if (globalSelectedRows.length === 0) return [];
     if (!data || data.length === 0) return globalSelectedRows;
@@ -139,6 +139,7 @@ export function ReferencesDataTable({ data = [] }) {
           ? newRowsOrUpdater(prev)
           : newRowsOrUpdater;
       globalSelectedRows = next;
+      if (onSelectionChange) onSelectionChange(next);
       return next;
     });
   };

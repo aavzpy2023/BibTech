@@ -115,6 +115,9 @@ let cachedTableData = [];
 
 export function ReferencesView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [tableData, setTableData] = useState(cachedTableData);
   const [_dummyState, _setDummy] = useState([
     {
@@ -169,6 +172,32 @@ export function ReferencesView() {
     }
   }, [projectCode, fetchProjectReferences]);
 
+  const handleDelete = async () => {
+    if (!projectCode || selectedRows.length === 0) return;
+    setIsDeleting(true);
+    try {
+        const res = await fetch('/api/bibliography/references/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                project_code: projectCode,
+                article_ids: selectedRows.map(r => r.id)
+            })
+        });
+        if (res.ok) {
+            await fetchProjectReferences(projectCode);
+            setSelectedRows([]);
+            setIsDeleteModalOpen(false);
+        } else {
+            console.error("Failed to delete references");
+        }
+    } catch (e) {
+        console.error(e);
+    } finally {
+        setIsDeleting(false);
+    }
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -181,20 +210,55 @@ export function ReferencesView() {
         )}
           </p>
         </div>
-        <button
-          style={styles.modalBtn}
-      onClick={() => {
-        if (resetStatus) resetStatus();
-        setIsModalOpen(true);
-      }}
-    >
-      + Add
-    </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            style={{ ...styles.modalBtn, backgroundColor: '#da3633', display: selectedRows.length > 0 ? 'inline-block' : 'none' }}
+            onClick={() => setIsDeleteModalOpen(true)}
+          >
+            Delete Selected ({selectedRows.length})
+          </button>
+          <button
+            style={styles.modalBtn}
+            onClick={() => {
+              if (resetStatus) resetStatus();
+              setIsModalOpen(true);
+            }}
+          >
+            + Add
+          </button>
+        </div>
       </div>
 
       <div style={styles.card}>
-        <ReferencesDataTable data={tableData} />
+        <ReferencesDataTable data={tableData} onSelectionChange={setSelectedRows} />
       </div>
+
+      {isDeleteModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div style={{ backgroundColor: '#161b22', padding: '24px', borderRadius: '8px', maxWidth: '400px', width: '100%', border: '1px solid #30363d', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+            <h3 style={{ margin: '0 0 12px 0', color: '#f0f6fc' }}>Delete References</h3>
+            <p style={{ color: '#8b949e', fontSize: '14px', marginBottom: '24px' }}>
+              Are you sure you want to delete {selectedRows.length} selected reference(s)? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                style={{ padding: '8px 16px', backgroundColor: 'transparent', border: '1px solid #30363d', color: '#f0f6fc', borderRadius: '6px', cursor: 'pointer' }}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                style={{ padding: '8px 16px', backgroundColor: '#da3633', border: 'none', color: '#ffffff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <UploadReferencesModal
         isOpen={isModalOpen}

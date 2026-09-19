@@ -71,6 +71,11 @@ class LocalBatchDownloadRequest(BaseModel):
     )
 
 
+class DeleteReferencesRequest(BaseModel):
+    project_code: str
+    article_ids: List[int]
+
+
 class ParsedReference(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
     

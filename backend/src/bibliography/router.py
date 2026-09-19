@@ -10,6 +10,7 @@ from .schemas import (
     BatchDownloadRequest,
     ZipDownloadRequest,
     LocalBatchDownloadRequest,
+    DeleteReferencesRequest,
 )
 from .parser_service import parse_bibliography_content
 from .download_service import execute_batch_download
@@ -128,6 +129,38 @@ if HAS_MULTIPART:
         db: Session = Depends(get_db),
     ):
         return await _process_inject(file, project_code, db)
+
+    @router.post("/references/delete")
+    def delete_references(
+        request: DeleteReferencesRequest,
+        db: Session = Depends(get_db),
+    ):
+        project = db.query(Project).filter(Project.name == request.project_code).first()
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        # Delete project links
+        db.query(ProjectArticle).filter(
+            ProjectArticle.project_id == project.id,
+            ProjectArticle.article_id.in_(request.article_ids)
+        ).delete(synchronize_session=False)
+
+        # Check for orphaned articles (not linked to any other project)
+        orphaned = db.query(Article.id).outerjoin(
+            ProjectArticle, Article.id == ProjectArticle.article_id
+        ).filter(
+            Article.id.in_(request.article_ids),
+            ProjectArticle.id == None
+        ).all()
+        
+        orphaned_ids = [o[0] for o in orphaned]
+        
+        if orphaned_ids:
+            db.query(Article).filter(Article.id.in_(orphaned_ids)).delete(synchronize_session=False)
+
+        db.commit()
+        return {"deleted": len(request.article_ids), "orphans_cleaned": len(orphaned_ids)}
+
 
     @router.get("/references", response_model=List[Dict[str, Any]])
     def get_project_references(
