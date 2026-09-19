@@ -29,14 +29,12 @@
 │   │   │   │   ├── ReferencesView.test.jsx
 │   │   │   │   ├── analysis/
 │   │   │   │   │   ├── network/
+│   │   │   │   │   │   ├── exportNetwork.js
 │   │   │   │   │   │   ├── networkData.js
-│   │   │   │   │   │   ├── networkData.test.js
+│   │   │   │   │   │   ├── networkFit.js
 │   │   │   │   │   │   ├── networkLayout.js
-│   │   │   │   │   │   ├── networkLayout.test.js
 │   │   │   │   │   │   ├── networkRender.js
-│   │   │   │   │   │   ├── networkRender.test.js
 │   │   │   │   │   │   ├── networkStyles.js
-│   │   │   │   │   │   ├── networkStyles.test.js
 │   │   │   ├── hooks/
 │   │   │   │   ├── useAnalysisNavigation.js
 │   │   │   │   ├── useAnalysisNavigation.test.js
@@ -46,6 +44,7 @@
 │   │   │   │   ├── useBibliography.test.js
 │   │   │   │   ├── useCoAuthorshipNetwork.js
 │   │   │   │   ├── useCoAuthorshipNetwork.test.js
+│   │   │   │   ├── useElementSize.js
 │   │   │   │   ├── useHoverReveal.js
 │   │   │   │   ├── useHoverReveal.test.js
 │   │   │   │   ├── useNetworkLayout.js
@@ -195,6 +194,7 @@
 │   │   │   ├── cli.py
 │   │   │   ├── compression.py
 │   │   │   ├── config.py
+│   │   │   ├── deduplicate_authors.py
 │   │   │   ├── discovery.py
 │   │   │   ├── export_project.py
 │   │   │   ├── export_project_old.py

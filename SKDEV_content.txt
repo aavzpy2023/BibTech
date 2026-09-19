@@ -1,164 +1,670 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-19 16:25:42
+Date: 2026-09-19 16:35:23
 AST Mode: False
 Line Numbers: True
-Modules: analysisMenuConfig.js, App.jsx
+Modules: AnalysisContent.jsx, core.py
 Processed Files: 2
 ===========================
 
 
 
-// --- frontend/src/config/analysisMenuConfig.js ---
+// --- frontend/src/components/analysis/AnalysisContent.jsx ---
 
-[L001, S0] export const ANALYSIS_MENU_CONFIG = [
-[L002, S4]     {
-[L003, S8]         id: 'overview',
-[L004, S8]         label: 'Overview',
-[L005, S8]         tabs: [
-[L006, S12]             { id: 'general-kpis', label: 'General KPIs' },
-[L007, S12]             { id: 'publication-citation-evolution', label: 'Publication & Citation Evolution' },
-[L008, S12]             { id: 'journal-distribution', label: 'Journal Distribution' },
-[L009, S12]             { id: 'research-snapshot', label: 'Research Snapshot' },
-[L010, S12]             { id: 'key-insights', label: 'Key Insights' }
-[L011, S8]         ]
-[L012, S4]     },
-[L013, S4]     {
-[L014, S8]         id: 'bibliometrics',
-[L015, S8]         label: 'Bibliometrics',
-[L016, S8]         tabs: [
-[L017, S12]             { id: 'publication-performance', label: 'Publication Performance' },
-[L018, S12]             { id: 'citation-analysis', label: 'Citation Analysis' },
-[L019, S12]             { id: 'author-productivity', label: 'Author Productivity' },
-[L020, S12]             { id: 'journal-analysis', label: 'Journal Analysis' },
-[L021, S12]             { id: 'document-impact', label: 'Document Impact' },
-[L022, S12]             { id: 'impact-indicators', label: 'Impact Indicators' }
-[L023, S8]         ]
-[L024, S4]     },
-[L025, S4]     {
-[L026, S8]         id: 'network-analysis',
-[L027, S8]         label: 'Network Analysis',
-[L028, S8]         tabs: [
-[L029, S12]             { id: 'co-authorship', label: 'Co-authorship' },
-[L030, S12]             { id: 'co-citation', label: 'Co-citation' },
-[L031, S12]             { id: 'bibliographic-coupling', label: 'Bibliographic Coupling' },
-[L032, S12]             { id: 'keyword-co-occurrence', label: 'Keyword Co-occurrence' }
-[L033, S8]         ]
-[L034, S4]     },
-[L035, S4]     {
-[L036, S8]         id: 'trends-evolution',
-[L037, S8]         label: 'Trends & Evolution',
-[L038, S8]         tabs: [
-[L039, S12]             { id: 'publication-evolution', label: 'Publication Evolution' },
-[L040, S12]             { id: 'citation-evolution', label: 'Citation Evolution' },
-[L041, S12]             { id: 'keyword-evolution', label: 'Keyword Evolution' },
-[L042, S12]             { id: 'thematic-evolution', label: 'Thematic Evolution' },
-[L043, S12]             { id: 'emerging-topics', label: 'Emerging Topics' }
-[L044, S8]         ]
-[L045, S4]     },
-[L046, S4]     {
-[L047, S8]         id: 'visualizations',
-[L048, S8]         label: 'Visualizations',
-[L049, S8]         tabs: [
-[L050, S12]             { id: 'visualization-builder', label: 'Visualization Builder' },
-[L051, S12]             { id: 'custom-charts', label: 'Custom Charts' },
-[L052, S12]             { id: 'network-maps', label: 'Network Maps' },
-[L053, S12]             { id: 'export-visualizations', label: 'Export Visualizations' }
-[L054, S8]         ]
-[L055, S4]     },
-[L056, S4]     {
-[L057, S8]         id: 'reports',
-[L058, S8]         label: 'Reports',
-[L059, S8]         tabs: [
-[L060, S12]             { id: 'generate-report', label: 'Generate Report' },
-[L061, S12]             { id: 'export-analysis', label: 'Export Analysis' }
-[L062, S8]         ]
-[L063, S4]     }
-[L064, S0] ];
+[L001, S0] import React from 'react';
+[L002, S0] import OverviewViewTemplate from './OverviewViewTemplate';
+[L003, S0] import CoAuthorshipNetwork from './CoAuthorshipNetwork';
+[L004, S0] 
+[L005, S0] const OVERVIEW_METADATA = {
+[L006, S4]     'general-kpis': {
+[L007, S8]         title: 'General KPIs',
+[L008, S8]         subtitle: 'Overall performance metrics and summary indicators.'
+[L009, S4]     },
+[L010, S4]     'publication-citation-evolution': {
+[L011, S8]         title: 'Publication & Citation Evolution',
+[L012, S8]         subtitle: 'Historical trajectory of publications and citation impact.'
+[L013, S4]     },
+[L014, S4]     'journal-distribution': {
+[L015, S8]         title: 'Journal Distribution',
+[L016, S8]         subtitle:
+[L017, S12]             'Breakdown and dispersion of articles across publication sources.'
+[L018, S4]     },
+[L019, S4]     'research-snapshot': {
+[L020, S8]         title: 'Research Snapshot',
+[L021, S8]         subtitle:
+[L022, S12]             'Consolidated scientometric snapshot of the current collection.'
+[L023, S4]     },
+[L024, S4]     'key-insights': {
+[L025, S8]         title: 'Key Insights',
+[L026, S8]         subtitle:
+[L027, S12]             'Automated analysis findings and primary bibliographic takeaways.'
+[L028, S4]     }
+[L029, S0] };
+[L030, S0] 
+[L031, S0] export default function AnalysisContent({ activeTabId }) {
+[L032, S4]     const styles = {
+[L033, S8]         container: {
+[L034, S12]             flex: 1,
+[L035, S12]             backgroundColor: '#0d1117',
+[L036, S12]             color: '#c9d1d9',
+[L037, S12]             display: 'flex',
+[L038, S12]             alignItems: 'center',
+[L039, S12]             justifyContent: 'center',
+[L040, S12]             padding: '24px',
+[L041, S12]             minHeight: '100%',
+[L042, S12]             flexDirection: 'column'
+[L043, S8]         },
+[L044, S8]         placeholderCard: {
+[L045, S12]             padding: '48px',
+[L046, S12]             backgroundColor: '#161b22',
+[L047, S12]             border: '1px dashed #30363d',
+[L048, S12]             borderRadius: '8px',
+[L049, S12]             textAlign: 'center'
+[L050, S8]         },
+[L051, S8]         title: {
+[L052, S12]             margin: '0 0 16px 0',
+[L053, S12]             fontSize: '20px',
+[L054, S12]             fontWeight: '600',
+[L055, S12]             color: '#f0f6fc'
+[L056, S8]         },
+[L057, S8]         subtitle: {
+[L058, S12]             margin: 0,
+[L059, S12]             fontSize: '14px',
+[L060, S12]             color: '#8b949e'
+[L061, S8]         }
+[L062, S4]     };
+[L063, S0] 
+[L064, S4]     const overviewConfig = OVERVIEW_METADATA[activeTabId];
+[L065, S0] 
+[L066, S4]     if (overviewConfig) {
+[L067, S8]         return (
+[L068, S12]             <OverviewViewTemplate
+[L069, S16]                 title={overviewConfig.title}
+[L070, S16]                 subtitle={overviewConfig.subtitle}
+[L071, S12]             >
+[L072, S16]                 <div style={styles.placeholderCard}>
+[L073, S20]                     <p style={styles.subtitle}>
+[L074, S24]                         Visualizations and metrics for {overviewConfig.title} will
+[L075, S24]                         appear here.
+[L076, S20]                     </p>
+[L077, S16]                 </div>
+[L078, S12]             </OverviewViewTemplate>
+[L079, S8]         );
+[L080, S4]     }
+[L081, S0] 
+[L082, S4]     if (activeTabId === 'co-authorship') {
+[L083, S8]         return <CoAuthorshipNetwork />;
+[L084, S4]     }
+[L085, S0] 
+[L086, S4]     return (
+[L087, S8]         <div style={styles.container} data-testid="analysis-content">
+[L088, S12]             <div style={styles.placeholderCard}>
+[L089, S16]                 <h2 style={styles.title}>Placeholder for {activeTabId}</h2>
+[L090, S16]                 <p style={styles.subtitle}>
+[L091, S20]                     Future dynamic visualization component will be rendered here.
+[L092, S16]                 </p>
+[L093, S12]             </div>
+[L094, S8]         </div>
+[L095, S4]     );
+[L096, S0] }
 
 
-// --- frontend/src/App.jsx ---
+// --- backend/src/database/models/core.py ---
 
-[L001, S0] import React, { useState, useEffect } from 'react';
-[L002, S0] import { BrowserRouter, Routes, Route } from 'react-router-dom';
-[L003, S0] import Layout from './components/Layout';
-[L004, S0] import LoadView from './views/LoadView';
-[L005, S0] import QueueView from './views/QueueView';
-[L006, S0] import AnalysisView from './views/AnalysisView';
-[L007, S0] import ReferencesView from './views/ReferencesView';
-[L008, S0] import BibliographyUploader from './components/BibliographyUploader';
-[L009, S0] import ReferenceTable from './components/ReferenceTable';
-[L010, S0] import { useBibliography } from './hooks/useBibliography';
-[L011, S0] 
-[L012, S0] export function DashboardView() {
-[L013, S2]   const [data, setData] = useState(null);
-[L014, S2]   const [error, setError] = useState(null);
-[L015, S2]   const { references, isLoading, error: uploadError, uploadFile } = useBibliography();
+[L001, S0] """Core relational database models for projects and articles."""
+[L002, S0] from datetime import datetime, timezone
+[L003, S0] 
+[L004, S0] from sqlalchemy import (
+[L005, S4]     Column,
+[L006, S4]     DateTime,
+[L007, S4]     ForeignKey,
+[L008, S4]     Integer,
+[L009, S4]     String,
+[L010, S4]     Text,
+[L011, S4]     UniqueConstraint,
+[L012, S0] )
+[L013, S0] from sqlalchemy.orm import relationship
+[L014, S0] 
+[L015, S0] from ..session import Base
 [L016, S0] 
-[L017, S2]   useEffect(() => {
-[L018, S4]     fetch('/api/requirements')
-[L019, S6]       .then(res => {
-[L020, S8]         if (!res.ok) throw new Error('Error al conectar con el servidor');
-[L021, S8]         return res.json();
-[L022, S6]       })
-[L023, S6]       .then(data => setData(data))
-[L024, S6]       .catch(err => setError(err.message));
-[L025, S2]   }, []);
-[L026, S0] 
-[L027, S2]   const styles = {
-[L028, S4]     container: { fontFamily: 'system-ui, sans-serif', padding: '0', textAlign: 'center', color: '#f0f6fc' },
-[L029, S4]     card: { border: 'none', borderRadius: '12px', padding: '24px', backgroundColor: '#161b22', textAlign: 'left' },
-[L030, S4]     badge: { backgroundColor: '#1f6feb22', color: '#58a6ff', padding: '6px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: 'bold', display: 'inline-block', marginBottom: '15px' },
-[L031, S4]     title: { fontSize: '24px', fontWeight: 'bold', color: '#f0f6fc', margin: '0 0 8px 0' }
-[L032, S2]   };
-[L033, S0] 
-[L034, S2]   return (
-[L035, S4]     <div style={styles.container}>
-[L036, S6]       <h1 style={styles.title}>¡Proyecto bibtech Inicializado! 🎉</h1>
-[L037, S6]       <div style={styles.card}>
-[L038, S8]         <h3>Ingesta de Bibliografía</h3>
-[L039, S8]         {uploadError && <p style={{color: 'red', fontWeight: 'bold'}}>❌ {uploadError}</p>}
-[L040, S8]         {isLoading && <p style={{color: '#0366d6'}}>Procesando archivo...</p>}
-[L041, S8]         
-[L042, S8]         <BibliographyUploader onUpload={uploadFile} />
-[L043, S8]         <ReferenceTable references={references} />
-[L044, S8]         
-[L045, S8]         <hr style={{margin: '32px 0', border: 'none', borderTop: '1px solid #30363d'}} />
-[L046, S8]         
-[L047, S8]         <h3>Parámetros Modernos Detectados:</h3>
-[L048, S8]         {error && <p style={{color: 'red'}}>❌ {error}</p>}
-[L049, S8]         {!data && !error && <p>Cargando requerimientos...</p>}
-[L050, S8]         {data && (
-[L051, S10]           <div>
-[L052, S12]             <span style={styles.badge}>{data.status}</span>
-[L053, S12]             <ul>
-[L054, S14]               <li><strong>Estructura:</strong> bibtech</li>
-[L055, S14]               <li><strong>Configuración Backend:</strong> pyproject.toml (PEP 621)</li>
-[L056, S14]               <li><strong>Base de Datos:</strong> {data.database}</li>
-[L057, S14]               <li><strong>Ruteo/Proxy:</strong> {data.proxy}</li>
-[L058, S14]               <li><strong>Backend Framework:</strong> Python + {data.framework}</li>
-[L059, S12]             </ul>
-[L060, S10]           </div>
-[L061, S8]         )}
-[L062, S6]       </div>
-[L063, S4]     </div>
-[L064, S2]   );
-[L065, S0] }
-[L066, S0] 
-[L067, S0] function App() {
-[L068, S2]   return (
-[L069, S4]     <BrowserRouter>
-[L070, S6]       <Routes>
-[L071, S8]         <Route path="/" element={<Layout />}>
-[L072, S10]           <Route index element={<DashboardView />} />
-[L073, S10]           <Route path="load" element={<LoadView />} />
-[L074, S10]           <Route path="queue" element={<QueueView />} />
-[L075, S10]           <Route path="analysis" element={<AnalysisView />} />
-[L076, S10]           <Route path="references" element={<ReferencesView />} />
-[L077, S8]         </Route>
-[L078, S6]       </Routes>
-[L079, S4]     </BrowserRouter>
-[L080, S2]   );
-[L081, S0] }
-[L082, S0] 
-[L083, S0] export default App;
+[L017, S0] 
+[L018, S0] class Project(Base):
+[L019, S4]     """Represents a research project containing bibliographies."""
+[L020, S0] 
+[L021, S4]     __tablename__ = "projects"
+[L022, S0] 
+[L023, S4]     id = Column(
+[L024, S8]         Integer,
+[L025, S8]         primary_key=True,
+[L026, S8]         autoincrement=True,
+[L027, S8]         comment="Primary key integer identifier",
+[L028, S4]     )
+[L029, S4]     name = Column(
+[L030, S8]         String(255),
+[L031, S8]         nullable=False,
+[L032, S8]         comment="Project display and reference name",
+[L033, S4]     )
+[L034, S4]     description = Column(
+[L035, S8]         Text,
+[L036, S8]         nullable=True,
+[L037, S8]         comment="Detailed description of the project",
+[L038, S4]     )
+[L039, S4]     hashed_password = Column(
+[L040, S8]         String(255),
+[L041, S8]         nullable=True,
+[L042, S8]         comment="Bcrypt hashed project password",
+[L043, S4]     )
+[L044, S4]     created_at = Column(
+[L045, S8]         DateTime,
+[L046, S8]         default=lambda: datetime.now(timezone.utc),
+[L047, S8]         nullable=False,
+[L048, S8]         comment="UTC timestamp when the project was created",
+[L049, S4]     )
+[L050, S4]     updated_at = Column(
+[L051, S8]         DateTime,
+[L052, S8]         default=lambda: datetime.now(timezone.utc),
+[L053, S8]         onupdate=lambda: datetime.now(timezone.utc),
+[L054, S8]         nullable=False,
+[L055, S8]         comment="UTC timestamp when the project was last updated",
+[L056, S4]     )
+[L057, S0] 
+[L058, S4]     project_articles = relationship(
+[L059, S8]         "ProjectArticle",
+[L060, S8]         back_populates="project",
+[L061, S8]         cascade="all, delete-orphan",
+[L062, S4]     )
+[L063, S4]     articles = relationship(
+[L064, S8]         "Article",
+[L065, S8]         secondary="project_articles",
+[L066, S8]         back_populates="projects",
+[L067, S8]         viewonly=True,
+[L068, S4]     )
+[L069, S4]     downloads = relationship(
+[L070, S8]         "Download",
+[L071, S8]         back_populates="project",
+[L072, S8]         cascade="all, delete-orphan",
+[L073, S4]     )
+[L074, S0] 
+[L075, S0] 
+[L076, S0] class SourceDatabase(Base):
+[L077, S4]     """Dimensional table representing the original source database of the article."""
+[L078, S0] 
+[L079, S4]     __tablename__ = "source_databases"
+[L080, S0] 
+[L081, S4]     id = Column(
+[L082, S8]         Integer,
+[L083, S8]         primary_key=True,
+[L084, S8]         autoincrement=True,
+[L085, S8]         comment="Primary key",
+[L086, S4]     )
+[L087, S4]     name = Column(
+[L088, S8]         String(100),
+[L089, S8]         unique=True,
+[L090, S8]         index=True,
+[L091, S8]         nullable=False,
+[L092, S4]     )
+[L093, S4]     description = Column(
+[L094, S8]         String(255),
+[L095, S8]         nullable=True,
+[L096, S4]     )
+[L097, S0] 
+[L098, S4]     articles = relationship(
+[L099, S8]         "Article",
+[L100, S8]         back_populates="source_database",
+[L101, S4]     )
+[L102, S0] 
+[L103, S0] 
+[L104, S0] class Article(Base):
+[L105, S4]     """Represents an academic publication with bibliographic data."""
+[L106, S0] 
+[L107, S4]     __tablename__ = "articles"
+[L108, S0] 
+[L109, S4]     id = Column(
+[L110, S8]         Integer,
+[L111, S8]         primary_key=True,
+[L112, S8]         autoincrement=True,
+[L113, S8]         comment="Primary key integer identifier",
+[L114, S4]     )
+[L115, S4]     doi = Column(
+[L116, S8]         String(255),
+[L117, S8]         unique=True,
+[L118, S8]         index=True,
+[L119, S8]         nullable=True,
+[L120, S8]         comment="Normalized DOI unique key",
+[L121, S4]     )
+[L122, S4]     title = Column(
+[L123, S8]         Text,
+[L124, S8]         nullable=False,
+[L125, S8]         comment="Full title of the article or publication",
+[L126, S4]     )
+[L127, S4]     journal = Column(
+[L128, S8]         String(255),
+[L129, S8]         nullable=True,
+[L130, S8]         comment="Journal or venue publishing the article",
+[L131, S4]     )
+[L132, S4]     journal_id = Column(
+[L133, S8]         Integer,
+[L134, S8]         ForeignKey("journals.id", ondelete="SET NULL"),
+[L135, S8]         nullable=True,
+[L136, S8]         comment="Foreign key linking to journals table for dimensional modeling",
+[L137, S4]     )
+[L138, S4]     source_database_id = Column(
+[L139, S8]         Integer,
+[L140, S8]         ForeignKey("source_databases.id", ondelete="SET NULL"),
+[L141, S8]         nullable=True,
+[L142, S8]         comment="Source database dimensional foreign key",
+[L143, S4]     )
+[L144, S4]     year = Column(
+[L145, S8]         Integer,
+[L146, S8]         nullable=True,
+[L147, S8]         comment="Publication calendar year",
+[L148, S4]     )
+[L149, S4]     volume = Column(
+[L150, S8]         String(50),
+[L151, S8]         nullable=True,
+[L152, S8]         comment="Journal publication volume",
+[L153, S4]     )
+[L154, S4]     issue = Column(
+[L155, S8]         String(50),
+[L156, S8]         nullable=True,
+[L157, S8]         comment="Journal publication issue",
+[L158, S4]     )
+[L159, S4]     pages = Column(
+[L160, S8]         String(50),
+[L161, S8]         nullable=True,
+[L162, S8]         comment="Article page range or article number",
+[L163, S4]     )
+[L164, S4]     abstract = Column(
+[L165, S8]         Text,
+[L166, S8]         nullable=True,
+[L167, S8]         comment="Full text abstract of the article",
+[L168, S4]     )
+[L169, S4]     publisher = Column(
+[L170, S8]         String(255),
+[L171, S8]         nullable=True,
+[L172, S8]         comment="Publisher or imprint name of the article",
+[L173, S4]     )
+[L174, S4]     language = Column(
+[L175, S8]         String(50),
+[L176, S8]         nullable=True,
+[L177, S8]         comment="Primary language of the publication",
+[L178, S4]     )
+[L179, S4]     research_areas = Column(
+[L180, S8]         Text,
+[L181, S8]         nullable=True,
+[L182, S8]         comment="Research areas or Web of Science categories",
+[L183, S4]     )
+[L184, S4]     web_of_science_categories = Column(
+[L185, S8]         Text,
+[L186, S8]         nullable=True,
+[L187, S8]         comment="Specific Web of Science categorical metadata",
+[L188, S4]     )
+[L189, S4]     funding_text = Column(
+[L190, S8]         Text,
+[L191, S8]         nullable=True,
+[L192, S8]         comment="Funding acknowledgment text or grant information",
+[L193, S4]     )
+[L194, S4]     journal_iso = Column(
+[L195, S8]         String(255),
+[L196, S8]         nullable=True,
+[L197, S8]         comment="ISO abbreviation of the journal name",
+[L198, S4]     )
+[L199, S4]     oa_status = Column(
+[L200, S8]         String(50),
+[L201, S8]         nullable=True,
+[L202, S8]         comment="Open Access status indicator",
+[L203, S4]     )
+[L204, S4]     issn = Column(
+[L205, S8]         String(50),
+[L206, S8]         nullable=True,
+[L207, S8]         comment="International Standard Serial Number",
+[L208, S4]     )
+[L209, S4]     times_cited = Column(
+[L210, S8]         Integer,
+[L211, S8]         nullable=True,
+[L212, S8]         comment="Number of times the article has been cited globally",
+[L213, S4]     )
+[L214, S4]     cited_references_count = Column(
+[L215, S8]         Integer,
+[L216, S8]         nullable=True,
+[L217, S8]         comment="Number of references cited by this article",
+[L218, S4]     )
+[L219, S4]     raw_data = Column(
+[L220, S8]         Text,
+[L221, S8]         nullable=True,
+[L222, S8]         comment="Raw bibliographic payload (e.g. BibTeX or RIS)",
+[L223, S4]     )
+[L224, S4]     created_at = Column(
+[L225, S8]         DateTime,
+[L226, S8]         default=lambda: datetime.now(timezone.utc),
+[L227, S8]         nullable=False,
+[L228, S8]         comment="UTC timestamp when article was ingested",
+[L229, S4]     )
+[L230, S4]     updated_at = Column(
+[L231, S8]         DateTime,
+[L232, S8]         default=lambda: datetime.now(timezone.utc),
+[L233, S8]         onupdate=lambda: datetime.now(timezone.utc),
+[L234, S8]         nullable=False,
+[L235, S8]         comment="UTC timestamp when article record was updated",
+[L236, S4]     )
+[L237, S0] 
+[L238, S4]     project_articles = relationship(
+[L239, S8]         "ProjectArticle",
+[L240, S8]         back_populates="article",
+[L241, S8]         cascade="all, delete-orphan",
+[L242, S4]     )
+[L243, S4]     projects = relationship(
+[L244, S8]         "Project",
+[L245, S8]         secondary="project_articles",
+[L246, S8]         back_populates="articles",
+[L247, S8]         viewonly=True,
+[L248, S4]     )
+[L249, S4]     author_articles = relationship(
+[L250, S8]         "AuthorArticle",
+[L251, S8]         back_populates="article",
+[L252, S8]         cascade="all, delete-orphan",
+[L253, S4]     )
+[L254, S4]     authors = relationship(
+[L255, S8]         "Author",
+[L256, S8]         secondary="author_articles",
+[L257, S8]         back_populates="articles",
+[L258, S8]         viewonly=True,
+[L259, S4]     )
+[L260, S4]     keyword_articles = relationship(
+[L261, S8]         "KeywordArticle",
+[L262, S8]         back_populates="article",
+[L263, S8]         cascade="all, delete-orphan",
+[L264, S4]     )
+[L265, S4]     keywords = relationship(
+[L266, S8]         "Keyword",
+[L267, S8]         secondary="keyword_articles",
+[L268, S8]         back_populates="articles",
+[L269, S8]         viewonly=True,
+[L270, S4]     )
+[L271, S4]     funding = relationship(
+[L272, S8]         "Funding",
+[L273, S8]         back_populates="article",
+[L274, S8]         cascade="all, delete-orphan",
+[L275, S4]     )
+[L276, S4]     downloads = relationship(
+[L277, S8]         "Download",
+[L278, S8]         back_populates="article",
+[L279, S8]         cascade="all, delete-orphan",
+[L280, S4]     )
+[L281, S4]     journal_entity = relationship(
+[L282, S8]         "Journal",
+[L283, S8]         back_populates="articles",
+[L284, S4]     )
+[L285, S4]     source_database = relationship(
+[L286, S8]         "SourceDatabase",
+[L287, S8]         back_populates="articles",
+[L288, S4]     )
+[L289, S4]     article_countries = relationship(
+[L290, S8]         "ArticleCountry",
+[L291, S8]         back_populates="article",
+[L292, S8]         cascade="all, delete-orphan",
+[L293, S4]     )
+[L294, S4]     countries = relationship(
+[L295, S8]         "Country",
+[L296, S8]         secondary="article_countries",
+[L297, S8]         back_populates="articles",
+[L298, S8]         viewonly=True,
+[L299, S4]     )
+[L300, S4]     article_citations = relationship(
+[L301, S8]         "ArticleCitation",
+[L302, S8]         back_populates="article",
+[L303, S8]         cascade="all, delete-orphan",
+[L304, S4]     )
+[L305, S4]     cited_references = relationship(
+[L306, S8]         "CitedReference",
+[L307, S8]         secondary="article_citations",
+[L308, S8]         back_populates="articles",
+[L309, S8]         viewonly=True,
+[L310, S4]     )
+[L311, S0] 
+[L312, S0] 
+[L313, S0] class ProjectArticle(Base):
+[L314, S4]     """Junction model connecting projects to articles."""
+[L315, S0] 
+[L316, S4]     __tablename__ = "project_articles"
+[L317, S4]     __table_args__ = (
+[L318, S8]         UniqueConstraint(
+[L319, S12]             "project_id",
+[L320, S12]             "article_id",
+[L321, S12]             name="uq_project_article",
+[L322, S8]         ),
+[L323, S4]     )
+[L324, S0] 
+[L325, S4]     id = Column(
+[L326, S8]         Integer,
+[L327, S8]         primary_key=True,
+[L328, S8]         autoincrement=True,
+[L329, S8]         comment="Primary key junction identifier",
+[L330, S4]     )
+[L331, S4]     project_id = Column(
+[L332, S8]         Integer,
+[L333, S8]         ForeignKey("projects.id", ondelete="CASCADE"),
+[L334, S8]         nullable=False,
+[L335, S8]         comment="Foreign key linking to projects.id",
+[L336, S4]     )
+[L337, S4]     article_id = Column(
+[L338, S8]         Integer,
+[L339, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L340, S8]         nullable=False,
+[L341, S8]         comment="Foreign key linking to articles.id",
+[L342, S4]     )
+[L343, S4]     status = Column(
+[L344, S8]         String(50),
+[L345, S8]         default="pending",
+[L346, S8]         nullable=False,
+[L347, S8]         comment="Processing or download status of the article in the project",
+[L348, S4]     )
+[L349, S4]     added_at = Column(
+[L350, S8]         DateTime,
+[L351, S8]         default=lambda: datetime.now(timezone.utc),
+[L352, S8]         nullable=False,
+[L353, S8]         comment="UTC timestamp when article was associated with project",
+[L354, S4]     )
+[L355, S0] 
+[L356, S4]     project = relationship("Project", back_populates="project_articles")
+[L357, S4]     article = relationship("Article", back_populates="project_articles")
+[L358, S0] 
+[L359, S0] 
+[L360, S0] class ArticleCountry(Base):
+[L361, S4]     """Junction model mapping articles to countries."""
+[L362, S0] 
+[L363, S4]     __tablename__ = "article_countries"
+[L364, S4]     __table_args__ = (
+[L365, S8]         UniqueConstraint(
+[L366, S12]             "article_id",
+[L367, S12]             "country_id",
+[L368, S12]             name="uq_article_country",
+[L369, S8]         ),
+[L370, S4]     )
+[L371, S0] 
+[L372, S4]     id = Column(
+[L373, S8]         Integer,
+[L374, S8]         primary_key=True,
+[L375, S8]         autoincrement=True,
+[L376, S8]         comment="Primary key junction identifier",
+[L377, S4]     )
+[L378, S4]     article_id = Column(
+[L379, S8]         Integer,
+[L380, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L381, S8]         nullable=False,
+[L382, S8]         index=True,
+[L383, S8]         comment="Foreign key linking to articles.id",
+[L384, S4]     )
+[L385, S4]     country_id = Column(
+[L386, S8]         Integer,
+[L387, S8]         ForeignKey("countries.id", ondelete="CASCADE"),
+[L388, S8]         nullable=False,
+[L389, S8]         index=True,
+[L390, S8]         comment="Foreign key linking to countries.id",
+[L391, S4]     )
+[L392, S0] 
+[L393, S4]     article = relationship("Article", back_populates="article_countries")
+[L394, S4]     country = relationship("Country", back_populates="article_countries")
+[L395, S0] 
+[L396, S0] 
+[L397, S0] class ArticleCitation(Base):
+[L398, S4]     """Junction model connecting an article to cited references."""
+[L399, S0] 
+[L400, S4]     __tablename__ = "article_citations"
+[L401, S4]     __table_args__ = (
+[L402, S8]         UniqueConstraint(
+[L403, S12]             "article_id",
+[L404, S12]             "cited_reference_id",
+[L405, S12]             name="uq_article_citation",
+[L406, S8]         ),
+[L407, S4]     )
+[L408, S0] 
+[L409, S4]     id = Column(
+[L410, S8]         Integer,
+[L411, S8]         primary_key=True,
+[L412, S8]         autoincrement=True,
+[L413, S8]         comment="Primary key junction identifier",
+[L414, S4]     )
+[L415, S4]     article_id = Column(
+[L416, S8]         Integer,
+[L417, S8]         ForeignKey("articles.id", ondelete="CASCADE"),
+[L418, S8]         nullable=False,
+[L419, S8]         index=True,
+[L420, S8]         comment="Foreign key linking to citing article",
+[L421, S4]     )
+[L422, S4]     cited_reference_id = Column(
+[L423, S8]         Integer,
+[L424, S8]         ForeignKey("cited_references.id", ondelete="CASCADE"),
+[L425, S8]         nullable=False,
+[L426, S8]         index=True,
+[L427, S8]         comment="Foreign key linking to cited reference",
+[L428, S4]     )
+[L429, S0] 
+[L430, S4]     article = relationship("Article", back_populates="article_citations")
+[L431, S4]     cited_reference = relationship("CitedReference", back_populates="article_citations")
+[L432, S0] 
+[L433, S0] 
+[L434, S0] class Country(Base):
+[L435, S4]     """Represents a geographical country involved in the publication."""
+[L436, S0] 
+[L437, S4]     __tablename__ = "countries"
+[L438, S0] 
+[L439, S4]     id = Column(
+[L440, S8]         Integer,
+[L441, S8]         primary_key=True,
+[L442, S8]         autoincrement=True,
+[L443, S8]         comment="Primary key integer identifier",
+[L444, S4]     )
+[L445, S4]     name = Column(
+[L446, S8]         String(100),
+[L447, S8]         nullable=False,
+[L448, S8]         unique=True,
+[L449, S8]         index=True,
+[L450, S8]         comment="Standardized name of the country",
+[L451, S4]     )
+[L452, S0] 
+[L453, S4]     article_countries = relationship(
+[L454, S8]         "ArticleCountry",
+[L455, S8]         back_populates="country",
+[L456, S8]         cascade="all, delete-orphan",
+[L457, S4]     )
+[L458, S4]     articles = relationship(
+[L459, S8]         "Article",
+[L460, S8]         secondary="article_countries",
+[L461, S8]         back_populates="countries",
+[L462, S8]         viewonly=True,
+[L463, S4]     )
+[L464, S0] 
+[L465, S0] 
+[L466, S0] class CitedReference(Base):
+[L467, S4]     """Represents a unique cited reference extracted from an article."""
+[L468, S0] 
+[L469, S4]     __tablename__ = "cited_references"
+[L470, S0] 
+[L471, S4]     id = Column(
+[L472, S8]         Integer,
+[L473, S8]         primary_key=True,
+[L474, S8]         autoincrement=True,
+[L475, S8]         comment="Primary key integer identifier",
+[L476, S4]     )
+[L477, S4]     raw_string = Column(
+[L478, S8]         Text,
+[L479, S8]         nullable=False,
+[L480, S8]         unique=True,
+[L481, S8]         index=True,
+[L482, S8]         comment="Raw unique string representing this reference",
+[L483, S4]     )
+[L484, S4]     author = Column(
+[L485, S8]         String(255),
+[L486, S8]         nullable=True,
+[L487, S8]         comment="Extracted first author of the reference",
+[L488, S4]     )
+[L489, S4]     year = Column(
+[L490, S8]         Integer,
+[L491, S8]         nullable=True,
+[L492, S8]         comment="Extracted publication year of the reference",
+[L493, S4]     )
+[L494, S4]     source = Column(
+[L495, S8]         String(255),
+[L496, S8]         nullable=True,
+[L497, S8]         comment="Extracted journal or source of the reference",
+[L498, S4]     )
+[L499, S4]     doi = Column(
+[L500, S8]         String(255),
+[L501, S8]         nullable=True,
+[L502, S8]         index=True,
+[L503, S8]         comment="DOI of the cited reference if available",
+[L504, S4]     )
+[L505, S0] 
+[L506, S4]     article_citations = relationship(
+[L507, S8]         "ArticleCitation",
+[L508, S8]         back_populates="cited_reference",
+[L509, S8]         cascade="all, delete-orphan",
+[L510, S4]     )
+[L511, S4]     articles = relationship(
+[L512, S8]         "Article",
+[L513, S8]         secondary="article_citations",
+[L514, S8]         back_populates="cited_references",
+[L515, S8]         viewonly=True,
+[L516, S4]     )
+[L517, S0] 
+[L518, S0] 
+[L519, S0] class Journal(Base):
+[L520, S4]     """Represents an academic journal or publication venue."""
+[L521, S0] 
+[L522, S4]     __tablename__ = "journals"
+[L523, S0] 
+[L524, S4]     id = Column(
+[L525, S8]         Integer,
+[L526, S8]         primary_key=True,
+[L527, S8]         autoincrement=True,
+[L528, S8]         comment="Primary key integer identifier",
+[L529, S4]     )
+[L530, S4]     name = Column(
+[L531, S8]         String(255),
+[L532, S8]         nullable=False,
+[L533, S8]         unique=True,
+[L534, S8]         index=True,
+[L535, S8]         comment="Full name of the journal",
+[L536, S4]     )
+[L537, S4]     iso_abbreviation = Column(
+[L538, S8]         String(255),
+[L539, S8]         nullable=True,
+[L540, S8]         comment="ISO abbreviation of the journal",
+[L541, S4]     )
+[L542, S4]     issn = Column(
+[L543, S8]         String(50),
+[L544, S8]         nullable=True,
+[L545, S8]         comment="International Standard Serial Number",
+[L546, S4]     )
+[L547, S4]     created_at = Column(
+[L548, S8]         DateTime,
+[L549, S8]         default=lambda: datetime.now(timezone.utc),
+[L550, S8]         nullable=False,
+[L551, S8]         comment="UTC timestamp of creation",
+[L552, S4]     )
+[L553, S0] 
+[L554, S4]     articles = relationship(
+[L555, S8]         "Article",
+[L556, S8]         back_populates="journal_entity",
+[L557, S4]     )

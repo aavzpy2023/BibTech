@@ -617,6 +617,153 @@ def get_coauthorship_network(
     return {"nodes": nodes, "links": links, "clusters": clusters}
 
 
+@router.get("/network/co-citation")
+def get_cocitation_network(
+    project_code: str | None = None,
+    max_nodes: int = 150,
+    resolution: float = 1.0,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Article)
+    if project_code and project_code.strip():
+        project = (
+            db.query(Project)
+            .filter(Project.name == project_code.strip())
+            .first()
+        )
+        if project:
+            links = (
+                db.query(ProjectArticle.article_id)
+                .filter(ProjectArticle.project_id == project.id)
+                .all()
+            )
+            article_ids = [l[0] for l in links]
+            query = query.filter(Article.id.in_(article_ids))
+        else:
+            return {"nodes": [], "links": [], "clusters": {}}
+
+    articles = query.all()
+    if not articles:
+        return {"nodes": [], "links": [], "clusters": {}}
+
+    ref_citations: dict[int, int] = defaultdict(int)
+    cocitation_counts: dict[tuple[int, int], int] = defaultdict(int)
+    ref_data = {}
+
+    for a in articles:
+        crs = getattr(a, "cited_references", [])
+        if not crs:
+            continue
+        
+        valid_refs = []
+        for cr in crs:
+            if cr.id not in ref_data:
+                auth = cr.author or "Unknown"
+                auth = auth.split(",")[0].strip() if "," in auth else auth.split(" ")[0].strip()
+                yr = str(cr.year) if cr.year else ""
+                label = f"{auth} ({yr})" if yr else auth
+                ref_data[cr.id] = {
+                    "id": str(cr.id),
+                    "name": label,
+                    "author": cr.author,
+                    "year": cr.year,
+                    "source": cr.source,
+                }
+            ref_citations[cr.id] += 1
+            valid_refs.append(cr.id)
+            
+        valid_refs = list(set(valid_refs))
+        for i in range(len(valid_refs)):
+            for j in range(i + 1, len(valid_refs)):
+                pair = tuple(sorted([valid_refs[i], valid_refs[j]]))
+                cocitation_counts[pair] += 1
+
+    ranked_refs = sorted(
+        ref_citations.keys(),
+        key=lambda k: ref_citations[k],
+        reverse=True,
+    )[:max_nodes]
+
+    if not ranked_refs:
+        return {"nodes": [], "links": [], "clusters": {}}
+
+    ranked_set = set(ranked_refs)
+    
+    G = nx.Graph()
+    G.add_nodes_from(ranked_refs)
+    for (r1, r2), w in cocitation_counts.items():
+        if r1 in ranked_set and r2 in ranked_set:
+            G.add_edge(r1, r2, weight=w)
+
+    if G.number_of_edges() > 0:
+        partition = community_louvain.best_partition(
+            G, weight="weight", resolution=resolution, random_state=42
+        )
+    else:
+        partition = {n: i for i, n in enumerate(ranked_refs)}
+
+    community_sizes: dict[int, int] = defaultdict(int)
+    for cid in partition.values():
+        community_sizes[cid] += 1
+    ordered_communities = sorted(
+        community_sizes.keys(), key=lambda c: community_sizes[c], reverse=True
+    )
+    remap = {old_cid: idx + 1 for idx, old_cid in enumerate(ordered_communities)}
+    visited = {n: remap[partition[n]] for n in ranked_refs}
+
+    cluster_nodes = defaultdict(list)
+    for n in ranked_refs:
+        cluster_nodes[visited[n]].append(n)
+
+    cluster_ids = sorted(cluster_nodes.keys())
+
+    nodes = []
+    for c_idx, cid in enumerate(cluster_ids):
+        c_refs = cluster_nodes[cid]
+        c_refs.sort(key=lambda n: G.degree(n) if n in G else 0, reverse=True)
+
+        for n in c_refs:
+            data = ref_data[n]
+            nodes.append({
+                "id": str(n),
+                "name": data["name"],
+                "papers": ref_citations[n],
+                "citations": ref_citations[n],
+                "avgYear": float(data["year"]) if data["year"] else 2000.0,
+                "group": cid,
+                "fullSource": data["source"]
+            })
+
+    links = []
+    for (r1, r2), w in cocitation_counts.items():
+        if r1 in ranked_set and r2 in ranked_set:
+            links.append({
+                "source": str(r1),
+                "target": str(r2),
+                "weight": w,
+            })
+
+    PALETTE = [
+        "#ef4444", "#3b82f6", "#10b981", "#06b6d4",
+        "#f59e0b", "#a855f7", "#ec4899", "#84cc16",
+    ]
+    CLUSTER_NAMES = [
+        "Core Foundational",
+        "Methodology & Tools",
+        "Thematic Domain A",
+        "Thematic Domain B",
+    ]
+    clusters = {
+        cid: {
+            "name": CLUSTER_NAMES[i] if i < len(CLUSTER_NAMES) else f"Cluster {cid}",
+            "color": PALETTE[i % len(PALETTE)],
+        }
+        for i, cid in enumerate(cluster_ids)
+    }
+
+    return {"nodes": nodes, "links": links, "clusters": clusters}
+
+
 @router.post("/download-zip")
 async def download_zip(request: ZipDownloadRequest):
     zip_io = create_zip_from_pdfs(request.batch_name, request.dois)

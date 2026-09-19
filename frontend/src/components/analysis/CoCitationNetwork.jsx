@@ -1,18 +1,5 @@
-=== SK-CONTEXT MANIFEST ===
-Intent: SKARCH
-Date: 2026-09-19 16:36:00
-AST Mode: True
-Line Numbers: False
-Modules: CoAuthorshipNetwork.jsx, NetworkGraphTemplate.jsx
-Processed Files: 2
-===========================
-
-
-
-// --- frontend/src/components/analysis/CoAuthorshipNetwork.jsx ---
-
 import React, { useRef, useState, useCallback, useMemo } from 'react';
-import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
+import useCoCitationNetwork from '../../hooks/useCoCitationNetwork';
 import useNetworkLayout from '../../hooks/useNetworkLayout';
 import useElementSize from '../../hooks/useElementSize';
 import NetworkGraphTemplate from './NetworkGraphTemplate';
@@ -35,31 +22,6 @@ const styles = {
         textTransform: 'uppercase',
         letterSpacing: '0.5px'
     },
-    input: {
-        backgroundColor: '#0d1117',
-        border: '1px solid #30363d',
-        borderRadius: '6px',
-        padding: '5px 10px',
-        color: '#f0f6fc',
-        fontSize: '12px',
-        outline: 'none'
-    },
-    modeSwitchGroup: {
-        display: 'inline-flex',
-        borderRadius: '6px',
-        border: '1px solid #30363d',
-        overflow: 'hidden'
-    },
-    modeBtn: (isActive) => ({
-        backgroundColor: isActive ? '#1f6feb' : '#0d1117',
-        color: isActive ? '#ffffff' : '#8b949e',
-        border: 'none',
-        padding: '5px 12px',
-        fontSize: '12px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        transition: 'all 0.2s'
-    }),
     exportBtn: {
         backgroundColor: '#238636',
         color: '#ffffff',
@@ -141,9 +103,9 @@ const styles = {
     })
 };
 
-const FIT_PADDING = 24; // px de margen; el ajuste ya cuenta las etiquetas
+const FIT_PADDING = 24;
 
-export default function CoAuthorshipNetwork() {
+export default function CoCitationNetwork() {
     const fgRef = useRef();
     const wrapperRef = useRef();
     const size = useElementSize(wrapperRef);
@@ -162,14 +124,12 @@ export default function CoAuthorshipNetwork() {
         louvainGamma,
         setLouvainGamma,
         isLoading
-    } = useCoAuthorshipNetwork();
+    } = useCoCitationNetwork();
 
     const [edgeOpacity, setEdgeOpacity] = useState(0.35);
 
-    // Offload heavy physics calculation to the state fractality hook
     const { frozenData, isCalculating } = useNetworkLayout(nodes, links);
 
-    // Force canvas repaint when opacity slider changes
     React.useEffect(() => {
         setEdgeOpacityMultiplier(edgeOpacity);
         if (fgRef.current && !isCalculating) {
@@ -188,8 +148,6 @@ export default function CoAuthorshipNetwork() {
 
     React.useEffect(() => {
         if (!isCalculating && frozenData?.nodes?.length > 0) {
-            // Reordenar nodos (pequeños primero, grandes al final) para garantizar
-            // que los hubs importantes se dibujen siempre encima de la masa en Canvas (Z-Index fix)
             const sortedNodes = [...frozenData.nodes].sort((a, b) => {
                 const valA = a.degree || a.radius || 0;
                 const valB = b.degree || b.radius || 0;
@@ -200,7 +158,6 @@ export default function CoAuthorshipNetwork() {
         }
     }, [isCalculating, frozenData]);
 
-    // Ajusta al cargar y cada vez que cambia el tamaño REAL del contenedor.
     React.useEffect(() => {
         if (isCalculating || !frozenData?.nodes?.length || !size.width || !size.height) return undefined;
         const t = setTimeout(() => {
@@ -229,13 +186,13 @@ export default function CoAuthorshipNetwork() {
 
             <div style={styles.controlGroup}>
                 <label htmlFor="min-weight-slider" style={styles.label}>
-                    Min Collab ({minWeight}):
+                    Min Co-citations ({minWeight}):
                 </label>
                 <input
                     id="min-weight-slider"
                     type="range"
                     min="1"
-                    max="7"
+                    max="10"
                     value={minWeight}
                     onChange={e => setMinWeight(Number(e.target.value))}
                     style={{ cursor: 'pointer', width: '60px' }}
@@ -255,7 +212,7 @@ export default function CoAuthorshipNetwork() {
                     value={louvainGamma}
                     onChange={e => setLouvainGamma(Number(e.target.value))}
                     style={{ cursor: 'pointer', width: '70px', accentColor: '#3b82f6' }}
-                    title="Bajo: Macro-Comunidades (Instituciones). Alto: Micro-Comunidades (Laboratorios)."
+                    title="Low: Macro-Communities. High: Micro-Communities."
                 />
             </div>
 
@@ -270,7 +227,7 @@ export default function CoAuthorshipNetwork() {
                 <button
                     type="button"
                     style={styles.exportBtn}
-                    onClick={() => exportCanvasToImage(fgRef, 'co-authorship-novascope-hd.png', {
+                    onClick={() => exportCanvasToImage(fgRef, 'co-citation-novascope-hd.png', {
                         nodes: frozenData.nodes,
                         links: frozenData.links,
                         logoSrc: logoImg
@@ -285,22 +242,22 @@ export default function CoAuthorshipNetwork() {
 
     const footer = selectedNode ? (
         <div>
-            <strong>Author:</strong> {selectedNode.name} |{' '}
-            <strong>Citations:</strong> {selectedNode.citations?.toLocaleString() || 0} |{' '}
-            <strong>Publications:</strong> {selectedNode.papers} |{' '}
-            <strong>Cluster:</strong> {clusters[selectedNode.group]?.name || 'Collaboration Cluster'}
+            <strong>Reference:</strong> {selectedNode.name} |{' '}
+            <strong>Co-citations:</strong> {selectedNode.citations?.toLocaleString() || 0} |{' '}
+            <strong>Year:</strong> {selectedNode.avgYear} |{' '}
+            <strong>Cluster:</strong> {clusters[selectedNode.group]?.name || 'Domain Cluster'}
         </div>
     ) : null;
 
     return (
         <AnalysisPageTemplate
-            title="Co-authorship Network"
-            subtitle="Novascope D3 force simulation: Radial cluster dynamics and convex co-authorship relationships."
+            title="Co-citation Network"
+            subtitle="Document co-citation relationships revealing foundational knowledge domains."
             toolbar={toolbar}
             footer={footer}
-            dataTestId="coauthorship-network-view"
+            dataTestId="cocitation-network-view"
         >
-            <div ref={wrapperRef} style={styles.canvasWrapper} data-testid="coauthorship-force-graph-wrapper">
+            <div ref={wrapperRef} style={styles.canvasWrapper} data-testid="cocitation-force-graph-wrapper">
                 <div style={styles.watermark}>
                     <img
                         src={logoImg}
@@ -345,7 +302,7 @@ export default function CoAuthorshipNetwork() {
 
                 {(isCalculating || isLoading) ? (
                     <div style={{ padding: '20px', textAlign: 'center', color: '#8b949e' }}>
-                        {isLoading ? "Recalculating Community Modularity..." : "Calculating Network Physics..."}
+                        {isLoading ? "Fetching Co-citation Network..." : "Calculating Network Physics..."}
                     </div>
                 ) : (
                     <NetworkGraphTemplate
@@ -360,68 +317,3 @@ export default function CoAuthorshipNetwork() {
         </AnalysisPageTemplate>
     );
 }
-
-
-
-// --- frontend/src/components/analysis/NetworkGraphTemplate.jsx ---
-
-import React, { forwardRef } from 'react';
-import ForceGraph2D from 'react-force-graph-2d';
-import { drawNode, drawLink, drawAllLabels } from '../../views/analysis/network/networkRender';
-import { calculateRadius } from '../../views/analysis/network/networkStyles';
-
-/**
- * Dumb View: Pure Canvas renderer for topological networks.
- * Physics engine is forcibly disabled (cooldownTicks={0}).
- *
- * width/height NO tienen valor por defecto: los pasa el contenedor con su tamaño
- * real. (Con 800x600 por defecto el canvas quedaba fijo en la esquina superior
- * izquierda y el grafo se ajustaba a esa zona.) Sin valores, la librería usa el
- * tamaño de la ventana.
- */
-const NetworkGraphTemplate = forwardRef(({
-    frozenData,
-    width,
-    height,
-    onNodeClick
-}, ref) => {
-
-    if (!frozenData || !frozenData.nodes) {
-        return null;
-    }
-
-    return (
-        <ForceGraph2D
-            ref={ref}
-            width={width}
-            height={height}
-            graphData={frozenData}
-            cooldownTicks={0} // FATAL RULE: Disables real-time D3 ticking (Graph is frozen)
-            enableNodeDrag={false} // Dragging disabled due to static physics layout
-            nodeCanvasObjectMode={() => 'replace'}
-            nodeCanvasObject={(node, ctx, globalScale) => {
-                drawNode(node, ctx, globalScale);
-            }}
-            nodePointerAreaPaint={(node, color, ctx) => {
-                ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.arc(node.x, node.y, calculateRadius(node), 0, 2 * Math.PI, false);
-                ctx.fill();
-            }}
-            linkCanvasObjectMode={() => 'replace'}
-            linkCanvasObject={(link, ctx, globalScale) => {
-                drawLink(link, ctx, globalScale);
-            }}
-            // Etiquetas en una sola pasada, después de nodos y aristas (ningún nodo las tapa).
-            // La marca de agua ya no se dibuja aquí: es el logo HTML del contenedor.
-            onRenderFramePost={(ctx, globalScale) => {
-                drawAllLabels(frozenData.nodes, ctx, globalScale);
-            }}
-            onNodeClick={onNodeClick}
-        />
-    );
-});
-
-NetworkGraphTemplate.displayName = 'NetworkGraphTemplate';
-export default NetworkGraphTemplate;
-

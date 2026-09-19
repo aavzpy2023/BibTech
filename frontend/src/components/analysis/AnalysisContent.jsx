@@ -1,6 +1,7 @@
 import React from 'react';
 import OverviewViewTemplate from './OverviewViewTemplate';
 import CoAuthorshipNetwork from './CoAuthorshipNetwork';
+import CoCitationNetwork from './CoCitationNetwork';
 
 const OVERVIEW_METADATA = {
     'general-kpis': {
@@ -81,6 +82,10 @@ export default function AnalysisContent({ activeTabId }) {
 
     if (activeTabId === 'co-authorship') {
         return <CoAuthorshipNetwork />;
+    }
+
+    if (activeTabId === 'co-citation') {
+        return <CoCitationNetwork />;
     }
 
     return (
