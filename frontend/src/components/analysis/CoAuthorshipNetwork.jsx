@@ -1,5 +1,6 @@
 import React from 'react';
 import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
+import AnalysisPageTemplate from './AnalysisPageTemplate';
 
 const GROUP_COLORS = {
     1: '#58a6ff',
@@ -111,17 +112,60 @@ export default function CoAuthorshipNetwork() {
         return map;
     }, [nodes]);
 
-    return (
-        <div style={styles.container} data-testid="coauthorship-network-view">
-            <div style={styles.header}>
-                <h2 style={styles.title}>Co-authorship Network</h2>
-                <p style={styles.subtitle}>
-                    Mapping collaboration patterns and author clusters across
-                    publications.
-                </p>
+    const toolbar = (
+        <>
+            <div style={styles.controlGroup}>
+                <label htmlFor="search-author" style={styles.label}>
+                    Filter:
+                </label>
+                <input
+                    id="search-author"
+                    type="text"
+                    placeholder="Search author..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    style={styles.input}
+                />
             </div>
 
-            <div style={styles.toolbar}>
+            <div style={styles.controlGroup}>
+                <label htmlFor="min-weight-slider" style={styles.label}>
+                    Min Collaborations ({minWeight}):
+                </label>
+                <input
+                    id="min-weight-slider"
+                    type="range"
+                    min="1"
+                    max="7"
+                    value={minWeight}
+                    onChange={e => setMinWeight(Number(e.target.value))}
+                    style={{ cursor: 'pointer' }}
+                />
+            </div>
+
+            <div style={styles.stats}>
+                Nodes: <strong>{nodes.length}</strong> | Links:{' '}
+                <strong>{links.length}</strong>
+            </div>
+        </>
+    );
+
+    const footer = selectedNode ? (
+        <div>
+            <strong>Selected Author:</strong> {selectedNode.name} |{' '}
+            <strong>Cluster:</strong> {selectedNode.group} |{' '}
+            <strong>Total Publications:</strong> {selectedNode.papers}
+        </div>
+    ) : null;
+
+    return (
+        <AnalysisPageTemplate
+            title="Co-authorship Network"
+            subtitle="Mapping collaboration patterns and author clusters across publications."
+            toolbar={toolbar}
+            footer={footer}
+            dataTestId="coauthorship-network-view"
+        >
                 <div style={styles.controlGroup}>
                     <label htmlFor="search-author" style={styles.label}>
                         Filter:
@@ -233,14 +277,6 @@ export default function CoAuthorshipNetwork() {
                     })}
                 </svg>
 
-                {selectedNode && (
-                    <div style={styles.detailDrawer}>
-                        <strong>Selected Author:</strong> {selectedNode.name} |{' '}
-                        <strong>Cluster:</strong> {selectedNode.group} |{' '}
-                        <strong>Total Publications:</strong> {selectedNode.papers}
-                    </div>
-                )}
-            </div>
-        </div>
+        </AnalysisPageTemplate>
     );
 }

@@ -30,3 +30,5 @@
     Dumb components enforcing State Fractality for metadata display.
   - `frontend/src/config/analysisMenuConfig.js` & `useAnalysisNavigation.js`:
     Static config and State hook isolating pure UI transitions for the Analysis shell.
+  - `frontend/src/components/analysis/AnalysisPageTemplate.jsx`:
+    Canonical layout template for all analytical views (Title, Subtitle, Toolbar, Main Canvas, Footer Drawer).
