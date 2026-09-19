@@ -257,11 +257,12 @@ export default function CoAuthorshipNetwork() {
                 <button
                     type="button"
                     style={styles.exportBtn}
-                    onClick={() => exportCanvasToImage(fgRef, 'co-authorship-novascope-hd.png', {
-                        nodes: frozenData.nodes,
-                        links: frozenData.links,
-                        logoSrc: logoImg
-                    })}
+                onClick={() => exportCanvasToImage(fgRef, 'co-authorship-novascope-hd.png', {
+                    nodes: frozenData.nodes,
+                    links: frozenData.links,
+                    clusters,
+                    logoSrc: logoImg
+                })}
                     data-testid="export-hd-btn"
                 >
                     Download

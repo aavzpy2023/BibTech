@@ -55,23 +55,32 @@ export const drawExportBranding = (ctx, W, H, logo = null) => {
 };
 
 export const drawExportLegend = (ctx, W, H, clusters, nodes) => {
-    let items = [];
-    if (clusters && Object.keys(clusters).length > 0) {
-        items = Object.values(clusters);
-    } else if (nodes) {
-        const groups = [...new Set(nodes.map(n => n.group))].filter(Boolean).sort();
-        items = groups.map(g => ({ name: `Cluster ${g}`, color: getNodeColor(g) }));
+    if (!nodes || nodes.length === 0) return;
+    const counts = {};
+    nodes.forEach(n => {
+        if (n.group != null) counts[n.group] = (counts[n.group] || 0) + 1;
+    });
+    const groupKeys = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    if (groupKeys.length === 0) return;
+
+    const top4 = groupKeys.slice(0, 4);
+    const items = top4.map(gid => ({
+        name: clusters?.[gid]?.name || `Cluster ${gid}`,
+        color: clusters?.[gid]?.color || getNodeColor(gid)
+    }));
+
+    if (groupKeys.length > 4) {
+        items.push({ name: 'Others', color: '#c9c9c9' });
     }
-    if (items.length === 0) return;
 
     const s = W / REFERENCE_W;
-    const padX = 40 * s;
-    const padY = 40 * s;
-    const itemH = 35 * s;
-    const radius = 10 * s;
+    const padX = 24 * s;
+    const padY = 24 * s;
+    const itemH = 22 * s;
+    const radius = 5.5 * s;
 
     ctx.save();
-    ctx.font = `600 ${16 * s}px Sans-Serif`;
+    ctx.font = `500 ${11 * s}px Sans-Serif`;
 
     let maxW = 0;
     items.forEach(item => {
@@ -79,8 +88,9 @@ export const drawExportLegend = (ctx, W, H, clusters, nodes) => {
         if (w > maxW) maxW = w;
     });
 
-    const boxW = maxW + 70 * s;
-    const boxH = items.length * itemH + 20 * s;
+    const headerH = 18 * s;
+    const boxW = Math.max(140 * s, maxW + 38 * s);
+    const boxH = items.length * itemH + headerH + 16 * s;
     const x = padX;
     const y = H - padY - boxH;
 
@@ -88,22 +98,29 @@ export const drawExportLegend = (ctx, W, H, clusters, nodes) => {
     ctx.shadowColor = 'rgba(0,0,0,0.1)';
     ctx.shadowBlur = 15 * s;
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(x, y, boxW, boxH, 12 * s);
+    if (ctx.roundRect) ctx.roundRect(x, y, boxW, boxH, 6 * s);
     else ctx.rect(x, y, boxW, boxH);
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
+    // Encabezado idéntico a la app (escala compacta)
     ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.font = `700 ${9.5 * s}px Sans-Serif`;
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('CLUSTERS', x + 14 * s, y + 10 * s);
+
+    ctx.font = `500 ${11 * s}px Sans-Serif`;
     ctx.textBaseline = 'middle';
     items.forEach((item, i) => {
-        const cy = y + 10 * s + itemH / 2 + i * itemH;
+        const cy = y + headerH + 10 * s + itemH / 2 + i * itemH;
         ctx.beginPath();
-        ctx.arc(x + 25 * s, cy, radius, 0, 2 * Math.PI);
+        ctx.arc(x + 16 * s, cy, radius, 0, 2 * Math.PI);
         ctx.fillStyle = item.color || '#9ca3af';
         ctx.fill();
         
         ctx.fillStyle = '#334155';
-        ctx.fillText(item.name || '', x + 45 * s, cy);
+        ctx.fillText(item.name || '', x + 28 * s, cy);
     });
     ctx.restore();
 };

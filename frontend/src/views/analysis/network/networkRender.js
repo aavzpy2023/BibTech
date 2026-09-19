@@ -226,7 +226,6 @@ export const drawLink = (link, ctx, globalScale) => {
     // 🚀 RENDERING CULLING (Optimizador de Performance):
     // Abortamos la función instantáneamente si la arista no participa en el hover.
     // Esto ahorra miles de cálculos de curvas Bezier (CPU) y rasterizados (GPU) por frame.
-    if (isHoverActive && !isConnected) return;
 
     const isHighlighted = Boolean(link.highlighted || link.hovered || isConnected);
 
@@ -237,16 +236,17 @@ export const drawLink = (link, ctx, globalScale) => {
 
     const color = isHighlighted
         ? getNodeColor(source.group)
-        : (isIntra ? '#64748b' : '#94a3b8');
+        : (isHoverActive ? '#cbd5e1' : (isIntra ? '#64748b' : '#94a3b8'));
 
     let opacity;
     if (isHighlighted) {
         // 🚀 INMUNIDAD AL SLIDER: Las aristas enfocadas brillan siempre con su
         // opacidad natural (65% al 95%). Permite el modo "Solo mostrar en hover"
         // si el usuario baja el slider global a 0.
-        opacity = Math.min(0.95, 0.65 + weight * 0.10);
+        opacity = Math.min(0.95, 0.70 + weight * 0.10);
     } else if (isHoverActive) {
-        opacity = 0.00002; // IGNORAR SLIDER: forzar fondo tenue invariable
+        // Atenuación suave on-hover; si slider es 0, se apaga por completo
+        opacity = edgeOpacityMultiplier > 0.05 ? 0.03 : 0.0;
     } else {
         if (isIntra) {
             // Intra-cluster: clearly visible at max slider (0.35 - 0.85)
@@ -274,8 +274,9 @@ export const drawLink = (link, ctx, globalScale) => {
 
     const dx = target.x - source.x;
     const dy = target.y - source.y;
-    const cx1 = source.x + dx * 0.5 - dy * 0.04;
-    const cy1 = source.y + dy * 0.5 + dx * 0.04;
+    // Arqueado de arista (0.14) para evitar que atraviese visualmente nodos
+    const cx1 = source.x + dx * 0.5 - dy * 0.14;
+    const cy1 = source.y + dy * 0.5 + dx * 0.14;
 
     ctx.bezierCurveTo(cx1, cy1, cx1, cy1, target.x, target.y);
 

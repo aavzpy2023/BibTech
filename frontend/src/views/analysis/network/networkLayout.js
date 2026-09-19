@@ -99,9 +99,9 @@ export const calculateStaticLayout = (nodes, links, width = 800, height = 600) =
 
     // Stage D: Force-directed refinement
     const simulation = d3.forceSimulation(layoutNodes)
-    .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(28))
-    .force('charge', d3.forceManyBody().strength(d => -16 - calculateRadius(d) * 3.5))
-    .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 2).iterations(4))
+    .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(36))
+    .force('charge', d3.forceManyBody().strength(d => -28 - calculateRadius(d) * 5.0))
+    .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 5).iterations(4))
     .force('radial', d3.forceRadial(0, 0, 0).strength(0.035))
     .force('x', d3.forceX(d => compCenters[nodeToComp[d.id]].x)
     .strength(d => nodeToComp[d.id] === 0 ? 0.03 : 0.1))     // antes 0.02 / 0.15: más orgánico
