@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
 import AnalysisPageTemplate from './AnalysisPageTemplate';
+import logoImg from '../../assets/logo.png';
 
 const GROUP_PALETTES = {
     1: { base: '#58a6ff', glow: '#1f6feb', highlight: '#79c0ff' },
@@ -51,10 +52,94 @@ const styles = {
         padding: '2px 8px',
         borderRadius: '12px',
         border: '1px solid #30363d'
+    },
+    exportBtn: {
+        backgroundColor: '#238636',
+        color: '#ffffff',
+        border: '1px solid #2ea043',
+        borderRadius: '6px',
+        padding: '5px 12px',
+        fontSize: '12px',
+        fontWeight: '600',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px'
+    },
+    canvasWrapper: {
+        position: 'relative',
+        width: '100%'
+    },
+    watermark: {
+        position: 'absolute',
+        top: '12px',
+        right: '12px',
+        zIndex: 5,
+        pointerEvents: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '4px',
+        borderRadius: '6px',
+        backgroundColor: 'rgba(13, 17, 23, 0.75)',
+        border: '1px solid rgba(48, 54, 61, 0.6)'
+    },
+    logoImage: {
+        width: '28px',
+        height: '28px',
+        objectFit: 'contain'
     }
 };
 
 export default function CoAuthorshipNetwork() {
+    const svgRef = useRef(null);
+
+    const handleExportHD = useCallback(() => {
+        if (!svgRef.current) return;
+        try {
+            const svg = svgRef.current;
+            const serializer = new XMLSerializer();
+            const svgStr = serializer.serializeToString(svg);
+            const blob = new Blob(
+                [svgStr],
+                { type: 'image/svg+xml;charset=utf-8' }
+            );
+            const url = URL.createObjectURL(blob);
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+
+            if (!ctx) {
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'co-authorship-network-hd.svg';
+                a.click();
+                URL.revokeObjectURL(url);
+                return;
+            }
+
+            const scale = 3;
+            canvas.width = 780 * scale;
+            canvas.height = 460 * scale;
+
+            const img = new Image();
+            img.onload = () => {
+                ctx.fillStyle = '#0a0d12';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                const pngUrl = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = pngUrl;
+                a.download = 'co-authorship-network-hd.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+            img.src = url;
+        } catch (err) {
+            console.error('HD Export Error:', err);
+        }
+    }, []);
+
     const {
         nodes,
         links,
@@ -124,6 +209,14 @@ export default function CoAuthorshipNetwork() {
                     Nodes: <strong>{nodes.length}</strong> | Links:{' '}
                     <strong>{links.length}</strong>
                 </span>
+                <button
+                    type="button"
+                    style={styles.exportBtn}
+                    onClick={handleExportHD}
+                    data-testid="export-hd-btn"
+                >
+                    Download HD
+                </button>
             </div>
         </>
     );
@@ -144,10 +237,20 @@ export default function CoAuthorshipNetwork() {
             footer={footer}
             dataTestId="coauthorship-network-view"
         >
-            <svg
-                data-testid="coauthorship-svg"
-                width="100%"
-                height="460"
+            <div style={styles.canvasWrapper}>
+                <div style={styles.watermark}>
+                    <img
+                        src={logoImg}
+                        alt="Logo Watermark"
+                        style={styles.logoImage}
+                        data-testid="corner-watermark-logo"
+                    />
+                </div>
+                <svg
+                    ref={svgRef}
+                    data-testid="coauthorship-svg"
+                    width="100%"
+                    height="460"
                 viewBox="0 0 780 400"
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
@@ -274,7 +377,8 @@ export default function CoAuthorshipNetwork() {
                         </g>
                     );
                 })}
-            </svg>
+                </svg>
+            </div>
         </AnalysisPageTemplate>
     );
 }

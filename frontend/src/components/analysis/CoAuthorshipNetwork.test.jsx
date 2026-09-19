@@ -42,4 +42,15 @@ describe('CoAuthorshipNetwork', () => {
         expect(resetBtn).toBeInTheDocument();
         fireEvent.click(resetBtn);
     });
+
+    it('renders corner logo watermark and handles HD download trigger', () => {
+        render(<CoAuthorshipNetwork />);
+
+        expect(screen.getByTestId('corner-watermark-logo')).toBeInTheDocument();
+        
+        const downloadBtn = screen.getByRole('button', { name: /Download HD/i });
+        expect(downloadBtn).toBeInTheDocument();
+
+        fireEvent.click(downloadBtn);
+    });
 });
