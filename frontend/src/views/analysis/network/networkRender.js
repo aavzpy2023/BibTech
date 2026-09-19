@@ -16,25 +16,37 @@ export const layoutLabels = (nodes, ctx, k) => {
         return { x: n.x - r, y: n.y - r, w: 2 * r, h: 2 * r };
     });
     const out = new Map();
-    [...nodes].sort((a, b) => (b.degree || 0) - (a.degree || 0)).forEach(n => {
-        const r = calculateRadius(n), fs = (11 + r * 0.25) / k, g = 3 / k;
-        ctx.font = `500 ${fs}px Sans-Serif`;
-        const w = ctx.measureText(n.name || '').width, h = fs * 1.2;
-        const cands = [
-            { x: n.x + r + g,     y: n.y - h / 2 },
-            { x: n.x - r - g - w, y: n.y - h / 2 },
-            { x: n.x - w / 2,     y: n.y + r + g },
-            { x: n.x - w / 2,     y: n.y - r - g - h },
-            { x: n.x + r + g * 3, y: n.y - h / 2 }
-        ];
-        let pick = cands.find(c => !placed.some(p => hit({ ...c, w, h }, p)));
-        
-        if (!pick && (n.degree || 0) >= 5) {
-            pick = cands[0];
-            fs = fs * 0.85;
-        }
 
-        if (pick) { placed.push({ ...pick, w, h }); out.set(n.id, { ...pick, fs }); }
+    [...nodes].sort((a, b) => (b.degree || 0) - (a.degree || 0)).forEach(n => {
+        const r = calculateRadius(n);
+        const g = 3 / k;
+        const isHub = (n.degree || 0) >= 5;
+        let last = null;
+
+        for (const f of [1, 0.85, 0.7]) {
+            const fs = ((11 + r * 0.25) / k) * f;
+            ctx.font = `${isHub ? 600 : 500} ${fs}px Sans-Serif`;
+            const w = ctx.measureText(n.name || '').width;
+            const h = fs * 1.2;
+            const cands = [
+                { x: n.x + r + g,     y: n.y - h / 2 },
+                { x: n.x - r - g - w, y: n.y - h / 2 },
+                { x: n.x - w / 2,     y: n.y + r + g },
+                { x: n.x - w / 2,     y: n.y - r - g - h },
+                { x: n.x + r + g * 3, y: n.y - h / 2 }
+            ];
+            const pick = cands.find(c => !placed.some(p => hit({ ...c, w, h }, p)));
+            last = { fs, w, h, first: cands[0] };
+            if (pick) {
+                placed.push({ ...pick, w, h });
+                out.set(n.id, { ...pick, fs });
+                return;
+            }
+        }
+        if (isHub && last) {
+            placed.push({ ...last.first, w: last.w, h: last.h });
+            out.set(n.id, { ...last.first, fs: last.fs });
+        }
     });
     return out;
 };
@@ -79,9 +91,15 @@ export const drawNode = (node, ctx, globalScale) => {
  * Renders smooth bezier curves for links, mapping weight to opacity and thickness.
  */
 export const drawLabel = (node, ctx, globalScale) => {
-    if (lastK !== globalScale && graphNodes.length > 0) {
-        labelCache = layoutLabels(graphNodes, ctx, globalScale);
+    try {
+        if (lastK !== globalScale && graphNodes.length > 0) {
+            labelCache = layoutLabels(graphNodes, ctx, globalScale);
+            lastK = globalScale;
+        }
+    } catch (e) {
+        console.error('layoutLabels error:', e);
         lastK = globalScale;
+        labelCache = new Map();
     }
     
     const pos = labelCache.get(node.id);
@@ -109,7 +127,7 @@ export const drawBranding = (ctx, width, height) => {
 export const drawLink = (link, ctx, globalScale) => {
     const { source, target, weight } = link;
     
-    const opacity = Math.min(0.6, 0.15 + (weight * 0.08));
+    const opacity = Math.min(0.7, 0.25 + (weight * 0.08));
     const thickness = Math.min(2.0, Math.max(0.5, weight * 0.4)) / globalScale;
     const color = getNodeColor(source.group);
     
@@ -119,8 +137,8 @@ export const drawLink = (link, ctx, globalScale) => {
     // Quadratic-like Bezier control points to add a slight curve
     const dx = target.x - source.x;
     const dy = target.y - source.y;
-    const cx1 = source.x + dx * 0.5 - dy * 0.1;
-    const cy1 = source.y + dy * 0.5 + dx * 0.1;
+    const cx1 = source.x + dx * 0.5 - dy * 0.04;
+    const cy1 = source.y + dy * 0.5 + dx * 0.04;
     
     ctx.bezierCurveTo(cx1, cy1, cx1, cy1, target.x, target.y);
     

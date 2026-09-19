@@ -1,12 +1,40 @@
 === SK-CONTEXT MANIFEST ===
 Intent: SKDEV
-Date: 2026-09-19 12:30:26
+Date: 2026-09-19 12:55:14
 AST Mode: False
 Line Numbers: True
-Modules: networkLayout.js, networkRender.js, networkStyles.js
-Processed Files: 3
+Modules: analysis
+Processed Files: 5
 ===========================
 
+
+
+// --- frontend/src/views/analysis/network/networkStyles.js ---
+
+[L001, S0] export const CLUSTER_METADATA = {
+[L002, S4]     1: { name: 'Primary Collaboration Cluster', color: '#ef4444' },
+[L003, S4]     2: { name: 'Core Scientific Cluster', color: '#3b82f6' },
+[L004, S4]     3: { name: 'Emerging Research Cluster', color: '#10b981' },
+[L005, S4]     4: { name: 'Secondary Hub', color: '#06b6d4' }
+[L006, S0] };
+[L007, S0] 
+[L008, S0] /**
+[L009, S1]  * Returns the hex color for a given node cluster group.
+[L010, S1]  */
+[L011, S0] export const getNodeColor = (group) => {
+[L012, S4]     const cluster = CLUSTER_METADATA[group];
+[L013, S4]     return cluster ? cluster.color : '#9ca3af';
+[L014, S0] };
+[L015, S0] 
+[L016, S0] /**
+[L017, S1]  * Calculates a bounded radius for nodes based on their metric (e.g. papers count).
+[L018, S1]  */
+[L019, S0] export const calculateRadius = (node, scale = 1) => {
+[L020, S4]     if (!node) return 4 * scale;
+[L021, S4]     const metric = node.degree !== undefined ? node.degree : (node.citations || node.papers || 1);
+[L022, S4]     const value = Math.max(0, metric);
+[L023, S4]     return Math.min(20, 3 + Math.sqrt(value) * 2.2) * scale;
+[L024, S0] };
 
 
 // --- frontend/src/views/analysis/network/networkLayout.js ---
@@ -76,160 +104,281 @@ Processed Files: 3
 [L063, S8]         });
 [L064, S4]     });
 [L065, S0] 
-[L066, S4]     // Stage D: Force-directed refinement
-[L067, S4]     const simulation = d3.forceSimulation(layoutNodes)
-[L068, S8]         .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(45))
-[L069, S8]         .force('charge', d3.forceManyBody().strength(-60))
-[L070, S8]         .force('center', d3.forceCenter(0, 0).strength(0.05))
-[L071, S8]         .force('collide', d3.forceCollide().radius(d => calculateRadius(d.papers) + 6).iterations(2))
-[L072, S8]         .force('x', d3.forceX(0).strength(d => nodeToComp[d.id] === 0 ? 0.01 : 0.08))
-[L073, S8]         .force('y', d3.forceY(0).strength(d => nodeToComp[d.id] === 0 ? 0.01 : 0.08))
-[L074, S8]         .stop();
-[L075, S0] 
-[L076, S4]     simulation.tick(300);
-[L077, S0] 
-[L078, S4]     // Bounding box and position normalization
-[L079, S4]     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-[L080, S4]     layoutNodes.forEach(n => {
-[L081, S8]         if (n.x < minX) minX = n.x;
-[L082, S8]         if (n.x > maxX) maxX = n.x;
-[L083, S8]         if (n.y < minY) minY = n.y;
-[L084, S8]         if (n.y > maxY) maxY = n.y;
+[L066, S4]     // Assign spatial centers to components to prevent vertical stacking
+[L067, S4]     const nodeById = Object.fromEntries(layoutNodes.map(n => [n.id, n]));
+[L068, S4]     const areaOf = comp => comp.reduce((s, id) => {
+[L069, S8]         const r = calculateRadius(nodeById[id]) + 6;
+[L070, S8]         return s + Math.PI * r * r;
+[L071, S4]     }, 0);
+[L072, S4]     const estRadius = comp => Math.sqrt(areaOf(comp) / 0.5 / Math.PI);
+[L073, S0] 
+[L074, S4]     const aspect = 1.6; // 16:10 aspect ratio
+[L075, S4]     const ex = Math.sqrt(aspect), ey = 1 / ex;
+[L076, S4]     const compCenters = [];
+[L077, S4]     const goldenAngle = 2.39996323; // radians
+[L078, S4]     const Rg = components.length > 0 ? estRadius(components[0]) : 0;
+[L079, S4]     
+[L080, S4]     components.forEach((comp, i) => {
+[L081, S8]         if (i === 0) return compCenters.push({ x: 0, y: 0 });
+[L082, S8]         const dist = Rg + estRadius(comp) + 40 + Math.sqrt(i) * 30;
+[L083, S8]         const a = i * goldenAngle;
+[L084, S8]         compCenters.push({ x: Math.cos(a) * dist * ex, y: Math.sin(a) * dist * ey });
 [L085, S4]     });
 [L086, S0] 
-[L087, S4]     const graphWidth = Math.max(1, maxX - minX);
-[L088, S4]     const graphHeight = Math.max(1, maxY - minY);
-[L089, S4]     
-[L090, S4]     // Target dimensions (85% of canvas)
-[L091, S4]     const targetWidth = width * 0.85;
-[L092, S4]     const targetHeight = height * 0.85;
-[L093, S4]     
-[L094, S4]     const scaleX = targetWidth / graphWidth;
-[L095, S4]     const scaleY = targetHeight / graphHeight;
-[L096, S4]     const scale = Math.min(scaleX, scaleY, 1.5);
-[L097, S0] 
-[L098, S4]     const offsetX = - (minX + maxX) / 2 * scale;
-[L099, S4]     const offsetY = - (minY + maxY) / 2 * scale;
-[L100, S0] 
-[L101, S4]     layoutNodes.forEach(node => {
-[L102, S8]         node.x = node.x * scale + offsetX;
-[L103, S8]         node.y = node.y * scale + offsetY;
-[L104, S8]         node.fx = node.x;
-[L105, S8]         node.fy = node.y;
-[L106, S4]     });
+[L087, S4]     // Initialize positions near their assigned centers
+[L088, S4]     const rnd = d3.randomLcg(42);
+[L089, S4]     layoutNodes.forEach(n => {
+[L090, S8]         const center = compCenters[nodeToComp[n.id]];
+[L091, S8]         n.x = center.x + (rnd() - 0.5) * 30;
+[L092, S8]         n.y = center.y + (rnd() - 0.5) * 30;
+[L093, S4]     });
+[L094, S0] 
+[L095, S4]     // Stage D: Force-directed refinement
+[L096, S4]     const simulation = d3.forceSimulation(layoutNodes)
+[L097, S8]         .force('link', d3.forceLink(layoutLinks).id(d => d.id).distance(55))
+[L098, S8]         .force('charge', d3.forceManyBody().strength(d => -40 - calculateRadius(d) * 8))
+[L099, S8]         .force('collide', d3.forceCollide().radius(d => calculateRadius(d) + 3).iterations(4))
+[L100, S8]         .force('x', d3.forceX(d => compCenters[nodeToComp[d.id]].x)
+[L101, S12]             .strength(d => nodeToComp[d.id] === 0 ? 0.02 : 0.15))
+[L102, S8]         .force('y', d3.forceY(d => compCenters[nodeToComp[d.id]].y)
+[L103, S12]             .strength(d => nodeToComp[d.id] === 0 ? 0.02 : 0.15))
+[L104, S8]         .stop();
+[L105, S0] 
+[L106, S4]     simulation.tick(300);
 [L107, S0] 
-[L108, S4]     return { nodes: layoutNodes, links: layoutLinks };
-[L109, S0] };
+[L108, S4]     // Bounding box and position normalization
+[L109, S4]     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+[L110, S4]     layoutNodes.forEach(n => {
+[L111, S8]         const r = calculateRadius(n);
+[L112, S8]         if (n.x - r < minX) minX = n.x - r;
+[L113, S8]         if (n.x + r > maxX) maxX = n.x + r;
+[L114, S8]         if (n.y - r < minY) minY = n.y - r;
+[L115, S8]         if (n.y + r > maxY) maxY = n.y + r;
+[L116, S4]     });
+[L117, S0] 
+[L118, S4]     const cx = (minX + maxX) / 2;
+[L119, S4]     const cy = (minY + maxY) / 2;
+[L120, S4]     
+[L121, S4]     const cur = Math.max(0.1, (maxX - minX) / Math.max(1, maxY - minY));
+[L122, S4]     const target = 1.6; // Target aspect ratio
+[L123, S4]     const stretch = Math.min(1.6, Math.max(target / cur, cur / target));
+[L124, S4]     const sx = cur < target ? stretch : 1;
+[L125, S4]     const sy = cur > target ? stretch : 1;
+[L126, S0] 
+[L127, S4]     layoutNodes.forEach(node => {
+[L128, S8]         node.x = (node.x - cx) * sx;
+[L129, S8]         node.y = (node.y - cy) * sy;
+[L130, S8]         node.fx = node.x;
+[L131, S8]         node.fy = node.y;
+[L132, S4]     });
+[L133, S0] 
+[L134, S4]     return { nodes: layoutNodes, links: layoutLinks };
+[L135, S0] };
 
 
 // --- frontend/src/views/analysis/network/networkRender.js ---
 
 [L001, S0] import { getNodeColor, calculateRadius } from './networkStyles';
 [L002, S0] 
-[L003, S0] /**
-[L004, S1]  * Renders a highly stylized 3D-like sphere for a node using Canvas radial gradients.
-[L005, S1]  */
-[L006, S0] export const drawNode = (node, ctx, globalScale) => {
-[L007, S4]     const radius = calculateRadius(node.papers);
-[L008, S4]     const color = getNodeColor(node.group);
-[L009, S4]     
-[L010, S4]     ctx.beginPath();
-[L011, S4]     ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-[L012, S4]     
-[L013, S4]     // Create a 3D light-source effect (top-left offset)
-[L014, S4]     const gradient = ctx.createRadialGradient(
-[L015, S8]         node.x - radius / 3, 
-[L016, S8]         node.y - radius / 3, 
-[L017, S8]         radius / 10,
-[L018, S8]         node.x, 
-[L019, S8]         node.y, 
-[L020, S8]         radius
-[L021, S4]     );
-[L022, S4]     
-[L023, S4]     gradient.addColorStop(0, '#ffffff'); // Specular highlight
-[L024, S4]     gradient.addColorStop(0.3, color);   // Base color
-[L025, S4]     gradient.addColorStop(1, '#1f2937'); // Core shadow (Tailwind gray-800)
-[L026, S4]     
-[L027, S4]     ctx.fillStyle = gradient;
-[L028, S4]     ctx.fill();
-[L029, S0] 
-[L030, S4]     ctx.lineWidth = 0.5 / globalScale;
-[L031, S4]     ctx.strokeStyle = '#111827';
-[L032, S4]     ctx.stroke();
-[L033, S0] };
-[L034, S0] 
-[L035, S0] /**
-[L036, S1]  * Renders smooth bezier curves for links, mapping weight to opacity and thickness.
-[L037, S1]  */
-[L038, S0] export const drawLabel = (node, ctx, globalScale) => {
-[L039, S4]     const LABEL_SCALE_THRESHOLD = 1.2;
-[L040, S4]     if (globalScale < LABEL_SCALE_THRESHOLD && (node.degree || 0) < 3) return;
+[L003, S0] let labelCache = new Map();
+[L004, S0] let lastK = -1;
+[L005, S0] let graphNodes = [];
+[L006, S0] 
+[L007, S0] export const setRenderNodes = (nodes) => {
+[L008, S4]     graphNodes = nodes || [];
+[L009, S4]     lastK = -1;
+[L010, S0] };
+[L011, S0] 
+[L012, S0] export const layoutLabels = (nodes, ctx, k) => {
+[L013, S4]     const hit = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+[L014, S4]     const placed = nodes.map(n => {
+[L015, S8]         const r = calculateRadius(n);
+[L016, S8]         return { x: n.x - r, y: n.y - r, w: 2 * r, h: 2 * r };
+[L017, S4]     });
+[L018, S4]     const out = new Map();
+[L019, S4]     [...nodes].sort((a, b) => (b.degree || 0) - (a.degree || 0)).forEach(n => {
+[L020, S8]         const r = calculateRadius(n), fs = (11 + r * 0.25) / k, g = 3 / k;
+[L021, S8]         ctx.font = `500 ${fs}px Sans-Serif`;
+[L022, S8]         const w = ctx.measureText(n.name || '').width, h = fs * 1.2;
+[L023, S8]         const cands = [
+[L024, S12]             { x: n.x + r + g,     y: n.y - h / 2 },
+[L025, S12]             { x: n.x - r - g - w, y: n.y - h / 2 },
+[L026, S12]             { x: n.x - w / 2,     y: n.y + r + g },
+[L027, S12]             { x: n.x - w / 2,     y: n.y - r - g - h },
+[L028, S12]             { x: n.x + r + g * 3, y: n.y - h / 2 }
+[L029, S8]         ];
+[L030, S8]         let pick = cands.find(c => !placed.some(p => hit({ ...c, w, h }, p)));
+[L031, S8]         
+[L032, S8]         if (!pick && (n.degree || 0) >= 5) {
+[L033, S12]             pick = cands[0];
+[L034, S12]             fs = fs * 0.85;
+[L035, S8]         }
+[L036, S0] 
+[L037, S8]         if (pick) { placed.push({ ...pick, w, h }); out.set(n.id, { ...pick, fs }); }
+[L038, S4]     });
+[L039, S4]     return out;
+[L040, S0] };
 [L041, S0] 
-[L042, S4]     const radius = calculateRadius(node.papers);
-[L043, S4]     const fontSize = Math.max(4, 12 / globalScale);
-[L044, S4]     
-[L045, S4]     ctx.font = `500 ${fontSize}px Sans-Serif`;
-[L046, S4]     ctx.textAlign = 'center';
-[L047, S4]     ctx.textBaseline = 'top';
-[L048, S4]     ctx.fillStyle = '#1e293b'; // neutral dark-gray
-[L049, S4]     
-[L050, S4]     ctx.fillText(node.name, node.x, node.y + radius + (2 / globalScale));
-[L051, S0] };
-[L052, S0] 
-[L053, S0] export const drawBranding = (ctx, width, height) => {
-[L054, S4]     ctx.save();
-[L055, S4]     ctx.font = 'bold 16px Sans-Serif';
-[L056, S4]     ctx.fillStyle = 'rgba(156, 163, 175, 0.4)'; // Tailwind gray-400, 40% opacity
-[L057, S4]     ctx.textAlign = 'right';
-[L058, S4]     ctx.textBaseline = 'bottom';
-[L059, S4]     ctx.fillText('NOVASCOPE', width - 20, height - 20);
-[L060, S4]     ctx.restore();
-[L061, S0] };
-[L062, S0] 
-[L063, S0] export const drawLink = (link, ctx, globalScale) => {
-[L064, S4]     const { source, target, weight } = link;
-[L065, S4]     
-[L066, S4]     const opacity = Math.min(0.35, 0.12 + (weight * 0.05));
-[L067, S4]     const thickness = Math.min(1.5, Math.max(0.5, weight * 0.3)) / globalScale;
-[L068, S4]     
-[L069, S4]     ctx.beginPath();
-[L070, S4]     ctx.moveTo(source.x, source.y);
-[L071, S4]     
-[L072, S4]     // Quadratic-like Bezier control points to add a slight curve
-[L073, S4]     const dx = target.x - source.x;
-[L074, S4]     const dy = target.y - source.y;
-[L075, S4]     const cx1 = source.x + dx * 0.5 - dy * 0.1;
-[L076, S4]     const cy1 = source.y + dy * 0.5 + dx * 0.1;
-[L077, S4]     
-[L078, S4]     ctx.bezierCurveTo(cx1, cy1, cx1, cy1, target.x, target.y);
-[L079, S4]     
-[L080, S4]     ctx.strokeStyle = `rgba(148, 163, 184, ${opacity})`; // neutral light blue/gray
-[L081, S4]     ctx.lineWidth = thickness;
-[L082, S4]     ctx.stroke();
-[L083, S0] };
+[L042, S0] /**
+[L043, S1]  * Renders a highly stylized 3D-like sphere for a node using Canvas radial gradients.
+[L044, S1]  */
+[L045, S0] export const drawNode = (node, ctx, globalScale) => {
+[L046, S4]     const radius = calculateRadius(node);
+[L047, S4]     const color = getNodeColor(node.group);
+[L048, S4]     
+[L049, S4]     ctx.beginPath();
+[L050, S4]     ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
+[L051, S4]     
+[L052, S4]     // Create a 3D light-source effect (top-left offset)
+[L053, S4]     const gradient = ctx.createRadialGradient(
+[L054, S8]         node.x - radius / 3, 
+[L055, S8]         node.y - radius / 3, 
+[L056, S8]         radius / 10,
+[L057, S8]         node.x, 
+[L058, S8]         node.y, 
+[L059, S8]         radius
+[L060, S4]     );
+[L061, S4]     
+[L062, S4]     const darken = (hex) => {
+[L063, S8]         if (!hex || !hex.startsWith('#')) return '#1e293b';
+[L064, S8]         const r = Math.floor(parseInt(hex.slice(1, 3), 16) * 0.5);
+[L065, S8]         const g = Math.floor(parseInt(hex.slice(3, 5), 16) * 0.5);
+[L066, S8]         const b = Math.floor(parseInt(hex.slice(5, 7), 16) * 0.5);
+[L067, S8]         return `rgb(${r},${g},${b})`;
+[L068, S4]     };
+[L069, S0] 
+[L070, S4]     gradient.addColorStop(0, '#ffffff'); // Specular highlight
+[L071, S4]     gradient.addColorStop(0.3, color);   // Base color
+[L072, S4]     gradient.addColorStop(1, darken(color)); // Core shadow
+[L073, S4]     
+[L074, S4]     ctx.fillStyle = gradient;
+[L075, S4]     ctx.fill();
+[L076, S0] };
+[L077, S0] 
+[L078, S0] /**
+[L079, S1]  * Renders smooth bezier curves for links, mapping weight to opacity and thickness.
+[L080, S1]  */
+[L081, S0] export const drawLabel = (node, ctx, globalScale) => {
+[L082, S4]     if (lastK !== globalScale && graphNodes.length > 0) {
+[L083, S8]         labelCache = layoutLabels(graphNodes, ctx, globalScale);
+[L084, S8]         lastK = globalScale;
+[L085, S4]     }
+[L086, S4]     
+[L087, S4]     const pos = labelCache.get(node.id);
+[L088, S4]     if (!pos) return;
+[L089, S0] 
+[L090, S4]     const isHub = (node.degree || 0) >= 5;
+[L091, S4]     ctx.font = `${isHub ? '600' : '500'} ${pos.fs}px Sans-Serif`;
+[L092, S4]     ctx.textAlign = 'left';
+[L093, S4]     ctx.textBaseline = 'top';
+[L094, S4]     ctx.fillStyle = isHub ? '#0f172a' : '#334155';
+[L095, S4]     
+[L096, S4]     ctx.fillText(node.name || '', pos.x, pos.y);
+[L097, S0] };
+[L098, S0] 
+[L099, S0] export const drawBranding = (ctx, width, height) => {
+[L100, S4]     ctx.save();
+[L101, S4]     ctx.font = 'bold 16px Sans-Serif';
+[L102, S4]     ctx.fillStyle = 'rgba(156, 163, 175, 0.4)'; // Tailwind gray-400, 40% opacity
+[L103, S4]     ctx.textAlign = 'right';
+[L104, S4]     ctx.textBaseline = 'bottom';
+[L105, S4]     ctx.fillText('NOVASCOPE', width - 20, height - 20);
+[L106, S4]     ctx.restore();
+[L107, S0] };
+[L108, S0] 
+[L109, S0] export const drawLink = (link, ctx, globalScale) => {
+[L110, S4]     const { source, target, weight } = link;
+[L111, S4]     
+[L112, S4]     const opacity = Math.min(0.6, 0.15 + (weight * 0.08));
+[L113, S4]     const thickness = Math.min(2.0, Math.max(0.5, weight * 0.4)) / globalScale;
+[L114, S4]     const color = getNodeColor(source.group);
+[L115, S4]     
+[L116, S4]     ctx.beginPath();
+[L117, S4]     ctx.moveTo(source.x, source.y);
+[L118, S4]     
+[L119, S4]     // Quadratic-like Bezier control points to add a slight curve
+[L120, S4]     const dx = target.x - source.x;
+[L121, S4]     const dy = target.y - source.y;
+[L122, S4]     const cx1 = source.x + dx * 0.5 - dy * 0.1;
+[L123, S4]     const cy1 = source.y + dy * 0.5 + dx * 0.1;
+[L124, S4]     
+[L125, S4]     ctx.bezierCurveTo(cx1, cy1, cx1, cy1, target.x, target.y);
+[L126, S4]     
+[L127, S4]     const hexToRgba = (hex, alpha) => {
+[L128, S8]         if (!hex || !hex.startsWith('#')) return `rgba(148, 163, 184, ${alpha})`;
+[L129, S8]         const r = parseInt(hex.slice(1, 3), 16);
+[L130, S8]         const g = parseInt(hex.slice(3, 5), 16);
+[L131, S8]         const b = parseInt(hex.slice(5, 7), 16);
+[L132, S8]         return `rgba(${r},${g},${b},${alpha})`;
+[L133, S4]     };
+[L134, S0] 
+[L135, S4]     ctx.strokeStyle = hexToRgba(color, opacity);
+[L136, S4]     ctx.lineWidth = thickness;
+[L137, S4]     ctx.stroke();
+[L138, S0] };
 
 
-// --- frontend/src/views/analysis/network/networkStyles.js ---
+// --- frontend/src/views/analysis/network/exportNetwork.js ---
 
-[L001, S0] export const CLUSTER_METADATA = {
-[L002, S4]     1: { name: 'Primary Collaboration Cluster', color: '#ef4444' },
-[L003, S4]     2: { name: 'Core Scientific Cluster', color: '#3b82f6' },
-[L004, S4]     3: { name: 'Emerging Research Cluster', color: '#10b981' },
-[L005, S4]     4: { name: 'Secondary Hub', color: '#06b6d4' }
-[L006, S0] };
+[L001, S0] export const exportCanvasToImage = (canvasRef, filename = 'network-export.png') => {
+[L002, S4]     try {
+[L003, S8]         const fgEl = canvasRef.current;
+[L004, S8]         // react-force-graph exposes its internal canvas via the canvas property on the ref
+[L005, S8]         const fgCanvas = fgEl ? fgEl.canvas || document.querySelector('canvas') : null;
+[L006, S8]         if (!fgCanvas) return;
 [L007, S0] 
-[L008, S0] /**
-[L009, S1]  * Returns the hex color for a given node cluster group.
-[L010, S1]  */
-[L011, S0] export const getNodeColor = (group) => {
-[L012, S4]     const cluster = CLUSTER_METADATA[group];
-[L013, S4]     return cluster ? cluster.color : '#9ca3af';
-[L014, S0] };
-[L015, S0] 
-[L016, S0] /**
-[L017, S1]  * Calculates a bounded radius for nodes based on their metric (e.g. papers count).
-[L018, S1]  */
-[L019, S0] export const calculateRadius = (metric, scale = 1) => {
-[L020, S4]     const value = Math.max(0, metric || 0);
-[L021, S4]     return Math.min(28, 5 + Math.sqrt(value) * 2.5) * scale;
-[L022, S0] };
+[L008, S8]         const scale = 2.5;
+[L009, S8]         const exportCanvas = document.createElement('canvas');
+[L010, S8]         exportCanvas.width = fgCanvas.width * scale;
+[L011, S8]         exportCanvas.height = fgCanvas.height * scale;
+[L012, S8]         const ctx = exportCanvas.getContext('2d');
+[L013, S8]         if (!ctx) return;
+[L014, S0] 
+[L015, S8]         // Apply white background safely
+[L016, S8]         ctx.fillStyle = '#ffffff';
+[L017, S8]         ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+[L018, S0] 
+[L019, S8]         // Draw original canvas
+[L020, S8]         ctx.drawImage(fgCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
+[L021, S0] 
+[L022, S8]         // Execute download
+[L023, S8]         const a = document.createElement('a');
+[L024, S8]         a.href = exportCanvas.toDataURL('image/png');
+[L025, S8]         a.download = filename;
+[L026, S8]         a.click();
+[L027, S4]     } catch (err) {
+[L028, S8]         console.error('HD Export Error:', err);
+[L029, S4]     }
+[L030, S0] };
+
+
+// --- frontend/src/views/analysis/network/networkData.js ---
+
+[L001, S0] /**
+[L002, S1]  * Filters the network topology, strictly preserving nodes that have active links
+[L003, S1]  * and discarding orphan nodes or links that fall below the weight threshold.
+[L004, S1]  */
+[L005, S0] export const filterNetworkData = (nodes, links, minWeight) => {
+[L006, S4]     if (!nodes || !links) {
+[L007, S8]         return { nodes: [], links: [] };
+[L008, S4]     }
+[L009, S4]     
+[L010, S4]     // 1. Filter out weak links
+[L011, S4]     const filteredLinks = links.filter(link => link.weight >= minWeight);
+[L012, S4]     
+[L013, S4]     // 2. Identify nodes that remain actively connected
+[L014, S4]     const activeNodeIds = new Set();
+[L015, S4]     filteredLinks.forEach(link => {
+[L016, S8]         // Handle both raw IDs (strings) and pre-processed D3 objects ({id: '1'})
+[L017, S8]         activeNodeIds.add(link.source?.id || link.source);
+[L018, S8]         activeNodeIds.add(link.target?.id || link.target);
+[L019, S4]     });
+[L020, S4]     
+[L021, S4]     // 3. Keep only active nodes
+[L022, S4]     const filteredNodes = nodes.filter(node => activeNodeIds.has(node.id));
+[L023, S4]     
+[L024, S4]     return {
+[L025, S8]         nodes: filteredNodes,
+[L026, S8]         links: filteredLinks
+[L027, S4]     };
+[L028, S0] };

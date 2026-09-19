@@ -31,13 +31,9 @@
 │   │   │   │   │   ├── network/
 │   │   │   │   │   │   ├── exportNetwork.js
 │   │   │   │   │   │   ├── networkData.js
-│   │   │   │   │   │   ├── networkData.test.js
 │   │   │   │   │   │   ├── networkLayout.js
-│   │   │   │   │   │   ├── networkLayout.test.js
 │   │   │   │   │   │   ├── networkRender.js
-│   │   │   │   │   │   ├── networkRender.test.js
 │   │   │   │   │   │   ├── networkStyles.js
-│   │   │   │   │   │   ├── networkStyles.test.js
 │   │   │   ├── hooks/
 │   │   │   │   ├── useAnalysisNavigation.js
 │   │   │   │   ├── useAnalysisNavigation.test.js
