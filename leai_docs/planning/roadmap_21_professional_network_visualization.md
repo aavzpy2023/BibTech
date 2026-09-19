@@ -31,7 +31,8 @@ complexity_aggregate: "HARD"
     - [ID-21.2.2] [LOGIC/CORE]: [1. Create networkStyles.js. 2. Export pure functions getNodeColor(group) and calculateRadius(metric) using a controlled scale. 3. Create networkData.js exporting pure function filterNetworkData(nodes, links, minWeight) to strip weak links and orphaned nodes]. Type: Task.
     - [ID-21.2.3] [PLANNING/SYNC]: [1. Open roadmap_21_professional_network_visualization.md and check - [x] for Story 21.2. 2. Append > Files touched: frontend/src/views/analysis/network/networkStyles.js, frontend/src/views/analysis/network/networkData.js under the story. 3. Open global_backlog.md and check - [x] for [REQ-061]]. Type: Task.
 
-- [ ] Story 21.3: Static D3 Force Layout Engine (State Logic) | [MoSCoW: MUST] | [Complexity: HARD] (<-- REQ-061)
+- [x] Story 21.3: Static D3 Force Layout Engine (State Logic) | [MoSCoW: MUST] | [Complexity: HARD] (<-- REQ-061)
+  > Files touched: frontend/src/views/analysis/network/networkLayout.js, frontend/src/views/analysis/network/networkLayout.test.js
   - Business Requirement: Pre-calculate network physics synchronously to freeze the layout.
   - Story Context Radius: {"frontend/src/views/analysis/network/networkLayout.js": ["*"]}
   - Layered Technical Breakdown:
