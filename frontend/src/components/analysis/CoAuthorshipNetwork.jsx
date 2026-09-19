@@ -3,11 +3,12 @@ import useCoAuthorshipNetwork from '../../hooks/useCoAuthorshipNetwork';
 import AnalysisPageTemplate from './AnalysisPageTemplate';
 import logoImg from '../../assets/logo.png';
 
-// VOSviewer canonical cluster palette
-const VOS_CLUSTER_COLORS = {
-    1: { solid: '#ef4444', halo: 'rgba(239, 68, 68, 0.28)', text: '#fca5a5' },
-    2: { solid: '#3b82f6', halo: 'rgba(59, 130, 246, 0.28)', text: '#93c5fd' },
-    3: { solid: '#10b981', halo: 'rgba(16, 185, 129, 0.28)', text: '#6ee7b7' }
+// Novascope Bubble Palettes
+const GROUP_PALETTES = {
+    1: { base: '#ef4444', text: '#1e3a8a' }, // Red
+    2: { base: '#3b82f6', text: '#1e3a8a' }, // Blue
+    3: { base: '#10b981', text: '#1e3a8a' }, // Green
+    4: { base: '#06b6d4', text: '#1e3a8a' }  // Cyan
 };
 
 // VOSviewer Overlay (Timeline gradient blue -> teal -> yellow)
@@ -105,8 +106,9 @@ const styles = {
         bottom: '12px',
         left: '12px',
         zIndex: 5,
-        backgroundColor: 'rgba(13, 17, 23, 0.88)',
-        border: '1px solid rgba(48, 54, 61, 0.8)',
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        border: '1px solid rgba(0, 0, 0, 0.1)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
         borderRadius: '6px',
         padding: '8px 12px',
         display: 'flex',
@@ -120,7 +122,8 @@ const styles = {
         alignItems: 'center',
         gap: '8px',
         fontSize: '11px',
-        color: '#c9d1d9'
+        color: '#1e293b',
+        fontWeight: '500'
     },
     legendDot: (color) => ({
         width: '10px',
@@ -203,7 +206,7 @@ export default function CoAuthorshipNetwork() {
 
             const img = new Image();
             img.onload = () => {
-                ctx.fillStyle = '#06090e';
+                ctx.fillStyle = '#ffffff';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
@@ -388,7 +391,7 @@ export default function CoAuthorshipNetwork() {
                 </div>
 
                 <div style={styles.legendPanel} data-testid="vosviewer-legend">
-                    <span style={{ ...styles.label, fontSize: '10px' }}>
+                    <span style={{ ...styles.label, fontSize: '10px', color: '#64748b' }}>
                         {viewMode === 'network' ? 'CLUSTERS' : 'AVG PUB YEAR'}
                     </span>
                     {viewMode === 'network' ? (
@@ -427,13 +430,36 @@ export default function CoAuthorshipNetwork() {
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
                     style={{
-                        backgroundColor: '#06090e',
+                        backgroundColor: '#ffffff',
                         borderRadius: '6px',
                         cursor: is3DMode ? (isDragging ? 'grabbing' : 'grab') : 'default',
                         userSelect: 'none'
                     }}
                 >
-                    {/* VOSviewer Curved & Translucent Relationship Links */}
+                    <defs>
+                        <radialGradient id="sphereGrad1" cx="30%" cy="30%" r="70%">
+                            <stop offset="0%" stopColor="#fca5a5" />
+                            <stop offset="45%" stopColor="#ef4444" />
+                            <stop offset="100%" stopColor="#7f1d1d" />
+                        </radialGradient>
+                        <radialGradient id="sphereGrad2" cx="30%" cy="30%" r="70%">
+                            <stop offset="0%" stopColor="#93c5fd" />
+                            <stop offset="45%" stopColor="#3b82f6" />
+                            <stop offset="100%" stopColor="#1e3a8a" />
+                        </radialGradient>
+                        <radialGradient id="sphereGrad3" cx="30%" cy="30%" r="70%">
+                            <stop offset="0%" stopColor="#6ee7b7" />
+                            <stop offset="45%" stopColor="#10b981" />
+                            <stop offset="100%" stopColor="#064e3b" />
+                        </radialGradient>
+                        <radialGradient id="sphereGrad4" cx="30%" cy="30%" r="70%">
+                            <stop offset="0%" stopColor="#67e8f9" />
+                            <stop offset="45%" stopColor="#06b6d4" />
+                            <stop offset="100%" stopColor="#164e63" />
+                        </radialGradient>
+                    </defs>
+
+                    {/* Glossy Colored Curved Links */}
                     {links.map((link, idx) => {
                         const s = nodeMap.get(link.source);
                         const t = nodeMap.get(link.target);
@@ -449,30 +475,31 @@ export default function CoAuthorshipNetwork() {
                             hoveredNodeId || selectedNodeId
                         );
                         const edgeOpacity = isFocused
-                            ? 0.95
+                            ? 0.7
                             : hasFocusActive
-                            ? 0.08
-                            : ((s.depthOpacity + t.depthOpacity) / 2) * 0.35;
+                            ? 0.04
+                            : ((s.depthOpacity + t.depthOpacity) / 2) * 0.2;
 
-                        // Curved Bezier Spline
                         const midX = (s.px + t.px) / 2;
                         const midY = (s.py + t.py) / 2 - 12;
                         const strokeWidth =
-                            Math.max(1, link.weight * ((s.scale + t.scale) / 2) * 0.85);
+                            Math.max(1, link.weight * ((s.scale + t.scale) / 2) * 0.7);
+                        
+                        const sourcePalette = GROUP_PALETTES[s.group] || GROUP_PALETTES[1];
 
                         return (
                             <path
                                 key={`link-${idx}`}
                                 d={`M ${s.px} ${s.py} Q ${midX} ${midY} ${t.px} ${t.py}`}
                                 fill="none"
-                                stroke={isFocused ? '#ffffff' : '#475569'}
+                                stroke={isFocused ? '#000000' : sourcePalette.base}
                                 strokeWidth={strokeWidth}
                                 strokeOpacity={edgeOpacity}
                             />
                         );
                     })}
 
-                    {/* VOSviewer Characteristic Halos and High-Legibility Nodes */}
+                    {/* Glossy 3D Nodes and Clean Typography */}
                     {nodes.map(node => {
                         const isMatch =
                             searchQuery.trim() === '' ||
@@ -482,15 +509,7 @@ export default function CoAuthorshipNetwork() {
                         const isSelected = selectedNodeId === node.id;
                         const isHovered = hoveredNodeId === node.id;
 
-                        const color =
-                            viewMode === 'network'
-                                ? VOS_CLUSTER_COLORS[node.group]?.solid || '#3b82f6'
-                                : getOverlayColor(node.avgYear);
-
-                        const haloColor =
-                            viewMode === 'network'
-                                ? VOS_CLUSTER_COLORS[node.group]?.halo || 'rgba(59, 130, 246, 0.25)'
-                                : 'rgba(250, 204, 21, 0.25)';
+                        const gradId = `url(#sphereGrad${node.group || 1})`;
 
                         return (
                             <g
@@ -503,47 +522,26 @@ export default function CoAuthorshipNetwork() {
                                 onMouseLeave={() => setHoveredNodeId(null)}
                                 style={{ cursor: 'pointer' }}
                             >
-                                {/* Outer Cluster Density Halo */}
-                                <circle
-                                    cx={node.px}
-                                    cy={node.py}
-                                    r={node.radius + 8 * node.scale}
-                                    fill={haloColor}
-                                    fillOpacity={
-                                        isMatch
-                                            ? isSelected || isHovered
-                                                ? 0.8
-                                                : 0.35
-                                            : 0.05
-                                    }
-                                />
-
-                                {/* Core Publication Sphere */}
+                                {/* 3D Bubble Sphere */}
                                 <circle
                                     cx={node.px}
                                     cy={node.py}
                                     r={node.radius}
-                                    fill={color}
-                                    fillOpacity={isMatch ? node.depthOpacity : 0.12}
-                                    stroke={isSelected || isHovered ? '#ffffff' : '#0f172a'}
-                                    strokeWidth={isSelected ? 3 : 1.5}
+                                    fill={viewMode === 'network' ? gradId : getOverlayColor(node.avgYear)}
+                                    fillOpacity={isMatch ? node.depthOpacity : 0.15}
+                                    stroke={isSelected || isHovered ? '#000000' : 'none'}
+                                    strokeWidth={isSelected || isHovered ? 2 : 0}
                                 />
 
-                                {/* VOSviewer Iconic Heavy-Stroke Labels for Crystal Legibility */}
+                                {/* Clean Navy Labels Above Nodes */}
                                 <text
                                     x={node.px}
-                                    y={node.py + node.radius + 13}
+                                    y={node.py - node.radius - 6}
                                     textAnchor="middle"
-                                    fill={isSelected || isHovered ? '#ffffff' : '#f1f5f9'}
-                                    fillOpacity={isMatch ? node.depthOpacity : 0.1}
-                                    fontSize={`${Math.max(10, Math.round(12 * node.scale))}px`}
-                                    fontWeight={isSelected || node.papers > 12 ? '700' : '500'}
-                                    style={{
-                                        paintOrder: 'stroke fill',
-                                        stroke: '#06090e',
-                                        strokeWidth: '3.5px',
-                                        strokeLinejoin: 'round'
-                                    }}
+                                    fill={isSelected || isHovered ? '#000000' : '#1e3a8a'}
+                                    fillOpacity={isMatch ? Math.max(0.6, node.depthOpacity) : 0.15}
+                                    fontSize={`${Math.max(10, Math.round(11 * node.scale))}px`}
+                                    fontWeight={isSelected || node.papers > 12 ? '600' : '400'}
                                 >
                                     {node.name}
                                 </text>

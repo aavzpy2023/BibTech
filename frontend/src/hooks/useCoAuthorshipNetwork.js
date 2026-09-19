@@ -154,8 +154,10 @@ const DEFAULT_LINKS = [
 ];
 
 const CLUSTER_METADATA = {
-    1: { name: 'Attention & Transformers', color: '#f87171' },
-    2: { name: 'Deep Learning Foundations', color: '#60a5fa' }
+    1: { name: 'Attention & Transformers', color: '#ef4444' },
+    2: { name: 'Deep Learning Foundations', color: '#3b82f6' },
+    3: { name: 'Emerging Research', color: '#10b981' },
+    4: { name: 'Secondary Hub', color: '#06b6d4' }
 };
 
 const INITIAL_ROTATION = { rotX: 15, rotY: 25 };

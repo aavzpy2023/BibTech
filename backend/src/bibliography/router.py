@@ -577,6 +577,7 @@ def get_coauthorship_network(
         1: {"name": "Primary Collaboration Cluster", "color": "#ef4444"},
         2: {"name": "Core Scientific Cluster", "color": "#3b82f6"},
         3: {"name": "Emerging Research Cluster", "color": "#10b981"},
+        4: {"name": "Secondary Hub", "color": "#06b6d4"},
     }
 
     return {"nodes": nodes, "links": links, "clusters": clusters}
