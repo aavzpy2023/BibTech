@@ -49,8 +49,6 @@
 │   │   │   │   ├── useTableResize.js
 │   │   │   │   ├── useTableResize.test.js
 │   │   │   ├── assets/
-│   │   │   │   ├── logo.ico
-│   │   │   │   ├── logo.png
 │   │   │   ├── components/
 │   │   │   │   ├── BibliographyUploader.jsx
 │   │   │   │   ├── Layout.jsx

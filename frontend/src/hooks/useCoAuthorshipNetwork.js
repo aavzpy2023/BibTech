@@ -161,6 +161,9 @@ const CLUSTER_METADATA = {
 const INITIAL_ROTATION = { rotX: 15, rotY: 25 };
 
 export default function useCoAuthorshipNetwork() {
+    const [dynamicNodes, setDynamicNodes] = useState(null);
+    const [dynamicLinks, setDynamicLinks] = useState(null);
+    const [dynamicClusters, setDynamicClusters] = useState(null);
     const [minWeight, setMinWeight] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedNodeId, setSelectedNodeId] = useState(null);
@@ -170,13 +173,38 @@ export default function useCoAuthorshipNetwork() {
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
+    React.useEffect(() => {
+        let isMounted = true;
+        fetch('/api/bibliography/network/co-authorship')
+            .then(res => (res.ok ? res.json() : null))
+            .then(data => {
+                if (isMounted && data && data.nodes && data.nodes.length > 0) {
+                    setDynamicNodes(data.nodes);
+                    setDynamicLinks(data.links);
+                    if (data.clusters) {
+                        setDynamicClusters(data.clusters);
+                    }
+                }
+            })
+            .catch(() => {
+                // Fallback to static distribution on failure or testing
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     const resetRotation = useCallback(() => {
         setRotation(INITIAL_ROTATION);
     }, []);
 
+    const sourceNodes = dynamicNodes || DEFAULT_NODES_3D;
+    const sourceLinks = dynamicLinks || DEFAULT_LINKS;
+    const sourceClusters = dynamicClusters || CLUSTER_METADATA;
+
     const filteredLinks = useMemo(() => {
-        return DEFAULT_LINKS.filter(link => link.weight >= minWeight);
-    }, [minWeight]);
+        return sourceLinks.filter(link => link.weight >= minWeight);
+    }, [sourceLinks, minWeight]);
 
     const activeNodeIds = useMemo(() => {
         const set = new Set();
@@ -194,7 +222,7 @@ export default function useCoAuthorshipNetwork() {
         const cx = 390;
         const cy = 200;
 
-        const projected = DEFAULT_NODES_3D
+        const projected = sourceNodes
             .filter(n => activeNodeIds.has(n.id))
             .map(n => {
                 const x1 = n.x * Math.cos(radY) + n.z * Math.sin(radY);
@@ -224,7 +252,7 @@ export default function useCoAuthorshipNetwork() {
             });
 
         return projected.sort((a, b) => a.z2 - b.z2);
-    }, [rotation, activeNodeIds]);
+    }, [rotation, activeNodeIds, sourceNodes]);
 
     const handleMouseDown = useCallback((e) => {
         setIsDragging(true);
@@ -251,8 +279,8 @@ export default function useCoAuthorshipNetwork() {
     }, []);
 
     const selectedNode = useMemo(() => {
-        return DEFAULT_NODES_3D.find(n => n.id === selectedNodeId) || null;
-    }, [selectedNodeId]);
+        return sourceNodes.find(n => n.id === selectedNodeId) || null;
+    }, [selectedNodeId, sourceNodes]);
 
     return {
         nodes: projectedNodes,
@@ -268,7 +296,7 @@ export default function useCoAuthorshipNetwork() {
         selectedNode,
         viewMode,
         setViewMode,
-        clusters: CLUSTER_METADATA,
+        clusters: sourceClusters,
         rotation,
         setRotation,
         resetRotation,

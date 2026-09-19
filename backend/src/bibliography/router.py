@@ -14,6 +14,8 @@ from .schemas import (
 from .parser_service import parse_bibliography_content
 from .download_service import execute_batch_download
 from .zip_service import create_zip_from_pdfs
+import math
+from collections import defaultdict
 from .injection_service import (
     inject_references_to_db,
     backfill_funding_from_articles,
@@ -418,6 +420,166 @@ async def batch_download_local(request: LocalBatchDownloadRequest):
             yield f"data: {event}\n\n"
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")
+
+
+@router.get("/network/co-authorship")
+def get_coauthorship_network(
+    project_code: str | None = None,
+    max_nodes: int = 150,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Article)
+    if project_code and project_code.strip():
+        project = (
+            db.query(Project)
+            .filter(Project.name == project_code.strip())
+            .first()
+        )
+        if project:
+            links = (
+                db.query(ProjectArticle.article_id)
+                .filter(ProjectArticle.project_id == project.id)
+                .all()
+            )
+            article_ids = [l[0] for l in links]
+            query = query.filter(Article.id.in_(article_ids))
+        else:
+            return {"nodes": [], "links": [], "clusters": {}}
+
+    articles = query.all()
+    if not articles:
+        return {"nodes": [], "links": [], "clusters": {}}
+
+    author_papers: dict[str, int] = defaultdict(int)
+    author_citations: dict[str, int] = defaultdict(int)
+    author_years: dict[str, list[float]] = defaultdict(list)
+    coauthorship_counts: dict[tuple[str, str], int] = defaultdict(int)
+
+    for a in articles:
+        names = []
+        if getattr(a, "author_articles", None):
+            for aa in a.author_articles:
+                auth = getattr(aa, "author", None)
+                if auth and getattr(auth, "name", None):
+                    names.append(auth.name.strip())
+
+        if not names and getattr(a, "author", None):
+            raw = str(a.author)
+            if " and " in raw:
+                names = [p.strip() for p in raw.split(" and ") if p.strip()]
+            elif ";" in raw:
+                names = [p.strip() for p in raw.split(";") if p.strip()]
+            else:
+                names = [raw.strip()]
+
+        names = list(dict.fromkeys(names))
+        if not names:
+            continue
+
+        year_val = None
+        if getattr(a, "year", None):
+            try:
+                year_val = float(str(a.year).strip())
+            except (ValueError, TypeError):
+                pass
+
+        cites_val = 0
+        if getattr(a, "times_cited", None):
+            try:
+                cites_val = int(a.times_cited)
+            except (ValueError, TypeError):
+                pass
+
+        for name in names:
+            author_papers[name] += 1
+            author_citations[name] += cites_val
+            if year_val:
+                author_years[name].append(year_val)
+
+        for i in range(len(names)):
+            for j in range(i + 1, len(names)):
+                pair = tuple(sorted([names[i], names[j]]))
+                coauthorship_counts[pair] += 1
+
+    ranked_authors = sorted(
+        author_papers.keys(),
+        key=lambda k: (author_papers[k], author_citations[k]),
+        reverse=True,
+    )[:max_nodes]
+
+    if not ranked_authors:
+        return {"nodes": [], "links": [], "clusters": {}}
+
+    ranked_set = set(ranked_authors)
+    author_id_map = {
+        name: str(idx + 1) for idx, name in enumerate(ranked_authors)
+    }
+
+    adj: dict[str, set[str]] = defaultdict(set)
+    for (a1, a2), w in coauthorship_counts.items():
+        if a1 in ranked_set and a2 in ranked_set:
+            adj[a1].add(a2)
+            adj[a2].add(a1)
+
+    visited: dict[str, int] = {}
+    curr_cluster = 1
+    for author in ranked_authors:
+        if author not in visited:
+            queue = [author]
+            visited[author] = curr_cluster
+            while queue:
+                curr = queue.pop(0)
+                for neighbor in adj[curr]:
+                    if neighbor not in visited:
+                        visited[neighbor] = curr_cluster
+                        queue.append(neighbor)
+            curr_cluster = (curr_cluster % 3) + 1
+
+    nodes = []
+    n_count = len(ranked_authors)
+    for idx, name in enumerate(ranked_authors):
+        node_id = author_id_map[name]
+        papers = author_papers[name]
+        citations = author_citations[name]
+        years = author_years[name]
+        avg_year = sum(years) / len(years) if years else 2020.0
+        cluster = visited.get(name, 1)
+
+        phi = math.acos(1 - 2 * (idx + 0.5) / n_count)
+        theta = math.pi * (1 + 5**0.5) * idx
+        radius_3d = 160.0 + (idx % 3) * 18.0
+        x = radius_3d * math.sin(phi) * math.cos(theta)
+        y = radius_3d * math.cos(phi) * 0.78
+        z = radius_3d * math.sin(phi) * math.sin(theta)
+
+        nodes.append({
+            "id": node_id,
+            "name": name,
+            "papers": papers,
+            "citations": citations,
+            "avgYear": round(avg_year, 1),
+            "group": cluster,
+            "x": round(x, 1),
+            "y": round(y, 1),
+            "z": round(z, 1),
+        })
+
+    links = []
+    for (a1, a2), w in coauthorship_counts.items():
+        if a1 in ranked_set and a2 in ranked_set:
+            links.append({
+                "source": author_id_map[a1],
+                "target": author_id_map[a2],
+                "weight": w,
+            })
+
+    clusters = {
+        1: {"name": "Primary Collaboration Cluster", "color": "#ef4444"},
+        2: {"name": "Core Scientific Cluster", "color": "#3b82f6"},
+        3: {"name": "Emerging Research Cluster", "color": "#10b981"},
+    }
+
+    return {"nodes": nodes, "links": links, "clusters": clusters}
 
 
 @router.post("/download-zip")
